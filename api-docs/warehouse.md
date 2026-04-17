@@ -2,7 +2,7 @@
 
 > **Module:** warehouse  
 > **Base URL:** https://api.maryai.uz/  
-> **Last Updated:** 2026-04-14T16:58:40.297Z
+> **Last Updated:** 2026-04-17T08:55:38.959Z
 
 ---
 
@@ -770,25 +770,33 @@
 
 **Summary:** Get all compounds
 
-**Description:** Retrieve all compounds with pagination
+**Description:** Retrieve all compounds with pagination, optional search, department filter and sorting
 
 **Parameters:**
 
 | Name | Location | Type | Required | Description |
 |------|----------|------|----------|-------------|
+| search | query | string | No | Search by compound name or description |
+| department_id | query | string | No | Filter by department ID |
+| sort_by | query | string | No | Sort by field |
+| sort_order | query | string | No | Sort order |
 | limit | query | integer | No | Limit (default: 20) |
 | offset | query | integer | No | Offset (default: 0) |
 | expand | query | string | No | Expand related fields |
 
 **Responses:**
 
-- **200**: Compounds found
+- **200**: OK
   ```json
 {
-  "type": "array",
-  "items": {
-    "$ref": "#/definitions/model.CompoundResponse"
-  }
+  "$ref": "#/definitions/model.PaginatedCompoundsResponse"
+}
+```
+
+- **400**: Bad Request
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorResponse"
 }
 ```
 
@@ -799,7 +807,7 @@
 }
 ```
 
-- **500**: Internal server error
+- **500**: Internal Server Error
   ```json
 {
   "$ref": "#/definitions/model.ErrorResponse"
@@ -864,30 +872,30 @@
 
 **Summary:** Get all compounds with language support
 
-**Description:** Retrieve all compounds with names and descriptions translated to specified language
+**Description:** Retrieve all compounds with names and descriptions translated to specified language, with optional search and sorting
 
 **Parameters:**
 
 | Name | Location | Type | Required | Description |
 |------|----------|------|----------|-------------|
 | lang | query | string | No | Language code (uz, ru, en - default: uz) |
+| search | query | string | No | Search by compound name or description |
+| sort_by | query | string | No | Sort by field |
+| sort_order | query | string | No | Sort order |
 | limit | query | integer | No | Limit (default: 20) |
 | offset | query | integer | No | Offset (default: 0) |
 | expand | query | string | No | Expand related fields |
 
 **Responses:**
 
-- **200**: Compounds retrieved successfully
+- **200**: OK
   ```json
 {
-  "type": "array",
-  "items": {
-    "$ref": "#/definitions/model.CompoundResponse"
-  }
+  "$ref": "#/definitions/model.PaginatedCompoundsResponse"
 }
 ```
 
-- **400**: Invalid request parameters
+- **400**: Bad Request
   ```json
 {
   "$ref": "#/definitions/model.ErrorResponse"
@@ -901,7 +909,7 @@
 }
 ```
 
-- **500**: Internal server error
+- **500**: Internal Server Error
   ```json
 {
   "$ref": "#/definitions/model.ErrorResponse"
@@ -1252,56 +1260,6 @@
 ```
 
 - **400**: Invalid ID format
-  ```json
-{
-  "$ref": "#/definitions/model.ErrorResponse"
-}
-```
-
-- **401**: Unauthorized
-  ```json
-{
-  "$ref": "#/definitions/model.ErrorResponse"
-}
-```
-
-- **500**: Internal server error
-  ```json
-{
-  "$ref": "#/definitions/model.ErrorResponse"
-}
-```
-
-
-## /api/v1/compounds/search
-
-### GET /api/v1/compounds/search 🔒
-
-**Summary:** Search compounds
-
-**Description:** Search for compounds by name or description with pagination
-
-**Parameters:**
-
-| Name | Location | Type | Required | Description |
-|------|----------|------|----------|-------------|
-| q | query | string | Yes | Search query |
-| limit | query | integer | No | Limit (default: 20) |
-| offset | query | integer | No | Offset (default: 0) |
-
-**Responses:**
-
-- **200**: Compounds found
-  ```json
-{
-  "type": "array",
-  "items": {
-    "$ref": "#/definitions/model.CompoundResponse"
-  }
-}
-```
-
-- **400**: Invalid request data
   ```json
 {
   "$ref": "#/definitions/model.ErrorResponse"

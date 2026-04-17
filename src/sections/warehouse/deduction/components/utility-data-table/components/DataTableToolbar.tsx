@@ -13,6 +13,7 @@ import Typography from '@mui/material/Typography';
 import InputAdornment from '@mui/material/InputAdornment';
 
 import { Iconify } from 'src/components/iconify';
+import { NoDataTooltip } from 'src/components/no-data-tooltip';
 
 import { ACCENT, BORDER } from '../utils';
 
@@ -33,6 +34,15 @@ export type DataTableToolbarProps<T> = {
     onPeriodChange?: (period: 'day' | 'week' | 'month' | 'year') => void;
   };
 
+  showStorageSelector?: boolean;
+  storageSelectorProps?: {
+    storageId: string;
+    storages: Array<{ id: string; name: string }>;
+    onStorageChange: (storageId: string) => void;
+    label?: string;
+    disabled?: boolean;
+  };
+
   showCheckboxes: boolean;
   selectedRows: T[];
   batchActions: Array<BatchAction<T>>;
@@ -49,6 +59,8 @@ export function DataTableToolbar<T>({
   periodPickerProps,
   showPeriodButtons = false,
   periodButtonProps,
+  showStorageSelector = false,
+  storageSelectorProps,
   showCheckboxes,
   selectedRows,
   batchActions,
@@ -222,6 +234,44 @@ export function DataTableToolbar<T>({
                     </Button>
                   ))}
                 </Stack>
+              )}
+
+              {showStorageSelector && (
+                <NoDataTooltip enabled={storageSelectorProps?.storages.length === 0} title="No storages available">
+                  <TextField
+                    select
+                    size="small"
+                    label={storageSelectorProps?.label || 'Storage'}
+                    value={storageSelectorProps?.storageId || ''}
+                    onChange={(e) => storageSelectorProps?.onStorageChange?.(e.target.value)}
+                    SelectProps={{ native: true }}
+                    disabled={storageSelectorProps?.disabled || storageSelectorProps?.storages.length === 0}
+                    sx={{
+                      minWidth: 150,
+                      '& .MuiInputBase-root': {
+                        height: 34,
+                        fontSize: 12.5,
+                        backgroundColor: 'rgba(9,9,11,0.7)',
+                        borderRadius: 1,
+                        fontFamily: '"Inter", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif',
+                      },
+                      '& .MuiOutlinedInput-notchedOutline': { borderColor: BORDER },
+                      '& .MuiInputBase-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                        borderColor: ACCENT,
+                        boxShadow: `0 0 0 3px rgba(245, 158, 11, 0.15)`,
+                      },
+                    }}
+                  >
+                    <option value="" disabled hidden>
+                      Select Storage
+                    </option>
+                    {storageSelectorProps?.storages.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name}
+                      </option>
+                    ))}
+                  </TextField>
+                </NoDataTooltip>
               )}
             </Stack>
           )}

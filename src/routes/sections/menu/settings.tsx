@@ -32,7 +32,7 @@ const EmployeeListView = lazy(() =>
 export const settingRoutes: RouteObject[] = [
   { path: 'settings/users', element: <EmployeeListView /> },
   { path: 'settings/users/new', element: <EmployeeFormView isNew /> },
-  { path: 'settings/users/:id', element: <EmployeeFormView /> },
+  { path: 'settings/users/:id/edit', element: <EmployeeFormView /> },
   { path: 'settings/devices', element: <ConnectedDeviceListView /> },
   { path: 'settings/management', element: <ManagementListView /> },
   { path: 'settings/restaurant-info', element: <RestaurantInfoListView /> },

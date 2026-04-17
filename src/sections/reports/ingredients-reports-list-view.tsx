@@ -527,37 +527,6 @@ export function IngredientReportsListView() {
                         flex: 1,
                     }}
                 >
-            {/* Storage - Required */}
-            <NoDataTooltip enabled={isStoragesEmpty} title={noDataText}>
-                <TextField
-                    select
-                    label={t('ingredientReports.storage') || 'Storage'}
-                    value={selectedStorageId}
-                    onChange={(e) => handleStorageChange(e.target.value)}
-                    SelectProps={{ native: true }}
-                    size="small"
-                    fullWidth
-                    InputLabelProps={{ shrink: true }}
-                    sx={{
-                        '& .MuiOutlinedInput-root': {
-                            '&.Mui-focused fieldset': {
-                                borderColor: '#1890FF',
-                            },
-                        },
-                    }}
-                    disabled={isStoragesEmpty}
-                >
-                    <option value="" disabled hidden>
-                        {t('common.select') || 'Select Storage'}
-                    </option>
-                    {filterOptions.storage_id.map((option) => (
-                        <option key={option.value} value={option.value}>
-                            {option.label}
-                        </option>
-                    ))}
-                </TextField>
-            </NoDataTooltip>
-
             {/* Start Date - Required */}
             <DatePicker
                 label={t('ingredientReports.startDate') || 'Start Date'}
@@ -596,6 +565,37 @@ export function IngredientReportsListView() {
                     },
                 }}
             />
+
+            {/* Storage - Required */}
+            <NoDataTooltip enabled={isStoragesEmpty} title={noDataText}>
+                <TextField
+                    select
+                    label={t('ingredientReports.storage') || 'Storage'}
+                    value={selectedStorageId}
+                    onChange={(e) => handleStorageChange(e.target.value)}
+                    SelectProps={{ native: true }}
+                    size="small"
+                    fullWidth
+                    InputLabelProps={{ shrink: true }}
+                    sx={{
+                        '& .MuiOutlinedInput-root': {
+                            '&.Mui-focused fieldset': {
+                                borderColor: '#1890FF',
+                            },
+                        },
+                    }}
+                    disabled={isStoragesEmpty}
+                >
+                    <option value="" disabled hidden>
+                        {t('common.select') || 'Select Storage'}
+                    </option>
+                    {filterOptions.storage_id.map((option) => (
+                        <option key={option.value} value={option.value}>
+                            {option.label}
+                        </option>
+                    ))}
+                </TextField>
+            </NoDataTooltip>
 
             {/* Ingredient - Optional */}
             <NoDataTooltip enabled={isIngredientsEmpty} title={noDataText}>
@@ -882,6 +882,14 @@ export function IngredientReportsListView() {
                         onPeriodChange: (period: 'day' | 'week' | 'month' | 'year') => {
                             applyRange(period);
                         }
+                    }}
+                    showStorageSelector
+                    storageSelectorProps={{
+                        storageId: selectedStorageId,
+                        storages: storages.map((s: any) => ({ id: s.id, name: s.name })),
+                        onStorageChange: handleStorageChange,
+                        label: t('ingredientReports.storage') || 'Storage',
+                        disabled: isStoragesEmpty,
                     }}
                     defaultConfig={{
                         order: ['ingredient_name', 'measurement', 'cost_start', 'begin_qty', 'invoice_in_qty', 'order_out_qty', 'surplus_qty', 'shortage_qty', 'end_qty', 'cost_end', 'end_amount', 'actions'],

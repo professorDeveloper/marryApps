@@ -1,4 +1,5 @@
 import type { IUser } from 'src/types/user';
+import type { EmployeeListProps } from '../types';
 import type { RowAction, BatchAction, DataTableColumn } from 'src/sections/warehouse/deduction/components/utility-data-table/types/types';
 
 import { useTranslation } from 'react-i18next';
@@ -6,7 +7,8 @@ import { useMemo, useState, useCallback } from 'react';
 
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
-import { useTheme } from '@mui/material/styles';
+import Tooltip from '@mui/material/Tooltip';
+import IconButton from '@mui/material/IconButton';
 
 import { paths } from 'src/routes/paths';
 
@@ -27,13 +29,20 @@ import { EmployeeStatusCell } from './EmployeeStatusCell';
 import { EmployeeDeleteDialog } from './EmployeeDeleteDialog';
 import { ROLE_COLORS, STATUS_COLORS, DEFAULT_DATATABLE_CONFIG, EMPLOYEE_DATATABLE_PERSIST_KEY } from '../constants';
 
-export function EmployeeListView() {
-    const theme = useTheme();
+export function EmployeeListView({ role, useStaffApi = false, branchId }: EmployeeListProps) {
     const { t } = useTranslation('menu');
-    const role = 'user'; // TODO: Remove this when the API is ready
-    const useStaffApi = false; // TODO: Remove this when the API is ready
-    // API hooks
-    const { employees, employeesLoading, deleteEmployee, deleteMultipleEmployees } = useEmployeeApi(role, useStaffApi);
+    const {
+        employees,
+        totalCount,
+        query,
+        page,
+        rowsPerPage,
+        setQuery,
+        setPage,
+        setRowsPerPage,
+        deleteEmployee,
+        deleteMultipleEmployees,
+    } = useEmployeeApi(role, useStaffApi, branchId);
 
     // State
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -41,6 +50,15 @@ export function EmployeeListView() {
 
     // View modal hook
     const { isOpen, selectedData: selectedEmployee, openModal, closeModal } = useGenericViewModal<IUser>();
+
+    const handleEdit = useCallback((employeeId: string) => {
+        window.location.href = paths.settings.usersEdit(employeeId);
+    }, []);
+
+    const handleRequestDelete = useCallback((employeeId: string) => {
+        setUserToDelete(employeeId);
+        setDeleteDialogOpen(true);
+    }, []);
 
     // DataTable columns configuration
     const columns = useMemo<DataTableColumn<IUser>[]>(
@@ -104,31 +122,31 @@ export function EmployeeListView() {
                     <EmployeeStatusCell employee={row} statusColors={STATUS_COLORS} />
                 ),
             },
-        ],
-        [t]
-    );
-
-    // Row actions
-    const rowActions = useMemo<RowAction<IUser>[]>(
-        () => [
             {
-                label: t('users.edit'),
-                icon: <Iconify icon="solar:pen-bold" />,
-                onClick: (row) => {
-                    const editPath = paths.settings.usersEdit(row.id);
-                    window.location.href = editPath;
-                },
-            },
-            {
-                label: t('users.delete'),
-                icon: <Iconify icon="solar:trash-bin-trash-bold" />,
-                onClick: (row) => {
-                    setUserToDelete(row.id);
-                    setDeleteDialogOpen(true);
-                },
+                key: 'actions',
+                label: t('common.actions', 'Actions'),
+                width: 140,
+                sortable: false,
+                filterable: false,
+                reorderable: true,
+                align: 'center',
+                renderCell: ({ row }) => (
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
+                        <Tooltip title={t('users.edit')}>
+                            <IconButton size="small" onClick={() => handleEdit(row.id)}>
+                                <Iconify icon="solar:pen-bold" width={18} />
+                            </IconButton>
+                        </Tooltip>
+                        <Tooltip title={t('users.delete')}>
+                            <IconButton size="small" color="error" onClick={() => handleRequestDelete(row.id)}>
+                                <Iconify icon="solar:trash-bin-trash-bold" width={18} />
+                            </IconButton>
+                        </Tooltip>
+                    </Box>
+                ),
             },
         ],
-        [role, t]
+        [handleEdit, handleRequestDelete, t]
     );
 
     // Batch actions
@@ -177,17 +195,16 @@ export function EmployeeListView() {
         openModal(employee);
     }, [openModal]);
 
-    // Add view action to row actions
-    const enhancedRowActions = useMemo<RowAction<IUser>[]>(
+    // Row actions
+    const rowActions = useMemo<RowAction<IUser>[]>(
         () => [
             {
                 label: t('view'),
                 icon: <Iconify icon="solar:eye-bold" />,
                 onClick: handleView,
             },
-            ...rowActions,
         ],
-        [handleView, rowActions]
+        [handleView, t]
     );
 
     // Header actions (Add button)
@@ -203,17 +220,23 @@ export function EmployeeListView() {
 
     return (
         <Box sx={{m:2}}>
-            {/* DataTable */}
             <DataTable<IUser>
                 persistKey={EMPLOYEE_DATATABLE_PERSIST_KEY}
                 data={employees}
                 columns={columns}
                 defaultConfig={DEFAULT_DATATABLE_CONFIG}
-                onReset={() => {/* Handle reset if needed */}}
+                onReset={() => setQuery('')}
                 showRowNumbers
                 batchActions={batchActions}
-                rowActions={enhancedRowActions}
+                rowActions={rowActions}
                 getRowId={(row) => row.id}
+                searchValue={query}
+                onSearchChange={setQuery}
+                page={page}
+                rowsPerPage={rowsPerPage}
+                totalCount={totalCount}
+                onPageChange={setPage}
+                onRowsPerPageChange={setRowsPerPage}
                 emptyTitle={t('users.noEmployees', 'No employees found')}
                 emptySubtitle={t('users.noEmployeesSubtitle', 'Try adjusting filters or check if employees exist for this role.')}
                 headerActions={headerActions}
@@ -238,6 +261,3 @@ export function EmployeeListView() {
         </Box>
     );
 }
-
-
-

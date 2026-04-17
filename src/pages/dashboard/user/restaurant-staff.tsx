@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
-import { EmployeeListView } from 'src/sections/user/employee-list-view';
+import { EmployeeListView } from 'src/sections/user/employee';
 
 export function RestaurantStaffPage() {
     const { t } = useTranslation('menu');

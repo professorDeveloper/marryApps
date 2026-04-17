@@ -34,7 +34,7 @@ import { useCashRegisters } from '../hooks/useCashRegisters';
 export const EmployeeFormView = React.memo(function EmployeeFormView({ isNew = false }: EmployeeFormProps) {
     const { t } = useTranslation('menu');
     const router = useRouter();
-    const { userId } = useParams();
+    const { id: userId } = useParams();
 
     const createUser = useCreateUser();
     const updateUser = useUpdateUser();
@@ -48,6 +48,7 @@ export const EmployeeFormView = React.memo(function EmployeeFormView({ isNew = f
         phone_number: '',
         password: '',
         role: '',
+        is_active: true,
         pincode: '',
         terminal: '',
         cash_register_id: '',
@@ -65,6 +66,10 @@ export const EmployeeFormView = React.memo(function EmployeeFormView({ isNew = f
                 phone_number: existingUser.phone_number || '',
                 password: '', // Password is not returned from backend for security
                 role: (existingUser.role || '') as UserRole | '',
+                is_active:
+                    typeof existingUser.is_active === 'boolean'
+                        ? existingUser.is_active
+                        : existingUser.status === 'active',
                 pincode: existingUser.pincode || '',
                 terminal: existingUser.terminal || '',
                 cash_register_id: existingUser.cash_register_id || '',
@@ -72,7 +77,7 @@ export const EmployeeFormView = React.memo(function EmployeeFormView({ isNew = f
         }
     }, [existingUser, isNew]);
 
-    const handleChange = useCallback((field: keyof EmployeeFormState, value: string) => {
+    const handleChange = useCallback((field: keyof EmployeeFormState, value: string | boolean) => {
         setFormData((prev) => ({
             ...prev,
             [field]: value,
@@ -93,14 +98,6 @@ export const EmployeeFormView = React.memo(function EmployeeFormView({ isNew = f
             setError(t('users.roleRequired', 'Role is required'));
             return false;
         }
-        if (isNew && !formData.password) {
-            setError(t('users.passwordRequired', 'Password is required'));
-            return false;
-        }
-        if (!formData.pincode) {
-            setError(t('users.pincodeRequired', 'PIN code is required'));
-            return false;
-        }
         if (formData.role === 'cashier' && !formData.cash_register_id) {
             setError(t('users.cashRegisterRequired', 'Cash register is required'));
             return false;
@@ -119,15 +116,22 @@ export const EmployeeFormView = React.memo(function EmployeeFormView({ isNew = f
                 const userData: IUserFormData = {
                     full_name: formData.full_name || '',
                     username: formData.username || '',
-                    password: formData.password || '',
                     role: (formData.role || 'user') as UserRole,
+                    is_active: formData.is_active,
                     phone_number: formData.phone_number,
-                    pincode: formData.pincode || '',
                     terminal: formData.terminal,
                     cash_register_id: formData.cash_register_id,
                     brand_id: localStorage.getItem('brand_id') || 'default_brand',
                     branch_id: ownBranchId,
                 };
+
+                if (formData.password.trim()) {
+                    userData.password = formData.password.trim();
+                }
+
+                if (formData.pincode.trim()) {
+                    userData.pincode = formData.pincode.trim();
+                }
 
                 if (isNew) {
                     await createUser(userData);
@@ -408,7 +412,32 @@ export const EmployeeFormView = React.memo(function EmployeeFormView({ isNew = f
                                     </Select>
                                 </FormControl>
 
-                                {isNew && (
+                                <FormControl fullWidth size="small" disabled={isSubmitting}>
+                                    <InputLabel sx={{ color: '#7A8290' }}>{t('users.status', 'Status')}</InputLabel>
+                                    <Select
+                                        value={formData.is_active ? 'active' : 'inactive'}
+                                        onChange={(e) => handleChange('is_active', e.target.value === 'active')}
+                                        label={t('users.status', 'Status')}
+                                        sx={{
+                                            backgroundColor: '#242733',
+                                            color: '#FFFFFF',
+                                            '& .MuiOutlinedInput-notchedOutline': {
+                                                borderColor: '#3D424F',
+                                            },
+                                            '&:hover .MuiOutlinedInput-notchedOutline': {
+                                                borderColor: '#545D6B',
+                                            },
+                                            '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                                borderColor: '#FF6B35',
+                                            },
+                                        }}
+                                    >
+                                        <MenuItem value="active">{t('common.active', 'Active')}</MenuItem>
+                                        <MenuItem value="inactive">{t('common.inactive', 'Inactive')}</MenuItem>
+                                    </Select>
+                                </FormControl>
+
+                                {formData.role === 'cashier' && (
                                     <FormControl fullWidth size="small" disabled={isSubmitting || cashRegistersLoading}>
                                         <InputLabel sx={{ color: '#7A8290' }}>
                                             {t('cashbox.cashiers.title', 'Cash Register')}
@@ -543,6 +572,3 @@ export const EmployeeFormView = React.memo(function EmployeeFormView({ isNew = f
         </Box>
     );
 });
-
-
-

@@ -23,6 +23,15 @@ interface BackendResponse<T> {
     code: number;
 }
 
+interface GetUsersParams {
+    query?: string;
+    role?: string;
+    staff?: boolean;
+    branch_id?: string;
+    limit?: number;
+    offset?: number;
+}
+
 function normalizeUser(rawUser: any): IUser {
     return {
         ...rawUser,
@@ -33,6 +42,7 @@ function normalizeUser(rawUser: any): IUser {
         cash_register_id: rawUser?.cash_register_id ?? rawUser?.cashRegisterId ?? '',
         pincode: rawUser?.pincode ?? rawUser?.pinCode ?? '',
         terminal: rawUser?.terminal ?? rawUser?.terminal_name ?? '',
+        is_active: rawUser?.is_active,
         status:
             rawUser?.status ??
             (typeof rawUser?.is_active === 'boolean'
@@ -84,6 +94,20 @@ function getBrandIdFromToken(): string {
     }
 }
 
+function buildUsersListUrl(params: GetUsersParams = {}) {
+    const searchParams = new URLSearchParams();
+
+    if (params.query?.trim()) searchParams.set('query', params.query.trim());
+    if (params.role?.trim()) searchParams.set('role', params.role.trim());
+    if (typeof params.staff === 'boolean') searchParams.set('staff', String(params.staff));
+    if (params.branch_id?.trim()) searchParams.set('branch_id', params.branch_id.trim());
+    if (typeof params.limit === 'number') searchParams.set('limit', String(params.limit));
+    if (typeof params.offset === 'number') searchParams.set('offset', String(params.offset));
+
+    const queryString = searchParams.toString();
+    return queryString ? `${endpoints.users.list}?${queryString}` : endpoints.users.list;
+}
+
 
 /**
  * Get users by role
@@ -118,26 +142,32 @@ export function useGetUsersByRole(role: string, useStaffApi = false) {
 }
 
 /**
- * Get all users
+ * Get users with filters
  */
-export function useGetUsers() {
-    const url = endpoints.users.list;
+export function useGetUsers(params: GetUsersParams = {}) {
+    const url = buildUsersListUrl(params);
 
-    const { data, isLoading, error, isValidating } = useSWR<BackendResponse<IUser[]>>(
+    const { data, isLoading, error, isValidating } = useSWR<BackendResponse<IUser[]> | IUser[]>(
         url,
         fetcher,
         { ...swrOptions }
     );
 
+    const users = useMemo(() => {
+        const rawUsers = Array.isArray(data) ? data : (data?.data || []);
+        return rawUsers.map((user: any) => normalizeUser(user));
+    }, [data]);
+
     const memoizedValue = useMemo(
         () => ({
-            users: data?.data || [],
+            users,
+            totalCount: users.length,
             usersLoading: isLoading,
             usersError: error,
             usersValidating: isValidating,
-            usersEmpty: !isLoading && !isValidating && !data?.data?.length,
+            usersEmpty: !isLoading && !isValidating && !users.length,
         }),
-        [data, error, isLoading, isValidating]
+        [error, isLoading, isValidating, users]
     );
 
     return memoizedValue;
@@ -196,11 +226,18 @@ export function useCreateUser() {
                     || '',
                 fullName: formData.full_name || formData.fullName || '',
                 username: formData.username,
-                password: formData.password || Math.random().toString(36).slice(-8), // Generate random if not provided
                 phoneNumber: formData.phone_number || formData.phoneNumber || '',
-                pincode: formData.pincode || '',
                 role: formData.role,
+                is_active: formData.is_active,
             };
+
+            if (formData.password?.trim()) {
+                registerData.password = formData.password.trim();
+            }
+
+            if (formData.pincode?.trim()) {
+                registerData.pincode = formData.pincode.trim();
+            }
 
             if (formData.role === 'cashier' && formData.cash_register_id) {
                 registerData.cash_register_id = formData.cash_register_id;

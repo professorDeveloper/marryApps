@@ -12,6 +12,7 @@ export interface IUser {
     username: string;
     role: UserRole;
     status: UserStatus;
+    is_active?: boolean;
     phone_number?: string;
     brand_id?: string;
     branch_id?: string;
@@ -29,6 +30,7 @@ export interface IUserFormData {
     password?: string;
     role: UserRole;
     status?: UserStatus;
+    is_active?: boolean;
     phone_number?: string;
     phoneNumber?: string;
     pincode?: string;
@@ -45,10 +47,11 @@ export interface IUserRegisterData {
     cash_register_id?: string;
     fullName: string;
     username: string;
-    password: string;
+    password?: string;
     phoneNumber: string;
-    pincode: string;
+    pincode?: string;
     role: UserRole;
+    is_active?: boolean;
 }
 
 export interface IUserTableFilters {

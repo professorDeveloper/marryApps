@@ -3,7 +3,7 @@
 > **Version:** 1.0  
 > **Base URL:** https://api.maryai.uz/  
 > **Description:** MaryAI API server with multi-language support (uz, ru, en)  
-> **Last Updated:** 2026-04-14T16:58:40.298Z
+> **Last Updated:** 2026-04-17T08:55:38.960Z
 
 ---
 
@@ -24,19 +24,19 @@ This documentation is organized by functional modules for easier navigation:
 *6 endpoints*
 
 ### [CAFE](./cafe.md) - ☕ Cafe table management and reservations
-*14 endpoints*
+*13 endpoints*
 
 ### [CORE](./core.md) - ⚙️ Core system endpoints
-*154 endpoints*
+*145 endpoints*
 
 ### [CASH](./cash.md) - 💰 Cash register and shift management
 *8 endpoints*
 
 ### [MENU](./menu.md) - 📋 Menu items, categories, and modifiers
-*19 endpoints*
+*18 endpoints*
 
 ### [WAREHOUSE](./warehouse.md) - 📦 Inventory, stock, and warehouse management
-*55 endpoints*
+*54 endpoints*
 
 ### [STAFF](./staff.md) - 👥 Staff management and operations
 *4 endpoints*
@@ -65,7 +65,7 @@ Authorization: Bearer <your-token>
 ## 📊 Quick Stats
 
 - **Total Modules**: 13
-- **Total Endpoints**: 282
+- **Total Endpoints**: 270
 
 ---
 
@@ -86,4 +86,4 @@ Common data models are shared across modules. Refer to individual module documen
 ---
 
 *This documentation is automatically generated from the Swagger/OpenAPI specification*  
-*Last updated: 2026-04-14T16:58:40.298Z*
+*Last updated: 2026-04-17T08:55:38.960Z*

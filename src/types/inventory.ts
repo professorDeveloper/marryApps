@@ -79,6 +79,8 @@ export interface IInventoryListParams {
     date_to?: string;
     storage_id?: string;
     status?: string;
+    sort_by?: string;
+    sort_order?: string;
 }
 
 export interface IInventoryListResult {

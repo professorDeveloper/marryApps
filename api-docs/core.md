@@ -2,7 +2,7 @@
 
 > **Module:** core  
 > **Base URL:** https://api.maryai.uz/  
-> **Last Updated:** 2026-04-14T16:58:40.293Z
+> **Last Updated:** 2026-04-17T08:55:38.956Z
 
 ---
 
@@ -861,26 +861,33 @@
 
 **Summary:** Get all departments
 
-**Description:** Retrieve all departments with pagination and optional search
+**Description:** Retrieve all departments with pagination, optional search, storage filter and sorting
 
 **Parameters:**
 
 | Name | Location | Type | Required | Description |
 |------|----------|------|----------|-------------|
+| search | query | string | No | Search by department name |
+| storage_id | query | string | No | Filter by storage ID |
+| sort_by | query | string | No | Sort by field |
+| sort_order | query | string | No | Sort order |
 | limit | query | integer | No | Limit (default: 20) |
 | offset | query | integer | No | Offset (default: 0) |
-| search | query | string | No | Search by name |
-| expand | query | string | No | Expand FK relations (comma-separated: storage_id, name_i18n) |
+| expand | query | string | No | Expand related fields |
 
 **Responses:**
 
-- **200**: Departments found
+- **200**: OK
   ```json
 {
-  "type": "array",
-  "items": {
-    "$ref": "#/definitions/model.DepartmentResponse"
-  }
+  "$ref": "#/definitions/model.PaginatedDepartmentsResponse"
+}
+```
+
+- **400**: Bad Request
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorResponse"
 }
 ```
 
@@ -891,7 +898,7 @@
 }
 ```
 
-- **500**: Internal server error
+- **500**: Internal Server Error
   ```json
 {
   "$ref": "#/definitions/model.ErrorResponse"
@@ -1041,56 +1048,6 @@
 ```
 
 - **404**: Department not found
-  ```json
-{
-  "$ref": "#/definitions/model.ErrorResponse"
-}
-```
-
-- **500**: Internal server error
-  ```json
-{
-  "$ref": "#/definitions/model.ErrorResponse"
-}
-```
-
-
-## /api/v1/departments/search
-
-### GET /api/v1/departments/search 🔒
-
-**Summary:** Search departments
-
-**Description:** Search for departments by name with pagination
-
-**Parameters:**
-
-| Name | Location | Type | Required | Description |
-|------|----------|------|----------|-------------|
-| q | query | string | Yes | Search query |
-| limit | query | integer | No | Limit (default: 20) |
-| offset | query | integer | No | Offset (default: 0) |
-
-**Responses:**
-
-- **200**: Departments found
-  ```json
-{
-  "type": "array",
-  "items": {
-    "$ref": "#/definitions/model.DepartmentResponse"
-  }
-}
-```
-
-- **400**: Invalid request data
-  ```json
-{
-  "$ref": "#/definitions/model.ErrorResponse"
-}
-```
-
-- **401**: Unauthorized
   ```json
 {
   "$ref": "#/definitions/model.ErrorResponse"
@@ -1748,7 +1705,7 @@
 
 **Summary:** Get all goods
 
-**Description:** Get all goods with pagination and optional filters
+**Description:** Get all goods with pagination, search, filters and sorting
 
 **Parameters:**
 
@@ -1761,17 +1718,18 @@
 | category_id | query | string | No | Filter by category ID |
 | department_id | query | string | No | Filter by department ID |
 | storage_id | query | string | No | Filter by storage ID |
-| search | query | string | No | Search by name |
+| search | query | string | No | Search by name or description |
+| min_price | query | string | No | Minimum price |
+| max_price | query | string | No | Maximum price |
+| sort_by | query | string | No | Sort by field |
+| sort_order | query | string | No | Sort order |
 
 **Responses:**
 
 - **200**: OK
   ```json
 {
-  "type": "array",
-  "items": {
-    "$ref": "#/definitions/model.GoodResponse"
-  }
+  "$ref": "#/definitions/model.PaginatedGoodsResponse"
 }
 ```
 
@@ -1855,7 +1813,7 @@
 
 **Summary:** Get all goods with language support
 
-**Description:** Retrieve all goods/menu items with names and descriptions translated to specified language
+**Description:** Retrieve all goods/menu items with names and descriptions translated to specified language, including search, filters and sorting
 
 **Parameters:**
 
@@ -1868,21 +1826,22 @@
 | category_id | query | string | No | Filter by category ID |
 | department_id | query | string | No | Filter by department ID |
 | storage_id | query | string | No | Filter by storage ID |
-| search | query | string | No | Search by name |
+| search | query | string | No | Search by name or description |
+| min_price | query | string | No | Minimum price |
+| max_price | query | string | No | Maximum price |
+| sort_by | query | string | No | Sort by field |
+| sort_order | query | string | No | Sort order |
 
 **Responses:**
 
-- **200**: Goods retrieved successfully
+- **200**: OK
   ```json
 {
-  "type": "array",
-  "items": {
-    "$ref": "#/definitions/model.GoodResponse"
-  }
+  "$ref": "#/definitions/model.PaginatedGoodsResponse"
 }
 ```
 
-- **400**: Invalid request parameters
+- **400**: Bad Request
   ```json
 {
   "$ref": "#/definitions/model.ErrorResponse"
@@ -1896,7 +1855,7 @@
 }
 ```
 
-- **500**: Internal server error
+- **500**: Internal Server Error
   ```json
 {
   "$ref": "#/definitions/model.ErrorResponse"
@@ -2214,109 +2173,6 @@
   ```json
 {
   "$ref": "#/definitions/model.ErrorData"
-}
-```
-
-
-## /api/v1/goods/search
-
-### GET /api/v1/goods/search 🔒
-
-**Summary:** Search goods
-
-**Description:** Search goods by name or description
-
-**Parameters:**
-
-| Name | Location | Type | Required | Description |
-|------|----------|------|----------|-------------|
-| lang | query | string | No | Language (uz, ru, en) |
-| query | query | string | Yes | Search query |
-| limit | query | integer | No | Limit |
-| offset | query | integer | No | Offset |
-
-**Responses:**
-
-- **200**: OK
-  ```json
-{
-  "type": "array",
-  "items": {
-    "$ref": "#/definitions/model.GoodResponse"
-  }
-}
-```
-
-- **400**: Bad Request
-  ```json
-{
-  "$ref": "#/definitions/model.ErrorResponse"
-}
-```
-
-- **401**: Unauthorized
-  ```json
-{
-  "$ref": "#/definitions/model.ErrorResponse"
-}
-```
-
-- **500**: Internal Server Error
-  ```json
-{
-  "$ref": "#/definitions/model.ErrorResponse"
-}
-```
-
-
-## /api/v1/goods/search/by-price
-
-### GET /api/v1/goods/search/by-price 🔒
-
-**Summary:** Get goods by price range
-
-**Description:** Get goods within a price range with pagination
-
-**Parameters:**
-
-| Name | Location | Type | Required | Description |
-|------|----------|------|----------|-------------|
-| lang | query | string | No | Language (uz, ru, en) |
-| min_price | query | string | Yes | Minimum price |
-| max_price | query | string | Yes | Maximum price |
-| limit | query | integer | No | Limit |
-| offset | query | integer | No | Offset |
-
-**Responses:**
-
-- **200**: OK
-  ```json
-{
-  "type": "array",
-  "items": {
-    "$ref": "#/definitions/model.GoodResponse"
-  }
-}
-```
-
-- **400**: Bad Request
-  ```json
-{
-  "$ref": "#/definitions/model.ErrorResponse"
-}
-```
-
-- **401**: Unauthorized
-  ```json
-{
-  "$ref": "#/definitions/model.ErrorResponse"
-}
-```
-
-- **500**: Internal Server Error
-  ```json
-{
-  "$ref": "#/definitions/model.ErrorResponse"
 }
 ```
 
@@ -2840,12 +2696,15 @@
 
 **Summary:** Get all group transactions
 
-**Description:** Retrieve all group transactions with pagination
+**Description:** Retrieve all group transactions with pagination, optional search and sorting
 
 **Parameters:**
 
 | Name | Location | Type | Required | Description |
 |------|----------|------|----------|-------------|
+| search | query | string | No | Search by group transaction name |
+| sort_by | query | string | No | Sort by field |
+| sort_order | query | string | No | Sort order |
 | limit | query | integer | No | Limit |
 | offset | query | integer | No | Offset |
 
@@ -2854,10 +2713,14 @@
 - **200**: OK
   ```json
 {
-  "type": "array",
-  "items": {
-    "$ref": "#/definitions/model.GroupTransactionResponse"
-  }
+  "$ref": "#/definitions/model.PaginatedGroupTransactionsResponse"
+}
+```
+
+- **400**: Bad Request
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorResponse"
 }
 ```
 
@@ -2906,49 +2769,6 @@
 ```
 
 - **401**: Unauthorized
-  ```json
-{
-  "$ref": "#/definitions/model.ErrorResponse"
-}
-```
-
-- **500**: Internal Server Error
-  ```json
-{
-  "$ref": "#/definitions/model.ErrorResponse"
-}
-```
-
-
-## /api/v1/group-transactions/search
-
-### GET /api/v1/group-transactions/search 🔒
-
-**Summary:** Search group transactions
-
-**Description:** Search group transactions by name
-
-**Parameters:**
-
-| Name | Location | Type | Required | Description |
-|------|----------|------|----------|-------------|
-| q | query | string | Yes | Search query |
-| limit | query | integer | No | Limit |
-| offset | query | integer | No | Offset |
-
-**Responses:**
-
-- **200**: OK
-  ```json
-{
-  "type": "array",
-  "items": {
-    "$ref": "#/definitions/model.GroupTransactionResponse"
-  }
-}
-```
-
-- **400**: Bad Request
   ```json
 {
   "$ref": "#/definitions/model.ErrorResponse"
@@ -3126,25 +2946,32 @@
 
 **Summary:** Get all halls
 
-**Description:** Retrieve all halls with pagination
+**Description:** Retrieve all halls with pagination, optional search and sorting
 
 **Parameters:**
 
 | Name | Location | Type | Required | Description |
 |------|----------|------|----------|-------------|
+| search | query | string | No | Search by hall name |
+| sort_by | query | string | No | Sort by field |
+| sort_order | query | string | No | Sort order |
 | limit | query | integer | No | Limit (default: 20) |
 | offset | query | integer | No | Offset (default: 0) |
 | expand | query | string | No | Expand related fields |
 
 **Responses:**
 
-- **200**: Halls found
+- **200**: OK
   ```json
 {
-  "type": "array",
-  "items": {
-    "$ref": "#/definitions/model.HallResponse"
-  }
+  "$ref": "#/definitions/model.PaginatedHallsResponse"
+}
+```
+
+- **400**: Bad Request
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorResponse"
 }
 ```
 
@@ -3155,7 +2982,7 @@
 }
 ```
 
-- **500**: Internal server error
+- **500**: Internal Server Error
   ```json
 {
   "$ref": "#/definitions/model.ErrorResponse"
@@ -3220,30 +3047,30 @@
 
 **Summary:** Get all halls with language support
 
-**Description:** Retrieve all halls with names translated to specified language (uz, ru, en)
+**Description:** Retrieve all halls with names translated to specified language, with optional search and sorting
 
 **Parameters:**
 
 | Name | Location | Type | Required | Description |
 |------|----------|------|----------|-------------|
 | lang | query | string | No | Language code (uz, ru, en - default: uz) |
+| search | query | string | No | Search by hall name |
+| sort_by | query | string | No | Sort by field |
+| sort_order | query | string | No | Sort order |
 | limit | query | integer | No | Limit (default: 20) |
 | offset | query | integer | No | Offset (default: 0) |
 | expand | query | string | No | Expand related fields |
 
 **Responses:**
 
-- **200**: Halls retrieved successfully
+- **200**: OK
   ```json
 {
-  "type": "array",
-  "items": {
-    "$ref": "#/definitions/model.HallResponse"
-  }
+  "$ref": "#/definitions/model.PaginatedHallsResponse"
 }
 ```
 
-- **400**: Invalid request parameters
+- **400**: Bad Request
   ```json
 {
   "$ref": "#/definitions/model.ErrorResponse"
@@ -3257,7 +3084,7 @@
 }
 ```
 
-- **500**: Internal server error
+- **500**: Internal Server Error
   ```json
 {
   "$ref": "#/definitions/model.ErrorResponse"
@@ -3335,56 +3162,6 @@
 | expand | query | string | No | Expand related fields |
 
 **Responses:**
-
-- **401**: Unauthorized
-  ```json
-{
-  "$ref": "#/definitions/model.ErrorResponse"
-}
-```
-
-- **500**: Internal server error
-  ```json
-{
-  "$ref": "#/definitions/model.ErrorResponse"
-}
-```
-
-
-## /api/v1/halls/search
-
-### GET /api/v1/halls/search 🔒
-
-**Summary:** Search halls
-
-**Description:** Search for halls by name with pagination
-
-**Parameters:**
-
-| Name | Location | Type | Required | Description |
-|------|----------|------|----------|-------------|
-| q | query | string | Yes | Search query |
-| limit | query | integer | No | Limit (default: 20) |
-| offset | query | integer | No | Offset (default: 0) |
-
-**Responses:**
-
-- **200**: Halls found
-  ```json
-{
-  "type": "array",
-  "items": {
-    "$ref": "#/definitions/model.HallResponse"
-  }
-}
-```
-
-- **400**: Invalid request data
-  ```json
-{
-  "$ref": "#/definitions/model.ErrorResponse"
-}
-```
 
 - **401**: Unauthorized
   ```json
@@ -3614,7 +3391,7 @@
 
 **Summary:** Get inventories
 
-**Description:** Retrieve inventories with pagination (limit/offset)
+**Description:** Retrieve inventories with pagination, filters, search and sorting
 
 **Parameters:**
 
@@ -3625,19 +3402,26 @@
 | storage_id | query | string | No | Storage ID |
 | ingredient_id | query | string | No | Ingredient ID |
 | status | query | string | No | Inventory status (draft, active, deleted) |
+| search | query | string | No | Search by description or number |
+| sort_by | query | string | No | Sort by field |
+| sort_order | query | string | No | Sort order |
 | limit | query | integer | No | Limit results (default: 20) |
 | offset | query | integer | No | Offset for pagination (default: 0) |
 | expand | query | string | No | Comma-separated relations to expand (e.g. storage_id) |
 
 **Responses:**
 
-- **200**: Inventories retrieved successfully
+- **200**: OK
   ```json
 {
-  "type": "array",
-  "items": {
-    "$ref": "#/definitions/model.InventoryResponse"
-  }
+  "$ref": "#/definitions/model.PaginatedInventoriesResponse"
+}
+```
+
+- **400**: Bad Request
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorResponse"
 }
 ```
 
@@ -3648,7 +3432,7 @@
 }
 ```
 
-- **500**: Internal server error
+- **500**: Internal Server Error
   ```json
 {
   "$ref": "#/definitions/model.ErrorResponse"
@@ -3779,56 +3563,6 @@
   ```json
 {
   "$ref": "#/definitions/model.SuccessResponse"
-}
-```
-
-- **400**: Invalid request
-  ```json
-{
-  "$ref": "#/definitions/model.ErrorResponse"
-}
-```
-
-- **401**: Unauthorized
-  ```json
-{
-  "$ref": "#/definitions/model.ErrorResponse"
-}
-```
-
-- **500**: Internal server error
-  ```json
-{
-  "$ref": "#/definitions/model.ErrorResponse"
-}
-```
-
-
-## /api/v1/inventories/search
-
-### GET /api/v1/inventories/search 🔒
-
-**Summary:** Search inventories
-
-**Description:** Search inventories by description or number
-
-**Parameters:**
-
-| Name | Location | Type | Required | Description |
-|------|----------|------|----------|-------------|
-| q | query | string | Yes | Search query |
-| limit | query | integer | No | Limit results (default: 20) |
-| offset | query | integer | No | Offset for pagination (default: 0) |
-
-**Responses:**
-
-- **200**: Inventories retrieved successfully
-  ```json
-{
-  "type": "array",
-  "items": {
-    "$ref": "#/definitions/model.InventoryResponse"
-  }
 }
 ```
 
@@ -4996,7 +4730,7 @@
 
 **Summary:** Get all invoices
 
-**Description:** Get all invoices with optional filters: date range, storage, supplier, ingredient, status
+**Description:** Get all invoices with optional filters: date range, storage, supplier, ingredient, status, search and sorting
 
 **Parameters:**
 
@@ -5011,6 +4745,9 @@
 | supplier_id | query | string | No | Filter by supplier ID |
 | ingredient_id | query | string | No | Filter by ingredient ID (invoices containing this ingredient) |
 | status | query | string | No | Filter by status (pending, arrived, received, cancelled) |
+| search | query | string | No | Search by supplier name, phone or total amount |
+| sort_by | query | string | No | Sort by field |
+| sort_order | query | string | No | Sort order |
 | expand | query | string | No | Expand related fields |
 
 **Responses:**
@@ -5018,10 +4755,7 @@
 - **200**: OK
   ```json
 {
-  "type": "array",
-  "items": {
-    "$ref": "#/definitions/model.InvoiceResponse"
-  }
+  "$ref": "#/definitions/model.PaginatedInvoicesResponse"
 }
 ```
 
@@ -5197,57 +4931,6 @@
 ```
 
 - **500**: Internal server error
-  ```json
-{
-  "$ref": "#/definitions/model.ErrorResponse"
-}
-```
-
-
-## /api/v1/invoices/search
-
-### GET /api/v1/invoices/search 🔒
-
-**Summary:** Search invoices
-
-**Description:** Search invoices by supplier name
-
-**Parameters:**
-
-| Name | Location | Type | Required | Description |
-|------|----------|------|----------|-------------|
-| lang | query | string | No | Language (uz, ru, en) |
-| q | query | string | Yes | Search query (supplier name) |
-| limit | query | integer | No | Limit |
-| offset | query | integer | No | Offset |
-
-**Responses:**
-
-- **200**: OK
-  ```json
-{
-  "type": "array",
-  "items": {
-    "$ref": "#/definitions/model.InvoiceResponse"
-  }
-}
-```
-
-- **400**: Bad Request
-  ```json
-{
-  "$ref": "#/definitions/model.ErrorResponse"
-}
-```
-
-- **401**: Unauthorized
-  ```json
-{
-  "$ref": "#/definitions/model.ErrorResponse"
-}
-```
-
-- **500**: Internal Server Error
   ```json
 {
   "$ref": "#/definitions/model.ErrorResponse"
@@ -9220,25 +8903,32 @@
 
 **Summary:** Get all storages
 
-**Description:** Retrieve all storages with pagination
+**Description:** Retrieve all storages with pagination, optional search and sorting
 
 **Parameters:**
 
 | Name | Location | Type | Required | Description |
 |------|----------|------|----------|-------------|
-| limit | query | integer | No | Limit results (default: 20) |
-| offset | query | integer | No | Offset for pagination (default: 0) |
-| expand | query | string | No | Comma-separated relations to expand (e.g. name_i18n) |
+| search | query | string | No | Search by storage name |
+| sort_by | query | string | No | Sort by field |
+| sort_order | query | string | No | Sort order |
+| limit | query | integer | No | Limit (default: 20) |
+| offset | query | integer | No | Offset (default: 0) |
+| expand | query | string | No | Expand related fields |
 
 **Responses:**
 
-- **200**: List of all storages
+- **200**: OK
   ```json
 {
-  "type": "array",
-  "items": {
-    "$ref": "#/definitions/model.StorageResponse"
-  }
+  "$ref": "#/definitions/model.PaginatedStoragesResponse"
+}
+```
+
+- **400**: Bad Request
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorResponse"
 }
 ```
 
@@ -9249,7 +8939,7 @@
 }
 ```
 
-- **500**: Internal server error
+- **500**: Internal Server Error
   ```json
 {
   "$ref": "#/definitions/model.ErrorResponse"
@@ -9443,57 +9133,6 @@
 ```
 
 - **400**: Invalid branch ID
-  ```json
-{
-  "$ref": "#/definitions/model.ErrorResponse"
-}
-```
-
-- **401**: Unauthorized
-  ```json
-{
-  "$ref": "#/definitions/model.ErrorResponse"
-}
-```
-
-- **500**: Internal server error
-  ```json
-{
-  "$ref": "#/definitions/model.ErrorResponse"
-}
-```
-
-
-## /api/v1/storages/search
-
-### GET /api/v1/storages/search 🔒
-
-**Summary:** Search storages
-
-**Description:** Search for storages by name
-
-**Parameters:**
-
-| Name | Location | Type | Required | Description |
-|------|----------|------|----------|-------------|
-| q | query | string | Yes | Search query |
-| limit | query | integer | No | Limit results (default: 20) |
-| offset | query | integer | No | Offset for pagination (default: 0) |
-| expand | query | string | No | Comma-separated relations to expand (e.g. name_i18n) |
-
-**Responses:**
-
-- **200**: List of matching storages
-  ```json
-{
-  "type": "array",
-  "items": {
-    "$ref": "#/definitions/model.StorageResponse"
-  }
-}
-```
-
-- **400**: Invalid parameters
   ```json
 {
   "$ref": "#/definitions/model.ErrorResponse"
@@ -9714,25 +9353,25 @@
 
 **Summary:** Get all suppliers
 
-**Description:** Get all suppliers with pagination
+**Description:** Retrieve all suppliers with pagination, optional search and sorting
 
 **Parameters:**
 
 | Name | Location | Type | Required | Description |
 |------|----------|------|----------|-------------|
-| lang | query | string | No | Language (uz, ru, en) |
-| limit | query | integer | No | Limit |
-| offset | query | integer | No | Offset |
+| search | query | string | No | Search by supplier name |
+| sort_by | query | string | No | Sort by field |
+| sort_order | query | string | No | Sort order |
+| limit | query | integer | No | Limit (default: 20) |
+| offset | query | integer | No | Offset (default: 0) |
+| expand | query | string | No | Expand related fields |
 
 **Responses:**
 
 - **200**: OK
   ```json
 {
-  "type": "array",
-  "items": {
-    "$ref": "#/definitions/model.SupplierResponse"
-  }
+  "$ref": "#/definitions/model.PaginatedSuppliersResponse"
 }
 ```
 
@@ -9785,57 +9424,6 @@
   ```json
 {
   "$ref": "#/definitions/model.SupplierResponse"
-}
-```
-
-- **400**: Bad Request
-  ```json
-{
-  "$ref": "#/definitions/model.ErrorResponse"
-}
-```
-
-- **401**: Unauthorized
-  ```json
-{
-  "$ref": "#/definitions/model.ErrorResponse"
-}
-```
-
-- **500**: Internal Server Error
-  ```json
-{
-  "$ref": "#/definitions/model.ErrorResponse"
-}
-```
-
-
-## /api/v1/suppliers/search
-
-### GET /api/v1/suppliers/search 🔒
-
-**Summary:** Search suppliers
-
-**Description:** Search suppliers by name
-
-**Parameters:**
-
-| Name | Location | Type | Required | Description |
-|------|----------|------|----------|-------------|
-| lang | query | string | No | Language (uz, ru, en) |
-| q | query | string | Yes | Search query |
-| limit | query | integer | No | Limit |
-| offset | query | integer | No | Offset |
-
-**Responses:**
-
-- **200**: OK
-  ```json
-{
-  "type": "array",
-  "items": {
-    "$ref": "#/definitions/model.SupplierResponse"
-  }
 }
 ```
 
@@ -10174,29 +9762,44 @@
 
 **Summary:** Get all transactions
 
-**Description:** Supports filters: type (income|expense|transfer), cash_register_id, group_id, date_from, date_to
+**Description:** Retrieve all transactions with pagination, filters, search and sorting
 
 **Parameters:**
 
 | Name | Location | Type | Required | Description |
 |------|----------|------|----------|-------------|
-| type | query | string | No | Filter by type: income, expense, transfer |
-| cash_register_id | query | string | No | Filter by cash register |
-| group_id | query | string | No | Filter by group transaction |
-| date_from | query | string | No | Start date (RFC3339) |
-| date_to | query | string | No | End date (RFC3339) |
-| limit | query | integer | No | Limit (default 20) |
-| offset | query | integer | No | Offset (default 0) |
+| search | query | string | No | Search by comment or description |
+| type | query | string | No | Filter by transaction type |
+| pay_type | query | string | No | Filter by pay type (cash, card) |
+| cash_register_id | query | string | No | Filter by cash register ID |
+| group_transaction_id | query | string | No | Filter by group transaction ID |
+| date_from | query | string | No | Start date (YYYY-MM-DD) |
+| date_to | query | string | No | End date (YYYY-MM-DD) |
+| sort_by | query | string | No | Sort by field |
+| sort_order | query | string | No | Sort order |
+| limit | query | integer | No | Limit (default: 20) |
+| offset | query | integer | No | Offset (default: 0) |
 
 **Responses:**
 
 - **200**: OK
   ```json
 {
-  "type": "array",
-  "items": {
-    "$ref": "#/definitions/model.TransactionResponse"
-  }
+  "$ref": "#/definitions/model.PaginatedTransactionsResponse"
+}
+```
+
+- **400**: Bad Request
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorResponse"
+}
+```
+
+- **401**: Unauthorized
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorResponse"
 }
 ```
 

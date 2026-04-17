@@ -52,6 +52,15 @@ export type DataTableProps<T> = {
     onPeriodChange?: (period: 'day' | 'week' | 'month' | 'year') => void;
   };
 
+  showStorageSelector?: boolean;
+  storageSelectorProps?: {
+    storageId: string;
+    storages: Array<{ id: string; name: string }>;
+    onStorageChange: (storageId: string) => void;
+    label?: string;
+    disabled?: boolean;
+  };
+
   showRowNumbers?: boolean;
   batchActions?: Array<BatchAction<T>>;
   rowActions?: Array<RowAction<T>>;
@@ -94,6 +103,8 @@ export function DataTable<T>({
   periodPickerProps,
   showPeriodButtons = false,
   periodButtonProps,
+  showStorageSelector = false,
+  storageSelectorProps,
   showRowNumbers = true,
   batchActions = [],
   rowActions = [],
@@ -221,8 +232,12 @@ export function DataTable<T>({
     [isFilterControlled, onFiltersChange]
   );
 
-  // Note: Filtering is done on the server side; DataTable only manages filter UI state
+  // Note: If onSortChange is provided, sorting is done on the server side; DataTable only manages UI state
+  // Otherwise, do client-side sorting
   const sortedData = useMemo(() => {
+    // If onSortChange is provided, the parent component handles API sorting
+    if (onSortChange) return data;
+
     if (!sort.key || !sort.dir) return data;
     const col = columns.find((c) => c.key === sort.key);
     if (!col) return data;
@@ -237,7 +252,7 @@ export function DataTable<T>({
       return 0;
     });
     return copy;
-  }, [data, sort, columns]);
+  }, [data, sort, columns, onSortChange]);
 
   // ---- Totals ------------------------------------------------------------
   const totals = useMemo(() => {
@@ -486,6 +501,8 @@ export function DataTable<T>({
         periodPickerProps={periodPickerProps}
         showPeriodButtons={showPeriodButtons}
         periodButtonProps={periodButtonProps}
+        showStorageSelector={showStorageSelector}
+        storageSelectorProps={storageSelectorProps}
         showCheckboxes={showCheckboxes}
         selectedRows={selectedRows}
         batchActions={batchActions}

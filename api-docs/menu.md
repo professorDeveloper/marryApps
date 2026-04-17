@@ -2,7 +2,7 @@
 
 > **Module:** menu  
 > **Base URL:** https://api.maryai.uz/  
-> **Last Updated:** 2026-04-14T16:58:40.296Z
+> **Last Updated:** 2026-04-17T08:55:38.959Z
 
 ---
 
@@ -14,25 +14,34 @@
 
 **Summary:** Get all categories
 
-**Description:** Retrieve all categories with pagination
+**Description:** Retrieve all categories with pagination, optional search, filters and sorting
 
 **Parameters:**
 
 | Name | Location | Type | Required | Description |
 |------|----------|------|----------|-------------|
+| search | query | string | No | Search by category name |
+| department_id | query | string | No | Filter by department ID |
+| storage_id | query | string | No | Filter by storage ID |
+| sort_by | query | string | No | Sort by field |
+| sort_order | query | string | No | Sort order |
 | limit | query | integer | No | Limit (default: 20) |
 | offset | query | integer | No | Offset (default: 0) |
 | expand | query | string | No | Expand related fields |
 
 **Responses:**
 
-- **200**: Categories found
+- **200**: OK
   ```json
 {
-  "type": "array",
-  "items": {
-    "$ref": "#/definitions/model.CategoryResponse"
-  }
+  "$ref": "#/definitions/model.PaginatedCategoriesResponse"
+}
+```
+
+- **400**: Bad Request
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorResponse"
 }
 ```
 
@@ -43,7 +52,7 @@
 }
 ```
 
-- **500**: Internal server error
+- **500**: Internal Server Error
   ```json
 {
   "$ref": "#/definitions/model.ErrorResponse"
@@ -114,24 +123,25 @@
 
 | Name | Location | Type | Required | Description |
 |------|----------|------|----------|-------------|
-| lang | query | string | No | Language code (uz, ru, en - default: uz) |
+| search | query | string | No | Search by category name |
+| department_id | query | string | No | Filter by department ID |
+| storage_id | query | string | No | Filter by storage ID |
+| sort_by | query | string | No | Sort by field |
+| sort_order | query | string | No | Sort order |
 | limit | query | integer | No | Limit (default: 20) |
 | offset | query | integer | No | Offset (default: 0) |
 | expand | query | string | No | Expand related fields |
 
 **Responses:**
 
-- **200**: Categories retrieved successfully
+- **200**: OK
   ```json
 {
-  "type": "array",
-  "items": {
-    "$ref": "#/definitions/model.CategoryResponse"
-  }
+  "$ref": "#/definitions/model.PaginatedCategoriesResponse"
 }
 ```
 
-- **400**: Invalid request parameters
+- **400**: Bad Request
   ```json
 {
   "$ref": "#/definitions/model.ErrorResponse"
@@ -145,7 +155,7 @@
 }
 ```
 
-- **500**: Internal server error
+- **500**: Internal Server Error
   ```json
 {
   "$ref": "#/definitions/model.ErrorResponse"
@@ -333,56 +343,6 @@
   "items": {
     "$ref": "#/definitions/model.CategoryResponse"
   }
-}
-```
-
-- **401**: Unauthorized
-  ```json
-{
-  "$ref": "#/definitions/model.ErrorResponse"
-}
-```
-
-- **500**: Internal server error
-  ```json
-{
-  "$ref": "#/definitions/model.ErrorResponse"
-}
-```
-
-
-## /api/v1/categories/search
-
-### GET /api/v1/categories/search 🔒
-
-**Summary:** Search categories
-
-**Description:** Search for categories by name with pagination
-
-**Parameters:**
-
-| Name | Location | Type | Required | Description |
-|------|----------|------|----------|-------------|
-| q | query | string | Yes | Search query |
-| limit | query | integer | No | Limit (default: 20) |
-| offset | query | integer | No | Offset (default: 0) |
-
-**Responses:**
-
-- **200**: Categories found
-  ```json
-{
-  "type": "array",
-  "items": {
-    "$ref": "#/definitions/model.CategoryResponse"
-  }
-}
-```
-
-- **400**: Invalid request data
-  ```json
-{
-  "$ref": "#/definitions/model.ErrorResponse"
 }
 ```
 

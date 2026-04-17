@@ -2,7 +2,7 @@
 
 > **Module:** cafe  
 > **Base URL:** https://api.maryai.uz/  
-> **Last Updated:** 2026-04-14T16:58:40.293Z
+> **Last Updated:** 2026-04-17T08:55:38.956Z
 
 ---
 
@@ -14,29 +14,45 @@
 
 **Summary:** Get all cafe tables
 
-**Description:** Get all cafe tables with pagination
+**Description:** Retrieve all cafe tables with pagination, optional search, hall filter, status filter and sorting
 
 **Parameters:**
 
 | Name | Location | Type | Required | Description |
 |------|----------|------|----------|-------------|
-| limit | query | integer | No | Limit |
-| offset | query | integer | No | Offset |
-| expand | query | string | No | Expand related fields |
+| search | query | string | No | Search by table number |
+| hall_id | query | string | No | Filter by hall ID |
+| status | query | string | No | Filter by table status |
+| table_type | query | string | No | Filter by table type |
+| sort_by | query | string | No | Sort by field |
+| sort_order | query | string | No | Sort order |
+| limit | query | integer | No | Limit (default: 20) |
+| offset | query | integer | No | Offset (default: 0) |
 
 **Responses:**
 
 - **200**: OK
   ```json
 {
-  "type": "array",
-  "items": {
-    "$ref": "#/definitions/model.CafeTableResponse"
-  }
+  "$ref": "#/definitions/model.PaginatedCafeTablesResponse"
 }
 ```
 
 - **400**: Bad Request
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorResponse"
+}
+```
+
+- **401**: Unauthorized
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorResponse"
+}
+```
+
+- **500**: Internal Server Error
   ```json
 {
   "$ref": "#/definitions/model.ErrorResponse"
@@ -244,42 +260,6 @@
 | limit | query | integer | No | Limit |
 | offset | query | integer | No | Offset |
 | expand | query | string | No | Expand related fields |
-
-**Responses:**
-
-- **200**: OK
-  ```json
-{
-  "type": "array",
-  "items": {
-    "$ref": "#/definitions/model.CafeTableResponse"
-  }
-}
-```
-
-- **400**: Bad Request
-  ```json
-{
-  "$ref": "#/definitions/model.ErrorResponse"
-}
-```
-
-
-## /api/v1/cafe-tables/search
-
-### GET /api/v1/cafe-tables/search 🔒
-
-**Summary:** Search cafe tables
-
-**Description:** Search cafe tables by number or status
-
-**Parameters:**
-
-| Name | Location | Type | Required | Description |
-|------|----------|------|----------|-------------|
-| query | query | string | No | Search query |
-| limit | query | integer | No | Limit |
-| offset | query | integer | No | Offset |
 
 **Responses:**
 

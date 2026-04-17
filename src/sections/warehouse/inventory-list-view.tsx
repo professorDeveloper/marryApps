@@ -154,12 +154,13 @@ export function InventoryListView() {
     });
     const [activePeriod, setActivePeriod] = useState<'day' | 'week' | 'month' | 'year' | undefined>('day');
     const [storageOptions, setStorageOptions] = useState<Array<{ id: string; name: string }>>([]);
-  const [draftFilters, setDraftFilters] = useState({
-    status: '',
-    storage_id: '',
-    date_from: getTodayUtcBoundary(),
-    date_to: getTomorrowUtcBoundary(true),
-  });
+    const [sort, setSort] = useState({ by: 'date', order: 'desc' as 'asc' | 'desc' });
+    const [draftFilters, setDraftFilters] = useState({
+        status: '',
+        storage_id: '',
+        date_from: getTodayUtcBoundary(),
+        date_to: getTomorrowUtcBoundary(true),
+    });
 
     const { isOpen, selectedData, openModal, closeModal } = useGenericViewModal<IInventory>();
 
@@ -189,6 +190,8 @@ export function InventoryListView() {
                 ...(draftFilters.date_to ? { date_to: draftFilters.date_to } : {}),
                 ...(draftFilters.status ? { status: draftFilters.status } : {}),
                 ...(draftFilters.storage_id ? { storage_id: draftFilters.storage_id } : {}),
+                sort_by: sort.by,
+                sort_order: sort.order,
             });
             setInventories(response.items);
             setPagination(response.pagination);
@@ -197,11 +200,20 @@ export function InventoryListView() {
         } finally {
             setLoading(false);
         }
-    }, [debouncedSearchQuery, getInventories, paginationModel.page, paginationModel.pageSize, draftFilters]);
+    }, [debouncedSearchQuery, getInventories, paginationModel.page, paginationModel.pageSize, draftFilters, sort]);
 
     useEffect(() => {
         loadInventories();
     }, [loadInventories]);
+
+    // Update draftFilters when dateFrom or dateTo changes
+    useEffect(() => {
+        setDraftFilters(prev => ({
+            ...prev,
+            date_from: dateFrom,
+            date_to: dateTo,
+        }));
+    }, [dateFrom, dateTo]);
 
     useEffect(() => {
         setPaginationModel((prev) => ({ ...prev, page: 0 }));
@@ -245,6 +257,16 @@ export function InventoryListView() {
         [getInventoryItems, openModal, t]
     );
 
+    const handleSortChange = useCallback(
+        (sortState: { key: string | null; dir: 'asc' | 'desc' | null }) => {
+            if (sortState.key && sortState.dir) {
+                setSort({ by: sortState.key, order: sortState.dir });
+                setPaginationModel((prev) => ({ ...prev, page: 0 }));
+            }
+        },
+        []
+    );
+
     const columns = useMemo(
         () => [
       
@@ -266,14 +288,14 @@ export function InventoryListView() {
                 getValue: (row: IInventory) =>
                     row?.storage_id || '-',
                 renderCell: ({ row }: { row: IInventory }) => {
-                    const id = row?.storage_id;
-                    const storage = storageOptions.find((s) => s.id === id);
-                    const value = storage?.name || id || '-';
+                    // Try to get storage name from expanded data first, then from storageOptions
+                    const expandedStorage = row._expand?.storage_id;
+                    const value = expandedStorage?.name || storageOptions.find((s) => s.id === row?.storage_id)?.name || row?.storage_id || '-';
                     return (
-                        <Box sx={{ 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            py: 1.5, 
+                        <Box sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            py: 1.5,
                             px: 1,
                             color: 'text.primary',
                             fontSize: '0.875rem',
@@ -511,7 +533,7 @@ export function InventoryListView() {
                         setDraftFilters(prev => {
                             const newStatus = Array.isArray(filterState.status?.value) ? filterState.status.value[0] : (filterState.status?.value || '');
                             const newStorageId = Array.isArray(filterState.storage_id?.value) ? filterState.storage_id.value[0] : (filterState.storage_id?.value || '');
-                            
+
                             // If clicking the same value again, clear the filter
                             return {
                                 ...prev,
@@ -520,6 +542,7 @@ export function InventoryListView() {
                             };
                         });
                     }}
+                    onSortChange={handleSortChange}
                     page={paginationModel.page}
                     rowsPerPage={paginationModel.pageSize}
                     totalCount={pagination?.total || 0}

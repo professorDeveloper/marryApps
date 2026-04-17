@@ -38,11 +38,10 @@ const buildQueryString = (params: Partial<IIngredientReportsFilterParams>): stri
 
 /**
  * Get ingredient reports with filters
- * Note: storage_id is optional - empty string can be sent as `storage_id=`
  */
 export function useGetIngredientReports(params?: Partial<IIngredientReportsFilterParams>) {
-    // Fetch when date range exists; storage_id can be empty
-    const shouldFetch = Boolean(params?.start && params?.end);
+    // Fetch when date range and storage_id exist
+    const shouldFetch = Boolean(params?.start && params?.end && params?.storage_id);
 
     const queryString = buildQueryString(params || {});
     const url = shouldFetch ? `${endpoints.ingredientReports.list}${queryString}` : null;

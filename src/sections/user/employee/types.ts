@@ -4,9 +4,10 @@ import type { IUser , UserRole } from 'src/types/user';
 // ── Employee Management Types ───────────────────────────────────────────────────
 
 export interface EmployeeListProps {
-    role: string;
-    title: string;
+    role?: string;
+    title?: string;
     useStaffApi?: boolean;
+    branchId?: string;
 }
 
 export interface EmployeeRowActionProps {
@@ -45,7 +46,14 @@ export interface EmployeeStatusCellProps extends EmployeeCellRendererProps {
 
 export interface EmployeeApi {
     employees: IUser[];
+    totalCount: number;
     employeesLoading: boolean;
+    query: string;
+    page: number;
+    rowsPerPage: number;
+    setQuery: (query: string) => void;
+    setPage: (page: number) => void;
+    setRowsPerPage: (rowsPerPage: number) => void;
     deleteEmployee: (id: string) => Promise<void>;
     deleteMultipleEmployees: (ids: string[]) => Promise<void>;
 }
@@ -97,6 +105,7 @@ export type EmployeeFormState = {
     phone_number: string;
     password: string;
     role: UserRole | '';
+    is_active: boolean;
     pincode: string;
     terminal: string;
     cash_register_id: string;

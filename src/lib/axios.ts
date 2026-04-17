@@ -335,7 +335,7 @@ export const endpoints = {
     staff: '/api/v1/users/staff',
     details: (id: string) => `/api/v1/users/${id}`,
     create: '/api/v1/users',
-    update: (id: string) => `/api/v1/user/update/${id}`,
+    update: (id: string) => `/api/v1/users/${id}`,
     delete: (id: string) => `/api/v1/users/${id}`,
     register: '/api/v1/auth/register',
   },
@@ -347,7 +347,6 @@ export const endpoints = {
   },
   inventory: {
     list: '/api/v1/inventories',
-    search: '/api/v1/inventories/search',
     details: (id: string) => `/api/v1/inventories/${id}`,
     create: '/api/v1/inventories',
     batch: '/api/v1/inventories/batch',

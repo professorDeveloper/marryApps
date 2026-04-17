@@ -139,12 +139,12 @@ export function useInventoryAPI() {
         date_to,
         storage_id,
         status,
+        sort_by = 'date',
+        sort_order = 'desc',
     }: IInventoryListParams = {}): Promise<IInventoryListResult> => {
         try {
-            const normalizedQuery = search?.trim() || '';
-            const endpoint = normalizedQuery ? endpoints.inventory.search : endpoints.inventory.list;
             const params = {
-                ...(normalizedQuery ? { q: normalizedQuery } : {}),
+                ...(search ? { search } : {}),
                 limit,
                 offset,
                 expand: 'storage_id',
@@ -152,10 +152,12 @@ export function useInventoryAPI() {
                 ...(date_to ? { date_to } : {}),
                 ...(storage_id ? { storage_id } : {}),
                 ...(status ? { status } : {}),
+                sort_by,
+                sort_order,
             };
 
             const response = await fetcher<unknown>([
-                endpoint,
+                endpoints.inventory.list,
                 { params },
             ]);
 
