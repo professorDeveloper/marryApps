@@ -298,60 +298,12 @@ type IngredientReportItem struct {
 	PictureUrl     *string `json:"picture_url,omitempty"`
 	ColorCode      *string `json:"color_code,omitempty"`
 
-	BeginQty string `json:"begin_qty"`
-	EndQty   string `json:"end_qty"`
-
-	CostStart string `json:"cost_start"`
-	CostEnd   string `json:"cost_end"`
-
-	BeginAmount string `json:"begin_amount"`
-	EndAmount   string `json:"end_amount"`
-
-	AddedQty       string `json:"added_qty"`
-	RemovedQty     string `json:"removed_qty"`
-	AddedAmount    string `json:"added_amount"`
-	RemovedAmount  string `json:"removed_amount"`
-
-	InvoiceInQty     string `json:"invoice_in_qty"`
-	InvoiceInAmount  string `json:"invoice_in_amount"`
-	InvoiceOutQty    string `json:"invoice_out_qty"`
-	InvoiceOutAmount string `json:"invoice_out_amount"`
-
-	OrderOutQty    string `json:"order_out_qty"`
-	OrderOutAmount string `json:"order_out_amount"`
-
-	DeductionOutQty    string `json:"deduction_out_qty"`
-	DeductionOutAmount string `json:"deduction_out_amount"`
-
-	TransferInQty     string `json:"transfer_in_qty"`
-	TransferInAmount  string `json:"transfer_in_amount"`
-	TransferOutQty    string `json:"transfer_out_qty"`
-	TransferOutAmount string `json:"transfer_out_amount"`
-
-	OutgoingInvoiceInQty     string `json:"outgoing_invoice_in_qty"`
-	OutgoingInvoiceInAmount  string `json:"outgoing_invoice_in_amount"`
-	OutgoingInvoiceOutQty    string `json:"outgoing_invoice_out_qty"`
-	OutgoingInvoiceOutAmount string `json:"outgoing_invoice_out_amount"`
-
-	SeparationActInQty     string `json:"separation_act_in_qty"`
-	SeparationActInAmount  string `json:"separation_act_in_amount"`
-	SeparationActOutQty    string `json:"separation_act_out_qty"`
-	SeparationActOutAmount string `json:"separation_act_out_amount"`
-
-	ShipmentInQty     string `json:"shipment_in_qty"`
-	ShipmentInAmount  string `json:"shipment_in_amount"`
-	ShipmentOutQty    string `json:"shipment_out_qty"`
-	ShipmentOutAmount string `json:"shipment_out_amount"`
-
-	ManualInQty     string `json:"manual_in_qty"`
-	ManualInAmount  string `json:"manual_in_amount"`
-	ManualOutQty    string `json:"manual_out_qty"`
-	ManualOutAmount string `json:"manual_out_amount"`
-
-	InventoryInQty     string `json:"inventory_in_qty"`
-	InventoryInAmount  string `json:"inventory_in_amount"`
-	InventoryOutQty    string `json:"inventory_out_qty"`
-	InventoryOutAmount string `json:"inventory_out_amount"`
+	BeginQuantity string `json:"begin_quantity"`
+	EndQuantity   string `json:"end_quantity"`
+	In            string `json:"in"`
+	Out           string `json:"out"`
+	Shortage      string `json:"shortage"`
+	Surplus       string `json:"surplus"`
 }
 
 type GetIngredientReportMovementsRequest struct {
