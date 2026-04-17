@@ -998,6 +998,7 @@ type Order struct {
 	TableCharge        pgtype.Numeric     `json:"table_charge"`
 	CashAmount         pgtype.Numeric     `json:"cash_amount"`
 	CardAmount         pgtype.Numeric     `json:"card_amount"`
+	ClientCreatedAt    pgtype.Timestamptz `json:"client_created_at"`
 }
 
 type OrderItem struct {

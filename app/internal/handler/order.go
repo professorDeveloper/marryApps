@@ -168,6 +168,114 @@ func (h *Handler) CreateOrder(c echo.Context) error {
 	))
 }
 
+// CreateOrdersBatch creates multiple orders in one request
+// @Summary Create orders batch
+// @Description Create multiple orders in one request. Useful for offline sync.
+// @Tags Orders
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param lang query string false "Language (uz, ru, en)" default(uz)
+// @Param request body model.CreateOrderBatchRequest true "Create orders batch request"
+// @Success 201 {object} model.SuccessResponse
+// @Failure 400 {object} model.ErrorResponse
+// @Failure 401 {object} model.ErrorResponse
+// @Failure 500 {object} model.ErrorResponse
+// @Router /api/v1/orders/batch [post]
+func (h *Handler) CreateOrdersBatch(c echo.Context) error {
+	var req model.CreateOrderBatchRequest
+	if err := c.Bind(&req); err != nil {
+		log.Printf("Failed to bind create orders batch request: %v", err)
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"invalid request format",
+			err.Error(),
+			http.StatusBadRequest,
+		))
+	}
+
+	if len(req.Orders) == 0 {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"orders is required",
+			"orders array is empty",
+			http.StatusBadRequest,
+		))
+	}
+
+	if len(req.Orders) > 100 {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"too many orders",
+			"max 100 orders allowed per request",
+			http.StatusBadRequest,
+		))
+	}
+
+	role, _ := c.Get("role").(string)
+	userID, _ := c.Get("user_id").(string)
+	cashRegisterID, _ := c.Get("cash_register_id").(string)
+
+	for i := range req.Orders {
+		if role == "waiter" && userID != "" {
+			req.Orders[i].WaiterID = &userID
+		}
+
+		if role == "cashier" && userID != "" {
+			req.Orders[i].CashierID = &userID
+			if cashRegisterID != "" && req.Orders[i].CashRegisterID == nil {
+				req.Orders[i].CashRegisterID = &cashRegisterID
+			}
+		}
+	}
+
+	resp, err := h.service.Order().CreateOrdersBatch(c.Request().Context(), req)
+	if err != nil {
+		log.Printf("CreateOrdersBatch failed: %v", err)
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+			"failed to create orders batch",
+			err.Error(),
+			http.StatusInternalServerError,
+		))
+	}
+
+	for _, result := range resp.Results {
+		if result.Status != "created" || result.Order == nil {
+			continue
+		}
+
+		srcReq := req.Orders[result.Index]
+
+		orderType := "dine_in"
+		if srcReq.OrderType != nil && *srcReq.OrderType == "takeaway" {
+			orderType = "takeaway"
+		}
+
+		shouldAutoStartTimer := orderType == "dine_in" &&
+			srcReq.TableID != "" &&
+			(srcReq.ScheduledAt == nil || *srcReq.ScheduledAt == "")
+
+		if shouldAutoStartTimer {
+			if _, timerErr := h.service.TableTimer().StartTableTimerIfNeeded(
+				c.Request().Context(),
+				result.Order.ID,
+				userID,
+				role,
+			); timerErr != nil {
+				log.Printf("CreateOrdersBatch auto-start timer skipped/failed for order %s: %v", result.Order.ID, timerErr)
+			}
+		}
+	}
+
+	statusCode := http.StatusCreated
+	if resp.FailedCount > 0 {
+		statusCode = http.StatusMultiStatus
+	}
+
+	return c.JSON(statusCode, model.NewSuccessResponse(
+		"Orders batch processed successfully",
+		resp,
+		statusCode,
+	))
+}
+
 // AddOrderItems appends multiple items to an existing order
 // @Summary Add order items
 // @Description Append multiple order items to an existing order (e.g. dessert after meal). Item price is auto-filled from goods.price and order totals are recalculated server-side.

@@ -27,6 +27,33 @@ func NewOrderS(repo *repository.Repository) *OrderS {
 	return &OrderS{repo: repo}
 }
 
+func withOrderBatchSavepoint(ctx context.Context, name string, fn func() error) error {
+	tx, ok := repository.TenantTxFromContext(ctx)
+	if !ok || tx == nil {
+		return fn()
+	}
+
+	if _, err := tx.Exec(ctx, "SAVEPOINT "+name); err != nil {
+		return err
+	}
+
+	if err := fn(); err != nil {
+		if _, rbErr := tx.Exec(ctx, "ROLLBACK TO SAVEPOINT "+name); rbErr != nil {
+			return fmt.Errorf("%v (rollback savepoint error: %w)", err, rbErr)
+		}
+		if _, relErr := tx.Exec(ctx, "RELEASE SAVEPOINT "+name); relErr != nil {
+			log.Printf("release savepoint after rollback failed: %v", relErr)
+		}
+		return err
+	}
+
+	if _, err := tx.Exec(ctx, "RELEASE SAVEPOINT "+name); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (s *OrderS) AddOrderItems(ctx context.Context, orderID string, req model.AddOrderItemsRequest) (*model.AddOrderItemsResponse, error) {
 	if orderID == "" {
 		return nil, fmt.Errorf("order_id is required")
@@ -121,6 +148,26 @@ func (s *OrderS) CreateOrder(ctx context.Context, req model.CreateOrderRequest) 
 		orderType = "takeaway"
 	}
 
+	orderUUID := uuid.New()
+
+	if req.ID != nil && *req.ID != "" {
+		parsedID, err := uuid.Parse(*req.ID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid id: %w", err)
+		}
+
+		orderUUID = parsedID
+
+		_, err = s.repo.Tenant(ctx).GetOrderByID(ctx, orderUUID)
+		if err == nil {
+			// Bu order oldin yaratilgan, duplicate create qilmaymiz
+			return s.GetOrderByID(ctx, orderUUID.String())
+		}
+		if err != nil && err != pgx.ErrNoRows {
+			return nil, fmt.Errorf("failed to check existing order by id: %w", err)
+		}
+	}
+
 	tableUUID := uuid.Nil
 	if orderType == "dine_in" {
 		if req.TableID == "" {
@@ -189,6 +236,18 @@ func (s *OrderS) CreateOrder(ctx context.Context, req model.CreateOrderRequest) 
 		}
 	}
 
+	clientCreatedAtPg := pgtype.Timestamptz{}
+	if req.ClientCreatedAt != nil && *req.ClientCreatedAt != "" {
+		t, err := time.Parse(time.RFC3339, *req.ClientCreatedAt)
+		if err != nil {
+			return nil, fmt.Errorf("invalid client_created_at: %w", err)
+		}
+		clientCreatedAtPg = pgtype.Timestamptz{
+			Time:  t,
+			Valid: true,
+		}
+	}
+
 	isDineIn := orderType == "dine_in" && tableUUID != uuid.Nil
 	immediateDineIn := isDineIn && !scheduledAtPg.Valid
 
@@ -234,17 +293,18 @@ func (s *OrderS) CreateOrder(ctx context.Context, req model.CreateOrderRequest) 
 	}
 
 	createdOrder, err := s.repo.Tenant(ctx).CreateOrder(ctx, pg.CreateOrderParams{
-		ID:             uuid.New(),
-		TableID:        tableIDPg,
-		WaiterID:       waiterUUID,
-		CashierID:      cashierUUID,
-		CashRegisterID: cashRegisterUUID,
-		Status:         status,
-		GuestCount:     req.GuestCount,
-		TotalAmount:    totalAmount,
-		Comment:        req.Comment,
-		OrderType:      orderType,
-		ScheduledAt:    scheduledAtPg,
+		ID:              orderUUID,
+		TableID:         tableIDPg,
+		WaiterID:        waiterUUID,
+		CashierID:       cashierUUID,
+		CashRegisterID:  cashRegisterUUID,
+		Status:          status,
+		GuestCount:      req.GuestCount,
+		TotalAmount:     totalAmount,
+		Comment:         req.Comment,
+		OrderType:       orderType,
+		ScheduledAt:     scheduledAtPg,
+		ClientCreatedAt: clientCreatedAtPg,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create order: %w", err)
@@ -339,6 +399,56 @@ func (s *OrderS) CreateOrder(ctx context.Context, req model.CreateOrderRequest) 
 
 	return resp, nil
 }
+
+func (s *OrderS) CreateOrdersBatch(ctx context.Context, req model.CreateOrderBatchRequest) (*model.CreateOrderBatchResponse, error) {
+	if len(req.Orders) == 0 {
+		return nil, fmt.Errorf("orders is required")
+	}
+
+	resp := &model.CreateOrderBatchResponse{
+		Total:   len(req.Orders),
+		Results: make([]model.CreateOrderBatchItemResult, 0, len(req.Orders)),
+	}
+
+	for i, orderReq := range req.Orders {
+		result := model.CreateOrderBatchItemResult{
+			Index:  i,
+			Status: "created",
+		}
+
+		if orderReq.ID != nil && *orderReq.ID != "" {
+			result.InputOrderID = orderReq.ID
+		}
+
+		var createdOrder *model.OrderResponse
+
+		err := withOrderBatchSavepoint(ctx, fmt.Sprintf("order_batch_%d", i+1), func() error {
+			var err error
+			createdOrder, err = s.CreateOrder(ctx, orderReq)
+			return err
+		})
+
+		if err != nil {
+			msg := err.Error()
+			result.Status = "failed"
+			result.Error = &msg
+			resp.FailedCount++
+			resp.Results = append(resp.Results, result)
+			if !req.ContinueOnError {
+				return nil, fmt.Errorf("orders[%d]: %w", i, err)
+			}
+
+			continue
+		}
+
+		result.Order = createdOrder
+		resp.SuccessCount++
+		resp.Results = append(resp.Results, result)
+	}
+
+	return resp, nil
+}
+
 func (s *OrderS) GetOrderByID(ctx context.Context, orderID string) (*model.OrderResponse, error) {
 	id, err := uuid.Parse(orderID)
 	if err != nil {
@@ -2324,6 +2434,7 @@ func toOrderResponse(o any) *model.OrderResponse {
 		orderType         string
 		scheduledAtTs     pgtype.Timestamptz
 		rescheduleComment *string
+		clientCreatedAtPg pgtype.Timestamptz
 		createdAtPg       pgtype.Timestamptz
 		updatedAtPg       pgtype.Timestamptz
 	)
@@ -2342,8 +2453,10 @@ func toOrderResponse(o any) *model.OrderResponse {
 		orderType = row.OrderType
 		scheduledAtTs = row.ScheduledAt
 		rescheduleComment = row.RescheduleComment
+		clientCreatedAtPg = row.ClientCreatedAt
 		createdAtPg = row.CreatedAt
 		updatedAtPg = row.UpdatedAt
+
 	case pg.CreateOrderRow:
 		id = row.ID
 		tableID = row.TableID
@@ -2357,8 +2470,10 @@ func toOrderResponse(o any) *model.OrderResponse {
 		orderType = row.OrderType
 		scheduledAtTs = row.ScheduledAt
 		rescheduleComment = row.RescheduleComment
+		clientCreatedAtPg = row.ClientCreatedAt
 		createdAtPg = row.CreatedAt
 		updatedAtPg = row.UpdatedAt
+
 	case pg.GetOrderByIDRow:
 		id = row.ID
 		tableID = row.TableID
@@ -2372,8 +2487,10 @@ func toOrderResponse(o any) *model.OrderResponse {
 		orderType = row.OrderType
 		scheduledAtTs = row.ScheduledAt
 		rescheduleComment = row.RescheduleComment
+		clientCreatedAtPg = row.ClientCreatedAt
 		createdAtPg = row.CreatedAt
 		updatedAtPg = row.UpdatedAt
+
 	case pg.GetAllOrdersRow:
 		id = row.ID
 		tableID = row.TableID
@@ -2387,8 +2504,10 @@ func toOrderResponse(o any) *model.OrderResponse {
 		orderType = row.OrderType
 		scheduledAtTs = row.ScheduledAt
 		rescheduleComment = row.RescheduleComment
+		clientCreatedAtPg = row.ClientCreatedAt
 		createdAtPg = row.CreatedAt
 		updatedAtPg = row.UpdatedAt
+
 	case pg.GetOrdersByStatusRow:
 		id = row.ID
 		tableID = row.TableID
@@ -2402,8 +2521,10 @@ func toOrderResponse(o any) *model.OrderResponse {
 		orderType = row.OrderType
 		scheduledAtTs = row.ScheduledAt
 		rescheduleComment = row.RescheduleComment
+		clientCreatedAtPg = row.ClientCreatedAt
 		createdAtPg = row.CreatedAt
 		updatedAtPg = row.UpdatedAt
+
 	case pg.GetOrdersByWaiterIDRow:
 		id = row.ID
 		tableID = row.TableID
@@ -2417,8 +2538,10 @@ func toOrderResponse(o any) *model.OrderResponse {
 		orderType = row.OrderType
 		scheduledAtTs = row.ScheduledAt
 		rescheduleComment = row.RescheduleComment
+		clientCreatedAtPg = row.ClientCreatedAt
 		createdAtPg = row.CreatedAt
 		updatedAtPg = row.UpdatedAt
+
 	case pg.GetOrdersByTableIDRow:
 		id = row.ID
 		tableID = row.TableID
@@ -2432,8 +2555,10 @@ func toOrderResponse(o any) *model.OrderResponse {
 		orderType = row.OrderType
 		scheduledAtTs = row.ScheduledAt
 		rescheduleComment = row.RescheduleComment
+		clientCreatedAtPg = row.ClientCreatedAt
 		createdAtPg = row.CreatedAt
 		updatedAtPg = row.UpdatedAt
+
 	case pg.UpdateOrderRow:
 		id = row.ID
 		tableID = row.TableID
@@ -2446,8 +2571,10 @@ func toOrderResponse(o any) *model.OrderResponse {
 		orderType = row.OrderType
 		scheduledAtTs = row.ScheduledAt
 		rescheduleComment = row.RescheduleComment
+		clientCreatedAtPg = row.ClientCreatedAt
 		createdAtPg = row.CreatedAt
 		updatedAtPg = row.UpdatedAt
+
 	case pg.UpdateOrderStatusRow:
 		id = row.ID
 		tableID = row.TableID
@@ -2460,8 +2587,10 @@ func toOrderResponse(o any) *model.OrderResponse {
 		orderType = row.OrderType
 		scheduledAtTs = row.ScheduledAt
 		rescheduleComment = row.RescheduleComment
+		clientCreatedAtPg = row.ClientCreatedAt
 		createdAtPg = row.CreatedAt
 		updatedAtPg = row.UpdatedAt
+
 	case pg.AssignWaiterToOrderRow:
 		id = row.ID
 		tableID = row.TableID
@@ -2474,8 +2603,10 @@ func toOrderResponse(o any) *model.OrderResponse {
 		orderType = row.OrderType
 		scheduledAtTs = row.ScheduledAt
 		rescheduleComment = row.RescheduleComment
+		clientCreatedAtPg = row.ClientCreatedAt
 		createdAtPg = row.CreatedAt
 		updatedAtPg = row.UpdatedAt
+
 	case pg.AssignCashierToOrderRow:
 		id = row.ID
 		tableID = row.TableID
@@ -2488,8 +2619,10 @@ func toOrderResponse(o any) *model.OrderResponse {
 		orderType = row.OrderType
 		scheduledAtTs = row.ScheduledAt
 		rescheduleComment = row.RescheduleComment
+		clientCreatedAtPg = row.ClientCreatedAt
 		createdAtPg = row.CreatedAt
 		updatedAtPg = row.UpdatedAt
+
 	case pg.CancelOrderRow:
 		id = row.ID
 		tableID = row.TableID
@@ -2502,8 +2635,10 @@ func toOrderResponse(o any) *model.OrderResponse {
 		orderType = row.OrderType
 		scheduledAtTs = row.ScheduledAt
 		rescheduleComment = row.RescheduleComment
+		clientCreatedAtPg = row.ClientCreatedAt
 		createdAtPg = row.CreatedAt
 		updatedAtPg = row.UpdatedAt
+
 	case pg.MarkOrderCookingRow:
 		id = row.ID
 		tableID = row.TableID
@@ -2516,8 +2651,10 @@ func toOrderResponse(o any) *model.OrderResponse {
 		orderType = row.OrderType
 		scheduledAtTs = row.ScheduledAt
 		rescheduleComment = row.RescheduleComment
+		clientCreatedAtPg = row.ClientCreatedAt
 		createdAtPg = row.CreatedAt
 		updatedAtPg = row.UpdatedAt
+
 	case pg.MarkOrderReadyRow:
 		id = row.ID
 		tableID = row.TableID
@@ -2530,8 +2667,10 @@ func toOrderResponse(o any) *model.OrderResponse {
 		orderType = row.OrderType
 		scheduledAtTs = row.ScheduledAt
 		rescheduleComment = row.RescheduleComment
+		clientCreatedAtPg = row.ClientCreatedAt
 		createdAtPg = row.CreatedAt
 		updatedAtPg = row.UpdatedAt
+
 	case pg.MarkOrderServedRow:
 		id = row.ID
 		tableID = row.TableID
@@ -2544,8 +2683,10 @@ func toOrderResponse(o any) *model.OrderResponse {
 		orderType = row.OrderType
 		scheduledAtTs = row.ScheduledAt
 		rescheduleComment = row.RescheduleComment
+		clientCreatedAtPg = row.ClientCreatedAt
 		createdAtPg = row.CreatedAt
 		updatedAtPg = row.UpdatedAt
+
 	case pg.MarkOrderPaidRow:
 		id = row.ID
 		tableID = row.TableID
@@ -2558,8 +2699,10 @@ func toOrderResponse(o any) *model.OrderResponse {
 		orderType = row.OrderType
 		scheduledAtTs = row.ScheduledAt
 		rescheduleComment = row.RescheduleComment
+		clientCreatedAtPg = row.ClientCreatedAt
 		createdAtPg = row.CreatedAt
 		updatedAtPg = row.UpdatedAt
+
 	case pg.ActivateOrderRow:
 		id = row.ID
 		tableID = row.TableID
@@ -2572,8 +2715,10 @@ func toOrderResponse(o any) *model.OrderResponse {
 		orderType = row.OrderType
 		scheduledAtTs = row.ScheduledAt
 		rescheduleComment = row.RescheduleComment
+		clientCreatedAtPg = row.ClientCreatedAt
 		createdAtPg = row.CreatedAt
 		updatedAtPg = row.UpdatedAt
+
 	case pg.RescheduleOrderRow:
 		id = row.ID
 		tableID = row.TableID
@@ -2586,8 +2731,10 @@ func toOrderResponse(o any) *model.OrderResponse {
 		orderType = row.OrderType
 		scheduledAtTs = row.ScheduledAt
 		rescheduleComment = row.RescheduleComment
+		clientCreatedAtPg = row.ClientCreatedAt
 		createdAtPg = row.CreatedAt
 		updatedAtPg = row.UpdatedAt
+
 	default:
 		return nil
 	}
@@ -2612,6 +2759,12 @@ func toOrderResponse(o any) *model.OrderResponse {
 	if cashRegisterIDPg.Valid {
 		s := cashRegisterIDPg.String()
 		cashRegisterID = &s
+	}
+
+	var clientCreatedAt *time.Time
+	if clientCreatedAtPg.Valid {
+		t := clientCreatedAtPg.Time
+		clientCreatedAt = &t
 	}
 
 	var createdAt *time.Time
@@ -2650,6 +2803,7 @@ func toOrderResponse(o any) *model.OrderResponse {
 		OrderType:         orderType,
 		ScheduledAt:       scheduledAt,
 		RescheduleComment: rescheduleComment,
+		ClientCreatedAt:   clientCreatedAt,
 		CreatedAt:         createdAt,
 		UpdatedAt:         updatedAt,
 	}

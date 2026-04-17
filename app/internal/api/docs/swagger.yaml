@@ -1309,6 +1309,15 @@ definitions:
     required:
     - modifier
     type: object
+  model.CreateOrderBatchRequest:
+    properties:
+      continue_on_error:
+        type: boolean
+      orders:
+        items:
+          $ref: '#/definitions/model.CreateOrderRequest'
+        type: array
+    type: object
   model.CreateOrderItemEntry:
     properties:
       comment:
@@ -1377,11 +1386,17 @@ definitions:
       cashier_id:
         example: a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5
         type: string
+      client_created_at:
+        example: "2026-04-17T09:10:00+05:00"
+        type: string
       comment:
         type: string
       guest_count:
         example: 2
         type: integer
+      id:
+        example: 11111111-1111-1111-1111-111111111111
+        type: string
       items:
         items:
           $ref: '#/definitions/model.CreateOrderItemInline'
@@ -3021,6 +3036,8 @@ definitions:
         type: string
       cashier_id:
         example: a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5
+        type: string
+      client_created_at:
         type: string
       comment:
         type: string
@@ -17675,6 +17692,47 @@ paths:
       summary: Start order table timer
       tags:
       - order-table-timer
+  /api/v1/orders/batch:
+    post:
+      consumes:
+      - application/json
+      description: Create multiple orders in one request. Useful for offline sync.
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Create orders batch request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateOrderBatchRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.SuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create orders batch
+      tags:
+      - Orders
   /api/v1/orders/my:
     get:
       description: Get current authenticated waiter's own orders with optional filters

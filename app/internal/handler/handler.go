@@ -253,6 +253,8 @@ func (h *Handler) Register(router *echo.Echo) {
 		orders := api.Group("/orders", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
 		{
 			orders.POST("", h.CreateOrder, mw.CheckLanguage(), mw.RequireRoles(mw.RolesCanCreateOrder...))
+			orders.POST("/batch", h.CreateOrdersBatch, mw.CheckLanguage(), mw.RequireRoles(mw.RolesCanCreateOrder...))
+
 			orders.GET("", h.GetAllOrders, mw.CheckLanguage(), mw.RequireRoles(model.RoleWaiter, model.RoleCashier, model.RoleAdmin, model.RoleManager, model.RoleSuperAdmin))
 			orders.GET("/:id", h.GetOrderByID, mw.CheckLanguage(), mw.RequireRoles(mw.RolesCanReadPOSOrders...))
 			orders.POST("/:id/items", h.AddOrderItems, mw.CheckLanguage(), mw.RequireRoles(mw.RolesCanCreateOrder...))
