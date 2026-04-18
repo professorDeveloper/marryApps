@@ -102,6 +102,9 @@ func TenantMiddleware(repo *repository.Repository) echo.MiddlewareFunc {
 						"message": "Internal server error",
 					})
 				}
+				log.Printf("TenantMiddleware: Set app.branch_id = %s", branchIDStr)
+			} else {
+				log.Printf("TenantMiddleware: branchIDStr is empty, app.branch_id not set")
 			}
 
 			tenantQueries := repo.Tenant(ctx).WithTx(tx)

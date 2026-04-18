@@ -581,13 +581,19 @@ func (s *InventoryS) ReplaceInventoryItems(ctx context.Context, inventoryID stri
 
 			if !exists {
 				// New item on active inventory:
-				// system_quantity = current stock (locked), set stock to counted
-				systemQty := locked.Quantity
-				if _, err := s.repo.Tenant(ctx).InsertInventoryItemWithSystemQty(ctx, uuid.New(), invID, ingID, newQty, systemQty); err != nil {
+				// Insert item first (system_quantity will be refreshed from movements)
+				itemID := uuid.New()
+				if _, err := s.repo.Tenant(ctx).InsertInventoryItemWithSystemQty(ctx, itemID, invID, ingID, newQty, zero); err != nil {
 					return nil, fmt.Errorf("failed to insert inventory item: %w", err)
 				}
-				// Apply delta: stock = counted (absolute set)
-				if numericToString(locked.Quantity) != item.CountedQuantity {
+				// Refresh system_quantity from movement ledger at inventory date
+				refreshedItem, err := s.repo.Tenant(ctx).UpdateInventoryItemSystemQuantityFromMovements(ctx, itemID)
+				if err != nil {
+					return nil, fmt.Errorf("failed to refresh system_quantity: %w", err)
+				}
+				// Apply delta: difference = counted - system
+				delta := numericToFloat(newQty) - numericToFloat(refreshedItem.SystemQuantity)
+				if delta != 0 {
 					updated, err := s.repo.Tenant(ctx).UpdateIngredientStock(ctx, pg.UpdateIngredientStockParams{
 						ID:       locked.ID,
 						Quantity: newQty,
@@ -595,26 +601,33 @@ func (s *InventoryS) ReplaceInventoryItems(ctx context.Context, inventoryID stri
 					if err != nil {
 						return nil, fmt.Errorf("failed to update stock: %w", err)
 					}
-					eventType := "inventory_in"
-					if numericToFloat(newQty) < numericToFloat(locked.Quantity) {
-						eventType = "inventory_out"
-					}
+					ev := pg.InventorySurplusIn
+					deltaQty := pgtype.Numeric{}
 					srcID := invID
-					var effectiveAt *pgtype.Timestamptz
-					if invDate.Valid && !invDate.Time.After(time.Now()) {
-						effectiveAt = &invDate
+					if delta > 0 {
+						_ = deltaQty.Scan(fmt.Sprintf("%.6f", delta))
+						_ = s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+							ID: uuid.New(), StorageID: inv.StorageID, IngredientID: ingID,
+							EventType: string(ev), QtyIn: deltaQty, QtyOut: zero,
+							StockBefore: locked.Quantity, StockAfter: updated.Quantity,
+							PricePerUnit: zero, SourceType: &sourceType, SourceID: &srcID,
+							EffectiveAt: &invDate,
+						})
+					} else {
+						ev = pg.InventoryShortageOut
+						_ = deltaQty.Scan(fmt.Sprintf("%.6f", -delta))
+						_ = s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+							ID: uuid.New(), StorageID: inv.StorageID, IngredientID: ingID,
+							EventType: string(ev), QtyIn: zero, QtyOut: deltaQty,
+							StockBefore: locked.Quantity, StockAfter: updated.Quantity,
+							PricePerUnit: zero, SourceType: &sourceType, SourceID: &srcID,
+							EffectiveAt: &invDate,
+						})
 					}
-					_ = s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
-						ID: uuid.New(), StorageID: inv.StorageID, IngredientID: ingID,
-						EventType: eventType, QtyIn: zero, QtyOut: zero,
-						StockBefore: locked.Quantity, StockAfter: updated.Quantity,
-						PricePerUnit: zero, SourceType: &sourceType, SourceID: &srcID,
-						EffectiveAt: effectiveAt,
-					})
 				}
 			} else {
 				// Existing item on active inventory:
-				// Adjust stock by (new_counted - old_counted)
+				// Adjust by the change in counted_quantity
 				oldQty := existing.CountedQuantity
 				adjustment := numericToFloat(newQty) - numericToFloat(oldQty)
 				if adjustment != 0 {
@@ -628,22 +641,29 @@ func (s *InventoryS) ReplaceInventoryItems(ctx context.Context, inventoryID stri
 					if err != nil {
 						return nil, fmt.Errorf("failed to update stock: %w", err)
 					}
-					eventType := "inventory_in"
-					if adjustment < 0 {
-						eventType = "inventory_out"
-					}
+					ev := pg.InventorySurplusIn
+					adjQty := pgtype.Numeric{}
 					srcID := invID
-					var effectiveAt *pgtype.Timestamptz
-					if invDate.Valid && !invDate.Time.After(time.Now()) {
-						effectiveAt = &invDate
+					if adjustment > 0 {
+						_ = adjQty.Scan(fmt.Sprintf("%.6f", adjustment))
+						_ = s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+							ID: uuid.New(), StorageID: inv.StorageID, IngredientID: ingID,
+							EventType: string(ev), QtyIn: adjQty, QtyOut: zero,
+							StockBefore: locked.Quantity, StockAfter: updated.Quantity,
+							PricePerUnit: zero, SourceType: &sourceType, SourceID: &srcID,
+							EffectiveAt: &invDate,
+						})
+					} else {
+						ev = pg.InventoryShortageOut
+						_ = adjQty.Scan(fmt.Sprintf("%.6f", -adjustment))
+						_ = s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+							ID: uuid.New(), StorageID: inv.StorageID, IngredientID: ingID,
+							EventType: string(ev), QtyIn: zero, QtyOut: adjQty,
+							StockBefore: locked.Quantity, StockAfter: updated.Quantity,
+							PricePerUnit: zero, SourceType: &sourceType, SourceID: &srcID,
+							EffectiveAt: &invDate,
+						})
 					}
-					_ = s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
-						ID: uuid.New(), StorageID: inv.StorageID, IngredientID: ingID,
-						EventType: eventType, QtyIn: zero, QtyOut: zero,
-						StockBefore: locked.Quantity, StockAfter: updated.Quantity,
-						PricePerUnit: zero, SourceType: &sourceType, SourceID: &srcID,
-						EffectiveAt: effectiveAt,
-					})
 				}
 				// Update counted_quantity, keep system_quantity
 				if _, err := s.repo.Tenant(ctx).UpdateInventoryItemCountedQuantity(ctx, existing.ID, newQty); err != nil {
@@ -702,7 +722,7 @@ func (s *InventoryS) ReplaceInventoryItems(ctx context.Context, inventoryID stri
 				}
 				_ = s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
 					ID: uuid.New(), StorageID: inv.StorageID, IngredientID: ingID,
-					EventType: "inventory_item_removed", QtyIn: zero, QtyOut: zero,
+					EventType: string(pg.InventoryItemRemoved), QtyIn: zero, QtyOut: zero,
 					StockBefore: locked.Quantity, StockAfter: updated.Quantity,
 					PricePerUnit: zero, SourceType: &sourceType, SourceID: &srcID,
 					EffectiveAt: effectiveAt,
@@ -873,16 +893,12 @@ func (s *InventoryS) DeleteInventoryItem(ctx context.Context, inventoryItemID st
 				return fmt.Errorf("failed to restore stock: %w", err)
 			}
 			srcID := inv.ID
-			var effectiveAt *pgtype.Timestamptz
-			if invDate.Valid && !invDate.Time.After(time.Now()) {
-				effectiveAt = &invDate
-			}
 			_ = s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
 				ID: uuid.New(), StorageID: inv.StorageID, IngredientID: item.IngredientID,
-				EventType: "inventory_item_deleted", QtyIn: zero, QtyOut: zero,
+				EventType: string(pg.InventoryItemDeleted), QtyIn: zero, QtyOut: zero,
 				StockBefore: locked.Quantity, StockAfter: restored.Quantity,
 				PricePerUnit: zero, SourceType: &sourceType, SourceID: &srcID,
-				EffectiveAt: effectiveAt,
+				EffectiveAt: &invDate,
 			})
 		}
 	}
@@ -984,7 +1000,8 @@ func (s *InventoryS) applyStockForItems(ctx context.Context, invID uuid.UUID, st
 			return fmt.Errorf("failed to lock stock: %w", err)
 		}
 
-		if numericToString(locked.Quantity) != numericToString(refreshed.CountedQuantity) {
+		delta := numericToFloat(refreshed.CountedQuantity) - numericToFloat(refreshed.SystemQuantity)
+		if delta != 0 {
 			updated, err := s.repo.Tenant(ctx).UpdateIngredientStock(ctx, pg.UpdateIngredientStockParams{
 				ID:       locked.ID,
 				Quantity: refreshed.CountedQuantity,
@@ -992,23 +1009,29 @@ func (s *InventoryS) applyStockForItems(ctx context.Context, invID uuid.UUID, st
 			if err != nil {
 				return fmt.Errorf("failed to apply stock: %w", err)
 			}
-			ev := "inventory_in"
-			if numericToFloat(refreshed.CountedQuantity) < numericToFloat(locked.Quantity) {
-				ev = "inventory_out"
-			}
+			ev := pg.InventorySurplusIn
+			deltaQty := pgtype.Numeric{}
 			srcID := invID
-			// Convert inventory date to TIMESTAMPTZ for effective_at
-			var effectiveAt *pgtype.Timestamptz
-			if inventoryDate.Valid {
-				effectiveAt = &pgtype.Timestamptz{Time: inventoryDate.Time.In(time.UTC), Valid: true}
+			if delta > 0 {
+				_ = deltaQty.Scan(fmt.Sprintf("%.6f", delta))
+				_ = s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+					ID: uuid.New(), StorageID: storageID, IngredientID: item.IngredientID,
+					EventType: string(ev), QtyIn: deltaQty, QtyOut: zero,
+					StockBefore: locked.Quantity, StockAfter: updated.Quantity,
+					PricePerUnit: zero, SourceType: &sourceType, SourceID: &srcID,
+					EffectiveAt: &pgtype.Timestamptz{Time: inventoryDate.Time.In(time.UTC), Valid: true},
+				})
+			} else {
+				ev = pg.InventoryShortageOut
+				_ = deltaQty.Scan(fmt.Sprintf("%.6f", -delta))
+				_ = s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+					ID: uuid.New(), StorageID: storageID, IngredientID: item.IngredientID,
+					EventType: string(ev), QtyIn: zero, QtyOut: deltaQty,
+					StockBefore: locked.Quantity, StockAfter: updated.Quantity,
+					PricePerUnit: zero, SourceType: &sourceType, SourceID: &srcID,
+					EffectiveAt: &pgtype.Timestamptz{Time: inventoryDate.Time.In(time.UTC), Valid: true},
+				})
 			}
-			_ = s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
-				ID: uuid.New(), StorageID: storageID, IngredientID: item.IngredientID,
-				EventType: ev, QtyIn: zero, QtyOut: zero,
-				StockBefore: locked.Quantity, StockAfter: updated.Quantity,
-				PricePerUnit: zero, SourceType: &sourceType, SourceID: &srcID,
-				EffectiveAt: effectiveAt,
-			})
 		}
 	}
 	return nil
@@ -1053,17 +1076,12 @@ func (s *InventoryS) reverseStockForItems(ctx context.Context, invID uuid.UUID, 
 		}
 
 		srcID := invID
-		// Convert inventory date to TIMESTAMPTZ for effective_at
-		var effectiveAt *pgtype.Timestamptz
-		if inventoryDate.Valid {
-			effectiveAt = &pgtype.Timestamptz{Time: inventoryDate.Time.In(time.UTC), Valid: true}
-		}
 		_ = s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
 			ID: uuid.New(), StorageID: storageID, IngredientID: item.IngredientID,
 			EventType: eventType, QtyIn: zero, QtyOut: zero,
 			StockBefore: locked.Quantity, StockAfter: updated.Quantity,
 			PricePerUnit: zero, SourceType: &sourceType, SourceID: &srcID,
-			EffectiveAt: effectiveAt,
+			EffectiveAt: &pgtype.Timestamptz{Time: inventoryDate.Time.In(time.UTC), Valid: true},
 		})
 	}
 	return nil

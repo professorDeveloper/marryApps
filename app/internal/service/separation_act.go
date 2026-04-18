@@ -284,7 +284,7 @@ func (s *SeparationActS) ConfirmSeparationAct(ctx context.Context, id string) (*
 
 	zero := pgtype.Numeric{}
 	_ = zero.Scan("0")
-	srcType := "separation_act"
+	srcType := string(pg.SeparationActOut)
 
 	// Convert act date to timestamptz for effective_at
 	var actDate pgtype.Timestamptz
@@ -323,7 +323,7 @@ func (s *SeparationActS) ConfirmSeparationAct(ctx context.Context, id string) (*
 		ID:           uuid.New(),
 		StorageID:    uuid.UUID(act.StorageID.Bytes),
 		IngredientID: act.SourceIngredientID,
-		EventType:    "separation_act_out",
+		EventType:    string(pg.SeparationActOut),
 		QtyIn:        zero,
 		QtyOut:       act.SourceQuantity,
 		StockBefore:  srcLocked.Quantity,
@@ -376,7 +376,7 @@ func (s *SeparationActS) ConfirmSeparationAct(ctx context.Context, id string) (*
 			ID:           uuid.New(),
 			StorageID:    uuid.UUID(itemStorage.Bytes),
 			IngredientID: item.IngredientID,
-			EventType:    "separation_act_in",
+			EventType:    string(pg.SeparationActIn),
 			QtyIn:        item.Quantity,
 			QtyOut:       zero,
 			StockBefore:  locked.Quantity,
@@ -434,7 +434,7 @@ func (s *SeparationActS) DeleteSeparationAct(ctx context.Context, id string) err
 
 		zero := pgtype.Numeric{}
 		_ = zero.Scan("0")
-		srcType := "separation_act"
+		srcType := string(pg.SeparationActOut)
 
 		// Convert act date to timestamptz for effective_at
 		var actDate pgtype.Timestamptz
@@ -482,7 +482,7 @@ func (s *SeparationActS) DeleteSeparationAct(ctx context.Context, id string) err
 				ID:           uuid.New(),
 				StorageID:    uuid.UUID(itemStorage.Bytes),
 				IngredientID: item.IngredientID,
-				EventType:    "separation_act_in_reversed",
+				EventType:    string(pg.SeparationActInReversed),
 				QtyIn:        zero,
 				QtyOut:       item.Quantity,
 				StockBefore:  locked.Quantity,
@@ -522,7 +522,7 @@ func (s *SeparationActS) DeleteSeparationAct(ctx context.Context, id string) err
 				ID:           uuid.New(),
 				StorageID:    uuid.UUID(act.StorageID.Bytes),
 				IngredientID: act.SourceIngredientID,
-				EventType:    "separation_act_out_reversed",
+				EventType:    string(pg.SeparationActOutReversed),
 				QtyIn:        act.SourceQuantity,
 				QtyOut:       zero,
 				StockBefore:  locked.Quantity,

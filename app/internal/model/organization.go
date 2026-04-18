@@ -281,8 +281,9 @@ type GetIngredientReportRequest struct {
 }
 
 type IngredientReportTotals struct {
-	TotalCount          int64  `json:"total_count"`
-	TotalOrderOutAmount string `json:"total_order_out_amount"`
+	TotalCount       int64  `json:"total_count"`
+	TotalAddedAmount string `json:"total_added_amount"`
+	TotalRemovedAmount string `json:"total_removed_amount"`
 }
 
 type IngredientReportResponse struct {
@@ -297,26 +298,12 @@ type IngredientReportItem struct {
 	PictureUrl     *string `json:"picture_url,omitempty"`
 	ColorCode      *string `json:"color_code,omitempty"`
 
-	BeginQty string `json:"begin_qty"`
-	EndQty   string `json:"end_qty"`
-
-	InvoiceInQty    string `json:"invoice_in_qty"`
-	OrderOutQty     string `json:"order_out_qty"`
-	DeductionOutQty string `json:"deduction_out_qty"`
-	SurplusQty      string `json:"surplus_qty"`
-	ShortageQty     string `json:"shortage_qty"`
-
-	CostStart string `json:"cost_start"`
-	CostEnd   string `json:"cost_end"`
-
-	BeginAmount string `json:"begin_amount"`
-	EndAmount   string `json:"end_amount"`
-
-	InvoiceInAmount    string `json:"invoice_in_amount"`
-	OrderOutAmount     string `json:"order_out_amount"`
-	DeductionOutAmount string `json:"deduction_out_amount"`
-	SurplusAmount      string `json:"surplus_amount"`
-	ShortageAmount     string `json:"shortage_amount"`
+	BeginQuantity string `json:"begin_quantity"`
+	EndQuantity   string `json:"end_quantity"`
+	In            string `json:"in"`
+	Out           string `json:"out"`
+	Shortage      string `json:"shortage"`
+	Surplus       string `json:"surplus"`
 }
 
 type GetIngredientReportMovementsRequest struct {

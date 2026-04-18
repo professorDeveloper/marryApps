@@ -266,34 +266,21 @@ func (i *IngredientS) GetIngredientReport(ctx context.Context, req model.GetIngr
 			PictureUrl:     r.PictureUrl,
 			ColorCode:      r.ColorCode,
 
-			BeginQty: numericToStr(r.BeginQty),
-			EndQty:   numericToStr(r.EndQty),
-
-			InvoiceInQty:    numericToStr(r.InvoiceInQty),
-			OrderOutQty:     numericToStr(r.OrderOutQty),
-			DeductionOutQty: numericToStr(r.DeductionOutQty),
-			SurplusQty:      numericToStr(r.SurplusQty),
-			ShortageQty:     numericToStr(r.ShortageQty),
-
-			CostStart: numericToStr(r.CostStart),
-			CostEnd:   numericToStr(r.CostEnd),
-
-			BeginAmount: numericToStr(r.BeginAmount),
-			EndAmount:   numericToStr(r.EndAmount),
-
-			InvoiceInAmount:    numericToStr(r.InvoiceInAmount),
-			OrderOutAmount:     numericToStr(r.OrderOutAmount),
-			DeductionOutAmount: numericToStr(r.DeductionOutAmount),
-			SurplusAmount:      numericToStr(r.SurplusAmount),
-			ShortageAmount:     numericToStr(r.ShortageAmount),
+			BeginQuantity: numericToStr(r.BeginQty),
+			EndQuantity:   numericToStr(r.EndQty),
+			In:            numericToStr(r.InQty),
+			Out:           numericToStr(r.OutQty),
+			Shortage:      numericToStr(r.ShortageQty),
+			Surplus:       numericToStr(r.SurplusQty),
 		})
 	}
 
 	return &model.IngredientReportResponse{
 		Items: items,
 		Totals: model.IngredientReportTotals{
-			TotalCount:          totalsRow.TotalCount,
-			TotalOrderOutAmount: numericToStr(totalsRow.TotalOrderOutAmount),
+			TotalCount:        totalsRow.TotalCount,
+			TotalAddedAmount:   numericToStr(totalsRow.TotalAddedAmount),
+			TotalRemovedAmount: numericToStr(totalsRow.TotalRemovedAmount),
 		},
 	}, nil
 }

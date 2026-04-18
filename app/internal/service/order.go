@@ -1620,6 +1620,7 @@ func (s *OrderS) consumeItemStockTx(
 ) error {
 	storageID, err := q.GetStorageByGoodID(ctx, goodID)
 	if err != nil {
+		log.Printf("❌ ERROR: Failed to get storage for good %s: %v", goodID, err)
 		return fmt.Errorf("failed to get storage for good: %w", err)
 	}
 	if !storageID.Valid {
@@ -1634,6 +1635,7 @@ func (s *OrderS) consumeItemStockTx(
 
 	usages, err := s.expandGoodToIngredientsByCalculations(ctx, goodID, mult)
 	if err != nil {
+		log.Printf("❌ ERROR: Failed to expand good %s to ingredients: %v", goodID, err)
 		return err
 	}
 	if len(usages) == 0 {
@@ -1730,26 +1732,40 @@ func (s *OrderS) consumeItemStock(ctx context.Context, goodID uuid.UUID, quantit
 		return fmt.Errorf("no calculation configured for good %s", goodID)
 	}
 
+	if len(usages) == 0 {
+		log.Printf("⚠️  WARNING: Good %s has NO ingredient calculations configured", goodID)
+		log.Printf("   ROOT CAUSE: This good has no recipe/BOM (Bill of Materials) setup")
+		log.Printf("   ACTION: Add ingredient calculations in the goods_calculations table")
+		return nil
+	}
+	log.Printf("✓ Ingredient usages expanded: %d ingredients found", len(usages))
+
 	for _, u := range usages {
+		log.Printf("\n  📦 Processing ingredient: %s", u.ingredientID.String())
 		stockID, err := s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
 			ID:           uuid.New(),
 			IngredientID: u.ingredientID,
 			StorageID:    storageID,
 		})
 		if err != nil {
+			log.Printf("  ❌ ERROR: Failed to ensure ingredient stock row: %v", err)
 			return fmt.Errorf("failed to ensure ingredient stock row: %w", err)
 		}
+		log.Printf("  ✓ Stock row ensured: %s", stockID.String())
 
 		locked, err := s.repo.Tenant(ctx).GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
 			IngredientID: u.ingredientID,
 			StorageID:    storageID,
 		})
 		if err != nil {
+			log.Printf("  ❌ ERROR: Failed to lock ingredient stock row: %v", err)
 			return fmt.Errorf("failed to lock ingredient stock row: %w", err)
 		}
+		log.Printf("  ✓ Stock locked | Before: %v | To Reduce: %v", locked.Quantity, u.quantity)
 
 		ing, err := s.repo.Tenant(ctx).GetIngredientByID(ctx, u.ingredientID)
 		if err != nil {
+			log.Printf("  ❌ ERROR: Failed to get ingredient: %v", err)
 			return fmt.Errorf("failed to get ingredient: %w", err)
 		}
 		price := ing.PricePerUnit
@@ -1762,8 +1778,10 @@ func (s *OrderS) consumeItemStock(ctx context.Context, goodID uuid.UUID, quantit
 			Quantity: u.quantity,
 		})
 		if err != nil {
+			log.Printf("  ❌ ERROR: Failed to consume ingredient stock: %v", err)
 			return fmt.Errorf("failed to consume ingredient stock: %w", err)
 		}
+		log.Printf("  ✅ REDUCED | Before: %v | After: %v | Reduced By: %v", numericToString(locked.Quantity), numericToString(updated.Quantity), numericToString(u.quantity))
 
 		zero := pgtype.Numeric{}
 		_ = zero.Scan("0")
@@ -1780,7 +1798,7 @@ func (s *OrderS) consumeItemStock(ctx context.Context, goodID uuid.UUID, quantit
 			ID:           uuid.New(),
 			StorageID:    uuid.UUID(storageID.Bytes),
 			IngredientID: u.ingredientID,
-			EventType:    "order_out",
+			EventType:    string(pg.OrderOut),
 			QtyIn:        zero,
 			QtyOut:       u.quantity,
 			StockBefore:  locked.Quantity,
@@ -1790,9 +1808,12 @@ func (s *OrderS) consumeItemStock(ctx context.Context, goodID uuid.UUID, quantit
 			SourceID:     &srcID,
 			EffectiveAt:  effectiveAt,
 		}); err != nil {
+			log.Printf("  ❌ ERROR: Failed to insert stock movement: %v", err)
 			return fmt.Errorf("failed to insert stock movement: %w", err)
 		}
+		log.Printf("  ✓ Stock movement recorded (order_out event)")
 	}
+	log.Printf("=== STOCK CONSUMPTION SUCCESS ===\n")
 	return nil
 }
 
@@ -1812,7 +1833,7 @@ func (s *OrderS) consumeItemStockWithModifiers(ctx context.Context, orderItemID 
 		return fmt.Errorf("failed to get storage for good: %w", err)
 	}
 	if !storageID.Valid {
-		return nil
+		return fmt.Errorf("no active storage configured for good %s", goodID)
 	}
 
 	mult := pgtype.Numeric{}
@@ -1878,7 +1899,7 @@ func (s *OrderS) consumeItemStockWithModifiers(ctx context.Context, orderItemID 
 			ID:           uuid.New(),
 			StorageID:    uuid.UUID(storageID.Bytes),
 			IngredientID: u.ingredientID,
-			EventType:    "order_out",
+			EventType:    string(pg.OrderOut),
 			QtyIn:        zero,
 			QtyOut:       u.quantity,
 			StockBefore:  locked.Quantity,
@@ -1969,7 +1990,7 @@ func (s *OrderS) consumeItemStockWithModifiers(ctx context.Context, orderItemID 
 				ID:           uuid.New(),
 				StorageID:    uuid.UUID(storageID.Bytes),
 				IngredientID: u.ingredientID,
-				EventType:    "order_out",
+				EventType:    string(pg.OrderOut),
 				QtyIn:        zero,
 				QtyOut:       u.quantity,
 				StockBefore:  locked.Quantity,
@@ -2165,6 +2186,20 @@ func (s *OrderS) CreateOrderItems(ctx context.Context, req model.CreateOrderItem
 		return nil, fmt.Errorf("invalid order_id: %w", err)
 	}
 
+	// Fetch order to get creation date for stock movements
+	order, err := s.repo.Tenant(ctx).GetOrderByID(ctx, oID)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, fmt.Errorf("order not found")
+		}
+		return nil, fmt.Errorf("failed to fetch order: %w", err)
+	}
+
+	orderDate := order.CreatedAt
+	if !orderDate.Valid {
+		orderDate = pgtype.Timestamptz{Time: time.Now(), Valid: true}
+	}
+
 	var responses []model.OrderItemResponse
 
 	for i, entry := range req.Items {
@@ -2192,9 +2227,9 @@ func (s *OrderS) CreateOrderItems(ctx context.Context, req model.CreateOrderItem
 			}
 		}
 
-		status := pg.NullOrderItemsStatus{OrderItemsStatus: pg.OrderItemsStatus(model.OrderItemStatusPending), Valid: true}
-		if entry.Status != nil && *entry.Status != "" {
-			status = pg.NullOrderItemsStatus{OrderItemsStatus: pg.OrderItemsStatus(*entry.Status), Valid: true}
+		status := pg.NullOrderItemsStatus{
+			OrderItemsStatus: pg.OrderItemsStatus(model.OrderItemStatusPending),
+			Valid:            true,
 		}
 
 		item, err := s.repo.Tenant(ctx).CreateOrderItem(ctx, pg.CreateOrderItemParams{
@@ -2582,15 +2617,7 @@ func (s *OrderS) MarkOrderItemCooking(ctx context.Context, itemID string) (*mode
 }
 
 func (s *OrderS) MarkOrderItemReady(ctx context.Context, itemID string) (*model.OrderItemResponse, error) {
-	id, err := uuid.Parse(itemID)
-	if err != nil {
-		return nil, fmt.Errorf("invalid order item id: %w", err)
-	}
-	item, err := s.repo.Tenant(ctx).MarkOrderItemReady(ctx, id)
-	if err != nil {
-		return nil, fmt.Errorf("failed to mark order item ready: %w", err)
-	}
-	return toOrderItemResponse(item), nil
+	return s.UpdateOrderItemStatus(ctx, itemID, string(model.OrderItemStatusReady))
 }
 
 // ==================== KITCHEN QUEUE ====================

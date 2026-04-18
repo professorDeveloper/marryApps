@@ -673,3 +673,15 @@ ORDER BY
     o.created_at DESC
 LIMIT sqlc.arg(page_limit)::int
 OFFSET sqlc.arg(page_offset)::int;
+
+-- name: GetOrderItemByIDForUpdate :one
+SELECT id, good_id, order_id, quantity, price, status, comment, created_at, updated_at, deleted_at, cost_price
+FROM order_items
+WHERE order_items.id = $1
+  AND order_items.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM orders o
+    WHERE o.id = order_items.order_id
+      AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
+FOR UPDATE;

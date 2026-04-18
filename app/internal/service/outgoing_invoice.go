@@ -283,7 +283,7 @@ func (s *OutgoingInvoiceS) ConfirmOutgoingInvoice(ctx context.Context, id string
 			return nil, fmt.Errorf("failed to save stock snapshot: %w", err)
 		}
 
-		srcType := "outgoing_invoice"
+		srcType := string(pg.OutgoingInvoiceOut)
 		srcID := invoiceID
 		zero := pgtype.Numeric{}
 		_ = zero.Scan("0")
@@ -297,7 +297,7 @@ func (s *OutgoingInvoiceS) ConfirmOutgoingInvoice(ctx context.Context, id string
 			ID:           uuid.New(),
 			StorageID:    uuid.UUID(storageID.Bytes),
 			IngredientID: item.IngredientID,
-			EventType:    "outgoing_invoice_out",
+			EventType:    string(pg.OutgoingInvoiceOut),
 			QtyIn:        zero,
 			QtyOut:       item.Quantity,
 			StockBefore:  locked.Quantity,
@@ -384,7 +384,7 @@ func (s *OutgoingInvoiceS) DeleteOutgoingInvoice(ctx context.Context, id string)
 				ID:           uuid.New(),
 				StorageID:    uuid.UUID(storageID.Bytes),
 				IngredientID: item.IngredientID,
-				EventType:    "outgoing_invoice_deleted_in",
+				EventType:    string(pg.OutgoingInvoiceDeletedIn),
 				QtyIn:        item.Quantity,
 				QtyOut:       zero,
 				StockBefore:  locked.Quantity,
