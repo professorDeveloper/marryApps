@@ -361,7 +361,7 @@ func (h *Handler) DeleteInventoryItem(c echo.Context) error {
 // @Security BearerAuth
 // @Param id path string true "Inventory ID"
 // @Param input body model.UpsertInventoryItemsRequest true "Inventory items upsert data"
-// @Success 200 {array} model.InventoryItemComputedResponse "Inventory items updated successfully"
+// @Success 200 {object} model.SuccessResponse{data=model.InventoryResponse} "Inventory items updated successfully"
 // @Failure 400 {object} model.ErrorResponse "Invalid request data"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
 // @Failure 500 {object} model.ErrorResponse "Internal server error"
@@ -401,7 +401,7 @@ func (h *Handler) UpsertInventoryItems(c echo.Context) error {
 // @Security BearerAuth
 // @Param id path string true "Inventory ID"
 // @Param input body model.UpsertInventoryItemsRequest true "Inventory items batch data (items required; inventory fields optional)"
-// @Success 200 {array} model.InventoryItemComputedResponse "Inventory items updated successfully"
+// @Success 200 {object} model.SuccessResponse{data=model.InventoryResponse} "Inventory items updated successfully"
 // @Failure 400 {object} model.ErrorResponse "Invalid request or inventory is deleted"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
 // @Failure 500 {object} model.ErrorResponse "Internal server error"

@@ -272,8 +272,8 @@ type InventoryI interface {
 	DeleteInventoriesBatch(ctx context.Context, ids []string) error
 	RestoreInventory(ctx context.Context, id string) (*model.InventoryResponse, error)
 
-	UpsertInventoryItems(ctx context.Context, inventoryID string, req *model.UpsertInventoryItemsRequest) ([]*model.InventoryItemComputedResponse, error)
-	ReplaceInventoryItems(ctx context.Context, inventoryID string, req *model.UpsertInventoryItemsRequest) ([]*model.InventoryItemComputedResponse, error)
+	UpsertInventoryItems(ctx context.Context, inventoryID string, req *model.UpsertInventoryItemsRequest) (*model.InventoryResponse, error)
+	ReplaceInventoryItems(ctx context.Context, inventoryID string, req *model.UpsertInventoryItemsRequest) (*model.InventoryResponse, error)
 	GetInventoryItems(ctx context.Context, inventoryID string) ([]*model.InventoryItemComputedResponse, error)
 	GetAllInventoryItems(ctx context.Context, inventoryID *string, limit, offset int32) ([]*model.InventoryItemResponse, error)
 	UpdateInventoryItem(ctx context.Context, inventoryItemID string, req *model.UpdateInventoryItemRequest) (*model.InventoryItemResponse, error)
