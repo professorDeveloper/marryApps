@@ -5,6 +5,7 @@ import "time"
 type OutgoingInvoiceStatus string
 
 const (
+	OutgoingInvoiceStatusDraft     OutgoingInvoiceStatus = "draft"
 	OutgoingInvoiceStatusActive    OutgoingInvoiceStatus = "active"
 	OutgoingInvoiceStatusCancelled OutgoingInvoiceStatus = "cancelled"
 )
@@ -78,9 +79,9 @@ type UpsertOutgoingInvoiceItemsRequest struct {
 
 // CreateOutgoingInvoiceBatchRequest creates an invoice with items in one call
 type CreateOutgoingInvoiceBatchRequest struct {
-	Date        *string                             `json:"date,omitempty"`
-	StorageID   *string                             `json:"storage_id,omitempty"`
-	GroupID     *string                             `json:"group_id,omitempty"`
-	Description *string                             `json:"description,omitempty"`
-	Items       []UpsertOutgoingInvoiceItemRequest  `json:"items" validate:"required,min=1"`
+	Date        *string                            `json:"date,omitempty"`
+	StorageID   *string                            `json:"storage_id,omitempty"`
+	GroupID     *string                            `json:"group_id,omitempty"`
+	Description *string                            `json:"description,omitempty"`
+	Items       []UpsertOutgoingInvoiceItemRequest `json:"items" validate:"required,min=1"`
 }

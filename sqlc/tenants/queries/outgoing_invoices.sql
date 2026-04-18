@@ -5,7 +5,7 @@ INSERT INTO outgoing_invoices (
 VALUES (
   gen_random_uuid(), $1, $2, $3,
   NULLIF(current_setting('app.branch_id', true), '')::uuid,
-  $4, 'active'
+  $4, 'draft'
 )
 RETURNING id, number, date, storage_id, group_id, branch_id, description, status, total_amount, created_at, updated_at, deleted_at;
 
@@ -53,14 +53,15 @@ SET date        = COALESCE($2, date),
     group_id    = COALESCE($4, group_id),
     description = COALESCE($5, description),
     updated_at  = NOW()
-WHERE id = $1 AND deleted_at = 0 AND status = 'active'
+WHERE id = $1 AND deleted_at = 0 AND status = 'draft'
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 RETURNING id, number, date, storage_id, group_id, branch_id, description, status, total_amount, created_at, updated_at, deleted_at;
 
 -- name: ConfirmOutgoingInvoice :one
 UPDATE outgoing_invoices
-SET updated_at = NOW()
-WHERE id = $1 AND deleted_at = 0 AND status = 'active'
+SET status     = 'active',
+    updated_at = NOW()
+WHERE id = $1 AND deleted_at = 0 AND status = 'draft'
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 RETURNING id, number, date, storage_id, group_id, branch_id, description, status, total_amount, created_at, updated_at, deleted_at;
 
@@ -68,7 +69,7 @@ RETURNING id, number, date, storage_id, group_id, branch_id, description, status
 UPDATE outgoing_invoices
 SET status     = 'cancelled',
     updated_at = NOW()
-WHERE id = $1 AND deleted_at = 0 AND status = 'active'
+WHERE id = $1 AND deleted_at = 0 AND status = 'draft'
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 RETURNING id, number, date, storage_id, group_id, branch_id, description, status, total_amount, created_at, updated_at, deleted_at;
 
@@ -76,7 +77,7 @@ RETURNING id, number, date, storage_id, group_id, branch_id, description, status
 UPDATE outgoing_invoices
 SET deleted_at = EXTRACT(EPOCH FROM NOW())::BIGINT,
     updated_at = NOW()
-WHERE id = $1 AND deleted_at = 0 AND status = 'active'
+WHERE id = $1 AND deleted_at = 0 AND status = 'draft'
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;
 
 -- name: UpdateOutgoingInvoiceTotalAmount :one

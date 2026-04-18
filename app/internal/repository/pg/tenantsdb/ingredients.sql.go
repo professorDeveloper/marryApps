@@ -7,7 +7,6 @@ package pg
 
 import (
 	"context"
-	"log"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -1064,7 +1063,6 @@ type RemoveFromIngredientStockParams struct {
 
 // RemoveFromIngredientStock decreases ingredient stock quantity (can go negative)
 func (q *Queries) RemoveFromIngredientStock(ctx context.Context, arg RemoveFromIngredientStockParams) (IngredientStock, error) {
-	log.Printf("RemoveFromIngredientStock: Attempting to remove %v from stock ID %s", arg.Quantity, arg.ID)
 	row := q.db.QueryRow(ctx, removeFromIngredientStock, arg.ID, arg.Quantity)
 	var i IngredientStock
 	err := row.Scan(
@@ -1077,11 +1075,6 @@ func (q *Queries) RemoveFromIngredientStock(ctx context.Context, arg RemoveFromI
 		&i.UpdatedAt,
 		&i.DeletedAt,
 	)
-	if err != nil {
-		log.Printf("RemoveFromIngredientStock: Failed for stock ID %s: %v", arg.ID, err)
-	} else {
-		log.Printf("RemoveFromIngredientStock: Success for stock ID %s, new quantity: %v", arg.ID, i.Quantity)
-	}
 	return i, err
 }
 
