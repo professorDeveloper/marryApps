@@ -1688,6 +1688,10 @@ func (s *OrderS) consumeItemStockTx(
 			Valid: true,
 		}
 
+		if shouldSkipStockMovement(zero, u.quantity) {
+			continue
+		}
+
 		if err := q.InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
 			ID:           uuid.New(),
 			StorageID:    uuid.UUID(storageID.Bytes),
@@ -1785,6 +1789,10 @@ func (s *OrderS) consumeItemStock(ctx context.Context, goodID uuid.UUID, quantit
 			Valid: true,
 		}
 		effectiveAt := &now
+
+		if shouldSkipStockMovement(zero, u.quantity) {
+			continue
+		}
 
 		if err := s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
 			ID:           uuid.New(),
@@ -1887,6 +1895,10 @@ func (s *OrderS) consumeItemStockWithModifiers(ctx context.Context, orderItemID 
 		}
 		effectiveAt := &now
 
+		if shouldSkipStockMovement(zero, u.quantity) {
+			continue
+		}
+
 		if err := s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
 			ID:           uuid.New(),
 			StorageID:    uuid.UUID(storageID.Bytes),
@@ -1978,6 +1990,11 @@ func (s *OrderS) consumeItemStockWithModifiers(ctx context.Context, orderItemID 
 			_ = zero.Scan("0")
 			sourceType := "order"
 			srcID := orderID
+
+			if shouldSkipStockMovement(zero, u.quantity) {
+				continue
+			}
+
 			if err := s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
 				ID:           uuid.New(),
 				StorageID:    uuid.UUID(storageID.Bytes),
@@ -2178,18 +2195,11 @@ func (s *OrderS) CreateOrderItems(ctx context.Context, req model.CreateOrderItem
 		return nil, fmt.Errorf("invalid order_id: %w", err)
 	}
 
-	// Fetch order to get creation date for stock movements
-	order, err := s.repo.Tenant(ctx).GetOrderByID(ctx, oID)
-	if err != nil {
+	if _, err := s.repo.Tenant(ctx).GetOrderByID(ctx, oID); err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, fmt.Errorf("order not found")
 		}
 		return nil, fmt.Errorf("failed to fetch order: %w", err)
-	}
-
-	orderDate := order.CreatedAt
-	if !orderDate.Valid {
-		orderDate = pgtype.Timestamptz{Time: time.Now(), Valid: true}
 	}
 
 	var responses []model.OrderItemResponse
