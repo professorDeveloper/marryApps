@@ -325,5 +325,6 @@ type IngredientStockMovementResponse struct {
 	PricePerUnit string     `json:"price_per_unit"`
 	SourceType   *string    `json:"source_type,omitempty"`
 	SourceID     *string    `json:"source_id,omitempty"`
+	EffectiveAt  *time.Time `json:"effective_at,omitempty"`
 	CreatedAt    *time.Time `json:"created_at,omitempty"`
 }

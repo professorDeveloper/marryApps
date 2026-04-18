@@ -278,7 +278,7 @@ func (i *IngredientS) GetIngredientReport(ctx context.Context, req model.GetIngr
 	return &model.IngredientReportResponse{
 		Items: items,
 		Totals: model.IngredientReportTotals{
-			TotalCount:        totalsRow.TotalCount,
+			TotalCount:         totalsRow.TotalCount,
 			TotalAddedAmount:   numericToStr(totalsRow.TotalAddedAmount),
 			TotalRemovedAmount: numericToStr(totalsRow.TotalRemovedAmount),
 		},
@@ -355,6 +355,7 @@ func (i *IngredientS) GetIngredientReportMovements(ctx context.Context, req mode
 			PricePerUnit: numericToStr(r.PricePerUnit),
 			SourceType:   r.SourceType,
 			SourceID:     sourceIDStr,
+			EffectiveAt:  timestampToTime(r.EffectiveAt),
 			CreatedAt:    timestampToTime(r.CreatedAt),
 		})
 	}

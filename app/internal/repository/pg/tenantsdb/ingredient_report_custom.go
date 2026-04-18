@@ -32,8 +32,8 @@ type GetIngredientReportParams struct {
 }
 
 type IngredientReportTotalsRow struct {
-	TotalCount       int64          `json:"total_count"`
-	TotalAddedAmount pgtype.Numeric `json:"total_added_amount"`
+	TotalCount         int64          `json:"total_count"`
+	TotalAddedAmount   pgtype.Numeric `json:"total_added_amount"`
 	TotalRemovedAmount pgtype.Numeric `json:"total_removed_amount"`
 }
 
@@ -235,6 +235,7 @@ type IngredientStockMovementRow struct {
 	PricePerUnit pgtype.Numeric
 	SourceType   *string
 	SourceID     *uuid.UUID
+	EffectiveAt  pgtype.Timestamptz
 	CreatedAt    pgtype.Timestamptz
 }
 
@@ -249,25 +250,26 @@ type GetIngredientStockMovementsParams struct {
 
 func (q *Queries) GetIngredientStockMovements(ctx context.Context, arg GetIngredientStockMovementsParams) ([]IngredientStockMovementRow, error) {
 	const sql = `
-SELECT
-	id,
-	event_type,
-	qty_in,
-	qty_out,
-	stock_before,
-	stock_after,
-	price_per_unit,
-	source_type,
-	source_id,
-	created_at
-FROM ingredient_stock_movements
-WHERE storage_id = $1
-	AND ingredient_id = $2
-	AND COALESCE(effective_at, created_at) >= $3
-	AND COALESCE(effective_at, created_at) <= $4
-ORDER BY COALESCE(effective_at, created_at) ASC, id ASC
-LIMIT $5 OFFSET $6
-`
+	SELECT
+		id,
+		event_type,
+		qty_in,
+		qty_out,
+		stock_before,
+		stock_after,
+		price_per_unit,
+		source_type,
+		source_id,
+		effective_at,
+		created_at
+	FROM ingredient_stock_movements
+	WHERE storage_id = $1
+		AND ingredient_id = $2
+		AND COALESCE(effective_at, created_at) >= $3
+		AND COALESCE(effective_at, created_at) <= $4
+	ORDER BY COALESCE(effective_at, created_at) ASC, created_at ASC, id ASC
+	LIMIT $5 OFFSET $6
+	`
 
 	rows, err := q.db.Query(ctx, sql, arg.StorageID, arg.IngredientID, arg.Start, arg.End, arg.Limit, arg.Offset)
 	if err != nil {
@@ -288,6 +290,7 @@ LIMIT $5 OFFSET $6
 			&r.PricePerUnit,
 			&r.SourceType,
 			&r.SourceID,
+			&r.EffectiveAt,
 			&r.CreatedAt,
 		); err != nil {
 			return nil, err

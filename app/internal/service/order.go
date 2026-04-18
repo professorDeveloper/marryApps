@@ -1732,14 +1732,6 @@ func (s *OrderS) consumeItemStock(ctx context.Context, goodID uuid.UUID, quantit
 		return fmt.Errorf("no calculation configured for good %s", goodID)
 	}
 
-	if len(usages) == 0 {
-		log.Printf("⚠️  WARNING: Good %s has NO ingredient calculations configured", goodID)
-		log.Printf("   ROOT CAUSE: This good has no recipe/BOM (Bill of Materials) setup")
-		log.Printf("   ACTION: Add ingredient calculations in the goods_calculations table")
-		return nil
-	}
-	log.Printf("✓ Ingredient usages expanded: %d ingredients found", len(usages))
-
 	for _, u := range usages {
 		log.Printf("\n  📦 Processing ingredient: %s", u.ingredientID.String())
 		stockID, err := s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
