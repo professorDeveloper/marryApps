@@ -1143,10 +1143,6 @@ definitions:
     properties:
       inventory:
         $ref: '#/definitions/model.InventoryResponse'
-      items:
-        items:
-          $ref: '#/definitions/model.InventoryItemComputedResponse'
-        type: array
     type: object
   model.CreateInventoryRequest:
     properties:
@@ -2352,47 +2348,27 @@ definitions:
     type: object
   model.IngredientReportItem:
     properties:
-      begin_amount:
-        type: string
-      begin_qty:
+      begin_quantity:
         type: string
       color_code:
         type: string
-      cost_end:
+      end_quantity:
         type: string
-      cost_start:
-        type: string
-      deduction_out_amount:
-        type: string
-      deduction_out_qty:
-        type: string
-      end_amount:
-        type: string
-      end_qty:
+      in:
         type: string
       ingredient_id:
         type: string
       ingredient_name:
         type: string
-      invoice_in_amount:
-        type: string
-      invoice_in_qty:
-        type: string
       measurement:
         type: string
-      order_out_amount:
-        type: string
-      order_out_qty:
+      out:
         type: string
       picture_url:
         type: string
-      shortage_amount:
+      shortage:
         type: string
-      shortage_qty:
-        type: string
-      surplus_amount:
-        type: string
-      surplus_qty:
+      surplus:
         type: string
     type: object
   model.IngredientResponse:
@@ -2434,6 +2410,8 @@ definitions:
   model.IngredientStockMovementResponse:
     properties:
       created_at:
+        type: string
+      effective_at:
         type: string
       event_type:
         type: string
@@ -14228,9 +14206,12 @@ paths:
         "200":
           description: Inventory items updated successfully
           schema:
-            items:
-              $ref: '#/definitions/model.InventoryItemComputedResponse'
-            type: array
+            allOf:
+            - $ref: '#/definitions/model.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.InventoryResponse'
+              type: object
         "400":
           description: Invalid request data
           schema:
@@ -14315,9 +14296,12 @@ paths:
         "200":
           description: Inventory items updated successfully
           schema:
-            items:
-              $ref: '#/definitions/model.InventoryItemComputedResponse'
-            type: array
+            allOf:
+            - $ref: '#/definitions/model.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.InventoryResponse'
+              type: object
         "400":
           description: Invalid request or inventory is deleted
           schema:

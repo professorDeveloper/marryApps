@@ -13855,10 +13855,19 @@ const docTemplate = `{
                     "200": {
                         "description": "Inventory items updated successfully",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/model.InventoryItemComputedResponse"
-                            }
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/model.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/model.InventoryResponse"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "400": {
@@ -13922,10 +13931,19 @@ const docTemplate = `{
                     "200": {
                         "description": "Inventory items updated successfully",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/model.InventoryItemComputedResponse"
-                            }
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/model.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/model.InventoryResponse"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "400": {
@@ -26852,12 +26870,6 @@ const docTemplate = `{
             "properties": {
                 "inventory": {
                     "$ref": "#/definitions/model.InventoryResponse"
-                },
-                "items": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/model.InventoryItemComputedResponse"
-                    }
                 }
             }
         },
@@ -28588,31 +28600,16 @@ const docTemplate = `{
         "model.IngredientReportItem": {
             "type": "object",
             "properties": {
-                "begin_amount": {
-                    "type": "string"
-                },
-                "begin_qty": {
+                "begin_quantity": {
                     "type": "string"
                 },
                 "color_code": {
                     "type": "string"
                 },
-                "cost_end": {
+                "end_quantity": {
                     "type": "string"
                 },
-                "cost_start": {
-                    "type": "string"
-                },
-                "deduction_out_amount": {
-                    "type": "string"
-                },
-                "deduction_out_qty": {
-                    "type": "string"
-                },
-                "end_amount": {
-                    "type": "string"
-                },
-                "end_qty": {
+                "in": {
                     "type": "string"
                 },
                 "ingredient_id": {
@@ -28621,34 +28618,19 @@ const docTemplate = `{
                 "ingredient_name": {
                     "type": "string"
                 },
-                "invoice_in_amount": {
-                    "type": "string"
-                },
-                "invoice_in_qty": {
-                    "type": "string"
-                },
                 "measurement": {
                     "type": "string"
                 },
-                "order_out_amount": {
-                    "type": "string"
-                },
-                "order_out_qty": {
+                "out": {
                     "type": "string"
                 },
                 "picture_url": {
                     "type": "string"
                 },
-                "shortage_amount": {
+                "shortage": {
                     "type": "string"
                 },
-                "shortage_qty": {
-                    "type": "string"
-                },
-                "surplus_amount": {
-                    "type": "string"
-                },
-                "surplus_qty": {
+                "surplus": {
                     "type": "string"
                 }
             }
@@ -28706,6 +28688,9 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "created_at": {
+                    "type": "string"
+                },
+                "effective_at": {
                     "type": "string"
                 },
                 "event_type": {

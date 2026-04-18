@@ -67,7 +67,6 @@ type CreateInventoryBatchRequest struct {
 
 type CreateInventoryBatchResponse struct {
 	Inventory *InventoryResponse             `json:"inventory"`
-	Items     []*InventoryItemComputedResponse `json:"items"`
 }
 
 type InventoryItemComputedResponse struct {

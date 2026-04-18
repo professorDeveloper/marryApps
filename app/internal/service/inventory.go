@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"gitlab.yurtal.tech/company/maryai/back/internal/model"
 	"gitlab.yurtal.tech/company/maryai/back/internal/repository"
@@ -69,7 +70,6 @@ func (s *InventoryS) CreateInventory(ctx context.Context, req *model.CreateInven
 
 	return toInventoryResponse(created), nil
 }
-
 func (s *InventoryS) CreateInventoryBatch(ctx context.Context, req *model.CreateInventoryBatchRequest) (*model.CreateInventoryBatchResponse, error) {
 	inv, err := s.CreateInventory(ctx, &model.CreateInventoryRequest{
 		Date:            req.Date,
@@ -82,16 +82,19 @@ func (s *InventoryS) CreateInventoryBatch(ctx context.Context, req *model.Create
 		return nil, err
 	}
 
-	items, err := s.ReplaceInventoryItems(ctx, inv.ID, &model.UpsertInventoryItemsRequest{
-		Items: req.Items,
-	})
-	if err != nil {
-		return nil, err
+	finalInv := inv
+
+	if len(req.Items) > 0 {
+		finalInv, err = s.ReplaceInventoryItems(ctx, inv.ID, &model.UpsertInventoryItemsRequest{
+			Items: req.Items,
+		})
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &model.CreateInventoryBatchResponse{
-		Inventory: inv,
-		Items:     items,
+		Inventory: finalInv,
 	}, nil
 }
 
@@ -113,13 +116,7 @@ func (s *InventoryS) GetInventoryByID(ctx context.Context, id string) (*model.In
 	return toInventoryResponse(inv), nil
 }
 
-func (s *InventoryS) GetInventoriesFiltered(
-	ctx context.Context,
-	dateFrom, dateTo *time.Time,
-	storageID, ingredientID, status *string,
-	search, sortBy, sortOrder string,
-	limit, offset int32,
-) (*model.PaginatedInventoriesResponse, error) {
+func (s *InventoryS) GetInventoriesFiltered(ctx context.Context, dateFrom, dateTo *time.Time, storageID, ingredientID, status *string, search, sortBy, sortOrder string, limit, offset int32) (*model.PaginatedInventoriesResponse, error) {
 	var fromDate pgtype.Date
 	if dateFrom != nil {
 		fromDate = pgtype.Date{Time: *dateFrom, Valid: true}
@@ -290,6 +287,15 @@ func (s *InventoryS) UpdateInventory(ctx context.Context, id string, req *model.
 		return nil, fmt.Errorf("failed to get inventory: %w", err)
 	}
 
+	effectiveDate := invFull.Date
+	if req.Date != nil && *req.Date != "" {
+		d, err := parseDateYYYYMMDD(*req.Date)
+		if err != nil {
+			return nil, fmt.Errorf("invalid date: %w", err)
+		}
+		effectiveDate = pgtype.Date{Time: d, Valid: true}
+	}
+
 	// Handle status transition with stock effects
 	if req.Status != nil && *req.Status != "" && *req.Status != invForApply.Status {
 		newStatus := *req.Status
@@ -302,11 +308,11 @@ func (s *InventoryS) UpdateInventory(ctx context.Context, id string, req *model.
 
 		switch {
 		case invForApply.Status == "draft" && newStatus == "active":
-			if err := s.applyStockForItems(ctx, inventoryID, invForApply.StorageID, storagePg, items, "draft_to_active", invFull.Date); err != nil {
+			if err := s.applyStockForItems(ctx, inventoryID, invForApply.StorageID, storagePg, items, "draft_to_active", effectiveDate); err != nil {
 				return nil, err
 			}
 		case invForApply.Status == "active" && newStatus == "draft":
-			if err := s.reverseStockForItems(ctx, inventoryID, invForApply.StorageID, storagePg, items, "active_to_draft", invFull.Date); err != nil {
+			if err := s.reverseStockForItems(ctx, inventoryID, invForApply.StorageID, storagePg, items, "active_to_draft", effectiveDate); err != nil {
 				return nil, err
 			}
 		default:
@@ -418,346 +424,176 @@ func (s *InventoryS) UpdateInventoryItem(ctx context.Context, inventoryItemID st
 // ReplaceInventoryItems is a full-replace batch: items in the request are upserted,
 // items currently in the inventory but absent from the request are deleted.
 // Stock is applied/reversed depending on the inventory's current status.
-func (s *InventoryS) ReplaceInventoryItems(ctx context.Context, inventoryID string, req *model.UpsertInventoryItemsRequest) ([]*model.InventoryItemComputedResponse, error) {
+func (s *InventoryS) ReplaceInventoryItems(ctx context.Context, inventoryID string, req *model.UpsertInventoryItemsRequest) (*model.InventoryResponse, error) {
+	if inventoryID == "" {
+		return nil, fmt.Errorf("inventory_id is required")
+	}
+
 	invID, err := uuid.Parse(inventoryID)
 	if err != nil {
-		return nil, fmt.Errorf("invalid inventory id: %w", err)
+		return nil, fmt.Errorf("invalid inventory_id: %w", err)
 	}
 
-	inv, err := s.repo.Tenant(ctx).GetInventoryForApply(ctx, invID)
+	inv, err := s.repo.Tenant(ctx).GetInventoryByID(ctx, invID)
 	if err != nil {
-		return nil, fmt.Errorf("inventory not found: %w", err)
-	}
-	if inv.Status == "deleted" {
-		return nil, fmt.Errorf("cannot edit a deleted inventory")
-	}
-
-	// Get full inventory record for date information
-	invFull, err := s.repo.Tenant(ctx).GetInventoryByID(ctx, invID)
-	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, fmt.Errorf("inventory not found")
+		}
 		return nil, fmt.Errorf("failed to get inventory: %w", err)
 	}
 
-	// Determine old/new status for stock transition
-	oldStatus := inv.Status
-	newStatus := oldStatus
-	if req.Status != nil && *req.Status != "" {
-		if *req.Status == "deleted" {
-			return nil, fmt.Errorf("cannot set status to 'deleted'; use the DELETE endpoint")
-		}
-		if *req.Status != oldStatus {
-			if !((oldStatus == "draft" && *req.Status == "active") || (oldStatus == "active" && *req.Status == "draft")) {
-				return nil, fmt.Errorf("invalid status transition: %s → %s", oldStatus, *req.Status)
-			}
-			newStatus = *req.Status
-		}
-	}
-
-	storagePg := pgtype.UUID{Bytes: inv.StorageID, Valid: true}
-	if req.StorageID != nil && *req.StorageID != "" {
-		sid, err := uuid.Parse(*req.StorageID)
-		if err != nil {
-			return nil, fmt.Errorf("invalid storage_id: %w", err)
-		}
-		storagePg = pgtype.UUID{Bytes: sid, Valid: true}
-	}
-
-	zero := pgtype.Numeric{}
-	_ = zero.Scan("0")
-	sourceType := "inventory"
-
-	// Build map of currently existing items keyed by ingredient_id
-	existingItems, err := s.repo.Tenant(ctx).GetInventoryItemsByInventoryIDAll(ctx, invID)
+	// Replace endpoint uchun items authoritative list hisoblanadi.
+	// Yangi listda yo'q itemlar delete qilinadi.
+	items, err := s.repo.Tenant(ctx).GetInventoryItemsForProcessByInventoryID(ctx, invID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load existing items: %w", err)
-	}
-	existingMap := make(map[uuid.UUID]pg.InventoryItemForProcess, len(existingItems))
-	for _, item := range existingItems {
-		existingMap[item.IngredientID] = item
+		return nil, fmt.Errorf("failed to get inventory items: %w", err)
 	}
 
-	// If transitioning active→draft, reverse all existing items' stock before processing
-	if oldStatus == "active" && newStatus == "draft" {
-		if err := s.reverseStockForItems(ctx, invID, inv.StorageID, pgtype.UUID{Bytes: inv.StorageID, Valid: true}, existingItems, "active_to_draft", invFull.Date); err != nil {
-			return nil, err
+	existingByIngredient := make(map[uuid.UUID]pg.InventoryItemForProcess, len(items))
+	for _, item := range items {
+		existingByIngredient[item.IngredientID] = item
+	}
+
+	seen := make(map[uuid.UUID]struct{}, len(req.Items))
+	isActive := inv.Status == "active"
+	effectiveAt := inventoryEffectiveAt(inv.Date)
+	zero := inventoryZeroNumeric()
+
+	for i, input := range req.Items {
+		if strings.TrimSpace(input.IngredientID) == "" {
+			return nil, fmt.Errorf("items[%d]: ingredient_id is required", i)
 		}
-	}
 
-	// Update inventory-level fields if any are provided (status, date, storage_id, description)
-	if req.Status != nil || req.Date != nil || req.StorageID != nil || req.Description != nil || req.DescriptionI18n != nil {
-		existing, err := s.repo.Tenant(ctx).GetInventoryByID(ctx, invID)
+		ingID, err := uuid.Parse(strings.TrimSpace(input.IngredientID))
 		if err != nil {
-			return nil, fmt.Errorf("failed to get inventory: %w", err)
+			return nil, fmt.Errorf("items[%d]: invalid ingredient_id: %w", i, err)
 		}
-		finalDate := existing.Date
-		if req.Date != nil && *req.Date != "" {
-			d, err := parseDateYYYYMMDD(*req.Date)
-			if err != nil {
-				return nil, fmt.Errorf("invalid date: %w", err)
-			}
-			finalDate = pgtype.Date{Time: d, Valid: true}
-		}
-		finalStorageID := existing.StorageID
-		if req.StorageID != nil && *req.StorageID != "" {
-			sid, err := uuid.Parse(*req.StorageID)
-			if err != nil {
-				return nil, fmt.Errorf("invalid storage_id: %w", err)
-			}
-			finalStorageID = sid
-		}
-		finalDescription := existing.Description
-		if req.Description != nil {
-			finalDescription = req.Description
-		}
-		finalDescI18n := existing.DescriptionI18n
-		if req.DescriptionI18n != nil {
-			if *req.DescriptionI18n == "" {
-				finalDescI18n = pgtype.UUID{Valid: false}
-			} else {
-				i18nID, err := uuid.Parse(*req.DescriptionI18n)
-				if err != nil {
-					return nil, fmt.Errorf("invalid description_i18n: %w", err)
-				}
-				finalDescI18n = pgtype.UUID{Bytes: i18nID, Valid: true}
-			}
-		}
-		if _, err := s.repo.Tenant(ctx).UpdateInventory(ctx, pg.UpdateInventoryParams{
-			ID:              invID,
-			Date:            finalDate,
-			StorageID:       finalStorageID,
-			Description:     finalDescription,
-			DescriptionI18n: finalDescI18n,
-			Status:          newStatus,
-		}); err != nil {
-			return nil, fmt.Errorf("failed to update inventory: %w", err)
-		}
-		// Refresh storagePg in case storage changed
-		storagePg = pgtype.UUID{Bytes: finalStorageID, Valid: true}
-	}
 
-	isActive := newStatus == "active"
-
-	// Convert inventory date to timestamptz for effective_at
-	var invDate pgtype.Timestamptz
-	if invFull.Date.Valid {
-		invDate = pgtype.Timestamptz{Time: invFull.Date.Time.In(time.UTC), Valid: true}
-	}
-
-	// Build set of ingredient IDs present in the request
-	requestSet := make(map[uuid.UUID]bool, len(req.Items))
-	for _, item := range req.Items {
-		ingID, err := uuid.Parse(item.IngredientID)
-		if err != nil {
-			return nil, fmt.Errorf("invalid ingredient_id: %w", err)
+		if _, ok := seen[ingID]; ok {
+			return nil, fmt.Errorf("items[%d]: duplicate ingredient_id: %s", i, ingID.String())
 		}
-		requestSet[ingID] = true
-	}
+		seen[ingID] = struct{}{}
 
-	// ── Upsert items present in request ──────────────────────────
-	for _, item := range req.Items {
-		ingID, _ := uuid.Parse(item.IngredientID)
 		newQty := pgtype.Numeric{}
-		if err := newQty.Scan(item.CountedQuantity); err != nil {
-			return nil, fmt.Errorf("invalid counted_quantity for ingredient %s: %w", ingID, err)
+		newQty.Valid = true
+
+		if strings.TrimSpace(input.CountedQuantity) == "" {
+			return nil, fmt.Errorf("items[%d]: counted_quantity is required", i)
 		}
 
-		existing, exists := existingMap[ingID]
+		if err := newQty.Scan(strings.TrimSpace(input.CountedQuantity)); err != nil {
+			return nil, fmt.Errorf("items[%d]: invalid counted_quantity: %w", i, err)
+		}
+		existing, exists := existingByIngredient[ingID]
 
-		if isActive {
-			// Ensure a stock row exists
-			_, _ = s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
-				ID:           uuid.New(),
-				IngredientID: ingID,
-				StorageID:    storagePg,
-			})
-
-			locked, err := s.repo.Tenant(ctx).GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
-				IngredientID: ingID,
-				StorageID:    storagePg,
-			})
+		// 1) Yangi item
+		if !exists {
+			inserted, err := s.repo.Tenant(ctx).InsertInventoryItemWithSystemQty(
+				ctx,
+				uuid.New(),
+				invID,
+				ingID,
+				newQty,
+				zero,
+			)
 			if err != nil {
-				return nil, fmt.Errorf("failed to lock stock for ingredient %s: %w", ingID, err)
+				return nil, fmt.Errorf("items[%d]: failed to insert inventory item: %w", i, err)
 			}
 
-			if !exists {
-				// New item on active inventory:
-				// Insert item first (system_quantity will be refreshed from movements)
-				itemID := uuid.New()
-				if _, err := s.repo.Tenant(ctx).InsertInventoryItemWithSystemQty(ctx, itemID, invID, ingID, newQty, zero); err != nil {
-					return nil, fmt.Errorf("failed to insert inventory item: %w", err)
-				}
-				// Refresh system_quantity from movement ledger at inventory date
-				refreshedItem, err := s.repo.Tenant(ctx).UpdateInventoryItemSystemQuantityFromMovements(ctx, itemID)
-				if err != nil {
-					return nil, fmt.Errorf("failed to refresh system_quantity: %w", err)
-				}
-				// Apply delta: difference = counted - system
-				delta := numericToFloat(newQty) - numericToFloat(refreshedItem.SystemQuantity)
-				if delta != 0 {
-					updated, err := s.repo.Tenant(ctx).UpdateIngredientStock(ctx, pg.UpdateIngredientStockParams{
-						ID:       locked.ID,
-						Quantity: newQty,
-					})
-					if err != nil {
-						return nil, fmt.Errorf("failed to update stock: %w", err)
-					}
-					ev := pg.InventorySurplusIn
-					deltaQty := pgtype.Numeric{}
-					srcID := invID
-					if delta > 0 {
-						_ = deltaQty.Scan(fmt.Sprintf("%.6f", delta))
-						_ = s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
-							ID: uuid.New(), StorageID: inv.StorageID, IngredientID: ingID,
-							EventType: string(ev), QtyIn: deltaQty, QtyOut: zero,
-							StockBefore: locked.Quantity, StockAfter: updated.Quantity,
-							PricePerUnit: zero, SourceType: &sourceType, SourceID: &srcID,
-							EffectiveAt: &invDate,
-						})
-					} else {
-						ev = pg.InventoryShortageOut
-						_ = deltaQty.Scan(fmt.Sprintf("%.6f", -delta))
-						_ = s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
-							ID: uuid.New(), StorageID: inv.StorageID, IngredientID: ingID,
-							EventType: string(ev), QtyIn: zero, QtyOut: deltaQty,
-							StockBefore: locked.Quantity, StockAfter: updated.Quantity,
-							PricePerUnit: zero, SourceType: &sourceType, SourceID: &srcID,
-							EffectiveAt: &invDate,
-						})
-					}
-				}
-			} else {
-				// Existing item on active inventory:
-				// Adjust by the change in counted_quantity
-				oldQty := existing.CountedQuantity
-				adjustment := numericToFloat(newQty) - numericToFloat(oldQty)
-				if adjustment != 0 {
-					newStockFloat := numericToFloat(locked.Quantity) + adjustment
-					newStockQty := pgtype.Numeric{}
-					_ = newStockQty.Scan(fmt.Sprintf("%.6f", newStockFloat))
-					updated, err := s.repo.Tenant(ctx).UpdateIngredientStock(ctx, pg.UpdateIngredientStockParams{
-						ID:       locked.ID,
-						Quantity: newStockQty,
-					})
-					if err != nil {
-						return nil, fmt.Errorf("failed to update stock: %w", err)
-					}
-					ev := pg.InventorySurplusIn
-					adjQty := pgtype.Numeric{}
-					srcID := invID
-					if adjustment > 0 {
-						_ = adjQty.Scan(fmt.Sprintf("%.6f", adjustment))
-						_ = s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
-							ID: uuid.New(), StorageID: inv.StorageID, IngredientID: ingID,
-							EventType: string(ev), QtyIn: adjQty, QtyOut: zero,
-							StockBefore: locked.Quantity, StockAfter: updated.Quantity,
-							PricePerUnit: zero, SourceType: &sourceType, SourceID: &srcID,
-							EffectiveAt: &invDate,
-						})
-					} else {
-						ev = pg.InventoryShortageOut
-						_ = adjQty.Scan(fmt.Sprintf("%.6f", -adjustment))
-						_ = s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
-							ID: uuid.New(), StorageID: inv.StorageID, IngredientID: ingID,
-							EventType: string(ev), QtyIn: zero, QtyOut: adjQty,
-							StockBefore: locked.Quantity, StockAfter: updated.Quantity,
-							PricePerUnit: zero, SourceType: &sourceType, SourceID: &srcID,
-							EffectiveAt: &invDate,
-						})
-					}
-				}
-				// Update counted_quantity, keep system_quantity
-				if _, err := s.repo.Tenant(ctx).UpdateInventoryItemCountedQuantity(ctx, existing.ID, newQty); err != nil {
-					return nil, fmt.Errorf("failed to update inventory item: %w", err)
-				}
+			if !isActive {
+				continue
 			}
-		} else {
-			// Draft: just upsert items, no stock changes
-			if _, err := s.repo.Tenant(ctx).UpsertInventoryItem(ctx, pg.UpsertInventoryItemParams{
-				ID:              uuid.New(),
-				InventoryID:     invID,
-				IngredientID:    ingID,
-				CountedQuantity: newQty,
-			}); err != nil {
-				return nil, fmt.Errorf("failed to upsert inventory item: %w", err)
+
+			refreshed, err := s.repo.Tenant(ctx).UpdateInventoryItemSystemQuantityFromMovements(ctx, inserted.ID)
+			if err != nil {
+				return nil, fmt.Errorf("items[%d]: failed to refresh system_quantity: %w", i, err)
 			}
+
+			plan, err := buildInventoryTransitionPlan(
+				refreshed.SystemQuantity,
+				refreshed.CountedQuantity,
+			)
+			if err != nil {
+				return nil, fmt.Errorf("items[%d]: failed to build inventory movement plan: %w", i, err)
+			}
+
+			if err := s.applyInventoryMovementPlan(
+				ctx,
+				invID,
+				inv.StorageID,
+				ingID,
+				plan,
+				effectiveAt,
+			); err != nil {
+				return nil, fmt.Errorf("items[%d]: failed to apply inventory movement plan: %w", i, err)
+			}
+
+			continue
+		}
+
+		// 2) Mavjud item update
+		oldQty := existing.CountedQuantity
+
+		if _, err := s.repo.Tenant(ctx).UpdateInventoryItemCountedQuantity(ctx, existing.ID, newQty); err != nil {
+			return nil, fmt.Errorf("items[%d]: failed to update counted quantity: %w", i, err)
+		}
+
+		// Draft inventory bo'lsa stockka tegmaymiz.
+		if !isActive {
+			continue
+		}
+
+		// Active inventory oldin ham apply bo'lgan.
+		// Endi old counted -> new counted orasidagi farqni movement sifatida yozamiz.
+		plan, err := buildInventoryTransitionPlan(oldQty, newQty)
+		if err != nil {
+			return nil, fmt.Errorf("items[%d]: failed to build inventory adjustment plan: %w", i, err)
+		}
+
+		if err := s.applyInventoryMovementPlan(
+			ctx,
+			invID,
+			inv.StorageID,
+			ingID,
+			plan,
+			effectiveAt,
+		); err != nil {
+			return nil, fmt.Errorf("items[%d]: failed to apply inventory adjustment plan: %w", i, err)
 		}
 	}
 
-	// ── Delete items absent from request ─────────────────────────
-	for ingID, item := range existingMap {
-		if requestSet[ingID] {
+	// 3) Requestda yo'q bo'lib qolgan eski itemlar delete qilinadi.
+	for _, item := range items {
+		if _, ok := seen[item.IngredientID]; ok {
 			continue
 		}
 
 		if isActive {
-			// Reverse the delta that was applied when this item was activated
-			_, _ = s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
-				ID:           uuid.New(),
-				IngredientID: ingID,
-				StorageID:    storagePg,
-			})
-			locked, err := s.repo.Tenant(ctx).GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
-				IngredientID: ingID,
-				StorageID:    storagePg,
-			})
+			// Active inventoryda delete bo'lsa old apply qilingan ta'sirni qaytaramiz:
+			// counted -> system
+			plan, err := buildInventoryTransitionPlan(item.CountedQuantity, item.SystemQuantity)
 			if err != nil {
-				return nil, fmt.Errorf("failed to lock stock for removal: %w", err)
+				return nil, fmt.Errorf("failed to build inventory delete reversal plan for ingredient %s: %w", item.IngredientID.String(), err)
 			}
-			delta := numericToFloat(item.CountedQuantity) - numericToFloat(item.SystemQuantity)
-			if delta != 0 {
-				reversedFloat := numericToFloat(locked.Quantity) - delta
-				reversedQty := pgtype.Numeric{}
-				_ = reversedQty.Scan(fmt.Sprintf("%.6f", reversedFloat))
-				updated, err := s.repo.Tenant(ctx).UpdateIngredientStock(ctx, pg.UpdateIngredientStockParams{
-					ID:       locked.ID,
-					Quantity: reversedQty,
-				})
-				if err != nil {
-					return nil, fmt.Errorf("failed to reverse stock: %w", err)
-				}
-				srcID := invID
-				var effectiveAt *pgtype.Timestamptz
-				if invDate.Valid && !invDate.Time.After(time.Now()) {
-					effectiveAt = &invDate
-				}
-				_ = s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
-					ID: uuid.New(), StorageID: inv.StorageID, IngredientID: ingID,
-					EventType: string(pg.InventoryItemRemoved), QtyIn: zero, QtyOut: zero,
-					StockBefore: locked.Quantity, StockAfter: updated.Quantity,
-					PricePerUnit: zero, SourceType: &sourceType, SourceID: &srcID,
-					EffectiveAt: effectiveAt,
-				})
+
+			if err := s.applyInventoryMovementPlan(
+				ctx,
+				invID,
+				inv.StorageID,
+				item.IngredientID,
+				plan,
+				effectiveAt,
+			); err != nil {
+				return nil, fmt.Errorf("failed to apply inventory delete reversal for ingredient %s: %w", item.IngredientID.String(), err)
 			}
 		}
 
-		if err := s.repo.Tenant(ctx).DeleteInventoryItemByID(ctx, item.ID); err != nil {
-			return nil, fmt.Errorf("failed to delete inventory item: %w", err)
+		if err := s.repo.Tenant(ctx).DeleteInventoryItem(ctx, item.ID); err != nil {
+			return nil, fmt.Errorf("failed to delete inventory item %s: %w", item.ID.String(), err)
 		}
 	}
 
-	// Recalculate totals
-	totals, err := s.repo.Tenant(ctx).CalculateInventoryTotals(ctx, invID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to calculate totals: %w", err)
-	}
-	if _, err := s.repo.Tenant(ctx).UpdateInventoryAmounts(ctx, pg.UpdateInventoryAmountsParams{
-		ID:              invID,
-		SurplusAmount:   totals.SurplusAmount,
-		ShortageAmount:  totals.ShortageAmount,
-		RemainingAmount: totals.RemainingAmount,
-	}); err != nil {
-		return nil, fmt.Errorf("failed to update inventory amounts: %w", err)
-	}
-
-	rows, err := s.repo.Tenant(ctx).GetInventoryItemsComputedAll(ctx, invID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get inventory items: %w", err)
-	}
-	resp := make([]*model.InventoryItemComputedResponse, 0, len(rows))
-	for _, row := range rows {
-		resp = append(resp, toInventoryItemComputedResponse(row))
-	}
-	return resp, nil
+	return s.GetInventoryByID(ctx, inventoryID)
 }
 
 // ─────────────────────────────────────────────
@@ -965,7 +801,7 @@ func (s *InventoryS) RestoreInventory(ctx context.Context, id string) (*model.In
 }
 
 // UpsertInventoryItems is kept for backwards compatibility; delegates to ReplaceInventoryItems.
-func (s *InventoryS) UpsertInventoryItems(ctx context.Context, inventoryID string, req *model.UpsertInventoryItemsRequest) ([]*model.InventoryItemComputedResponse, error) {
+func (s *InventoryS) UpsertInventoryItems(ctx context.Context, inventoryID string, req *model.UpsertInventoryItemsRequest) (*model.InventoryResponse, error) {
 	return s.ReplaceInventoryItems(ctx, inventoryID, req)
 }
 
@@ -1040,50 +876,19 @@ func (s *InventoryS) applyStockForItems(ctx context.Context, invID uuid.UUID, st
 // reverseStockForItems reverses the delta (counted - system_quantity) for each item.
 // Used when transitioning active → draft or deleting an active inventory.
 func (s *InventoryS) reverseStockForItems(ctx context.Context, invID uuid.UUID, storageID uuid.UUID, storagePg pgtype.UUID, items []pg.InventoryItemForProcess, eventType string, inventoryDate pgtype.Date) error {
-	zero := pgtype.Numeric{}
-	_ = zero.Scan("0")
-	sourceType := "inventory"
+	effectiveAt := inventoryEffectiveAt(inventoryDate)
 
 	for _, item := range items {
-		delta := numericToFloat(item.CountedQuantity) - numericToFloat(item.SystemQuantity)
-		if delta == 0 {
-			continue
-		}
-
-		_, _ = s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
-			ID:           uuid.New(),
-			IngredientID: item.IngredientID,
-			StorageID:    storagePg,
-		})
-		locked, err := s.repo.Tenant(ctx).GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
-			IngredientID: item.IngredientID,
-			StorageID:    storagePg,
-		})
+		plan, err := buildInventoryTransitionPlan(item.CountedQuantity, item.SystemQuantity)
 		if err != nil {
-			return fmt.Errorf("failed to lock stock: %w", err)
+			return fmt.Errorf("failed to build inventory reverse plan: %w", err)
 		}
 
-		reversedFloat := numericToFloat(locked.Quantity) - delta
-		reversedQty := pgtype.Numeric{}
-		_ = reversedQty.Scan(fmt.Sprintf("%.6f", reversedFloat))
-
-		updated, err := s.repo.Tenant(ctx).UpdateIngredientStock(ctx, pg.UpdateIngredientStockParams{
-			ID:       locked.ID,
-			Quantity: reversedQty,
-		})
-		if err != nil {
-			return fmt.Errorf("failed to reverse stock: %w", err)
+		if err := s.applyInventoryMovementPlan(ctx, invID, storageID, item.IngredientID, plan, effectiveAt); err != nil {
+			return err
 		}
-
-		srcID := invID
-		_ = s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
-			ID: uuid.New(), StorageID: storageID, IngredientID: item.IngredientID,
-			EventType: eventType, QtyIn: zero, QtyOut: zero,
-			StockBefore: locked.Quantity, StockAfter: updated.Quantity,
-			PricePerUnit: zero, SourceType: &sourceType, SourceID: &srcID,
-			EffectiveAt: &pgtype.Timestamptz{Time: inventoryDate.Time.In(time.UTC), Valid: true},
-		})
 	}
+
 	return nil
 }
 
