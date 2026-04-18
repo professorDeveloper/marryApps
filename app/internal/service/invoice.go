@@ -1185,6 +1185,11 @@ func (s *InvoiceS) applyInvoiceStockMovement(ctx context.Context, storageID pgty
 	}); err != nil {
 		return fmt.Errorf("failed to insert stock movement: %w", err)
 	}
+
+	if err := s.rebalanceIngredientStockLedger(ctx, storageID, ingredientID); err != nil {
+		return fmt.Errorf("failed to rebalance stock ledger after invoice movement: %w", err)
+	}
+
 	return nil
 }
 
@@ -1203,6 +1208,99 @@ func numericFromRat(r *big.Rat, scale int) (pgtype.Numeric, error) {
 		return pgtype.Numeric{}, err
 	}
 	return n, nil
+}
+
+func addNumericSafe(a, b pgtype.Numeric, scale int) (pgtype.Numeric, error) {
+	ra, err := ratFromNumeric(a)
+	if err != nil {
+		return pgtype.Numeric{}, err
+	}
+	rb, err := ratFromNumeric(b)
+	if err != nil {
+		return pgtype.Numeric{}, err
+	}
+
+	out := new(big.Rat).Add(ra, rb)
+	return numericFromRat(out, scale)
+}
+
+func subNumeric(a, b pgtype.Numeric, scale int) (pgtype.Numeric, error) {
+	ra, err := ratFromNumeric(a)
+	if err != nil {
+		return pgtype.Numeric{}, err
+	}
+	rb, err := ratFromNumeric(b)
+	if err != nil {
+		return pgtype.Numeric{}, err
+	}
+
+	out := new(big.Rat).Sub(ra, rb)
+	return numericFromRat(out, scale)
+}
+
+func applyMovementDelta(balance, qtyIn, qtyOut pgtype.Numeric, scale int) (pgtype.Numeric, error) {
+	withIn, err := addNumericSafe(balance, qtyIn, scale)
+	if err != nil {
+		return pgtype.Numeric{}, err
+	}
+	return subNumeric(withIn, qtyOut, scale)
+}
+
+func (s *InvoiceS) rebalanceIngredientStockLedger(ctx context.Context, storageID pgtype.UUID, ingredientID uuid.UUID) error {
+	if !storageID.Valid {
+		return fmt.Errorf("storage_id is required for ledger rebalance")
+	}
+
+	q := s.repo.Tenant(ctx)
+
+	_, _ = q.EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
+		ID:           uuid.New(),
+		IngredientID: ingredientID,
+		StorageID:    storageID,
+	})
+
+	rows, err := q.ListIngredientStockMovementsForRebalance(ctx, storageID.Bytes, ingredientID)
+	if err != nil {
+		return fmt.Errorf("failed to list stock movements for rebalance: %w", err)
+	}
+
+	running := zeroNumeric()
+
+	for _, row := range rows {
+		before := running
+
+		after, err := applyMovementDelta(before, row.QtyIn, row.QtyOut, 6)
+		if err != nil {
+			return fmt.Errorf("failed to calculate movement balance for movement %s: %w", row.ID, err)
+		}
+
+		if err := q.UpdateIngredientStockMovementBalances(ctx, pg.UpdateIngredientStockMovementBalancesParams{
+			ID:          row.ID,
+			StockBefore: before,
+			StockAfter:  after,
+		}); err != nil {
+			return fmt.Errorf("failed to update movement balances for movement %s: %w", row.ID, err)
+		}
+
+		running = after
+	}
+
+	stockRow, err := q.GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
+		IngredientID: ingredientID,
+		StorageID:    storageID,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to lock ingredient stock for final sync: %w", err)
+	}
+
+	if _, err := q.UpdateIngredientStock(ctx, pg.UpdateIngredientStockParams{
+		ID:       stockRow.ID,
+		Quantity: running,
+	}); err != nil {
+		return fmt.Errorf("failed to sync ingredient_stock quantity after rebalance: %w", err)
+	}
+
+	return nil
 }
 
 func cmpNumeric(a, b pgtype.Numeric) (int, error) {
