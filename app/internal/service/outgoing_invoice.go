@@ -38,27 +38,38 @@ func (s *OutgoingInvoiceS) CreateOutgoingInvoice(ctx context.Context, req *model
 	params := pg.CreateOutgoingInvoiceParams{
 		Date: pgtype.Timestamp{Time: time.Now(), Valid: true},
 	}
-	if req.Date != nil {
-		if t, err := time.Parse(time.RFC3339, *req.Date); err == nil {
-			params.Date = pgtype.Timestamp{Time: t, Valid: true}
+
+	if req.Date != nil && *req.Date != "" {
+		t, err := time.Parse(time.RFC3339, *req.Date)
+		if err != nil {
+			return nil, fmt.Errorf("invalid date: %w", err)
 		}
+		params.Date = pgtype.Timestamp{Time: t, Valid: true}
 	}
-	if req.StorageID != nil {
-		if id, err := uuid.Parse(*req.StorageID); err == nil {
-			params.StorageID = pgtype.UUID{Bytes: id, Valid: true}
+
+	if req.StorageID != nil && *req.StorageID != "" {
+		id, err := uuid.Parse(*req.StorageID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid storage_id: %w", err)
 		}
+		params.StorageID = pgtype.UUID{Bytes: id, Valid: true}
 	}
-	if req.GroupID != nil {
-		if id, err := uuid.Parse(*req.GroupID); err == nil {
-			params.GroupID = pgtype.UUID{Bytes: id, Valid: true}
+
+	if req.GroupID != nil && *req.GroupID != "" {
+		id, err := uuid.Parse(*req.GroupID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid group_id: %w", err)
 		}
+		params.GroupID = pgtype.UUID{Bytes: id, Valid: true}
 	}
+
 	params.Description = req.Description
 
 	row, err := s.repo.Tenant(ctx).CreateOutgoingInvoice(ctx, params)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create outgoing invoice: %w", err)
 	}
+
 	return outgoingInvoiceToResponse(row), nil
 }
 
@@ -79,9 +90,14 @@ func (s *OutgoingInvoiceS) GetOutgoingInvoice(ctx context.Context, id string) (*
 	itemResponses := make([]model.OutgoingInvoiceItemResponse, 0, len(items))
 	for _, it := range items {
 		resp := outgoingInvoiceItemToResponse(it)
-		// Show live stock preview if snapshots haven't been saved yet
+
+		if row.Status == "draft" {
+			itemResponses = append(itemResponses, hideOutgoingDraftStockSnapshot(resp, row.Status))
+			continue
+		}
 		snapshotSaved := it.StockBefore.Valid && it.StockAfter.Valid &&
 			!(resp.StockBefore == "0" && resp.StockAfter == "0")
+
 		if !snapshotSaved && row.StorageID.Valid {
 			stock, err := s.repo.Tenant(ctx).GetStockByIngredientAndStorage(ctx, pg.GetStockByIngredientAndStorageParams{
 				IngredientID: it.IngredientID,
@@ -95,12 +111,14 @@ func (s *OutgoingInvoiceS) GetOutgoingInvoice(ctx context.Context, id string) (*
 			} else {
 				resp.StockBefore = "0"
 			}
+
 			itemQty, _ := it.Quantity.Float64Value()
 			projected := currentQty - itemQty.Float64
 			projN := pgtype.Numeric{}
 			_ = projN.Scan(fmt.Sprintf("%g", projected))
 			resp.StockAfter = pgNumericToStr(projN)
 		}
+
 		itemResponses = append(itemResponses, resp)
 	}
 	return &model.OutgoingInvoiceWithItemsResponse{
@@ -226,8 +244,8 @@ func (s *OutgoingInvoiceS) ConfirmOutgoingInvoice(ctx context.Context, id string
 	if err != nil {
 		return nil, fmt.Errorf("outgoing invoice not found: %w", err)
 	}
-	if invoice.Status != "active" {
-		return nil, fmt.Errorf("only active invoices can have stock deducted")
+	if invoice.Status != "draft" {
+		return nil, fmt.Errorf("only draft invoices can be confirmed")
 	}
 	if !invoice.StorageID.Valid {
 		return nil, fmt.Errorf("invoice must have a storage selected before confirming")
@@ -242,12 +260,12 @@ func (s *OutgoingInvoiceS) ConfirmOutgoingInvoice(ctx context.Context, id string
 	}
 
 	storageID := invoice.StorageID
+	effectiveAt := outgoingInvoiceEffectiveAt(invoice.Date)
 
-	// Convert invoice date to timestamptz for effective_at
-	var invoiceDate pgtype.Timestamptz
-	if invoice.Date.Valid {
-		invoiceDate = pgtype.Timestamptz{Time: invoice.Date.Time.In(time.UTC), Valid: true}
-	}
+	touched := make(map[outgoingTouchedKey]struct{})
+	srcType := "outgoing_invoice"
+	srcID := invoiceID
+	zero := inventoryZeroNumeric()
 
 	for _, item := range items {
 		stockID, err := s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
@@ -283,21 +301,15 @@ func (s *OutgoingInvoiceS) ConfirmOutgoingInvoice(ctx context.Context, id string
 			return nil, fmt.Errorf("failed to save stock snapshot: %w", err)
 		}
 
-		srcType := string(pg.OutgoingInvoiceOut)
-		srcID := invoiceID
-		zero := pgtype.Numeric{}
-		_ = zero.Scan("0")
-
-		var effectiveAt *pgtype.Timestamptz
-		if invoiceDate.Valid && !invoiceDate.Time.After(time.Now()) {
-			effectiveAt = &invoiceDate
+		if shouldSkipStockMovement(zero, item.Quantity) {
+			continue
 		}
 
 		if err := s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
 			ID:           uuid.New(),
 			StorageID:    uuid.UUID(storageID.Bytes),
 			IngredientID: item.IngredientID,
-			EventType:    string(pg.OutgoingInvoiceOut),
+			EventType:    "outgoing_invoice_out",
 			QtyIn:        zero,
 			QtyOut:       item.Quantity,
 			StockBefore:  locked.Quantity,
@@ -308,6 +320,17 @@ func (s *OutgoingInvoiceS) ConfirmOutgoingInvoice(ctx context.Context, id string
 			EffectiveAt:  effectiveAt,
 		}); err != nil {
 			return nil, fmt.Errorf("failed to log stock movement: %w", err)
+		}
+
+		touched[outgoingTouchedKey{
+			StorageID:    storageID.Bytes,
+			IngredientID: item.IngredientID,
+		}] = struct{}{}
+	}
+
+	for key := range touched {
+		if err := s.rebalanceOutgoingIngredientLedger(ctx, pgtype.UUID{Bytes: key.StorageID, Valid: true}, key.IngredientID); err != nil {
+			return nil, fmt.Errorf("failed to rebalance outgoing invoice ledger: %w", err)
 		}
 	}
 
@@ -323,68 +346,77 @@ func (s *OutgoingInvoiceS) CancelOutgoingInvoice(ctx context.Context, id string)
 	if err != nil {
 		return nil, fmt.Errorf("invalid invoice id: %w", err)
 	}
+
 	row, err := s.repo.Tenant(ctx).CancelOutgoingInvoice(ctx, invoiceID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to cancel outgoing invoice: %w", err)
 	}
+
 	return outgoingInvoiceToResponse(row), nil
 }
-
 func (s *OutgoingInvoiceS) DeleteOutgoingInvoice(ctx context.Context, id string) error {
 	invoiceID, err := uuid.Parse(id)
 	if err != nil {
 		return fmt.Errorf("invalid invoice id: %w", err)
 	}
 
-	// Reverse stock: add back quantities that were deducted when confirmed
 	invoice, err := s.repo.Tenant(ctx).GetOutgoingInvoiceByID(ctx, invoiceID)
-	if err == nil && invoice.Status == "confirmed" && invoice.StorageID.Valid {
-		items, _ := s.repo.Tenant(ctx).GetOutgoingInvoiceItemsByInvoiceID(ctx, invoiceID)
+	if err != nil {
+		return fmt.Errorf("failed to get outgoing invoice: %w", err)
+	}
+
+	if invoice.Status == "active" && invoice.StorageID.Valid {
+		items, err := s.repo.Tenant(ctx).GetOutgoingInvoiceItemsByInvoiceID(ctx, invoiceID)
+		if err != nil {
+			return fmt.Errorf("failed to get outgoing invoice items: %w", err)
+		}
+
 		storageID := invoice.StorageID
 		srcType := "outgoing_invoice_deleted"
-		zero := pgtype.Numeric{}
-		_ = zero.Scan("0")
+		zero := inventoryZeroNumeric()
+		effectiveAt := outgoingInvoiceEffectiveAt(invoice.Date)
 
-		// Convert invoice date to timestamptz for effective_at
-		var invoiceDate pgtype.Timestamptz
-		if invoice.Date.Valid {
-			invoiceDate = pgtype.Timestamptz{Time: invoice.Date.Time.In(time.UTC), Valid: true}
-		}
+		touched := make(map[outgoingTouchedKey]struct{})
+
 		for _, item := range items {
 			if !item.StockBefore.Valid {
-				continue
+				return fmt.Errorf("cannot reverse outgoing invoice item %s: stock snapshot is missing", item.ID.String())
 			}
+
 			stockID, err := s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
 				ID:           uuid.New(),
 				IngredientID: item.IngredientID,
 				StorageID:    storageID,
 			})
 			if err != nil {
-				continue
+				return fmt.Errorf("failed to ensure stock row during outgoing invoice delete: %w", err)
 			}
+
 			locked, err := s.repo.Tenant(ctx).GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
 				IngredientID: item.IngredientID,
 				StorageID:    storageID,
 			})
 			if err != nil {
-				continue
+				return fmt.Errorf("failed to lock stock row during outgoing invoice delete: %w", err)
 			}
+
 			updated, err := s.repo.Tenant(ctx).AddToIngredientStock(ctx, pg.AddToIngredientStockParams{
 				ID:       stockID,
 				Quantity: item.Quantity,
 			})
 			if err != nil {
+				return fmt.Errorf("failed to restore stock during outgoing invoice delete: %w", err)
+			}
+
+			if shouldSkipStockMovement(item.Quantity, zero) {
 				continue
 			}
-			var effectiveAt *pgtype.Timestamptz
-			if invoiceDate.Valid && !invoiceDate.Time.After(time.Now()) {
-				effectiveAt = &invoiceDate
-			}
-			_ = s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+
+			if err := s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
 				ID:           uuid.New(),
 				StorageID:    uuid.UUID(storageID.Bytes),
 				IngredientID: item.IngredientID,
-				EventType:    string(pg.OutgoingInvoiceDeletedIn),
+				EventType:    "outgoing_invoice_deleted_in",
 				QtyIn:        item.Quantity,
 				QtyOut:       zero,
 				StockBefore:  locked.Quantity,
@@ -393,7 +425,20 @@ func (s *OutgoingInvoiceS) DeleteOutgoingInvoice(ctx context.Context, id string)
 				SourceType:   &srcType,
 				SourceID:     &invoiceID,
 				EffectiveAt:  effectiveAt,
-			})
+			}); err != nil {
+				return fmt.Errorf("failed to log reverse stock movement during outgoing invoice delete: %w", err)
+			}
+
+			touched[outgoingTouchedKey{
+				StorageID:    storageID.Bytes,
+				IngredientID: item.IngredientID,
+			}] = struct{}{}
+		}
+
+		for key := range touched {
+			if err := s.rebalanceOutgoingIngredientLedger(ctx, pgtype.UUID{Bytes: key.StorageID, Valid: true}, key.IngredientID); err != nil {
+				return fmt.Errorf("failed to rebalance outgoing invoice delete ledger: %w", err)
+			}
 		}
 	}
 
@@ -405,12 +450,14 @@ func (s *OutgoingInvoiceS) UpsertOutgoingInvoiceItems(ctx context.Context, invoi
 	if err != nil {
 		return nil, fmt.Errorf("invalid invoice id: %w", err)
 	}
+
 	invoice, err := s.repo.Tenant(ctx).GetOutgoingInvoiceByID(ctx, iID)
 	if err != nil {
 		return nil, fmt.Errorf("outgoing invoice not found: %w", err)
 	}
-	if invoice.Status != "active" {
-		return nil, fmt.Errorf("can only modify items of an active invoice")
+
+	if invoice.Status != "draft" {
+		return nil, fmt.Errorf("can only modify items of a draft invoice")
 	}
 
 	results := make([]model.OutgoingInvoiceItemResponse, 0, len(req.Items))
@@ -425,6 +472,7 @@ func (s *OutgoingInvoiceS) UpsertOutgoingInvoiceItems(ctx context.Context, invoi
 	if err := s.recalcInvoiceTotal(ctx, iID); err != nil {
 		return nil, err
 	}
+
 	return results, nil
 }
 
@@ -459,7 +507,13 @@ func (s *OutgoingInvoiceS) upsertOneInvoiceItem(ctx context.Context, iID uuid.UU
 	}
 
 	resp := outgoingInvoiceItemToResponse(item)
-	// Live stock preview
+
+	if invoice.Status == "draft" {
+		resp = hideOutgoingDraftStockSnapshot(resp, invoice.Status)
+		return &resp, nil
+	}
+
+	// Draft bo'lmasa fallback preview / snapshot ko'rsatish mumkin.
 	if invoice.StorageID.Valid {
 		stock, err := s.repo.Tenant(ctx).GetStockByIngredientAndStorage(ctx, pg.GetStockByIngredientAndStorageParams{
 			IngredientID: ingID,
@@ -479,6 +533,7 @@ func (s *OutgoingInvoiceS) upsertOneInvoiceItem(ctx context.Context, iID uuid.UU
 		_ = projN.Scan(fmt.Sprintf("%g", projected))
 		resp.StockAfter = pgNumericToStr(projN)
 	}
+
 	return &resp, nil
 }
 
@@ -487,13 +542,25 @@ func (s *OutgoingInvoiceS) DeleteOutgoingInvoiceItem(ctx context.Context, itemID
 	if err != nil {
 		return fmt.Errorf("invalid item id: %w", err)
 	}
+
 	item, err := s.repo.Tenant(ctx).GetOutgoingInvoiceItemByID(ctx, id)
 	if err != nil {
 		return fmt.Errorf("item not found: %w", err)
 	}
+
+	invoice, err := s.repo.Tenant(ctx).GetOutgoingInvoiceByID(ctx, item.OutgoingInvoiceID)
+	if err != nil {
+		return fmt.Errorf("outgoing invoice not found: %w", err)
+	}
+
+	if invoice.Status != "draft" {
+		return fmt.Errorf("can only delete items from a draft invoice")
+	}
+
 	if err := s.repo.Tenant(ctx).DeleteOutgoingInvoiceItem(ctx, id); err != nil {
 		return fmt.Errorf("failed to delete invoice item: %w", err)
 	}
+
 	return s.recalcInvoiceTotal(ctx, item.OutgoingInvoiceID)
 }
 
@@ -557,6 +624,14 @@ func outgoingInvoiceToResponse(row pg.OutgoingInvoice) *model.OutgoingInvoiceRes
 		r.UpdatedAt = &t
 	}
 	return r
+}
+
+func hideOutgoingDraftStockSnapshot(resp model.OutgoingInvoiceItemResponse, invoiceStatus pg.OutgoingInvoiceStatus) model.OutgoingInvoiceItemResponse {
+	if invoiceStatus == pg.OutgoingInvoiceStatus("draft") {
+		resp.StockBefore = ""
+		resp.StockAfter = ""
+	}
+	return resp
 }
 
 func outgoingInvoiceItemToResponse(row pg.OutgoingInvoiceItem) model.OutgoingInvoiceItemResponse {
