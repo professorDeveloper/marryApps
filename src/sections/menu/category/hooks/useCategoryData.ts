@@ -19,11 +19,16 @@ export function useCategoryData() {
         offset: 0,
     });
     const [searchQuery, setSearchQuery] = useState('');
+    const [sortState, setSortState] = useState<{ key: string | null; dir: 'asc' | 'desc' | null }>({ key: null, dir: null });
     const [selectedCategory, setSelectedCategory] = useState<ICategory | null>(null);
     const [goodsModalOpen, setGoodsModalOpen] = useState(false);
 
     // API hooks
-    const { categories, categoriesLoading, pagination } = useGetCategoriesPage(filters);
+    const { categories, categoriesLoading, pagination } = useGetCategoriesPage({
+        ...filters,
+        sort_by: sortState.key || undefined,
+        sort_order: sortState.dir || undefined,
+    });
     const { deleteCategory } = useDeleteCategory();
     const { storages } = useGetStorages();
     const { departments } = useGetDepartments();
@@ -104,6 +109,12 @@ export function useCategoryData() {
         window.location.href = paths.menu.category.edit(category.id);
     }, []);
 
+    // Handle sort
+    const handleSortChange = useCallback((sort: { key: string | null; dir: 'asc' | 'desc' | null }) => {
+        setSortState({ key: sort.key, dir: sort.dir });
+        setFilters((prev) => ({ ...prev, offset: 0 })); // Reset to first page when sorting
+    }, []);
+
     return {
         // Data
         categories: enrichedCategories,
@@ -115,6 +126,7 @@ export function useCategoryData() {
         goodsModalOpen,
         searchQuery,
         filters,
+        sortState,
 
         // Actions
         handleSearch,
@@ -124,6 +136,7 @@ export function useCategoryData() {
         handleViewGoods,
         handleCloseGoodsModal,
         handleEdit,
+        handleSortChange,
 
         // Setters
         setSelectedCategory,

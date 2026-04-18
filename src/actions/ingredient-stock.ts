@@ -103,18 +103,27 @@ export function useGetIngredientStocksPage(params?: {
     offset?: number;
     expand?: string;
     search?: string;
+    storage_id?: string;
+    sort_by?: string;
+    sort_order?: 'asc' | 'desc';
 }) {
     const limit = typeof params?.limit === 'number' ? params?.limit : 20;
     const offset = typeof params?.offset === 'number' ? params?.offset : 0;
     const expand = params?.expand || 'ingredient_id,storage_id,branch_id';
     const search = params?.search || '';
+    const storage_id = params?.storage_id || '';
+    const sort_by = params?.sort_by || '';
+    const sort_order = params?.sort_order || '';
 
-    // Build URL with query parameters so SWR cache key includes search
+    // Build URL with query parameters so SWR cache key includes search, filters, and sort
     const queryParams = new URLSearchParams({
         limit: String(limit),
         offset: String(offset),
         expand,
         ...(search && { search }),
+        ...(storage_id && { storage_id }),
+        ...(sort_by && { sort_by }),
+        ...(sort_order && { sort_order }),
     });
     const url = `${endpoints.ingredientStock.list}?${queryParams.toString()}`;
 

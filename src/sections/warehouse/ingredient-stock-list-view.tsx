@@ -25,6 +25,7 @@ function IngredientStockListView() {
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
     const [storageFilter, setStorageFilter] = useState('');
+    const [sortState, setSortState] = useState<{ key: string | null; dir: 'asc' | 'desc' | null }>({ key: null, dir: null });
 
     // Debounce search query
     useEffect(() => {
@@ -40,23 +41,6 @@ function IngredientStockListView() {
     useEffect(() => {
         setPaginationModel((prev) => ({ ...prev, page: 0 }));
     }, [debouncedSearchQuery]);
-
-    const { stocks, stocksLoading, pagination } = useGetIngredientStocksPage({
-        limit: paginationModel.pageSize,
-        offset: paginationModel.page * paginationModel.pageSize,
-        search: debouncedSearchQuery,
-        expand: 'ingredient_id,storage_id,branch_id',
-    });
-    
-    // Debug logging
-    useEffect(() => {
-        console.log('API call params:', {
-            limit: paginationModel.pageSize,
-            offset: paginationModel.page * paginationModel.pageSize,
-            search: debouncedSearchQuery,
-            expand: 'ingredient_id,storage_id,branch_id',
-        });
-    }, [paginationModel.pageSize, paginationModel.page, debouncedSearchQuery]);
     
     // Debug search state changes
     useEffect(() => {
@@ -111,25 +95,30 @@ function IngredientStockListView() {
     const handleFiltersChange = (filterState: Record<string, { type: 'text' | 'multi'; value: string | string[] }>) => {
         const v = filterState.storage_name?.value;
         const storageValue = Array.isArray(v) ? (v[0] ?? '') : (v ?? '');
-        setStorageFilter(storageValue);
+        // Convert storage name back to storage ID for the API
+        const storageId = Object.keys(storageMap).find(key => storageMap[key] === storageValue) || '';
+        setStorageFilter(storageId);
         setPaginationModel((prev) => ({ ...prev, page: 0 }));
     };
 
+    const { stocks, pagination } = useGetIngredientStocksPage({
+        limit: paginationModel.pageSize,
+        offset: paginationModel.page * paginationModel.pageSize,
+        search: debouncedSearchQuery,
+        expand: 'ingredient_id,storage_id,branch_id',
+        storage_id: storageFilter,
+        sort_by: sortState.key || undefined,
+        sort_order: (sortState.dir as 'asc' | 'desc' | undefined) || undefined,
+    });
+
     // The stocks are now enriched by the hook with ingredient and storage names
     const enrichedStocks = useMemo(() => Array.isArray(stocks) ? stocks : [], [stocks]);
-
-    // TODO: Once the backend supports storage_id param in the ingredient-stocks endpoint,
-    // move this filtering to the server-side by adding storage_id to the API query params
-    const filteredStocks = useMemo(() => {
-        if (!storageFilter) return enrichedStocks;
-        return enrichedStocks.filter((stock: any) => stock.storage_id === storageFilter);
-    }, [enrichedStocks, storageFilter]);
 
     // Build unique storage options from enriched stocks
     const storageOptions = useMemo(() => {
         const options = new Set<string>();
         enrichedStocks.forEach((stock: any) => {
-            if (stock.storage_id) options.add(stock.storage_id);
+            if (stock.storage_name) options.add(stock.storage_name);
         });
         return Array.from(options);
     }, [enrichedStocks]);
@@ -144,11 +133,25 @@ function IngredientStockListView() {
         return map;
     }, [enrichedStocks]);
 
+    // Create reverse mapping from storage names to storage IDs for API calls
+    const reverseStorageMap = useMemo(() => {
+        const map: Record<string, string> = {};
+        enrichedStocks.forEach((stock: any) => {
+            if (stock.storage_id && stock.storage_name) {
+                map[stock.storage_name] = stock.storage_id;
+            }
+        });
+        return map;
+    }, [enrichedStocks]);
+
     const filtersValue = useMemo(() => {
         const result: Record<string, { type: 'multi'; value: string[] }> = {};
-        if (storageFilter) result.storage_name = { type: 'multi', value: [storageFilter] };
+        if (storageFilter) {
+            const storageName = storageMap[storageFilter] || storageFilter;
+            result.storage_name = { type: 'multi', value: [storageName] };
+        }
         return result;
-    }, [storageFilter]);
+    }, [storageFilter, storageMap]);
 
     const columns = useMemo(
         () => [
@@ -225,7 +228,7 @@ function IngredientStockListView() {
             >
                 <DeductionUtilityDataTable
                     persistKey="warehouse-ingredient-stocks"
-                    data={filteredStocks}
+                    data={enrichedStocks}
                     getRowId={(row: any) => String(row?.id)}
                     columns={columns}
                     filters={filtersValue}
@@ -238,9 +241,14 @@ function IngredientStockListView() {
                     onRowsPerPageChange={(size) => setPaginationModel({ page: 0, pageSize: size })}
                     searchValue={searchQuery}
                     onSearchChange={handleSearchChange}
+                    onSortChange={(sort) => {
+                        setSortState({ key: sort.key, dir: sort.dir });
+                        setPaginationModel((prev) => ({ ...prev, page: 0 }));
+                    }}
                     onReset={() => {
                         setSearchQuery('');
                         setStorageFilter('');
+                        setSortState({ key: null, dir: null });
                         setPaginationModel({ page: 0, pageSize: 20 });
                     }}
                     defaultConfig={{

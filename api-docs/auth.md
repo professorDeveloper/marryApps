@@ -2,7 +2,7 @@
 
 > **Module:** auth  
 > **Base URL:** https://api.maryai.uz/  
-> **Last Updated:** 2026-04-17T08:55:38.954Z
+> **Last Updated:** 2026-04-17T11:19:13.211Z
 
 ---
 

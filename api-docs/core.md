@@ -2,7 +2,7 @@
 
 > **Module:** core  
 > **Base URL:** https://api.maryai.uz/  
-> **Last Updated:** 2026-04-17T08:55:38.956Z
+> **Last Updated:** 2026-04-17T11:19:13.212Z
 
 ---
 
@@ -6230,6 +6230,60 @@
   ```json
 {
   "$ref": "#/definitions/model.OrderResponse"
+}
+```
+
+- **400**: Bad Request
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorResponse"
+}
+```
+
+- **401**: Unauthorized
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorResponse"
+}
+```
+
+- **500**: Internal Server Error
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorResponse"
+}
+```
+
+
+## /api/v1/orders/batch
+
+### POST /api/v1/orders/batch 🔒
+
+**Summary:** Create orders batch
+
+**Description:** Create multiple orders in one request. Useful for offline sync.
+
+**Parameters:**
+
+| Name | Location | Type | Required | Description |
+|------|----------|------|----------|-------------|
+| lang | query | string | No | Language (uz, ru, en) |
+| request | body | object | Yes | Create orders batch request |
+
+**Request Body:**
+
+```json
+{
+  "$ref": "#/definitions/model.CreateOrderBatchRequest"
+}
+```
+
+**Responses:**
+
+- **201**: Created
+  ```json
+{
+  "$ref": "#/definitions/model.SuccessResponse"
 }
 ```
 

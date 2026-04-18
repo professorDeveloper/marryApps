@@ -26,7 +26,10 @@ export interface TransactionFilters {
   date_to?: string;
   type?: TransactionType | '';
   cash_register_id?: string;
-  group_id?: string;
+  group_transaction_id?: string;
+  search?: string;
+  sort_by?: string;
+  sort_order?: string;
 }
 
 export interface TransactionReportFilters {

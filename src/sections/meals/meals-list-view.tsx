@@ -231,6 +231,7 @@ export function Meals() {
     const [filters, setFilters] = useState(initialFilters);
     const [draftFilters, setDraftFilters] = useState(initialFilters);
     const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 20 });
+    const [sortState, setSortState] = useState<{ key: string | null; dir: 'asc' | 'desc' | null }>({ key: null, dir: null });
     const { categories } = useGetCategories();
     const { departments } = useGetDepartments();
 
@@ -240,6 +241,8 @@ export function Meals() {
         limit: paginationModel.pageSize,
         offset: paginationModel.page * paginationModel.pageSize,
         expand: 'category_id,department_id,name_i18n',
+        sort_by: sortState.key || undefined,
+        sort_order: sortState.dir || undefined,
     });
     const { deleteMeal } = useDeleteMeal();
     const { deleteMeals } = useDeleteMeals();
@@ -499,6 +502,10 @@ export function Meals() {
                         setSearchQuery(value);
                         setPaginationModel((prev) => ({ ...prev, page: 0 }));
                     }}
+                    onSortChange={(sort) => {
+                        setSortState({ key: sort.key, dir: sort.dir });
+                        setPaginationModel((prev) => ({ ...prev, page: 0 }));
+                    }}
                     page={paginationModel.page}
                     rowsPerPage={paginationModel.pageSize}
                     totalCount={pagination?.total || 0}
@@ -524,7 +531,10 @@ export function Meals() {
                             actions: '0.8fr',
                         },
                     }}
-                    onReset={() => setDraftFilters(initialFilters)}
+                    onReset={() => {
+                        setDraftFilters(initialFilters);
+                        setSortState({ key: null, dir: null });
+                    }}
                     onRowClick={openModal}
                     headerActions={
                         <Button

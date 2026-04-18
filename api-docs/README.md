@@ -3,7 +3,7 @@
 > **Version:** 1.0  
 > **Base URL:** https://api.maryai.uz/  
 > **Description:** MaryAI API server with multi-language support (uz, ru, en)  
-> **Last Updated:** 2026-04-17T08:55:38.960Z
+> **Last Updated:** 2026-04-17T11:19:13.217Z
 
 ---
 
@@ -27,7 +27,7 @@ This documentation is organized by functional modules for easier navigation:
 *13 endpoints*
 
 ### [CORE](./core.md) - ⚙️ Core system endpoints
-*145 endpoints*
+*146 endpoints*
 
 ### [CASH](./cash.md) - 💰 Cash register and shift management
 *8 endpoints*
@@ -65,7 +65,7 @@ Authorization: Bearer <your-token>
 ## 📊 Quick Stats
 
 - **Total Modules**: 13
-- **Total Endpoints**: 270
+- **Total Endpoints**: 271
 
 ---
 
@@ -86,4 +86,4 @@ Common data models are shared across modules. Refer to individual module documen
 ---
 
 *This documentation is automatically generated from the Swagger/OpenAPI specification*  
-*Last updated: 2026-04-17T08:55:38.960Z*
+*Last updated: 2026-04-17T11:19:13.217Z*

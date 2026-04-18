@@ -74,10 +74,13 @@ export function WarehouseStorageListView() {
     page: 0,
     pageSize: 20,
   });
+  const [sortState, setSortState] = useState<{ key: string | null; dir: 'asc' | 'desc' | null }>({ key: null, dir: null });
 
   const { storages, storagesLoading, storagesTotal } = useGetStorages(debouncedSearchQuery, {
     limit: paginationModel.pageSize,
     offset: paginationModel.page * paginationModel.pageSize,
+    sort_by: sortState.key || undefined,
+    sort_order: sortState.dir || undefined,
   });
   const { deleteStorage } = useDeleteStorage();
 
@@ -227,10 +230,15 @@ export function WarehouseStorageListView() {
           defaultConfig={defaultConfig}
           onReset={() => {
             setSearchQuery('');
+            setSortState({ key: null, dir: null });
             setPaginationModel({ page: 0, pageSize: 20 });
           }}
           searchValue={searchQuery}
           onSearchChange={setSearchQuery}
+          onSortChange={(sort) => {
+            setSortState({ key: sort.key, dir: sort.dir });
+            setPaginationModel((prev) => ({ ...prev, page: 0 }));
+          }}
           page={paginationModel.page}
           rowsPerPage={paginationModel.pageSize}
           totalCount={storagesTotal || 0}

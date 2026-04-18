@@ -229,7 +229,7 @@ export function useGetCategories(searchQuery?: string) {
 /**
  * Get categories with server-side pagination using expand (no extra API calls)
  */
-export function useGetCategoriesPage(params?: { search?: string; limit?: number; offset?: number }) {
+export function useGetCategoriesPage(params?: { search?: string; limit?: number; offset?: number; sort_by?: string; sort_order?: 'asc' | 'desc' }) {
     const { i18n } = useTranslation();
 
     const normalizedQuery = params?.search?.trim() || '';
@@ -237,9 +237,13 @@ export function useGetCategoriesPage(params?: { search?: string; limit?: number;
     const offset = typeof params?.offset === 'number' ? params?.offset : 0;
     const expand = 'name_i18n,department_id';
 
+    const queryParams: Record<string, any> = { limit, offset, expand };
+    if (params?.sort_by) queryParams.sort_by = params.sort_by;
+    if (params?.sort_order) queryParams.sort_order = params.sort_order;
+
     const swrKey = normalizedQuery
-        ? [endpoints.category.search, { params: { q: normalizedQuery, limit, offset, expand } }]
-        : [endpoints.category.list, { params: { limit, offset, expand } }];
+        ? [endpoints.category.search, { params: { q: normalizedQuery, ...queryParams } }]
+        : [endpoints.category.list, { params: queryParams }];
 
     const { data, isLoading, error, isValidating } = useSWR<
         BackendResponse<ICategory[]> | ICategory[]

@@ -475,10 +475,12 @@ export function OutgoingInvoicesListView() {
           onFiltersChange={(fs: Record<string, any>) => {
             const storageName = (fs.storage_id?.value as string[])?.[0];
             const groupName = (fs.group_id?.value as string[])?.[0];
+            const statusValue = (fs.status?.value as string[])?.[0];
             setDraftFilters((prev) => ({
               ...prev,
               storage_id: storageName ? reverseMap(storagesMap, storageName) : '',
               group_id: groupName ? reverseMap(groupsMap, groupName) : '',
+              status: statusValue || '',
               offset: 0,
             }));
           }}

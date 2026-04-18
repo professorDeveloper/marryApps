@@ -69,6 +69,8 @@ export interface MealsFilters {
     limit?: number;
     offset?: number;
     expand?: string;
+    sort_by?: string;
+    sort_order?: 'asc' | 'desc';
 }
 
 // ============================================================================
@@ -392,6 +394,8 @@ export function useGetMealsPage(filters?: MealsFilters) {
     if (filters?.category_id) params.category_id = filters.category_id;
     if (filters?.department_id) params.department_id = filters.department_id;
     if (filters?.storage_id) params.storage_id = filters.storage_id;
+    if (filters?.sort_by) params.sort_by = filters.sort_by;
+    if (filters?.sort_order) params.sort_order = filters.sort_order;
 
     const swrKey = normalizedQuery
         ? [endpoints.meals.search, { params: { ...params, query: normalizedQuery } }]

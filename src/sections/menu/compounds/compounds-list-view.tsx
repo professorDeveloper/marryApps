@@ -430,6 +430,7 @@ export function HalfMeals() {
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
     const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 20 });
+    const [sortState, setSortState] = useState<{ key: string | null; dir: 'asc' | 'desc' | null }>({ key: null, dir: null });
 
     useEffect(() => {
         const timeout = setTimeout(() => {
@@ -449,6 +450,8 @@ export function HalfMeals() {
         limit: paginationModel.pageSize,
         offset: paginationModel.page * paginationModel.pageSize,
         expand: 'ingredient_group_id,name_i18n,description_i18n',
+        sort_by: sortState.key || undefined,
+        sort_order: sortState.dir || undefined,
     });
     const { ingredientGroups } = useGetIngredientGroups();
     const { deleteCompound } = useDeleteCompound();
@@ -718,6 +721,10 @@ export function HalfMeals() {
                         setSearchQuery(value);
                         setPaginationModel((prev) => ({ ...prev, page: 0 }));
                     }}
+                    onSortChange={(sort) => {
+                        setSortState({ key: sort.key, dir: sort.dir });
+                        setPaginationModel((prev) => ({ ...prev, page: 0 }));
+                    }}
                     page={paginationModel.page}
                     rowsPerPage={paginationModel.pageSize}
                     totalCount={pagination?.total || 0}
@@ -745,6 +752,7 @@ export function HalfMeals() {
                     }}
                     onReset={() => {
                         setSearchQuery('');
+                        setSortState({ key: null, dir: null });
                         setPaginationModel({ page: 0, pageSize: 20 });
                     }}
                     onRowClick={openModal}

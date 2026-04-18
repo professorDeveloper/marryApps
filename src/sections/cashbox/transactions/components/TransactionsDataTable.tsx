@@ -30,6 +30,7 @@ interface TransactionsDataTableProps {
   onPageChange?: (page: number) => void;
   onRowsPerPageChange?: (rowsPerPage: number) => void;
   onReset?: () => void;
+  onSortChange?: (sort: { key: string | null; dir: 'asc' | 'desc' | null }) => void;
   headerActions?: ReactNode;
   showPeriodPicker?: boolean;
   periodPickerProps?: {
@@ -60,6 +61,7 @@ export function TransactionsDataTable({
   onPageChange,
   onRowsPerPageChange,
   onReset,
+  onSortChange,
   headerActions,
   showPeriodPicker = false,
   periodPickerProps,
@@ -356,6 +358,7 @@ export function TransactionsDataTable({
       getRowId={(row) => String(row.id)}
       searchValue={searchValue}
       onSearchChange={onSearchChange}
+      onSortChange={onSortChange}
       page={page}
       rowsPerPage={rowsPerPage}
       totalCount={totalCount}

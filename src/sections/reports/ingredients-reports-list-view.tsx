@@ -13,7 +13,7 @@ import {
   TableCell,
   TableHead,
   IconButton,
-  Typography,
+  Typography, 
   ToggleButton,
   CircularProgress,
   ToggleButtonGroup,
@@ -271,124 +271,69 @@ export function IngredientReportsListView() {
                 },
             },
             {
-                key: 'cost_start',
-                label: t('ingredientReports.costStart', 'Cost Start'),
-                sortable: true,
-                width: '1fr',
-                align: 'left' as const,
-                mono: true,
-                getValue: (row: any) => Number(row?.cost_start || 0),
-                renderCell: ({ value }: { value: unknown }) => {
-                    const amount = Number(value ?? 0);
-                    return `${amount.toLocaleString()} so'm`;
-                },
-                total: { aggregation: 'sum' as const },
-            },
-            {
-                key: 'begin_qty',
+                key: 'begin_quantity',
                 label: t('ingredientReports.beginQty') || 'Begin Qty',
                 sortable: true,
                 width: '1fr',
                 align: 'left' as const,
                 mono: true,
-                getValue: (row: any) => Number(row?.begin_qty || 0),
+                getValue: (row: any) => Number(row?.begin_quantity || 0),
                 renderCell: ({ value }: { value: unknown }) => `${Number(value).toFixed(2)}`,
                 total: { aggregation: 'sum' as const },
             },
             {
-                key: 'invoice_in_qty',
+                key: 'in',
                 label: t('ingredientReports.in') || 'In',
                 sortable: true,
                 width: '0.8fr',
                 align: 'left' as const,
                 mono: true,
-                getValue: (row: any) => Number(row?.invoice_in_qty || 0),
+                getValue: (row: any) => Number(row?.in || 0),
                 renderCell: ({ value }: { value: unknown }) => `${Number(value).toFixed(2)}`,
                 total: { aggregation: 'sum' as const },
             },
             {
-                key: 'order_out_qty',
+                key: 'out',
                 label: t('ingredientReports.out') || 'Out',
                 sortable: true,
                 width: '0.8fr',
                 align: 'left' as const,
                 mono: true,
-                getValue: (row: any) => Number(row?.order_out_qty || 0),
-                renderCell: ({ row }: { row: any }) => (
-                    <Tooltip
-                        title={`${t('ingredientReports.deduction', 'Deduction')}: ${Number(row.deduction_out_qty).toFixed(2)}`}
-                        arrow
-                        disableInteractive
-                        slotProps={{
-                            popper: {
-                                sx: { pointerEvents: 'none' },
-                            },
-                        }}
-                    >
-                        <Box component="span">{`${Number(row.order_out_qty).toFixed(2)}`}</Box>
-                    </Tooltip>
-                ),
+                getValue: (row: any) => Number(row?.out || 0),
+                renderCell: ({ value }: { value: unknown }) => `${Number(value).toFixed(2)}`,
                 total: { aggregation: 'sum' as const },
             },
             {
-                key: 'surplus_qty',
+                key: 'surplus',
                 label: t('ingredientReports.surplus', 'Surplus Qty'),
                 sortable: true,
                 width: '1fr',
                 align: 'left' as const,
                 mono: true,
-                getValue: (row: any) => Number(row?.surplus_qty || 0),
+                getValue: (row: any) => Number(row?.surplus || 0),
                 renderCell: ({ value }: { value: unknown }) => `${Number(value).toFixed(2)}`,
                 total: { aggregation: 'sum' as const },
             },
             {
-                key: 'shortage_qty',
+                key: 'shortage',
                 label: t('ingredientReports.shortage', 'Shortage Qty'),
                 sortable: true,
                 width: '1fr',
                 align: 'left' as const,
                 mono: true,
-                getValue: (row: any) => Number(row?.shortage_qty || 0),
+                getValue: (row: any) => Number(row?.shortage || 0),
                 renderCell: ({ value }: { value: unknown }) => `${Number(value).toFixed(2)}`,
                 total: { aggregation: 'sum' as const },
             },
             {
-                key: 'end_qty',
+                key: 'end_quantity',
                 label: t('ingredientReports.endQty') || 'End Qty',
                 sortable: true,
                 width: '1fr',
                 align: 'left' as const,
                 mono: true,
-                getValue: (row: any) => Number(row?.end_qty || 0),
+                getValue: (row: any) => Number(row?.end_quantity || 0),
                 renderCell: ({ value }: { value: unknown }) => `${Number(value).toFixed(2)}`,
-                total: { aggregation: 'sum' as const },
-            },
-            {
-                key: 'cost_end',
-                label: t('ingredientReports.costEnd', 'Cost End'),
-                sortable: true,
-                width: '1fr',
-                align: 'left' as const,
-                mono: true,
-                getValue: (row: any) => Number(row?.cost_end || 0),
-                renderCell: ({ value }: { value: unknown }) => {
-                    const amount = Number(value ?? 0);
-                    return `${amount.toLocaleString()} so'm`;
-                },
-                total: { aggregation: 'sum' as const },
-            },
-            {
-                key: 'end_amount',
-                label: t('ingredientReports.endCost') || 'End Cost',
-                sortable: true,
-                width: '1fr',
-                align: 'left' as const,
-                mono: true,
-                getValue: (row: any) => Number(row?.end_amount || 0),
-                renderCell: ({ value }: { value: unknown }) => {
-                    const amount = Number(value ?? 0);
-                    return `${amount.toLocaleString()} so'm`;
-                },
                 total: { aggregation: 'sum' as const },
             },
             {
@@ -660,38 +605,27 @@ export function IngredientReportsListView() {
         const statsCards = [
             {
                 label: t('ingredientReports.begin') || 'Begin',
-                qty: Number(data.begin_qty).toFixed(2),
-                amount: Number(data.begin_amount).toLocaleString(),
+                qty: Number(data.begin_quantity).toFixed(2),
             },
             {
                 label: t('ingredientReports.end') || 'End',
-                qty: Number(data.end_qty).toFixed(2),
-                amount: Number(data.end_amount).toLocaleString(),
+                qty: Number(data.end_quantity).toFixed(2),
             },
             {
                 label: t('ingredientReports.in') || 'In',
-                qty: Number(data.invoice_in_qty).toFixed(2),
-                amount: Number(data.invoice_in_amount).toLocaleString(),
+                qty: Number(data.in).toFixed(2),
             },
             {
                 label: t('ingredientReports.out') || 'Out',
-                qty: Number(data.order_out_qty).toFixed(2),
-                amount: Number(data.order_out_amount).toLocaleString(),
-            },
-            {
-                label: t('ingredientReports.deduction') || 'Deduction',
-                qty: Number(data.deduction_out_qty).toFixed(2),
-                amount: Number(data.deduction_out_amount).toLocaleString(),
+                qty: Number(data.out).toFixed(2),
             },
             {
                 label: t('ingredientReports.surplus') || 'Surplus',
-                qty: Number(data.surplus_qty).toFixed(2),
-                amount: Number(data.surplus_amount).toLocaleString(),
+                qty: Number(data.surplus).toFixed(2),
             },
             {
                 label: t('ingredientReports.shortage') || 'Shortage',
-                qty: Number(data.shortage_qty).toFixed(2),
-                amount: Number(data.shortage_amount).toLocaleString(),
+                qty: Number(data.shortage).toFixed(2),
             },
         ];
 
@@ -699,13 +633,6 @@ export function IngredientReportsListView() {
             <Box>
                 {/* Header Info */}
                 <Box sx={{ mb: 3, pb: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
-                    {/* <Typography variant="body2" sx={{ color: 'text.secondary', mb: 0.5 }}>
-                        {t('ingredientReports.ingredient') || 'Ingredient'}
-                    </Typography>
-                    <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
-                        {data.ingredient_name}
-                    </Typography> */}
-
                     <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2 }}>
                         <Box>
                             <Typography variant="caption" sx={{ color: 'text.secondary' }}>
@@ -717,14 +644,6 @@ export function IngredientReportsListView() {
                                     : data.measurement === 'l'
                                         ? 'l'
                                         : 'dona'}
-                            </Typography>
-                        </Box>
-                        <Box>
-                            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                                {t('ingredientReports.costPerUnit') || 'Cost/Unit'}
-                            </Typography>
-                            <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                {Number(data.cost_start).toLocaleString()} so'm
                             </Typography>
                         </Box>
                     </Box>
@@ -755,13 +674,7 @@ export function IngredientReportsListView() {
                                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
                                         {card.qty}
                                     </Typography>
-                                    {/* <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                                        {data.measurement === 'kg' ? 'kg' : data.measurement === 'l' ? 'l' : 'dona'}
-                                    </Typography> */}
                                 </Box>
-                                <Typography variant="body2" sx={{ fontWeight: 700, color: '#1890FF' }}>
-                                    {card.amount} so'm
-                                </Typography>
                             </Box>
                         </Box>
                     ))}
@@ -775,28 +688,28 @@ export function IngredientReportsListView() {
 
         const amountRows = [
             {
-                label: t('ingredientReports.beginCost') || 'Begin Cost',
-                value: Number(data.begin_amount).toLocaleString(),
+                label: t('ingredientReports.beginQty') || 'Begin Qty',
+                value: Number(data.begin_quantity).toFixed(2),
             },
             {
-                label: t('ingredientReports.inAmount', 'In Amount'),
-                value: Number(data.invoice_in_amount).toLocaleString(),
+                label: t('ingredientReports.in') || 'In',
+                value: Number(data.in).toFixed(2),
             },
             {
-                label: t('ingredientReports.outAmount', 'Out Amount'),
-                value: Number(data.order_out_amount).toLocaleString(),
+                label: t('ingredientReports.out') || 'Out',
+                value: Number(data.out).toFixed(2),
             },
             {
-                label: t('ingredientReports.deductionAmount', 'Deduction Amount'),
-                value: Number(data.deduction_out_amount).toLocaleString(),
+                label: t('ingredientReports.surplus', 'Surplus Qty'),
+                value: Number(data.surplus).toFixed(2),
             },
             {
-                label: t('ingredientReports.surplusAmount', 'Surplus Amount'),
-                value: Number(data.surplus_amount).toLocaleString(),
+                label: t('ingredientReports.shortage', 'Shortage Qty'),
+                value: Number(data.shortage).toFixed(2),
             },
             {
-                label: t('ingredientReports.shortageAmount', 'Shortage Amount'),
-                value: Number(data.shortage_amount).toLocaleString(),
+                label: t('ingredientReports.endQty') || 'End Qty',
+                value: Number(data.end_quantity).toFixed(2),
             },
         ];
 
@@ -814,7 +727,7 @@ export function IngredientReportsListView() {
                             <TableRow key={row.label}>
                                 <TableCell>{row.label}</TableCell>
                                 <TableCell align="right" sx={{ fontWeight: 600 }}>
-                                    {row.value} so'm
+                                    {row.value}
                                 </TableCell>
                             </TableRow>
                         ))}
@@ -892,33 +805,27 @@ export function IngredientReportsListView() {
                         disabled: isStoragesEmpty,
                     }}
                     defaultConfig={{
-                        order: ['ingredient_name', 'measurement', 'cost_start', 'begin_qty', 'invoice_in_qty', 'order_out_qty', 'surplus_qty', 'shortage_qty', 'end_qty', 'cost_end', 'end_amount', 'actions'],
+                        order: ['ingredient_name', 'measurement', 'begin_quantity', 'in', 'out', 'surplus', 'shortage', 'end_quantity', 'actions'],
                         visibility: {
                             ingredient_name: true,
                             measurement: true,
-                            cost_start: true,
-                            begin_qty: true,
-                            invoice_in_qty: true,
-                            order_out_qty: true,
-                            surplus_qty: true,
-                            shortage_qty: true,
-                            end_qty: true,
-                            cost_end: true,
-                            end_amount: true,
+                            begin_quantity: true,
+                            in: true,
+                            out: true,
+                            surplus: true,
+                            shortage: true,
+                            end_quantity: true,
                             actions: true,
                         },
                         widths: {
                             ingredient_name: '1.5fr',
                             measurement: '0.8fr',
-                            cost_start: '1fr',
-                            begin_qty: '1fr',
-                            invoice_in_qty: '0.8fr',
-                            order_out_qty: '0.8fr',
-                            surplus_qty: '1fr',
-                            shortage_qty: '1fr',
-                            end_qty: '1fr',
-                            cost_end: '1fr',
-                            end_amount: '1fr',
+                            begin_quantity: '1fr',
+                            in: '0.8fr',
+                            out: '0.8fr',
+                            surplus: '1fr',
+                            shortage: '1fr',
+                            end_quantity: '1fr',
                             actions: '0.7fr',
                         },
                     }}

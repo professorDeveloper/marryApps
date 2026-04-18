@@ -44,12 +44,14 @@ export function CategoryListView() {
         selectedCategory,
         goodsModalOpen,
         searchQuery,
+        sortState,
         handleSearch,
         handlePageChange,
         handleDelete,
         handleViewGoods,
         handleCloseGoodsModal,
         handleEdit,
+        handleSortChange,
     } = useCategoryData();
 
     // Define DataTable columns
@@ -272,10 +274,14 @@ export function CategoryListView() {
                     columns={columns}
                     searchValue={searchQuery}
                     onSearchChange={handleSearch}
+                    onSortChange={handleSortChange}
                     page={paginationModel.page}
                     rowsPerPage={paginationModel.pageSize}
                     totalCount={totalCount}
-                    onReset={() => handleSearch('')}
+                    onReset={() => {
+                        handleSearch('');
+                        handleSortChange({ key: null, dir: null });
+                    }}
                     rowsPerPageOptions={[10, 20, 50, 100]}
                     onPageChange={(page) => handlePageChangeInternal(page, paginationModel.pageSize)}
                     onRowsPerPageChange={(pageSize) =>

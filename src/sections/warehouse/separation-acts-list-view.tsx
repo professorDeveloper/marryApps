@@ -376,11 +376,13 @@ export function SeparationActsListView() {
             const ingredientName = (fs.source_ingredient_id?.value as string[])?.[0];
             const storageName = (fs.storage_id?.value as string[])?.[0];
             const groupName = (fs.group_id?.value as string[])?.[0];
+            const statusValue = (fs.status?.value as string[])?.[0];
             setDraftFilters((prev) => ({
               ...prev,
               ingredient_id: ingredientName ? reverseMap(ingredientsMap, ingredientName) : '',
               storage_id: storageName ? reverseMap(storagesMap, storageName) : '',
               group_id: groupName ? reverseMap(groupsMap, groupName) : '',
+              status: statusValue || '',
               offset: 0,
             }));
           }}

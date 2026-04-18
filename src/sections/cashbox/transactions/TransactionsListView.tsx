@@ -75,7 +75,10 @@ const getInitialFilters = (): TransactionFilters => {
     date_to: getTomorrowUtcBoundary(true),
     type: '',
     cash_register_id: '',
-    group_id: '',
+    group_transaction_id: '',
+    search: '',
+    sort_by: '',
+    sort_order: '',
   };
 };
 
@@ -103,9 +106,20 @@ export function TransactionsListView() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [openConfirm, setOpenConfirm] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [startDate, setStartDate] = useState<dayjs.Dayjs | null>(null);
   const [endDate, setEndDate] = useState<dayjs.Dayjs | null>(null);
   const [activeRange, setActiveRange] = useState<'day' | 'week' | 'month' | 'year'>('day');
+  const [sortState, setSortState] = useState<{ key: string | null; dir: 'asc' | 'desc' | null }>({ key: null, dir: null });
+
+  // Debounce search query
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 400);
+
+    return () => clearTimeout(timeout);
+  }, [searchQuery]);
 
   // Set default date range on component mount
   useEffect(() => {
@@ -113,6 +127,23 @@ export function TransactionsListView() {
     setStartDate(today.startOf('day'));
     setEndDate(today.endOf('day'));
   }, []);
+
+  // Apply search changes
+  useEffect(() => {
+    setFilters((prev) => ({
+      ...prev,
+      search: debouncedSearchQuery,
+    }));
+  }, [debouncedSearchQuery]);
+
+  // Apply sort changes
+  useEffect(() => {
+    setFilters((prev) => ({
+      ...prev,
+      sort_by: sortState.key || '',
+      sort_order: sortState.dir || '',
+    }));
+  }, [sortState]);
 
   // Apply date range changes
   useEffect(() => {
@@ -229,10 +260,17 @@ export function TransactionsListView() {
 
   const handleResetFilters = useCallback(() => {
     setFilters(getInitialFilters());
+    setSearchQuery('');
+    setDebouncedSearchQuery('');
+    setSortState({ key: null, dir: null });
     const today = dayjs();
     setStartDate(today.startOf('day'));
     setEndDate(today.endOf('day'));
     setActiveRange('day');
+  }, []);
+
+  const handleSortChange = useCallback((sort: { key: string | null; dir: 'asc' | 'desc' | null }) => {
+    setSortState({ key: sort.key, dir: sort.dir });
   }, []);
 
   const handleFiltersChange = useCallback((newFilters: TransactionFilters) => {
@@ -268,6 +306,7 @@ export function TransactionsListView() {
           usersMap={usersMap}
           searchValue={searchQuery}
           onSearchChange={handleSearchChange}
+          onSortChange={handleSortChange}
           onDeleteClick={handleDeleteClick}
           onReset={handleResetFilters}
           showPeriodPicker

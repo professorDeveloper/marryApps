@@ -329,6 +329,8 @@ export function useGetCompoundsPage(params?: {
     limit?: number;
     offset?: number;
     expand?: string;
+    sort_by?: string;
+    sort_order?: 'asc' | 'desc';
 }): ICompoundPageResult {
     const { i18n } = useTranslation();
     const normalizedQuery = params?.search?.trim() || '';
@@ -341,9 +343,13 @@ export function useGetCompoundsPage(params?: {
         .filter((item) => item)
         .join(',');
 
+    const queryParams: Record<string, any> = { limit, offset, expand };
+    if (params?.sort_by) queryParams.sort_by = params.sort_by;
+    if (params?.sort_order) queryParams.sort_order = params.sort_order;
+
     const swrKey = normalizedQuery
-        ? [endpoints.compound.search, { params: { q: normalizedQuery, limit, offset, expand } }]
-        : [endpoints.compound.list, { params: { limit, offset, expand } }];
+        ? [endpoints.compound.search, { params: { q: normalizedQuery, ...queryParams } }]
+        : [endpoints.compound.list, { params: queryParams }];
 
     const { data, isLoading, error, isValidating, mutate: mutateCompounds } = useSWR<
         BackendResponse<ICompound[]> | ICompound[]

@@ -91,6 +91,7 @@ export function DeductionsListView() {
     const [viewLoading, setViewLoading] = useState(false);
     const [viewData, setViewData] = useState<DeductionDetailsData | null>(null);
     const [sortState, setSortState] = useState<{ key: string | null; dir: string | null }>({ key: null, dir: null });
+    const [filterValues, setFilterValues] = useState<{ storage_id: string; act_group_id: string; status: string }>({ storage_id: '', act_group_id: '', status: '' });
 
     const storagesMap = useMemo(
         () =>
@@ -161,6 +162,9 @@ export function DeductionsListView() {
                 ...(endDate ? { date_to: dayjs(endDate).format('YYYY-MM-DD') } : {}),
                 ...(sortState.key ? { sort_by: sortState.key } : {}),
                 ...(sortState.dir && (sortState.dir === 'asc' || sortState.dir === 'desc') ? { sort_order: sortState.dir as 'asc' | 'desc' } : {}),
+                ...(filterValues.storage_id ? { storage_id: filterValues.storage_id } : {}),
+                ...(filterValues.act_group_id ? { act_group_id: filterValues.act_group_id } : {}),
+                ...(filterValues.status ? { status: filterValues.status } : {}),
             });
             const deductionsData = deductionsResponse.items || [];
             const pagination = deductionsResponse.pagination as BackendPagination | undefined;
@@ -185,7 +189,7 @@ export function DeductionsListView() {
         } finally {
             setLoading(false);
         }
-    }, [getDeductions, getDeductionGroups, paginationModel.page, paginationModel.pageSize, searchQuery, startDate, endDate, sortState]);
+    }, [getDeductions, getDeductionGroups, paginationModel.page, paginationModel.pageSize, searchQuery, startDate, endDate, sortState, filterValues]);
 
     useEffect(() => {
         fetchData();
@@ -451,9 +455,14 @@ export function DeductionsListView() {
                     onFiltersChange={(fs: Record<string, any>) => {
                         const storageName = (fs.storage_id?.value as string[])?.[0];
                         const groupName = (fs.act_group_id?.value as string[])?.[0];
-                        // Filter API currently expects storage_id and act_group_id params
-                        // TODO: wire these to fetchData filters once API supports server-side filtering for these fields
-                        console.log('Filter change:', { storageName, groupName });
+                        const statusValue = (fs.status?.value as string[])?.[0];
+
+                        // Map display names back to IDs using the reverseMap helper
+                        const storageId = storageName ? reverseMap(storagesMap, storageName) : '';
+                        const groupId = groupName ? reverseMap(groupsMap, groupName) : '';
+
+                        setFilterValues({ storage_id: storageId, act_group_id: groupId, status: statusValue || '' });
+                        setPaginationModel((prev) => ({ ...prev, page: 0 }));
                     }}
                     defaultConfig={{
                         order: ['storage_id', 'act_group_id', 'description', 'balance', 'status', 'date', 'actions'],
@@ -477,7 +486,13 @@ export function DeductionsListView() {
                         },
                     }}
                     onReset={() => {
-                        // no-op for now; parent can hook this later
+                        setSearchQuery('');
+                        setFilterValues({ storage_id: '', act_group_id: '', status: '' });
+                        setSortState({ key: null, dir: null });
+                        setPaginationModel({ page: 0, pageSize: 20 });
+                        setStartDate(new Date());
+                        setEndDate(new Date());
+                        setActivePeriod('month');
                     }}
                     showPeriodPicker
                     periodPickerProps={{

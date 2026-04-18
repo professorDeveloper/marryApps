@@ -124,7 +124,7 @@ export function useGetDepartments(
 
   const normalizedQuery = searchQuery?.trim() || '';
   const params = {
-    ...(normalizedQuery ? { q: normalizedQuery } : {}),
+    ...(normalizedQuery ? { search: normalizedQuery } : {}),
     ...(typeof options?.limit === 'number' ? { limit: options?.limit } : {}),
     ...(typeof options?.offset === 'number' ? { offset: options?.offset } : {}),
     expand,
@@ -482,15 +482,17 @@ export function useGetCategoriesByDepartment(departmentId: string) {
  */
 export function useGetStorages(
   searchQuery?: string,
-  options?: { limit?: number; offset?: number; expand?: string }
+  options?: { limit?: number; offset?: number; expand?: string; sort_by?: string; sort_order?: 'asc' | 'desc' }
 ) {
   const { i18n } = useTranslation();
 
   const normalizedQuery = searchQuery?.trim() || '';
-  const params = {
+  const params: Record<string, any> = {
     ...(normalizedQuery ? { q: normalizedQuery } : {}),
     ...(typeof options?.limit === 'number' ? { limit: options.limit } : {}),
     ...(typeof options?.offset === 'number' ? { offset: options.offset } : {}),
+    ...(options?.sort_by ? { sort_by: options.sort_by } : {}),
+    ...(options?.sort_order ? { sort_order: options.sort_order } : {}),
     expand: options?.expand || 'name_i18n,branch_id',
   };
   const swrKey = normalizedQuery
