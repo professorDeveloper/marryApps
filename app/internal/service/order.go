@@ -27,6 +27,15 @@ func NewOrderS(repo *repository.Repository) *OrderS {
 	return &OrderS{repo: repo}
 }
 
+type orderStockTx interface {
+	GetStorageByGoodID(ctx context.Context, goodID uuid.UUID) (pgtype.UUID, error)
+	EnsureIngredientStockByStorage(ctx context.Context, arg pg.EnsureIngredientStockByStorageParams) (uuid.UUID, error)
+	GetStockByIngredientAndStorageForUpdate(ctx context.Context, arg pg.GetStockByIngredientAndStorageForUpdateParams) (pg.IngredientStock, error)
+	GetIngredientByID(ctx context.Context, id uuid.UUID) (pg.Ingredient, error)
+	RemoveFromIngredientStock(ctx context.Context, arg pg.RemoveFromIngredientStockParams) (pg.IngredientStock, error)
+	InsertIngredientStockMovement(ctx context.Context, arg pg.InsertIngredientStockMovementParams) error
+}
+
 func withOrderBatchSavepoint(ctx context.Context, name string, fn func() error) error {
 	tx, ok := repository.TenantTxFromContext(ctx)
 	if !ok || tx == nil {
@@ -1602,14 +1611,19 @@ func (s *OrderS) GetBillDetails(ctx context.Context, billID string) (*model.Bill
 	}, nil
 }
 
-func (s *OrderS) consumeItemStock(ctx context.Context, goodID uuid.UUID, quantity int32, orderID uuid.UUID, orderDate pgtype.Timestamptz) error {
-	storageID, err := s.repo.Tenant(ctx).GetStorageByGoodID(ctx, goodID)
+func (s *OrderS) consumeItemStockTx(
+	ctx context.Context,
+	q orderStockTx,
+	goodID uuid.UUID,
+	quantity int32,
+	orderID uuid.UUID,
+) error {
+	storageID, err := q.GetStorageByGoodID(ctx, goodID)
 	if err != nil {
 		return fmt.Errorf("failed to get storage for good: %w", err)
 	}
 	if !storageID.Valid {
-		// No storage configured for this good's department — skip stock deduction
-		return nil
+		return fmt.Errorf("no active storage configured for good %s", goodID)
 	}
 
 	mult := pgtype.Numeric{}
@@ -1621,6 +1635,99 @@ func (s *OrderS) consumeItemStock(ctx context.Context, goodID uuid.UUID, quantit
 	usages, err := s.expandGoodToIngredientsByCalculations(ctx, goodID, mult)
 	if err != nil {
 		return err
+	}
+	if len(usages) == 0 {
+		return fmt.Errorf("no calculation configured for good %s", goodID)
+	}
+
+	for _, u := range usages {
+		stockID, err := q.EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
+			ID:           uuid.New(),
+			IngredientID: u.ingredientID,
+			StorageID:    storageID,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to ensure ingredient stock row: %w", err)
+		}
+
+		locked, err := q.GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
+			IngredientID: u.ingredientID,
+			StorageID:    storageID,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to lock ingredient stock row: %w", err)
+		}
+
+		ing, err := q.GetIngredientByID(ctx, u.ingredientID)
+		if err != nil {
+			return fmt.Errorf("failed to get ingredient: %w", err)
+		}
+
+		price := ing.PricePerUnit
+		if !price.Valid {
+			_ = price.Scan("0")
+		}
+
+		updated, err := q.RemoveFromIngredientStock(ctx, pg.RemoveFromIngredientStockParams{
+			ID:       stockID,
+			Quantity: u.quantity,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to consume ingredient stock: %w", err)
+		}
+
+		zero := pgtype.Numeric{}
+		_ = zero.Scan("0")
+		sourceType := "order"
+		srcID := orderID
+
+		now := pgtype.Timestamptz{
+			Time:  time.Now().UTC(),
+			Valid: true,
+		}
+
+		if err := q.InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+			ID:           uuid.New(),
+			StorageID:    uuid.UUID(storageID.Bytes),
+			IngredientID: u.ingredientID,
+			EventType:    "order_out",
+			QtyIn:        zero,
+			QtyOut:       u.quantity,
+			StockBefore:  locked.Quantity,
+			StockAfter:   updated.Quantity,
+			PricePerUnit: price,
+			SourceType:   &sourceType,
+			SourceID:     &srcID,
+			EffectiveAt:  &now,
+		}); err != nil {
+			return fmt.Errorf("failed to insert stock movement: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (s *OrderS) consumeItemStock(ctx context.Context, goodID uuid.UUID, quantity int32, orderID uuid.UUID) error {
+	storageID, err := s.repo.Tenant(ctx).GetStorageByGoodID(ctx, goodID)
+	if err != nil {
+		return fmt.Errorf("failed to get storage for good: %w", err)
+	}
+	if !storageID.Valid {
+		return fmt.Errorf("no active storage configured for good %s", goodID)
+	}
+
+	mult := pgtype.Numeric{}
+	mult.Valid = true
+	if err := mult.Scan(strconv.Itoa(int(quantity))); err != nil {
+		return fmt.Errorf("invalid item quantity: %w", err)
+	}
+
+	usages, err := s.expandGoodToIngredientsByCalculations(ctx, goodID, mult)
+	if err != nil {
+		return err
+	}
+	if len(usages) == 0 {
+		return fmt.Errorf("no calculation configured for good %s", goodID)
 	}
 
 	for _, u := range usages {
@@ -1662,10 +1769,13 @@ func (s *OrderS) consumeItemStock(ctx context.Context, goodID uuid.UUID, quantit
 		_ = zero.Scan("0")
 		sourceType := "order"
 		srcID := orderID
-		var effectiveAt *pgtype.Timestamptz
-		if orderDate.Valid && !orderDate.Time.After(time.Now()) {
-			effectiveAt = &orderDate
+
+		now := pgtype.Timestamptz{
+			Time:  time.Now().UTC(),
+			Valid: true,
 		}
+		effectiveAt := &now
+
 		if err := s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
 			ID:           uuid.New(),
 			StorageID:    uuid.UUID(storageID.Bytes),
@@ -1715,6 +1825,9 @@ func (s *OrderS) consumeItemStockWithModifiers(ctx context.Context, orderItemID 
 	if err != nil {
 		return err
 	}
+	if len(usages) == 0 {
+		return fmt.Errorf("no calculation configured for good %s", goodID)
+	}
 	for _, u := range usages {
 		stockID, err := s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
 			ID:           uuid.New(),
@@ -1754,6 +1867,13 @@ func (s *OrderS) consumeItemStockWithModifiers(ctx context.Context, orderItemID 
 		_ = zero.Scan("0")
 		sourceType := "order"
 		srcID := orderID
+
+		now := pgtype.Timestamptz{
+			Time:  time.Now().UTC(),
+			Valid: true,
+		}
+		effectiveAt := &now
+
 		if err := s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
 			ID:           uuid.New(),
 			StorageID:    uuid.UUID(storageID.Bytes),
@@ -1766,6 +1886,7 @@ func (s *OrderS) consumeItemStockWithModifiers(ctx context.Context, orderItemID 
 			PricePerUnit: price,
 			SourceType:   &sourceType,
 			SourceID:     &srcID,
+			EffectiveAt:  effectiveAt,
 		}); err != nil {
 			return fmt.Errorf("failed to insert stock movement: %w", err)
 		}
@@ -2277,28 +2398,121 @@ func (s *OrderS) UpdateOrderItemQuantity(ctx context.Context, itemID string, qua
 	return toOrderItemResponse(item), nil
 }
 
+// helper
+func normalizeOrderItemStatus(status string) string {
+	return strings.ToLower(strings.TrimSpace(status))
+}
+
+func canTransitionOrderItemStatus(from, to string) bool {
+	switch model.OrderItemStatus(from) {
+	case model.OrderItemStatusPending:
+		return to == string(model.OrderItemStatusCooking) || to == string(model.OrderItemStatusCancelled)
+	case model.OrderItemStatusCooking:
+		return to == string(model.OrderItemStatusReady) || to == string(model.OrderItemStatusCancelled)
+	case model.OrderItemStatusReady:
+		return false
+	case model.OrderItemStatusCancelled:
+		return false
+	default:
+		return false
+	}
+}
+
+func (s *OrderS) getTenantMutationQueries(ctx context.Context) (*pg.Queries, context.Context, pgx.Tx, bool, error) {
+	if existingTx, ok := repository.TenantTxFromContext(ctx); ok && existingTx != nil {
+		return s.repo.Tenant(ctx), ctx, existingTx, false, nil
+	}
+
+	tx, err := s.repo.PgRepo.TenantPool.Begin(ctx)
+	if err != nil {
+		return nil, nil, nil, false, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+
+	brandID, _ := ctx.Value("brand_id").(string)
+	brandID = strings.TrimSpace(brandID)
+	if brandID == "" {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("brand_id is missing in context")
+	}
+
+	schemaName := fmt.Sprintf("tenant_%s", brandID)
+	if _, err := tx.Exec(ctx, fmt.Sprintf(`SET LOCAL search_path TO "%s", public`, schemaName)); err != nil {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("failed to set tenant search_path: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx, "SET LOCAL app.brand_id = $1", brandID); err != nil {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("failed to set app.brand_id: %w", err)
+	}
+
+	if branchID, _ := ctx.Value("branch_id").(string); strings.TrimSpace(branchID) != "" {
+		if _, err := tx.Exec(ctx, "SET LOCAL app.branch_id = $1", strings.TrimSpace(branchID)); err != nil {
+			tx.Rollback(ctx)
+			return nil, nil, nil, false, fmt.Errorf("failed to set app.branch_id: %w", err)
+		}
+	}
+
+	q := s.repo.Tenant(ctx).WithTx(tx)
+	txCtx := repository.WithTenantTx(ctx, tx)
+	txCtx = repository.WithTenantQueries(txCtx, q)
+
+	return q, txCtx, tx, true, nil
+}
+
 func (s *OrderS) UpdateOrderItemStatus(ctx context.Context, itemID string, status string) (*model.OrderItemResponse, error) {
 	id, err := uuid.Parse(itemID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid order item id: %w", err)
 	}
 
-	existing, err := s.repo.Tenant(ctx).GetOrderItemByID(ctx, id)
+	nextStatus := normalizeOrderItemStatus(status)
+	if !model.IsValidOrderItemStatus(nextStatus) {
+		return nil, fmt.Errorf("invalid order item status: %s", nextStatus)
+	}
+
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	existing, err := q.GetOrderItemByIDForUpdate(txCtx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get order item: %w", err)
 	}
-	currentStatus := string(existing.Status.OrderItemsStatus)
 
-	if currentStatus == string(pg.OrderItemsStatusCancelled) {
-		return nil, fmt.Errorf("cannot change status of a cancelled order item")
+	if !existing.Status.Valid {
+		return nil, fmt.Errorf("order item status is empty for item %s", itemID)
+	}
+
+	currentStatus := normalizeOrderItemStatus(string(existing.Status.OrderItemsStatus))
+	if !model.IsValidOrderItemStatus(currentStatus) {
+		return nil, fmt.Errorf("invalid current order item status: %s", currentStatus)
+	}
+
+	if currentStatus == nextStatus {
+		return toOrderItemResponse(existing), nil
+	}
+
+	if !canTransitionOrderItemStatus(currentStatus, nextStatus) {
+		return nil, fmt.Errorf("invalid order item status transition: %s -> %s", currentStatus, nextStatus)
+	}
+
+	if currentStatus == string(model.OrderItemStatusPending) && nextStatus == string(model.OrderItemStatusCooking) {
+		if err := s.consumeItemStockWithModifiers(txCtx, existing.ID); err != nil {
+			return nil, fmt.Errorf("failed to deduct stock for order item: %w", err)
+		}
 	}
 
 	st := pg.NullOrderItemsStatus{
-		OrderItemsStatus: pg.OrderItemsStatus(status),
+		OrderItemsStatus: pg.OrderItemsStatus(nextStatus),
 		Valid:            true,
 	}
 
-	item, err := s.repo.Tenant(ctx).UpdateOrderItemStatus(ctx, pg.UpdateOrderItemStatusParams{
+	item, err := q.UpdateOrderItemStatus(txCtx, pg.UpdateOrderItemStatusParams{
 		ID:     id,
 		Status: st,
 	})
@@ -2306,17 +2520,9 @@ func (s *OrderS) UpdateOrderItemStatus(ctx context.Context, itemID string, statu
 		return nil, fmt.Errorf("failed to update order item status: %w", err)
 	}
 
-	if currentStatus == string(pg.OrderItemsStatusPending) && status == string(pg.OrderItemsStatusCooking) {
-		order, err := s.repo.Tenant(ctx).GetOrderByID(ctx, existing.OrderID)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get order for stock deduction: %w", err)
-		}
-		orderDate := pgtype.Timestamptz{}
-		if order.CreatedAt.Valid {
-			orderDate = order.CreatedAt
-		}
-		if err := s.consumeItemStock(ctx, existing.GoodID, existing.Quantity, existing.OrderID, orderDate); err != nil {
-			return nil, fmt.Errorf("failed to deduct stock for order item: %w", err)
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
 		}
 	}
 

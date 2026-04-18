@@ -303,7 +303,14 @@ func (g *GoodsS) GetGoodsList(ctx context.Context, filter model.GoodsListFilter,
 		filter.SortOrder = "desc"
 	}
 
-	total, err := g.repo.Tenant(ctx).CountGoodsList(ctx, pg.CountGoodsListParams{
+	if limit <= 0 {
+		limit = 20
+	}
+	if offset < 0 {
+		offset = 0
+	}
+
+	countParams := pg.CountGoodsListParams{
 		Lang:         lang,
 		CategoryID:   categoryUUID,
 		DepartmentID: departmentUUID,
@@ -311,10 +318,26 @@ func (g *GoodsS) GetGoodsList(ctx context.Context, filter model.GoodsListFilter,
 		Search:       filter.Search,
 		MinPrice:     minPrice,
 		MaxPrice:     maxPrice,
+	}
+
+	var total int64
+	countErr := withTenantSavepoint(ctx, "goods_list_count", func() error {
+		var err error
+		total, err = g.repo.Tenant(ctx).CountGoodsList(ctx, countParams)
+		return err
 	})
-	if err != nil {
-		log.Printf("CountGoodsList failed: %v", err)
+	if countErr != nil {
+		log.Printf("CountGoodsList failed: lang=%q limit=%d offset=%d filter=%+v err=%v", lang, limit, offset, filter, countErr)
 		total = 0
+	}
+
+	if countErr == nil {
+		if total == 0 {
+			return []*model.GoodResponse{}, 0, nil
+		}
+		if int64(offset) >= total {
+			return []*model.GoodResponse{}, total, nil
+		}
 	}
 
 	rows, err := g.repo.Tenant(ctx).GetGoodsList(ctx, pg.GetGoodsListParams{
@@ -331,7 +354,7 @@ func (g *GoodsS) GetGoodsList(ctx context.Context, filter model.GoodsListFilter,
 		Offset:       offset,
 	})
 	if err != nil {
-		log.Printf("GetGoodsList failed: %v", err)
+		log.Printf("GetGoodsList failed: lang=%q limit=%d offset=%d filter=%+v err=%v", lang, limit, offset, filter, err)
 		return nil, 0, fmt.Errorf("failed to retrieve goods: %w", err)
 	}
 
@@ -343,12 +366,32 @@ func (g *GoodsS) GetGoodsList(ctx context.Context, filter model.GoodsListFilter,
 	return responses, total, nil
 }
 
-// GetAllGoods retrieves all goods with pagination
 func (g *GoodsS) GetAllGoods(ctx context.Context, limit, offset int32) ([]*model.GoodResponse, int64, error) {
-	total, err := g.repo.Tenant(ctx).CountGoods(ctx)
-	if err != nil {
-		log.Printf("CountGoods failed: %v", err)
+	if limit <= 0 {
+		limit = 20
+	}
+	if offset < 0 {
+		offset = 0
+	}
+
+	var total int64
+	countErr := withTenantSavepoint(ctx, "goods_count", func() error {
+		var err error
+		total, err = g.repo.Tenant(ctx).CountGoods(ctx)
+		return err
+	})
+	if countErr != nil {
+		log.Printf("CountGoods failed: limit=%d offset=%d err=%v", limit, offset, countErr)
 		total = 0
+	}
+
+	if countErr == nil {
+		if total == 0 {
+			return []*model.GoodResponse{}, 0, nil
+		}
+		if int64(offset) >= total {
+			return []*model.GoodResponse{}, total, nil
+		}
 	}
 
 	goods, err := g.repo.Tenant(ctx).GetAllGoods(ctx, pg.GetAllGoodsParams{
@@ -356,17 +399,17 @@ func (g *GoodsS) GetAllGoods(ctx context.Context, limit, offset int32) ([]*model
 		Offset: offset,
 	})
 	if err != nil {
-		log.Printf("GetAllGoods failed: %v", err)
+		log.Printf("GetAllGoods failed: limit=%d offset=%d err=%v", limit, offset, err)
 		return nil, 0, fmt.Errorf("failed to retrieve goods: %w", err)
 	}
 
-	var responses []*model.GoodResponse
+	responses := make([]*model.GoodResponse, 0, len(goods))
 	for _, good := range goods {
 		responses = append(responses, goodToResponseAny(good))
 	}
+
 	return responses, total, nil
 }
-
 
 // GetGoodsByCategory retrieves goods by category
 func (g *GoodsS) GetGoodsByCategory(ctx context.Context, categoryID string, limit, offset int32) ([]*model.GoodResponse, error) {
@@ -511,7 +554,6 @@ func (g *GoodsS) RestoreGood(ctx context.Context, goodID string) (*model.GoodRes
 
 	return g.GetGoodByID(ctx, goodID)
 }
-
 
 // ==================== GOODS DETAILS ====================
 
@@ -878,10 +920,31 @@ func (g *GoodsS) GetGoodByIDWithLang(ctx context.Context, goodID string, lang st
 
 // GetAllGoodsWithLang retrieves all goods with language support
 func (g *GoodsS) GetAllGoodsWithLang(ctx context.Context, lang string, limit, offset int32) ([]*model.GoodResponse, int64, error) {
-	total, err := g.repo.Tenant(ctx).CountGoods(ctx)
-	if err != nil {
-		log.Printf("CountGoods (WithLang) failed: %v", err)
+	if limit <= 0 {
+		limit = 20
+	}
+	if offset < 0 {
+		offset = 0
+	}
+
+	var total int64
+	countErr := withTenantSavepoint(ctx, "goods_count_with_lang", func() error {
+		var err error
+		total, err = g.repo.Tenant(ctx).CountGoods(ctx)
+		return err
+	})
+	if countErr != nil {
+		log.Printf("CountGoods (WithLang) failed: lang=%q limit=%d offset=%d err=%v", lang, limit, offset, countErr)
 		total = 0
+	}
+
+	if countErr == nil {
+		if total == 0 {
+			return []*model.GoodResponse{}, 0, nil
+		}
+		if int64(offset) >= total {
+			return []*model.GoodResponse{}, total, nil
+		}
 	}
 
 	goods, err := g.repo.Tenant(ctx).GetAllGoodsWithLanguage(ctx, pg.GetAllGoodsWithLanguageParams{
@@ -890,13 +953,14 @@ func (g *GoodsS) GetAllGoodsWithLang(ctx context.Context, lang string, limit, of
 		Offset:  offset,
 	})
 	if err != nil {
-		log.Printf("GetAllGoodsWithLang failed: %v", err)
+		log.Printf("GetAllGoodsWithLang failed: lang=%q limit=%d offset=%d err=%v", lang, limit, offset, err)
 		return nil, 0, fmt.Errorf("failed to get goods: %w", err)
 	}
 
-	var responses []*model.GoodResponse
+	responses := make([]*model.GoodResponse, 0, len(goods))
 	for _, good := range goods {
 		responses = append(responses, goodToResponseAny(good))
 	}
+
 	return responses, total, nil
 }
