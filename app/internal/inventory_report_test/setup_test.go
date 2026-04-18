@@ -390,3 +390,30 @@ func toStringSlice(args []interface{}) []string {
 	}
 	return out
 }
+
+// strPtr returns a pointer to a string.
+func strPtr(s string) *string {
+	return &s
+}
+
+// getInventoryMovement retrieves the most recent inventory correction movement (surplus or shortage).
+func getInventoryMovement(t *testing.T, ctx context.Context, pool *pgxpool.Pool,
+	storageID, ingredientID uuid.UUID,
+) (eventType string, qtyIn, qtyOut float64) {
+	t.Helper()
+	var qtyInStr, qtyOutStr string
+	err := pool.QueryRow(ctx, `
+		SELECT event_type, qty_in::text, qty_out::text
+		FROM ingredient_stock_movements
+		WHERE storage_id = $1 AND ingredient_id = $2
+		  AND event_type IN ('inventory_shortage_out', 'inventory_surplus_in')
+		ORDER BY created_at DESC
+		LIMIT 1
+	`, storageID, ingredientID).Scan(&eventType, &qtyInStr, &qtyOutStr)
+	if err != nil {
+		return "", 0, 0
+	}
+	fmt.Sscanf(qtyInStr, "%f", &qtyIn)
+	fmt.Sscanf(qtyOutStr, "%f", &qtyOut)
+	return eventType, qtyIn, qtyOut
+}

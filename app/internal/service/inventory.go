@@ -1000,7 +1000,7 @@ func (s *InventoryS) applyStockForItems(ctx context.Context, invID uuid.UUID, st
 			return fmt.Errorf("failed to lock stock: %w", err)
 		}
 
-		delta := numericToFloat(refreshed.CountedQuantity) - numericToFloat(locked.Quantity)
+		delta := numericToFloat(refreshed.CountedQuantity) - numericToFloat(refreshed.SystemQuantity)
 		if delta != 0 {
 			updated, err := s.repo.Tenant(ctx).UpdateIngredientStock(ctx, pg.UpdateIngredientStockParams{
 				ID:       locked.ID,
