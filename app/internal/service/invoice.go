@@ -1169,6 +1169,10 @@ func (s *InvoiceS) applyInvoiceStockMovement(ctx context.Context, storageID pgty
 		effectiveAt = &pgtype.Timestamptz{Time: invoiceDate.Time, Valid: true}
 	}
 
+	if shouldSkipStockMovement(qtyIn, qtyOut) {
+		return nil
+	}
+
 	if err := s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
 		ID:           uuid.New(),
 		StorageID:    uuid.UUID(storageID.Bytes),
