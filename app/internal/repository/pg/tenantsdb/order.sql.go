@@ -1150,6 +1150,38 @@ func (q *Queries) GetOrderItemByID(ctx context.Context, id uuid.UUID) (OrderItem
 	return i, err
 }
 
+const getOrderItemByIDForUpdate = `-- name: GetOrderItemByIDForUpdate :one
+SELECT id, good_id, order_id, quantity, price, status, comment, created_at, updated_at, deleted_at, cost_price
+FROM order_items
+WHERE order_items.id = $1
+  AND order_items.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM orders o
+    WHERE o.id = order_items.order_id
+      AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
+FOR UPDATE
+`
+
+func (q *Queries) GetOrderItemByIDForUpdate(ctx context.Context, id uuid.UUID) (OrderItem, error) {
+	row := q.db.QueryRow(ctx, getOrderItemByIDForUpdate, id)
+	var i OrderItem
+	err := row.Scan(
+		&i.ID,
+		&i.GoodID,
+		&i.OrderID,
+		&i.Quantity,
+		&i.Price,
+		&i.Status,
+		&i.Comment,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.CostPrice,
+	)
+	return i, err
+}
+
 const getOrderItemsByOrderID = `-- name: GetOrderItemsByOrderID :many
 SELECT id, good_id, order_id, quantity, price, status, comment, created_at, updated_at, deleted_at, cost_price
 FROM order_items

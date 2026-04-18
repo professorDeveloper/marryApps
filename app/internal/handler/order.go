@@ -2009,6 +2009,8 @@ func (h *Handler) UpdateOrderItemStatus(c echo.Context) error {
 			http.StatusBadRequest,
 		))
 	}
+
+	req.Status = strings.ToLower(strings.TrimSpace(req.Status))
 	if req.Status == "" {
 		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
 			"status is required",
@@ -2017,9 +2019,30 @@ func (h *Handler) UpdateOrderItemStatus(c echo.Context) error {
 		))
 	}
 
+	if !model.IsValidOrderItemStatus(req.Status) {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"invalid order item status",
+			"allowed values: "+model.OrderItemStatusAllowedValues,
+			http.StatusBadRequest,
+		))
+	}
+
 	item, err := h.service.Order().UpdateOrderItemStatus(c.Request().Context(), itemID, req.Status)
 	if err != nil {
 		log.Printf("UpdateOrderItemStatus failed for id %s: %v", itemID, err)
+
+		lowerErr := strings.ToLower(err.Error())
+		if strings.Contains(lowerErr, "invalid order item status") ||
+			strings.Contains(lowerErr, "invalid order item status transition") ||
+			strings.Contains(lowerErr, "cannot change status of a cancelled order item") ||
+			strings.Contains(lowerErr, "order item status is empty") {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"failed to update order item status",
+				err.Error(),
+				http.StatusBadRequest,
+			))
+		}
+
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
 			"failed to update order item status",
 			err.Error(),
