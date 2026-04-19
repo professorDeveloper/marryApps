@@ -2,7 +2,7 @@
 
 > **Module:** core  
 > **Base URL:** https://api.maryai.uz/  
-> **Last Updated:** 2026-04-17T11:19:13.212Z
+> **Last Updated:** 2026-04-19T02:29:41.393Z
 
 ---
 
@@ -3856,10 +3856,19 @@
 - **200**: Inventory items updated successfully
   ```json
 {
-  "type": "array",
-  "items": {
-    "$ref": "#/definitions/model.InventoryItemComputedResponse"
-  }
+  "allOf": [
+    {
+      "$ref": "#/definitions/model.SuccessResponse"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/definitions/model.InventoryResponse"
+        }
+      }
+    }
+  ]
 }
 ```
 
@@ -3913,10 +3922,19 @@
 - **200**: Inventory items updated successfully
   ```json
 {
-  "type": "array",
-  "items": {
-    "$ref": "#/definitions/model.InventoryItemComputedResponse"
-  }
+  "allOf": [
+    {
+      "$ref": "#/definitions/model.SuccessResponse"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/definitions/model.InventoryResponse"
+        }
+      }
+    }
+  ]
 }
 ```
 

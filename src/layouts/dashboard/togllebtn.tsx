@@ -4,7 +4,7 @@ import { Box } from '@mui/material';
 import WidgetsIcon from '@mui/icons-material/Widgets';
 import { styled, useTheme } from '@mui/material/styles';
 
-import { Logo } from 'src/components/logo';
+import Logo from 'src/components/logo/logo';
 
 const AnimatedButtonContainer = styled(Box)(({ theme }) => ({
   position: 'relative',
@@ -40,7 +40,7 @@ const IconWrapper = styled(Box, {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  transition: 'all 1s cubic-bezier(0.68, -0.55, 0.265, 1.55)',
+  transition: isLogo ? 'none' : 'all 1s cubic-bezier(0.68, -0.55, 0.265, 1.55)',
   opacity: isVisible ? 1 : 0,
   transform: isVisible 
     ? (isLogo ? 'scale(1) rotate(0deg)' : 'scale(1) rotate(0deg)')
@@ -63,10 +63,10 @@ export const AnimatedToggleButton = ({ onToggle }: { onToggle: () => void }) => 
           // Show logo
           setShowLogo(true);
           
-          // Hide logo after 3 seconds
+          // Hide logo after 12 seconds (full animation cycle)
           timeoutRef.current = setTimeout(() => {
             setShowLogo(false);
-          }, 3000);
+          }, 12000);
         }
       }, 30000); // 30 seconds
     };
@@ -94,7 +94,7 @@ export const AnimatedToggleButton = ({ onToggle }: { onToggle: () => void }) => 
     // Call the toggle function
     onToggle();
     
-    // Reset animations
+    // Reset animations after 12 seconds (full animation cycle)
     setTimeout(() => {
       setShowLogo(false);
       setIsAnimating(false);
@@ -105,14 +105,25 @@ export const AnimatedToggleButton = ({ onToggle }: { onToggle: () => void }) => 
           setShowLogo(true);
           timeoutRef.current = setTimeout(() => {
             setShowLogo(false);
-          }, 3000);
+          }, 12000);
         }
       }, 30000);
-    }, 1500);
+    }, 12000);
   };
 
   return (
-    <AnimatedButtonContainer onClick={handleClick}>
+    <AnimatedButtonContainer 
+      onClick={handleClick}
+      sx={{
+        // ...(showLogo && {
+        //   width: 'auto',
+        //   height: 'auto',
+        //   minWidth: 140,
+        //   minHeight: 140,
+        //   padding: '10px',
+        // }),
+      }}
+    >
       {/* Animated background glow effect */}
       <Box
         sx={{
@@ -178,49 +189,21 @@ export const AnimatedToggleButton = ({ onToggle }: { onToggle: () => void }) => 
       </IconWrapper>
       
       {/* Logo - Regular version during animation */}
-      <IconWrapper isVisible={showLogo} isLogo>
+      {showLogo && (
         <Box
           sx={{
-            transform: 'scale(0.8)',
-            filter: `drop-shadow(0 0 12px ${theme.palette.primary.main}50)`,
-            animation: 'logoAppear 1.5s ease-out, logoFloat 2s ease-in-out 1.5s infinite',
-            '@keyframes logoAppear': {
-              '0%': {
-                transform: 'scale(0) rotate(-180deg)',
-                opacity: 0,
-              },
-              '50%': {
-                transform: 'scale(1.2) rotate(90deg)',
-                opacity: 0.8,
-              },
-              '100%': {
-                transform: 'scale(0.8) rotate(0deg)',
-                opacity: 1,
-              },
-            },
-            '@keyframes logoFloat': {
-              '0%, 100%': {
-                transform: 'scale(0.8) translateY(0px)',
-                filter: `drop-shadow(0 0 12px ${theme.palette.primary.main}50)`,
-              },
-              '25%': {
-                transform: 'scale(0.85) translateY(-1px)',
-                filter: `drop-shadow(0 0 16px ${theme.palette.primary.main}70)`,
-              },
-              '50%': {
-                transform: 'scale(0.8) translateY(0px)',
-                filter: `drop-shadow(0 0 12px ${theme.palette.primary.main}50)`,
-              },
-              '75%': {
-                transform: 'scale(0.85) translateY(1px)',
-                filter: `drop-shadow(0 0 16px ${theme.palette.primary.main}70)`,
-              },
-            },
+            position: 'absolute',
+            width: 40,
+            height: 40,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10,
           }}
         >
-          <Logo isNavMini />
+          <Logo size={40} forceRestart={showLogo} />
         </Box>
-      </IconWrapper>
+      )}
       
       {/* Pulse effect during animation */}
       {isAnimating && (

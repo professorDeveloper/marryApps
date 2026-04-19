@@ -77,7 +77,7 @@ export function CategoryListView() {
                 sortable: true,
                 filterable: true,
                 filter: {
-                    type: 'multi',
+                    type: 'multi' as const,
                     options: storages.map((s) => s.name),
                 },
                 getValue: (row: ICategory) => row,
@@ -94,7 +94,7 @@ export function CategoryListView() {
                 sortable: true,
                 filterable: true,
                 filter: {
-                    type: 'multi',
+                    type: 'multi' as const,
                     options: departments.map((d) => d.name),
                 },
                 getValue: (row) => row.department_name || '-',

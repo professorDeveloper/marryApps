@@ -80,7 +80,7 @@ export function JwtSignInView() {
         username: data.username,
         password: data.password,
       });
-      await checkUserSession?.();
+      await checkUserSession?.()
 
       router.push(paths.menu.sign);
     } catch (error) {

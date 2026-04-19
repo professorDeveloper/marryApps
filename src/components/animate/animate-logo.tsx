@@ -6,7 +6,7 @@ import { varAlpha } from 'minimal-shared/utils';
 
 import { styled } from '@mui/material/styles';
 
-import { Logo } from '../logo';
+import Logo from '../logo/logo';
 
 // ----------------------------------------------------------------------
 
@@ -34,10 +34,7 @@ export function AnimateLogoZoom({ logo, slotProps, sx, ...other }: AnimateLogoPr
           <Logo
             disabled
             {...slotProps?.logo}
-            sx={[
-              { width: 64, height: 64 },
-              ...(Array.isArray(slotProps?.logo?.sx) ? slotProps.logo.sx : [slotProps?.logo?.sx]),
-            ]}
+            size={64}
           />
         )}
       </m.span>
@@ -96,10 +93,8 @@ export function AnimateLogoRotate({ logo, sx, slotProps, ...other }: AnimateLogo
       {logo ?? (
         <Logo
           {...slotProps?.logo}
-          sx={[
-            { zIndex: 9, width: 40, height: 40 },
-            ...(Array.isArray(slotProps?.logo?.sx) ? slotProps.logo.sx : [slotProps?.logo?.sx]),
-          ]}
+          size={40}
+          className="z-9"
         />
       )}
 
