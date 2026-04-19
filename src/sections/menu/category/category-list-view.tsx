@@ -47,6 +47,7 @@ export function CategoryListView() {
         sortState,
         handleSearch,
         handlePageChange,
+        handleFilterChange,
         handleDelete,
         handleViewGoods,
         handleCloseGoodsModal,
@@ -275,12 +276,18 @@ export function CategoryListView() {
                     searchValue={searchQuery}
                     onSearchChange={handleSearch}
                     onSortChange={handleSortChange}
+                    onFiltersChange={(fs: Record<string, any>) => {
+                        const storageId = (fs.storage_name?.value as string[])?.[0];
+                        const departmentId = (fs.department_name?.value as string[])?.[0];
+                        handleFilterChange({ storage_id: storageId || undefined, department_id: departmentId || undefined });
+                    }}
                     page={paginationModel.page}
                     rowsPerPage={paginationModel.pageSize}
                     totalCount={totalCount}
                     onReset={() => {
                         handleSearch('');
                         handleSortChange({ key: null, dir: null });
+                        handleFilterChange({});
                     }}
                     rowsPerPageOptions={[10, 20, 50, 100]}
                     onPageChange={(page) => handlePageChangeInternal(page, paginationModel.pageSize)}

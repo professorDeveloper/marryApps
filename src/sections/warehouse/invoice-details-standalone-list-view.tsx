@@ -99,7 +99,7 @@ const initialFilters: InvoiceListFilters = {
     ingredient_id: '',
     status: '',
     expand: 'supplier_id,storage_id',
-    q: '',
+    search: '',
     limit: 20,
     offset: 0,
 };
@@ -214,7 +214,7 @@ export function InvoiceDetailsStandaloneListView() {
                 supplier_id: filters.supplier_id,
                 ingredient_id: filters.ingredient_id,
                 status: filters.status,
-                q: filters.q,
+                search: filters.search,
                 expand: filters.expand,
                 limit: filters.limit,
                 offset: filters.offset,
@@ -278,7 +278,7 @@ export function InvoiceDetailsStandaloneListView() {
     useEffect(() => {
         setDraftFilters((prev) => ({
             ...prev,
-            q: debouncedSearchQuery,
+            search: debouncedSearchQuery,
         }));
     }, [debouncedSearchQuery]);
 

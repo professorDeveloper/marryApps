@@ -22,8 +22,8 @@ interface BackendResponse<T> {
 export interface OrderListParams {
   order_type?: string;
   status?: string;
-  start_date?: string;
-  end_date?: string;
+  from?: string;
+  to?: string;
   sort_by?: string;
   sort_order?: 'asc' | 'desc';
   limit?: number;
@@ -106,10 +106,10 @@ export function useOrdersAPI() {
   const getOrders = useCallback(async (params?: OrderListParams): Promise<OrdersListResponse> => {
     try {
       const queryParams: Record<string, unknown> = {};
-      if (params?.order_type) queryParams.order_type = params.order_type;
+      if (params?.order_type) queryParams.type = params.order_type;
       if (params?.status) queryParams.status = params.status;
-      if (params?.start_date) queryParams.start_date = params.start_date;
-      if (params?.end_date) queryParams.end_date = params.end_date;
+      if (params?.from) queryParams.from = params.from;
+      if (params?.to) queryParams.to = params.to;
       if (params?.sort_by) queryParams.sort_by = params.sort_by;
       if (params?.sort_order) queryParams.sort_order = params.sort_order;
       if (typeof params?.limit === 'number') queryParams.limit = params.limit;

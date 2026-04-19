@@ -331,6 +331,7 @@ export function useGetCompoundsPage(params?: {
     expand?: string;
     sort_by?: string;
     sort_order?: 'asc' | 'desc';
+    department_id?: string;
 }): ICompoundPageResult {
     const { i18n } = useTranslation();
     const normalizedQuery = params?.search?.trim() || '';
@@ -346,6 +347,7 @@ export function useGetCompoundsPage(params?: {
     const queryParams: Record<string, any> = { limit, offset, expand };
     if (params?.sort_by) queryParams.sort_by = params.sort_by;
     if (params?.sort_order) queryParams.sort_order = params.sort_order;
+    if (params?.department_id) queryParams.department_id = params.department_id;
 
     const swrKey = normalizedQuery
         ? [endpoints.compound.search, { params: { q: normalizedQuery, ...queryParams } }]

@@ -35,7 +35,7 @@ export interface InvoiceListFilters {
     ingredient_id?: string;
     status?: string;
     expand?: string;
-    q?: string;
+    search?: string;
     limit?: number;
     offset?: number;
 }
@@ -86,7 +86,7 @@ export function useInvoiceDetailsAPI(): UseInvoiceDetailsAPIReturn {
         assignIfPresent('ingredient_id', filters.ingredient_id);
         assignIfPresent('status', filters.status);
         assignIfPresent('expand', filters.expand);
-        assignIfPresent('q', filters.q);
+        assignIfPresent('search', filters.search);
         assignIfPresent('limit', filters.limit);
         assignIfPresent('offset', filters.offset);
 

@@ -1,7 +1,7 @@
 import type { IUser } from 'src/types/user';
 import type { RowAction, BatchAction, DataTableColumn } from 'src/sections/warehouse/deduction/components/utility-data-table/types/types';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Box from '@mui/material/Box';
@@ -18,42 +18,40 @@ import { useEmployeeApi } from '../../user/employee/hooks/useEmployeeApi';
 import { DEFAULT_DATATABLE_CONFIG, EMPLOYEE_DATATABLE_PERSIST_KEY } from '../../user/employee/constants';
 
 export function UserManagementView() {
-  console.log('UserManagementView rendering');
   const { t } = useTranslation('menu');
   const [searchQuery, setSearchQuery] = useState('');
+  const [paginationModel, setPaginationModel] = useState({
+    page: 0,
+    pageSize: 20,
+  });
 
-  // API hooks for both user types
-  const { 
-    employees: adminUsers, 
-    employeesLoading: adminUsersLoading, 
-    deleteEmployee: deleteAdminUser, 
-    deleteMultipleEmployees: deleteMultipleAdminUsers 
+  // API hooks for both user types with server-side search
+  const {
+    employees: adminUsers,
+    employeesLoading: adminUsersLoading,
+    totalCount: adminTotalCount,
+    setQuery: setAdminQuery,
+    deleteEmployee: deleteAdminUser,
   } = useEmployeeApi('admin', false);
-  
-  const { 
-    employees: staffUsers, 
-    employeesLoading: staffUsersLoading, 
-    deleteEmployee: deleteStaffUser, 
-    deleteMultipleEmployees: deleteMultipleStaffUsers 
+
+  const {
+    employees: staffUsers,
+    employeesLoading: staffUsersLoading,
+    totalCount: staffTotalCount,
+    setQuery: setStaffQuery,
+    deleteEmployee: deleteStaffUser,
   } = useEmployeeApi('user', true);
 
-  // Combine all users into one array
+  // Pass search query to both API hooks for server-side search
+  useEffect(() => {
+    setAdminQuery(searchQuery);
+    setStaffQuery(searchQuery);
+  }, [searchQuery, setAdminQuery, setStaffQuery]);
+
+  // Combine results from both API calls
   const allUsers = useMemo(() => [...(adminUsers || []), ...(staffUsers || [])], [adminUsers, staffUsers]);
 
-  // Filter users based on search query
-  const filteredUsers = useMemo(() => {
-    if (!searchQuery.trim()) {
-      return allUsers;
-    }
-    
-    const query = searchQuery.toLowerCase().trim();
-    return allUsers.filter(user => 
-      user.full_name?.toLowerCase().includes(query) ||
-      user.username?.toLowerCase().includes(query) ||
-      user.phone_number?.toLowerCase().includes(query) ||
-      user.role?.toLowerCase().includes(query)
-    );
-  }, [allUsers, searchQuery]);
+  const totalCount = (adminTotalCount || 0) + (staffTotalCount || 0);
 
   const isLoading = adminUsersLoading || staffUsersLoading;
 
@@ -229,19 +227,33 @@ export function UserManagementView() {
 
   return (
     <Box sx={{ px: 2 }}>
-     
-
       <DataTable<IUser>
-        data={filteredUsers}
+        data={allUsers}
         columns={columns}
         rowActions={rowActions}
         batchActions={batchActions}
         persistKey={EMPLOYEE_DATATABLE_PERSIST_KEY}
         defaultConfig={DEFAULT_DATATABLE_CONFIG}
-        onReset={() => setSearchQuery('')}
+        onReset={() => {
+          setSearchQuery('');
+          setPaginationModel({ page: 0, pageSize: 20 });
+        }}
         getRowId={(row) => row.id}
         searchValue={searchQuery}
-        onSearchChange={(value) => setSearchQuery(value)}
+        onSearchChange={(value) => {
+          setSearchQuery(value);
+          setPaginationModel({ page: 0, pageSize: 20 });
+        }}
+        page={paginationModel.page}
+        rowsPerPage={paginationModel.pageSize}
+        totalCount={totalCount}
+        rowsPerPageOptions={[10, 20, 50, 100]}
+        onPageChange={(page) => {
+          setPaginationModel((prev) => ({ ...prev, page }));
+        }}
+        onRowsPerPageChange={(pageSize) => {
+          setPaginationModel({ page: 0, pageSize });
+        }}
         headerActions={
           <Button
             variant="contained"

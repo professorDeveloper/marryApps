@@ -159,6 +159,16 @@ export function InventoryReportsListView() {
     setPaginationModel({ page: 0, pageSize: paginationModel.pageSize });
   }, [startDate, endDate]);
 
+  // Wire filters to hook
+  useEffect(() => {
+    setInventoryFilters({
+      search: draftFilters.search || '',
+      date_from: draftFilters.date_from || '',
+      date_to: draftFilters.date_to || '',
+      storage_id: draftFilters.storage_id ? [draftFilters.storage_id] : [],
+    });
+  }, [draftFilters, setInventoryFilters]);
+
   // Apply range changes
   const applyRange = useCallback((range: 'day' | 'week' | 'month' | 'year') => {
     const today = dayjs();

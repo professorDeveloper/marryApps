@@ -13,7 +13,7 @@ import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, IconBut
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
 
-import { useDeleteDepartment, useGetDepartments } from 'src/actions/departments';
+import { useDeleteDepartment, useGetDepartments, useGetStorages } from 'src/actions/departments';
 
 import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
@@ -42,10 +42,13 @@ export function DepartmentListView() {
   const [departmentToDelete, setDepartmentToDelete] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+  const [storageId, setStorageId] = useState('');
+  const [sortState, setSortState] = useState<{ key: string | null; dir: 'asc' | 'desc' | null }>({ key: null, dir: null });
   const [paginationModel, setPaginationModel] = useState({
     page: 0,
     pageSize: 20,
   });
+  const { storages } = useGetStorages();
 
   // Debounce quick filter input before hitting search API
   useEffect(() => {
@@ -56,12 +59,15 @@ export function DepartmentListView() {
     return () => clearTimeout(timeout);
   }, [searchQuery]);
 
-  // Get departments from API (supports server-side search)
+  // Get departments from API (supports server-side search, storage filter, and sort)
   const { departments, departmentsTotal } = useGetDepartments(
     debouncedSearchQuery,
     {
       limit: paginationModel.pageSize,
       offset: paginationModel.page * paginationModel.pageSize,
+      storage_id: storageId || undefined,
+      sort_by: sortState.key || undefined,
+      sort_order: (sortState.dir === 'asc' || sortState.dir === 'desc') ? sortState.dir : undefined,
     }
   );
 
@@ -218,10 +224,26 @@ export function DepartmentListView() {
           defaultConfig={defaultConfig}
           onReset={() => {
             setSearchQuery('');
+            setStorageId('');
+            setSortState({ key: null, dir: null });
             setPaginationModel({ page: 0, pageSize: 20 });
           }}
           searchValue={searchQuery}
           onSearchChange={setSearchQuery}
+          onSortChange={(sort) => {
+            setSortState({ key: sort.key, dir: sort.dir });
+            setPaginationModel((prev) => ({ ...prev, page: 0 }));
+          }}
+          showStorageSelector={true}
+          storageSelectorProps={{
+            storageId: storageId || '',
+            storages: (storages || []).map((s: any) => ({ id: s.id, name: s.name })),
+            onStorageChange: (id: string) => {
+              setStorageId(id);
+              setPaginationModel((prev) => ({ ...prev, page: 0 }));
+            },
+            label: t('common.storage', 'Storage'),
+          }}
           page={paginationModel.page}
           rowsPerPage={paginationModel.pageSize}
           totalCount={departmentsTotal || 0}

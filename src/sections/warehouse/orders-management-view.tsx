@@ -80,9 +80,12 @@ export function OrdersManagementView() {
 
   const [orders, setOrders] = useState<OrderEntity[]>([]);
   const [loading, setLoading] = useState(false);
+  const [rowCount, setRowCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [orderType, setOrderType] = useState<string>('');
   const [status, setStatus] = useState<string>('');
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(20);
   const [startDate, setStartDate] = useState<dayjs.Dayjs | null>(null);
   const [endDate, setEndDate] = useState<dayjs.Dayjs | null>(null);
   const [activeRange, setActiveRange] = useState<'day' | 'week' | 'month' | 'year'>('day');
@@ -101,17 +104,19 @@ export function OrdersManagementView() {
       const response = await getOrders({
         order_type: orderType || undefined,
         status: status || undefined,
-        start_date: startDate ? startDate.toISOString() : undefined,
-        end_date: endDate ? endDate.toISOString() : undefined,
+        from: startDate ? startDate.format('YYYY-MM-DD') : undefined,
+        to: endDate ? endDate.format('YYYY-MM-DD') : undefined,
         sort_by: sortState.key || undefined,
         sort_order: (sortState.dir === 'asc' || sortState.dir === 'desc') ? sortState.dir : undefined,
-        limit: 1000,
+        limit: rowsPerPage,
+        offset: page * rowsPerPage,
       });
       setOrders(response.data);
+      setRowCount(response.total || response.data.length);
     } finally {
       setLoading(false);
     }
-  }, [getOrders, orderType, status, startDate, endDate, sortState]);
+  }, [getOrders, orderType, status, startDate, endDate, sortState, rowsPerPage, page]);
 
   useEffect(() => {
     reloadOrders();
@@ -190,12 +195,13 @@ export function OrdersManagementView() {
 
   const handleReset = useCallback(() => {
     setSearchQuery('');
+    setPage(0);
+    setRowsPerPage(20);
     const today = dayjs();
     setStartDate(today.startOf('day'));
     setEndDate(today.endOf('day'));
     setActiveRange('day');
-    reloadOrders();
-  }, [reloadOrders]);
+  }, []);
 
   // Apply range changes
   const applyRange = useCallback((range: 'day' | 'week' | 'month' | 'year') => {
@@ -227,23 +233,6 @@ export function OrdersManagementView() {
     setEndDate(nextEnd);
   }, []);
 
-  // TODO: API search param for orders not confirmed — currently filtered client-side
-  const filteredOrders = useMemo(() => {
-    if (!searchQuery.trim()) return orders;
-
-    const query = searchQuery.toLowerCase();
-    return orders.filter((order) => {
-      const orderType = (order.order_type || 'dine_in').toLowerCase();
-      const orderStatus = (order.status || 'open').toLowerCase();
-      const tableInfo = order.table_id ? tableLabel(tableMap.get(order.table_id)).toLowerCase() : '';
-
-      return (
-        orderType.includes(query) ||
-        orderStatus.includes(query) ||
-        tableInfo.includes(query)
-      );
-    });
-  }, [orders, searchQuery, tableMap]);
 
   return (
     <DashboardContent
@@ -259,7 +248,7 @@ export function OrdersManagementView() {
 
       <DataTable<OrderEntity>
         persistKey="warehouse-orders-management"
-        data={filteredOrders}
+        data={orders}
         getRowId={(row: OrderEntity) => String(row.id)}
         columns={columns}
         defaultConfig={defaultConfig}
@@ -274,7 +263,15 @@ export function OrdersManagementView() {
           const selectedStatus = (fs.status?.value as string[])?.[0];
           setOrderType(selectedOrderType || '');
           setStatus(selectedStatus || '');
-          // Note: reloadOrders will be triggered by the useEffect watching orderType and status changes
+        }}
+        page={page}
+        rowsPerPage={rowsPerPage}
+        totalCount={rowCount}
+        rowsPerPageOptions={[20, 50, 100]}
+        onPageChange={(newPage) => setPage(newPage)}
+        onRowsPerPageChange={(newRowsPerPage) => {
+          setRowsPerPage(newRowsPerPage);
+          setPage(0);
         }}
         showPeriodPicker
         periodPickerProps={{
@@ -283,10 +280,12 @@ export function OrdersManagementView() {
           onStartDateChange: (date: Date | null) => {
             setStartDate(date ? dayjs(date) : null);
             setActiveRange('day');
+            setPage(0);
           },
           onEndDateChange: (date: Date | null) => {
             setEndDate(date ? dayjs(date) : null);
             setActiveRange('day');
+            setPage(0);
           }
         }}
         showPeriodButtons
@@ -294,6 +293,7 @@ export function OrdersManagementView() {
           activePeriod: activeRange,
           onPeriodChange: (period: 'day' | 'week' | 'month' | 'year') => {
             applyRange(period);
+            setPage(0);
           }
         }}
         emptyTitle="No orders found"

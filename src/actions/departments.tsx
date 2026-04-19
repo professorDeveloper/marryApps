@@ -116,7 +116,7 @@ function enrichDepartments(
  */
 export function useGetDepartments(
   searchQuery?: string,
-  options?: { limit?: number; offset?: number; expand?: string }
+  options?: { limit?: number; offset?: number; expand?: string; storage_id?: string; sort_by?: string; sort_order?: 'asc' | 'desc' }
 ) {
   const { i18n } = useTranslation();
 
@@ -127,6 +127,9 @@ export function useGetDepartments(
     ...(normalizedQuery ? { search: normalizedQuery } : {}),
     ...(typeof options?.limit === 'number' ? { limit: options?.limit } : {}),
     ...(typeof options?.offset === 'number' ? { offset: options?.offset } : {}),
+    ...(options?.storage_id ? { storage_id: options.storage_id } : {}),
+    ...(options?.sort_by ? { sort_by: options.sort_by } : {}),
+    ...(options?.sort_order ? { sort_order: options.sort_order } : {}),
     expand,
   };
   const swrKey = normalizedQuery

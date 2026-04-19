@@ -26,17 +26,47 @@ interface BackendResponse<T> {
 // GROUP TRANSACTIONS HOOKS
 // =============================================
 
-export function useGetGroupTransactions() {
-    const { data, isLoading, error } = useSWR<BackendResponse<IGroupTransaction[]>>(
-        endpoints.cashbox.groupTransactions.root,
+export interface GroupTransactionListParams {
+    search?: string;
+    sort_by?: string;
+    sort_order?: 'asc' | 'desc';
+    limit?: number;
+    offset?: number;
+}
+
+export function useGetGroupTransactions(params?: GroupTransactionListParams) {
+    const key = useMemo(() => {
+        if (!params) return endpoints.cashbox.groupTransactions.root;
+        const queryString = new URLSearchParams();
+        if (params.search) queryString.append('search', params.search);
+        if (params.sort_by) queryString.append('sort_by', params.sort_by);
+        if (params.sort_order) queryString.append('sort_order', params.sort_order);
+        if (typeof params.limit === 'number') queryString.append('limit', String(params.limit));
+        if (typeof params.offset === 'number') queryString.append('offset', String(params.offset));
+
+        const qs = queryString.toString();
+        return qs ? `${endpoints.cashbox.groupTransactions.root}?${qs}` : endpoints.cashbox.groupTransactions.root;
+    }, [params]);
+
+    const { data, isLoading, error } = useSWR<BackendResponse<IGroupTransaction[] | { data: IGroupTransaction[]; total: number }>>(
+        key,
         fetcher,
         swrOptions
     );
 
-    const groupTransactions = useMemo(
-        () => data?.data || [],
-        [data?.data]
-    );
+    const groupTransactions = useMemo(() => {
+        if (!data?.data) return [];
+        if (Array.isArray(data.data)) return data.data;
+        if (data.data && 'data' in data.data) return (data.data as any).data || [];
+        return [];
+    }, [data?.data]);
+
+    const total = useMemo(() => {
+        if (!data?.data) return 0;
+        if (Array.isArray(data.data)) return data.data.length;
+        if (data.data && 'total' in data.data) return (data.data as any).total || 0;
+        return 0;
+    }, [data?.data]);
 
     const groupTransactionsLoading = isLoading;
     const groupTransactionsError = error;
@@ -45,6 +75,7 @@ export function useGetGroupTransactions() {
         groupTransactions,
         groupTransactionsLoading,
         groupTransactionsError,
+        total,
     };
 }
 

@@ -36,6 +36,7 @@ import {
 import { DashboardContent } from 'src/layouts/dashboard';
 import { useGetIngredients } from 'src/actions/ingredients';
 import { useGetIngredientGroups } from 'src/actions/ingredient-group';
+import { useGetDepartments } from 'src/actions/departments';
 
 import { Iconify } from 'src/components/iconify';
 import { GenericViewModal } from 'src/components/generic-view-view';
@@ -429,8 +430,10 @@ export function HalfMeals() {
 
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+    const [departmentId, setDepartmentId] = useState('');
     const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 20 });
     const [sortState, setSortState] = useState<{ key: string | null; dir: 'asc' | 'desc' | null }>({ key: null, dir: null });
+    const { departments } = useGetDepartments();
 
     useEffect(() => {
         const timeout = setTimeout(() => {
@@ -452,6 +455,7 @@ export function HalfMeals() {
         expand: 'ingredient_group_id,name_i18n,description_i18n',
         sort_by: sortState.key || undefined,
         sort_order: sortState.dir || undefined,
+        department_id: departmentId || undefined,
     });
     const { ingredientGroups } = useGetIngredientGroups();
     const { deleteCompound } = useDeleteCompound();
@@ -725,6 +729,11 @@ export function HalfMeals() {
                         setSortState({ key: sort.key, dir: sort.dir });
                         setPaginationModel((prev) => ({ ...prev, page: 0 }));
                     }}
+                    onFiltersChange={(fs: Record<string, any>) => {
+                        const depId = (fs.ingredient_group_name?.value as string[])?.[0];
+                        setDepartmentId(depId || '');
+                        setPaginationModel((prev) => ({ ...prev, page: 0 }));
+                    }}
                     page={paginationModel.page}
                     rowsPerPage={paginationModel.pageSize}
                     totalCount={pagination?.total || 0}
@@ -752,6 +761,7 @@ export function HalfMeals() {
                     }}
                     onReset={() => {
                         setSearchQuery('');
+                        setDepartmentId('');
                         setSortState({ key: null, dir: null });
                         setPaginationModel({ page: 0, pageSize: 20 });
                     }}

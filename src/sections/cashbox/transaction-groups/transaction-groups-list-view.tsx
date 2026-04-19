@@ -19,11 +19,21 @@ import { TransactionGroupDeleteDialog } from './components/TransactionGroupDelet
 
 export function CashRegistersListView() {
     const { t } = useTranslation('menu');
-    const { groupTransactions, groupTransactionsLoading } = useGetGroupTransactions();
+    const [page, setPage] = useState(0);
+    const [rowsPerPage, setRowsPerPage] = useState(20);
+    const [searchValue, setSearchValue] = useState('');
+    const [sortState, setSortState] = useState<{ key: string | null; dir: string | null }>({ key: null, dir: null });
+
+    const { groupTransactions, groupTransactionsLoading, total } = useGetGroupTransactions({
+        search: searchValue || undefined,
+        sort_by: sortState.key || undefined,
+        sort_order: (sortState.dir === 'asc' || sortState.dir === 'desc') ? sortState.dir : undefined,
+        limit: rowsPerPage,
+        offset: page * rowsPerPage,
+    });
 
     const [deleteId, setDeleteId] = useState<string | null>(null);
     const [openConfirm, setOpenConfirm] = useState(false);
-    const [searchValue, setSearchValue] = useState('');
 
     const columns: DataTableColumn<TransactionGroup>[] = useMemo(
         () => [
@@ -92,6 +102,9 @@ export function CashRegistersListView() {
 
     const handleReset = useCallback(() => {
         setSearchValue('');
+        setPage(0);
+        setRowsPerPage(20);
+        setSortState({ key: null, dir: null });
     }, []);
 
     const getRowId = useCallback((row: TransactionGroup) => row.id, []);
@@ -117,6 +130,19 @@ export function CashRegistersListView() {
                         onReset={handleReset}
                         searchValue={searchValue}
                         onSearchChange={setSearchValue}
+                        onSortChange={(sort) => {
+                            setSortState({ key: sort.key, dir: sort.dir });
+                            setPage(0);
+                        }}
+                        page={page}
+                        rowsPerPage={rowsPerPage}
+                        totalCount={total}
+                        rowsPerPageOptions={[20, 50, 100]}
+                        onPageChange={setPage}
+                        onRowsPerPageChange={(newRowsPerPage) => {
+                            setRowsPerPage(newRowsPerPage);
+                            setPage(0);
+                        }}
                         rowActions={rowActions}
                         getRowId={getRowId}
                         emptyTitle={t('common.noData', 'No data')}

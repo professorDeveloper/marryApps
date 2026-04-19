@@ -25,7 +25,7 @@ import { useDeleteMeal, useDeleteMeals, useGetMealsPage, useGetMealWithCalculati
 
 import { DashboardContent } from 'src/layouts/dashboard';
 import { useGetCategories } from 'src/actions/categories';
-import { useGetDepartments } from 'src/actions/departments';
+import { useGetDepartments, useGetStorages } from 'src/actions/departments';
 import { useGetIngredients } from 'src/actions/ingredients';
 
 import { Iconify } from 'src/components/iconify';
@@ -234,6 +234,7 @@ export function Meals() {
     const [sortState, setSortState] = useState<{ key: string | null; dir: 'asc' | 'desc' | null }>({ key: null, dir: null });
     const { categories } = useGetCategories();
     const { departments } = useGetDepartments();
+    const { storages } = useGetStorages();
 
     // SWR hooks
     const { meals, mealsLoading, mutate, pagination } = useGetMealsPage({
@@ -512,6 +513,16 @@ export function Meals() {
                     rowsPerPageOptions={[10, 20, 50, 100]}
                     onPageChange={handlePaginationPageChange}
                     onRowsPerPageChange={handlePaginationRowsPerPageChange}
+                    showStorageSelector={true}
+                    storageSelectorProps={{
+                        storageId: filters.storage_id || '',
+                        storages: storages.map((s: any) => ({ id: s.id, name: s.name })),
+                        onStorageChange: (storageId: string) => {
+                            setDraftFilters((prev) => ({ ...prev, storage_id: storageId }));
+                            setPaginationModel((prev) => ({ ...prev, page: 0 }));
+                        },
+                        label: t('common.storage', 'Storage'),
+                    }}
                     defaultConfig={{
                         order: ['name', 'category_id', 'price', 'cost_price', 'cook_time', 'actions'],
                         visibility: {
