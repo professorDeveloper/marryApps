@@ -360,18 +360,18 @@ func (h *Handler) GetIngredientReportMovements(c echo.Context) error {
 
 // GetIngredientInventoryStatusReport retrieves per-ingredient report anchored at most recent inventory count
 // @Summary Get ingredient inventory status report
-// @Description Retrieve ingredient report where begin_qty is anchored at the most recent inventory count
+// @Description Retrieve ingredient report where begin_qty is anchored at the most recent inventory count event. For each ingredient, the report finds the latest inventory_surplus_in or inventory_shortage_out event and uses its stock_after as begin_qty. Subsequent movements are summed normally. If an ingredient has no inventory event, begin_qty defaults to 0 and all movements are included.
 // @Tags reports
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Param storage_id query string true "Storage ID"
-// @Param end query string false "End datetime (RFC3339) or date (YYYY-MM-DD)"
-// @Param ingredient_id query string false "Ingredient ID (optional filter)"
-// @Param limit query int false "Limit (default: 20)"
-// @Param offset query int false "Offset (default: 0)"
-// @Param expand query string false "Expand related fields"
-// @Success 200 {array} model.IngredientReportItem "Inventory status report retrieved successfully"
+// @Param storage_id query string true "Storage ID (UUID)" example:"550e8400-e29b-41d4-a716-446655440000"
+// @Param end query string false "End datetime (RFC3339 or YYYY-MM-DD format). Defaults to current time" example:"2026-04-20"
+// @Param ingredient_id query string false "Optional filter: return only this ingredient (UUID)" example:"550e8400-e29b-41d4-a716-446655440001"
+// @Param limit query int false "Pagination: items per page (default: 20)" default(20) example:"20"
+// @Param offset query int false "Pagination: offset from start (default: 0)" default(0) example:"0"
+// @Param expand query string false "Expand related fields (comma-separated)"
+// @Success 200 {object} model.PaginatedWithTotalsResponse{data=[]model.IngredientReportItem,totals=model.IngredientReportTotals} "Inventory status report retrieved successfully"
 // @Failure 400 {object} model.ErrorResponse "Invalid request parameters"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
 // @Failure 500 {object} model.ErrorResponse "Internal server error"
