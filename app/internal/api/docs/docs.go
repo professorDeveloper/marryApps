@@ -11627,6 +11627,93 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/ingredient-reports/inventory-status": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve ingredient report where begin_qty is anchored at the most recent inventory count event. For each ingredient, the report finds the latest inventory_surplus_in or inventory_shortage_out event and uses its stock_after as begin_qty. Subsequent movements are summed normally. If an ingredient has no inventory event, begin_qty defaults to 0 and all movements are included.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reports"
+                ],
+                "summary": "Get ingredient inventory status report",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Storage ID (UUID)",
+                        "name": "storage_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "End datetime (RFC3339 or YYYY-MM-DD format). Defaults to current time",
+                        "name": "end",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Optional filter: return only this ingredient (UUID)",
+                        "name": "ingredient_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Pagination: items per page (default: 20)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 0,
+                        "description": "Pagination: offset from start (default: 0)",
+                        "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand related fields (comma-separated)",
+                        "name": "expand",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Inventory status report retrieved successfully",
+                        "schema": {
+                            "$ref": "#/definitions/model.IngredientReportPaginatedResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request parameters",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/ingredient-reports/{ingredientId}": {
             "get": {
                 "security": [
@@ -28635,6 +28722,64 @@ const docTemplate = `{
                 }
             }
         },
+        "model.IngredientReportPaginatedResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.IngredientReportItem"
+                    }
+                },
+                "message": {
+                    "type": "string"
+                },
+                "pagination": {
+                    "type": "object",
+                    "properties": {
+                        "limit": {
+                            "type": "integer"
+                        },
+                        "offset": {
+                            "type": "integer"
+                        },
+                        "page": {
+                            "type": "integer"
+                        },
+                        "total": {
+                            "type": "integer"
+                        },
+                        "total_pages": {
+                            "type": "integer"
+                        }
+                    }
+                },
+                "status": {
+                    "type": "string",
+                    "example": "success"
+                },
+                "totals": {
+                    "$ref": "#/definitions/model.IngredientReportTotals"
+                }
+            }
+        },
+        "model.IngredientReportTotals": {
+            "type": "object",
+            "properties": {
+                "total_added_amount": {
+                    "type": "string"
+                },
+                "total_count": {
+                    "type": "integer"
+                },
+                "total_removed_amount": {
+                    "type": "string"
+                }
+            }
+        },
         "model.IngredientResponse": {
             "type": "object",
             "properties": {
@@ -29760,10 +29905,12 @@ const docTemplate = `{
         "model.OutgoingInvoiceStatus": {
             "type": "string",
             "enum": [
+                "draft",
                 "active",
                 "cancelled"
             ],
             "x-enum-varnames": [
+                "OutgoingInvoiceStatusDraft",
                 "OutgoingInvoiceStatusActive",
                 "OutgoingInvoiceStatusCancelled"
             ]
@@ -30174,6 +30321,9 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "offset": {
+                    "type": "integer"
+                },
+                "page": {
                     "type": "integer"
                 },
                 "total": {

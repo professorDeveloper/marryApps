@@ -371,7 +371,7 @@ func (h *Handler) GetIngredientReportMovements(c echo.Context) error {
 // @Param limit query int false "Pagination: items per page (default: 20)" default(20) example:"20"
 // @Param offset query int false "Pagination: offset from start (default: 0)" default(0) example:"0"
 // @Param expand query string false "Expand related fields (comma-separated)"
-// @Success 200 {object} model.PaginatedWithTotalsResponse{data=[]model.IngredientReportItem,totals=model.IngredientReportTotals} "Inventory status report retrieved successfully"
+// @Success 200 {object} model.IngredientReportPaginatedResponse "Inventory status report retrieved successfully"
 // @Failure 400 {object} model.ErrorResponse "Invalid request parameters"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
 // @Failure 500 {object} model.ErrorResponse "Internal server error"

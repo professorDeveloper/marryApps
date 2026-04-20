@@ -289,14 +289,30 @@ type GetIngredientInventoryStatusReportRequest struct {
 }
 
 type IngredientReportTotals struct {
-	TotalCount       int64  `json:"total_count"`
-	TotalAddedAmount string `json:"total_added_amount"`
+	TotalCount         int64  `json:"total_count"`
+	TotalAddedAmount   string `json:"total_added_amount"`
 	TotalRemovedAmount string `json:"total_removed_amount"`
 }
 
 type IngredientReportResponse struct {
 	Items  []IngredientReportItem `json:"items"`
 	Totals IngredientReportTotals `json:"totals"`
+}
+
+// IngredientReportPaginatedResponse is a concrete type for paginated ingredient report with totals
+type IngredientReportPaginatedResponse struct {
+	Status     string                 `json:"status" example:"success"`
+	Message    string                 `json:"message"`
+	Data       []IngredientReportItem `json:"data"`
+	Totals     IngredientReportTotals `json:"totals"`
+	Pagination struct {
+		Total      int32 `json:"total"`
+		Limit      int32 `json:"limit"`
+		Offset     int32 `json:"offset"`
+		Page       int32 `json:"page"`
+		TotalPages int32 `json:"total_pages"`
+	} `json:"pagination"`
+	Code int `json:"code"`
 }
 
 type IngredientReportItem struct {

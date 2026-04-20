@@ -2371,6 +2371,44 @@ definitions:
       surplus:
         type: string
     type: object
+  model.IngredientReportPaginatedResponse:
+    properties:
+      code:
+        type: integer
+      data:
+        items:
+          $ref: '#/definitions/model.IngredientReportItem'
+        type: array
+      message:
+        type: string
+      pagination:
+        properties:
+          limit:
+            type: integer
+          offset:
+            type: integer
+          page:
+            type: integer
+          total:
+            type: integer
+          total_pages:
+            type: integer
+        type: object
+      status:
+        example: success
+        type: string
+      totals:
+        $ref: '#/definitions/model.IngredientReportTotals'
+    type: object
+  model.IngredientReportTotals:
+    properties:
+      total_added_amount:
+        type: string
+      total_count:
+        type: integer
+      total_removed_amount:
+        type: string
+    type: object
   model.IngredientResponse:
     properties:
       brand_id:
@@ -3171,10 +3209,12 @@ definitions:
     type: object
   model.OutgoingInvoiceStatus:
     enum:
+    - draft
     - active
     - cancelled
     type: string
     x-enum-varnames:
+    - OutgoingInvoiceStatusDraft
     - OutgoingInvoiceStatusActive
     - OutgoingInvoiceStatusCancelled
   model.OutgoingInvoiceWithItemsResponse:
@@ -3455,6 +3495,8 @@ definitions:
       limit:
         type: integer
       offset:
+        type: integer
+      page:
         type: integer
       total:
         type: integer
@@ -12940,6 +12982,68 @@ paths:
       security:
       - BearerAuth: []
       summary: Get ingredient report movements
+      tags:
+      - reports
+  /api/v1/ingredient-reports/inventory-status:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve ingredient report where begin_qty is anchored at the most
+        recent inventory count event. For each ingredient, the report finds the latest
+        inventory_surplus_in or inventory_shortage_out event and uses its stock_after
+        as begin_qty. Subsequent movements are summed normally. If an ingredient has
+        no inventory event, begin_qty defaults to 0 and all movements are included.
+      parameters:
+      - description: Storage ID (UUID)
+        in: query
+        name: storage_id
+        required: true
+        type: string
+      - description: End datetime (RFC3339 or YYYY-MM-DD format). Defaults to current
+          time
+        in: query
+        name: end
+        type: string
+      - description: 'Optional filter: return only this ingredient (UUID)'
+        in: query
+        name: ingredient_id
+        type: string
+      - default: 20
+        description: 'Pagination: items per page (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: 'Pagination: offset from start (default: 0)'
+        in: query
+        name: offset
+        type: integer
+      - description: Expand related fields (comma-separated)
+        in: query
+        name: expand
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Inventory status report retrieved successfully
+          schema:
+            $ref: '#/definitions/model.IngredientReportPaginatedResponse'
+        "400":
+          description: Invalid request parameters
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get ingredient inventory status report
       tags:
       - reports
   /api/v1/ingredient-stock:
