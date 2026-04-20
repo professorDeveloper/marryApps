@@ -180,3 +180,38 @@ func TestInventoryStatusReport_InventoryEventNotCountedInSums(t *testing.T) {
 	assertFloat(t, 0, numericToFloat(r.ShortageQty), "shortage_qty only counts movements after anchor")
 	assertFloat(t, 25, numericToFloat(r.EndQty), "end=begin with no subsequent movements")
 }
+
+// TestInventoryStatusReport_NoInventoryEventMultipleInvoices verifies that when an
+// ingredient has NO inventory events (only regular movements), all movements are summed.
+// This is a regression test for the bug where sums CTE was using INNER JOIN instead of LEFT JOIN.
+func TestInventoryStatusReport_NoInventoryEventMultipleInvoices(t *testing.T) {
+	ctx := context.Background()
+	ingredientID := newIngredient(t, ctx, globalEnv.q, "oil-status-e")
+
+	t1 := ts(2026, time.June, 1, 8, 0)
+	t2 := ts(2026, time.June, 2, 8, 0)
+	endTs := ts(2026, time.June, 3, 0, 0)
+
+	// Two invoices, NO inventory event
+	insertMovement(t, ctx, globalEnv.q, globalEnv.storageID, ingredientID,
+		"invoice_in", 30, 0, 0, 30, t1)
+	insertMovement(t, ctx, globalEnv.q, globalEnv.storageID, ingredientID,
+		"invoice_in", 40, 0, 30, 70, t2)
+
+	rows, err := globalEnv.q.GetIngredientInventoryStatusReport(ctx, pg.GetIngredientInventoryStatusReportParams{
+		StorageID:    globalEnv.storageID,
+		End:          pgtype.Timestamptz{Time: endTs, Valid: true},
+		IngredientID: &ingredientID,
+		Limit:        10,
+		Offset:       0,
+	})
+	require.NoError(t, err)
+	require.Len(t, rows, 1)
+
+	r := rows[0]
+	// With no inventory event, both invoices should be included
+	assertFloat(t, 0, numericToFloat(r.BeginQty), "begin_qty=0 with no inventory event")
+	assertFloat(t, 70, numericToFloat(r.InQty), "both invoices summed: 30 + 40")
+	assertFloat(t, 0, numericToFloat(r.OutQty), "no out movements")
+	assertFloat(t, 70, numericToFloat(r.EndQty), "end_qty = 0 + 70")
+}

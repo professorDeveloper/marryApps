@@ -6,7 +6,9 @@
       "Bash(go mod *)",
       "Bash(git status *)",
       "Bash(git add *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(go build *)",
+      "Bash(git commit -m ' *)"
     ]
   }
 }

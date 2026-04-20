@@ -267,18 +267,19 @@ anchors AS (
 ),
 sums AS (
 	SELECT
-		m.ingredient_id,
+		a.ingredient_id,
 		COALESCE(SUM(m.qty_in),  0)::numeric(18,6) AS in_qty,
 		COALESCE(SUM(m.qty_out), 0)::numeric(18,6) AS out_qty,
 		COALESCE(SUM(CASE WHEN m.event_type = 'inventory_shortage_out' THEN m.qty_out ELSE 0 END), 0)::numeric(18,6) AS shortage_qty,
 		COALESCE(SUM(CASE WHEN m.event_type = 'inventory_surplus_in'  THEN m.qty_in  ELSE 0 END), 0)::numeric(18,6) AS surplus_qty
-	FROM ingredient_stock_movements m
-	JOIN params  p ON p.storage_id = m.storage_id
-	JOIN anchors a ON a.ingredient_id = m.ingredient_id
-	WHERE COALESCE(m.effective_at, m.created_at) > a.anchor_ts
+	FROM anchors a
+	JOIN params  p ON TRUE
+	LEFT JOIN ingredient_stock_movements m
+		ON m.ingredient_id = a.ingredient_id
+		AND m.storage_id = p.storage_id
+		AND COALESCE(m.effective_at, m.created_at) > a.anchor_ts
 		AND COALESCE(m.effective_at, m.created_at) <= p.end_ts
-		AND (p.ingredient_id IS NULL OR m.ingredient_id = p.ingredient_id)
-	GROUP BY m.ingredient_id
+	GROUP BY a.ingredient_id
 )
 SELECT
 	i.id                                   AS ingredient_id,
@@ -373,16 +374,17 @@ anchors AS (
 ),
 sums AS (
 	SELECT
-		m.ingredient_id,
+		a.ingredient_id,
 		COALESCE(SUM(m.qty_in * m.price_per_unit),  0)::numeric(18,2) AS total_in_amount,
 		COALESCE(SUM(m.qty_out * m.price_per_unit), 0)::numeric(18,2) AS total_out_amount
-	FROM ingredient_stock_movements m
-	JOIN params  p ON p.storage_id = m.storage_id
-	JOIN anchors a ON a.ingredient_id = m.ingredient_id
-	WHERE COALESCE(m.effective_at, m.created_at) > a.anchor_ts
+	FROM anchors a
+	JOIN params  p ON TRUE
+	LEFT JOIN ingredient_stock_movements m
+		ON m.ingredient_id = a.ingredient_id
+		AND m.storage_id = p.storage_id
+		AND COALESCE(m.effective_at, m.created_at) > a.anchor_ts
 		AND COALESCE(m.effective_at, m.created_at) <= p.end_ts
-		AND (p.ingredient_id IS NULL OR m.ingredient_id = p.ingredient_id)
-	GROUP BY m.ingredient_id
+	GROUP BY a.ingredient_id
 )
 SELECT
 	COUNT(DISTINCT bi.ingredient_id)::bigint        AS total_count,
