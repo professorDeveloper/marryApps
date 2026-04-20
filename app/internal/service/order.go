@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"math"
@@ -22,6 +23,12 @@ import (
 type OrderS struct {
 	repo *repository.Repository
 }
+
+var (
+	ErrOrderNotFound          = errors.New("order not found")
+	ErrOrderAlreadyActive     = errors.New("order already active")
+	ErrOrderCannotBeActivated = errors.New("order cannot be activated from current status")
+)
 
 func NewOrderS(repo *repository.Repository) *OrderS {
 	return &OrderS{repo: repo}
@@ -632,7 +639,7 @@ func formatAmountString(v float64) string {
 	return strconv.FormatFloat(v, 'f', 2, 64)
 }
 
-func (s *OrderS) GetAllOrders(ctx context.Context, req model.GetOrdersRequest) ([]model.OrderResponse, error) {
+func (s *OrderS) GetAllOrders(ctx context.Context, req model.GetOrdersRequest) ([]model.OrderResponse, int64, error) {
 	if activated, err := s.repo.Tenant(ctx).ActivateReservedOrders(ctx); err == nil {
 		for _, row := range activated {
 			if row.OrderType == "dine_in" && row.TableID.Valid {
@@ -681,7 +688,7 @@ func (s *OrderS) GetAllOrders(ctx context.Context, req model.GetOrdersRequest) (
 	if req.TableID != nil && *req.TableID != "" {
 		tableID, err := uuid.Parse(*req.TableID)
 		if err != nil {
-			return nil, fmt.Errorf("invalid table id: %w", err)
+			return nil, 0, fmt.Errorf("invalid table id: %w", err)
 		}
 		params.TableID = pgtype.UUID{
 			Bytes: tableID,
@@ -691,7 +698,7 @@ func (s *OrderS) GetAllOrders(ctx context.Context, req model.GetOrdersRequest) (
 
 	start, end, err := resolveOrderDateRange(req)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	if start != nil {
@@ -701,16 +708,21 @@ func (s *OrderS) GetAllOrders(ctx context.Context, req model.GetOrdersRequest) (
 		params.PeriodEnd = pgtype.Timestamptz{Time: end.UTC(), Valid: true}
 	}
 
-	orders, err := s.repo.Tenant(ctx).GetAllOrders(ctx, params)
+	total, err := s.repo.Tenant(ctx).CountFilteredOrders(ctx, params)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get orders: %w", err)
+		return nil, 0, fmt.Errorf("failed to count orders: %w", err)
 	}
 
-	var responses []model.OrderResponse
+	orders, err := s.repo.Tenant(ctx).GetAllOrders(ctx, params)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get orders: %w", err)
+	}
+
+	responses := make([]model.OrderResponse, 0, len(orders))
 	for _, o := range orders {
 		responses = append(responses, *toOrderResponse(o))
 	}
-	return responses, nil
+	return responses, total, nil
 }
 
 func resolveOrderDateRange(req model.GetOrdersRequest) (*time.Time, *time.Time, error) {
@@ -743,36 +755,46 @@ func resolveOrderDateRange(req model.GetOrdersRequest) (*time.Time, *time.Time, 
 	return start, end, nil
 }
 
-func (s *OrderS) GetOrdersByStatus(ctx context.Context, status string, limit, offset int32) ([]model.OrderResponse, error) {
+func (s *OrderS) GetOrdersByStatus(ctx context.Context, status string, limit, offset int32) ([]model.OrderResponse, int64, error) {
 	st := pg.NullOrderStatus{OrderStatus: pg.OrderStatus(status), Valid: true}
+	total, err := s.repo.Tenant(ctx).CountOrdersByStatus(ctx, st)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to count orders by status: %w", err)
+	}
 	orders, err := s.repo.Tenant(ctx).GetOrdersByStatus(ctx, pg.GetOrdersByStatusParams{Status: st, Limit: limit, Offset: offset})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get orders by status: %w", err)
+		return nil, 0, fmt.Errorf("failed to get orders by status: %w", err)
 	}
 
-	var responses []model.OrderResponse
+	responses := make([]model.OrderResponse, 0, len(orders))
 	for _, o := range orders {
 		responses = append(responses, *toOrderResponse(o))
 	}
-	return responses, nil
+	return responses, total, nil
 }
 
-func (s *OrderS) GetOrdersByWaiterID(ctx context.Context, waiterID string, limit, offset int32) ([]model.OrderResponse, error) {
+func (s *OrderS) GetOrdersByWaiterID(ctx context.Context, waiterID string, limit, offset int32) ([]model.OrderResponse, int64, error) {
 	id, err := uuid.Parse(waiterID)
 	if err != nil {
-		return nil, fmt.Errorf("invalid waiter id: %w", err)
+		return nil, 0, fmt.Errorf("invalid waiter id: %w", err)
 	}
 
-	orders, err := s.repo.Tenant(ctx).GetOrdersByWaiterID(ctx, pg.GetOrdersByWaiterIDParams{WaiterID: pgtype.UUID{Bytes: id, Valid: true}, Limit: limit, Offset: offset})
+	waiterIDPg := pgtype.UUID{Bytes: id, Valid: true}
+	total, err := s.repo.Tenant(ctx).CountOrdersByWaiterID(ctx, waiterIDPg)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get orders by waiter: %w", err)
+		return nil, 0, fmt.Errorf("failed to count orders by waiter: %w", err)
 	}
 
-	var responses []model.OrderResponse
+	orders, err := s.repo.Tenant(ctx).GetOrdersByWaiterID(ctx, pg.GetOrdersByWaiterIDParams{WaiterID: waiterIDPg, Limit: limit, Offset: offset})
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get orders by waiter: %w", err)
+	}
+
+	responses := make([]model.OrderResponse, 0, len(orders))
 	for _, o := range orders {
 		responses = append(responses, *toOrderResponse(o))
 	}
-	return responses, nil
+	return responses, total, nil
 }
 
 func (s *OrderS) GetOrdersByTableID(ctx context.Context, tableID string) ([]model.OrderResponse, error) {
@@ -1322,14 +1344,40 @@ func (s *OrderS) ActivateOrder(ctx context.Context, orderID string) (*model.Orde
 	if err != nil {
 		return nil, fmt.Errorf("invalid order id: %w", err)
 	}
+
+	existing, err := s.repo.Tenant(ctx).GetOrderByID(ctx, id)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, ErrOrderNotFound
+		}
+		return nil, fmt.Errorf("failed to get order: %w", err)
+	}
+
+	currentStatus := ""
+	if existing.Status.Valid {
+		currentStatus = string(existing.Status.OrderStatus)
+	}
+
+	switch currentStatus {
+	case "reserved", "rescheduled":
+	case "open", "cooking", "ready", "served":
+		return nil, fmt.Errorf("%w: %s", ErrOrderAlreadyActive, currentStatus)
+	default:
+		return nil, fmt.Errorf("%w: %s", ErrOrderCannotBeActivated, currentStatus)
+	}
+
 	order, err := s.repo.Tenant(ctx).ActivateOrder(ctx, id)
 	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, fmt.Errorf("%w: %s", ErrOrderCannotBeActivated, currentStatus)
+		}
 		return nil, fmt.Errorf("failed to activate order: %w", err)
 	}
-	// Mark the table busy now that the dine-in reservation has activated.
+
 	if order.OrderType == "dine_in" && order.TableID.Valid {
 		_, _ = s.repo.Tenant(ctx).SetTableBusy(ctx, order.TableID.Bytes)
 	}
+
 	return toOrderResponse(order), nil
 }
 
@@ -2280,17 +2328,21 @@ func (s *OrderS) GetOrderItemByID(ctx context.Context, itemID string) (*model.Or
 	return toOrderItemDetailResponse(item, good), nil
 }
 
-func (s *OrderS) GetAllOrderItems(ctx context.Context, limit, offset int32) ([]model.OrderItemResponse, error) {
+func (s *OrderS) GetAllOrderItems(ctx context.Context, limit, offset int32) ([]model.OrderItemResponse, int64, error) {
+	total, err := s.repo.Tenant(ctx).CountOrderItems(ctx)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to count order items: %w", err)
+	}
 	items, err := s.repo.Tenant(ctx).GetAllOrderItems(ctx, pg.GetAllOrderItemsParams{Limit: limit, Offset: offset})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get order items: %w", err)
+		return nil, 0, fmt.Errorf("failed to get order items: %w", err)
 	}
 
-	var responses []model.OrderItemResponse
+	responses := make([]model.OrderItemResponse, 0, len(items))
 	for _, it := range items {
 		responses = append(responses, *toOrderItemResponse(it))
 	}
-	return responses, nil
+	return responses, total, nil
 }
 
 func (s *OrderS) GetOrderItemsByOrderID(
@@ -2332,18 +2384,22 @@ func (s *OrderS) GetOrderItemsByOrderID(
 	return responses, nil
 }
 
-func (s *OrderS) GetOrderItemsByStatus(ctx context.Context, status string, limit, offset int32) ([]model.OrderItemResponse, error) {
+func (s *OrderS) GetOrderItemsByStatus(ctx context.Context, status string, limit, offset int32) ([]model.OrderItemResponse, int64, error) {
 	st := pg.NullOrderItemsStatus{OrderItemsStatus: pg.OrderItemsStatus(status), Valid: true}
+	total, err := s.repo.Tenant(ctx).CountOrderItemsByStatus(ctx, st)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to count order items by status: %w", err)
+	}
 	items, err := s.repo.Tenant(ctx).GetOrderItemsByStatus(ctx, pg.GetOrderItemsByStatusParams{Status: st, Limit: limit, Offset: offset})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get order items by status: %w", err)
+		return nil, 0, fmt.Errorf("failed to get order items by status: %w", err)
 	}
 
-	var responses []model.OrderItemResponse
+	responses := make([]model.OrderItemResponse, 0, len(items))
 	for _, it := range items {
 		responses = append(responses, *toOrderItemResponse(it))
 	}
-	return responses, nil
+	return responses, total, nil
 }
 
 func (s *OrderS) UpdateOrderItem(ctx context.Context, itemID string, req model.UpdateOrderItemRequest) (*model.OrderItemResponse, error) {
@@ -3345,10 +3401,10 @@ func (s *OrderS) SendNotificationByStatus(ctx context.Context, fcmClient *notifi
 	return nil
 }
 
-func (s *OrderS) GetMyOrders(ctx context.Context, waiterID string, req model.GetMyOrdersRequest) ([]model.WaiterOrderListItem, error) {
+func (s *OrderS) GetMyOrders(ctx context.Context, waiterID string, req model.GetMyOrdersRequest) ([]model.WaiterOrderListItem, int64, error) {
 	id, err := uuid.Parse(waiterID)
 	if err != nil {
-		return nil, fmt.Errorf("invalid waiter id: %w", err)
+		return nil, 0, fmt.Errorf("invalid waiter id: %w", err)
 	}
 
 	scope := model.WaiterOrderScopeActive
@@ -3362,7 +3418,7 @@ func (s *OrderS) GetMyOrders(ctx context.Context, waiterID string, req model.Get
 		model.WaiterOrderScopeHistory,
 		model.WaiterOrderScopeAll:
 	default:
-		return nil, fmt.Errorf("invalid scope: %s", scope)
+		return nil, 0, fmt.Errorf("invalid scope: %s", scope)
 	}
 
 	limit := req.Limit
@@ -3398,7 +3454,7 @@ func (s *OrderS) GetMyOrders(ctx context.Context, waiterID string, req model.Get
 	if req.TableID != nil && *req.TableID != "" {
 		tableUUID, err := uuid.Parse(*req.TableID)
 		if err != nil {
-			return nil, fmt.Errorf("invalid table id: %w", err)
+			return nil, 0, fmt.Errorf("invalid table id: %w", err)
 		}
 
 		params.TableID = pgtype.UUID{
@@ -3406,10 +3462,14 @@ func (s *OrderS) GetMyOrders(ctx context.Context, waiterID string, req model.Get
 			Valid: true,
 		}
 	}
+	total, err := s.repo.Tenant(ctx).CountMyWaiterOrders(ctx, params)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to count my orders: %w", err)
+	}
 
 	rows, err := s.repo.Tenant(ctx).GetMyWaiterOrders(ctx, params)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get my orders: %w", err)
+		return nil, 0, fmt.Errorf("failed to get my orders: %w", err)
 	}
 
 	resp := make([]model.WaiterOrderListItem, 0, len(rows))
@@ -3420,5 +3480,5 @@ func (s *OrderS) GetMyOrders(ctx context.Context, waiterID string, req model.Get
 		}
 	}
 
-	return resp, nil
+	return resp, total, nil
 }

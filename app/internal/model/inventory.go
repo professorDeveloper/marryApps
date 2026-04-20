@@ -48,25 +48,25 @@ type UpsertInventoryItemRequest struct {
 
 type UpsertInventoryItemsRequest struct {
 	// Optional inventory-level fields (update inventory + items in one call)
-	Date            *string `json:"date,omitempty" example:"2024-01-01"`
-	StorageID       *string `json:"storage_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
-	Status          *string `json:"status,omitempty" example:"active"`
-	Description     *string `json:"description,omitempty"`
-	DescriptionI18n *string `json:"description_i18n,omitempty"`
+	Date            *string                      `json:"date,omitempty" example:"2024-01-01"`
+	StorageID       *string                      `json:"storage_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
+	Status          *string                      `json:"status,omitempty" example:"active"`
+	Description     *string                      `json:"description,omitempty"`
+	DescriptionI18n *string                      `json:"description_i18n,omitempty"`
 	Items           []UpsertInventoryItemRequest `json:"items" validate:"required,min=1,dive"`
 }
 
 type CreateInventoryBatchRequest struct {
-	Date            string                      `json:"date" validate:"required" example:"2024-01-01"`
-	StorageID       string                      `json:"storage_id" validate:"required" example:"d1f29b75-8g6d-5536-0525-2c12deeef0e0"`
-	Description     *string                     `json:"description,omitempty" example:"Monthly inventory"`
-	DescriptionI18n *string                     `json:"description_i18n,omitempty"`
-	Status          *string                     `json:"status,omitempty" example:"active"`
+	Date            string                       `json:"date" validate:"required" example:"2024-01-01"`
+	StorageID       string                       `json:"storage_id" validate:"required" example:"d1f29b75-8g6d-5536-0525-2c12deeef0e0"`
+	Description     *string                      `json:"description,omitempty" example:"Monthly inventory"`
+	DescriptionI18n *string                      `json:"description_i18n,omitempty"`
+	Status          *string                      `json:"status,omitempty" example:"active"`
 	Items           []UpsertInventoryItemRequest `json:"items" validate:"required,min=1,dive"`
 }
 
 type CreateInventoryBatchResponse struct {
-	Inventory *InventoryResponse             `json:"inventory"`
+	Inventory *InventoryResponse `json:"inventory"`
 }
 
 type InventoryItemComputedResponse struct {
@@ -77,9 +77,9 @@ type InventoryItemComputedResponse struct {
 	IngredientMeasurement *string `json:"ingredient_measurement,omitempty" example:"kg"`
 	IngredientPictureUrl  *string `json:"ingredient_picture_url,omitempty" example:"https://example.com/tomato.jpg"`
 	IngredientColorCode   *string `json:"ingredient_color_code,omitempty" example:"#FF5733"`
-	SystemQuantity     string `json:"system_quantity" example:"6"`
-	CountedQuantity    string `json:"counted_quantity" example:"3"`
-	DifferenceQuantity string `json:"difference_quantity" example:"-3"`
+	SystemQuantity        string  `json:"system_quantity" example:"6"`
+	CountedQuantity       string  `json:"counted_quantity" example:"3"`
+	DifferenceQuantity    string  `json:"difference_quantity" example:"-3"`
 
 	PricePerUnit    string `json:"price_per_unit" example:"10000"`
 	SurplusAmount   string `json:"surplus_amount" example:"0"`
@@ -112,6 +112,7 @@ type PaginationMeta struct {
 	Total      int32 `json:"total"`
 	Limit      int32 `json:"limit"`
 	Offset     int32 `json:"offset"`
+	Page       int32 `json:"page"`
 	TotalPages int32 `json:"total_pages"`
 }
 
