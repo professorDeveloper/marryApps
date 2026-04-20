@@ -31,6 +31,7 @@ type PaginatedWithTotalsResponse[T any, U any] struct {
 		Total      int32 `json:"total"`
 		Limit      int32 `json:"limit"`
 		Offset     int32 `json:"offset"`
+		Page       int32 `json:"page"`
 		TotalPages int32 `json:"total_pages"`
 	} `json:"pagination"`
 	Code int `json:"code"`
@@ -47,7 +48,9 @@ func NewPaginatedWithTotalsResponse[T any, U any](message string, data T, totals
 	resp.Pagination.Total = total
 	resp.Pagination.Limit = limit
 	resp.Pagination.Offset = offset
+	resp.Pagination.Page = 1
 	if limit > 0 {
+		resp.Pagination.Page = (offset / limit) + 1
 		resp.Pagination.TotalPages = (total + limit - 1) / limit
 	}
 	return resp
@@ -61,6 +64,7 @@ type PaginatedResponse[T any] struct {
 		Total      int32 `json:"total" example:"100"`
 		Limit      int32 `json:"limit" example:"20"`
 		Offset     int32 `json:"offset" example:"0"`
+		Page       int32 `json:"page" example:"1"`
 		TotalPages int32 `json:"total_pages" example:"5"`
 	} `json:"pagination"`
 	Code int `json:"code" example:"200"`
@@ -94,7 +98,9 @@ func NewPaginatedResponse[T any](message string, data T, total, limit, offset in
 	resp.Pagination.Total = total
 	resp.Pagination.Limit = limit
 	resp.Pagination.Offset = offset
+	resp.Pagination.Page = 1
 	if limit > 0 {
+		resp.Pagination.Page = (offset / limit) + 1
 		resp.Pagination.TotalPages = (total + limit - 1) / limit
 	}
 	return resp

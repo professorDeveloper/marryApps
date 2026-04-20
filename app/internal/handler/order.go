@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"log"
 	"math"
 	"net/http"
@@ -11,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"gitlab.yurtal.tech/company/maryai/back/internal/model"
+	"gitlab.yurtal.tech/company/maryai/back/internal/service"
 )
 
 // ==================== ORDERS ====================
@@ -607,7 +609,7 @@ func (h *Handler) GetAllOrders(c echo.Context) error {
 		req.Offset = int32(offset)
 	}
 
-	orders, err := h.service.Order().GetAllOrders(c.Request().Context(), req)
+	orders, total, err := h.service.Order().GetAllOrders(c.Request().Context(), req)
 	if err != nil {
 		log.Printf("GetAllOrders failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
@@ -617,9 +619,12 @@ func (h *Handler) GetAllOrders(c echo.Context) error {
 		))
 	}
 
-	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse(
 		"Orders retrieved successfully",
 		orders,
+		int32(total),
+		req.Limit,
+		req.Offset,
 		http.StatusOK,
 	))
 }
@@ -666,7 +671,7 @@ func (h *Handler) GetOrdersByStatus(c echo.Context) error {
 		}
 	}
 
-	orders, err := h.service.Order().GetOrdersByStatus(c.Request().Context(), status, limit, offset)
+	orders, total, err := h.service.Order().GetOrdersByStatus(c.Request().Context(), status, limit, offset)
 	if err != nil {
 		log.Printf("GetOrdersByStatus failed for status %s: %v", status, err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
@@ -676,9 +681,12 @@ func (h *Handler) GetOrdersByStatus(c echo.Context) error {
 		))
 	}
 
-	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse(
 		"Orders retrieved successfully",
 		orders,
+		int32(total),
+		limit,
+		offset,
 		http.StatusOK,
 	))
 }
@@ -732,7 +740,7 @@ func (h *Handler) GetOrdersByWaiterID(c echo.Context) error {
 		}
 	}
 
-	orders, err := h.service.Order().GetOrdersByWaiterID(c.Request().Context(), waiterID, limit, offset)
+	orders, total, err := h.service.Order().GetOrdersByWaiterID(c.Request().Context(), waiterID, limit, offset)
 	if err != nil {
 		log.Printf("GetOrdersByWaiterID failed for waiter_id %s: %v", waiterID, err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
@@ -742,9 +750,12 @@ func (h *Handler) GetOrdersByWaiterID(c echo.Context) error {
 		))
 	}
 
-	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse(
 		"Orders retrieved successfully",
 		orders,
+		int32(total),
+		limit,
+		offset,
 		http.StatusOK,
 	))
 }
@@ -1700,7 +1711,7 @@ func (h *Handler) GetAllOrderItems(c echo.Context) error {
 		}
 	}
 
-	items, err := h.service.Order().GetAllOrderItems(c.Request().Context(), limit, offset)
+	items, total, err := h.service.Order().GetAllOrderItems(c.Request().Context(), limit, offset)
 	if err != nil {
 		log.Printf("GetAllOrderItems failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
@@ -1710,9 +1721,12 @@ func (h *Handler) GetAllOrderItems(c echo.Context) error {
 		))
 	}
 
-	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse(
 		"Order items retrieved successfully",
 		items,
+		int32(total),
+		limit,
+		offset,
 		http.StatusOK,
 	))
 }
@@ -1818,7 +1832,7 @@ func (h *Handler) GetOrderItemsByStatus(c echo.Context) error {
 		}
 	}
 
-	items, err := h.service.Order().GetOrderItemsByStatus(c.Request().Context(), status, limit, offset)
+	items, total, err := h.service.Order().GetOrderItemsByStatus(c.Request().Context(), status, limit, offset)
 	if err != nil {
 		log.Printf("GetOrderItemsByStatus failed for status %s: %v", status, err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
@@ -1828,9 +1842,12 @@ func (h *Handler) GetOrderItemsByStatus(c echo.Context) error {
 		))
 	}
 
-	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse(
 		"Order items retrieved successfully",
 		items,
+		int32(total),
+		limit,
+		offset,
 		http.StatusOK,
 	))
 }
@@ -2375,11 +2392,33 @@ func (h *Handler) ActivateOrder(c echo.Context) error {
 	order, err := h.service.Order().ActivateOrder(c.Request().Context(), orderID)
 	if err != nil {
 		log.Printf("ActivateOrder failed: %v", err)
-		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
-			"failed to activate order",
-			err.Error(),
-			http.StatusInternalServerError,
-		))
+
+		switch {
+		case errors.Is(err, service.ErrOrderNotFound):
+			return c.JSON(http.StatusNotFound, model.NewErrorResponse(
+				"order not found",
+				err.Error(),
+				http.StatusNotFound,
+			))
+		case errors.Is(err, service.ErrOrderAlreadyActive):
+			return c.JSON(http.StatusConflict, model.NewErrorResponse(
+				"order is already active",
+				err.Error(),
+				http.StatusConflict,
+			))
+		case errors.Is(err, service.ErrOrderCannotBeActivated):
+			return c.JSON(http.StatusConflict, model.NewErrorResponse(
+				"order cannot be activated from current status",
+				err.Error(),
+				http.StatusConflict,
+			))
+		default:
+			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+				"failed to activate order",
+				err.Error(),
+				http.StatusInternalServerError,
+			))
+		}
 	}
 
 	return c.JSON(http.StatusOK, model.NewSuccessResponse(
@@ -2555,7 +2594,7 @@ func (h *Handler) GetMyOrders(c echo.Context) error {
 		req.Offset = int32(offset)
 	}
 
-	orders, err := h.service.Order().GetMyOrders(c.Request().Context(), userID, req)
+	orders, total, err := h.service.Order().GetMyOrders(c.Request().Context(), userID, req)
 	if err != nil {
 		log.Printf("GetMyOrders failed for user_id %s: %v", userID, err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
@@ -2565,9 +2604,12 @@ func (h *Handler) GetMyOrders(c echo.Context) error {
 		))
 	}
 
-	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse(
 		"My orders retrieved successfully",
 		orders,
+		int32(total),
+		req.Limit,
+		req.Offset,
 		http.StatusOK,
 	))
 }

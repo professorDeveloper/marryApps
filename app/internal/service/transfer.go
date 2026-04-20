@@ -341,9 +341,15 @@ func (s *TransferS) GetAllTransfers(ctx context.Context, filter model.TransferFi
 		Data:        data,
 		TotalAmount: numericToStr(sumNumeric),
 		Pagination: model.PaginationMeta{
-			Total:      int32(total),
-			Limit:      limit,
-			Offset:     offset,
+			Total:  int32(total),
+			Limit:  limit,
+			Offset: offset,
+			Page: func() int32 {
+				if limit > 0 {
+					return (offset / limit) + 1
+				}
+				return 1
+			}(),
 			TotalPages: totalPages,
 		},
 	}, nil

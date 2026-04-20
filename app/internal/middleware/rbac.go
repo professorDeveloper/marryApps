@@ -9,6 +9,7 @@ var (
 		model.RoleSuperAdmin,
 	}
 	RolesCanActivateOrder = []string{
+		model.RoleWaiter,
 		model.RoleCashier,
 		model.RoleAdmin,
 		model.RoleManager,
@@ -46,6 +47,7 @@ var (
 	}
 
 	RolesCanReadCashierOrders = []string{
+		model.RoleWaiter,
 		model.RoleCashier,
 		model.RoleAdmin,
 		model.RoleManager,
@@ -76,6 +78,7 @@ var (
 	}
 
 	RolesCanControlTableTimer = []string{
+		model.RoleWaiter,
 		model.RoleCashier,
 		model.RoleAdmin,
 		model.RoleManager,

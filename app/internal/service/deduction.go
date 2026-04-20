@@ -914,9 +914,15 @@ func (s *DeductionS) GetAllDeductions(ctx context.Context, filter model.Deductio
 	return &model.PaginatedDeductionsResponse{
 		Data: data,
 		Pagination: model.PaginationMeta{
-			Total:      int32(total),
-			Limit:      limit,
-			Offset:     offset,
+			Total:  int32(total),
+			Limit:  limit,
+			Offset: offset,
+			Page: func() int32 {
+				if limit > 0 {
+					return (offset / limit) + 1
+				}
+				return 1
+			}(),
 			TotalPages: totalPages,
 		},
 	}, nil
