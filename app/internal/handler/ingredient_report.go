@@ -357,3 +357,116 @@ func (h *Handler) GetIngredientReportMovements(c echo.Context) error {
 	}
 	return c.JSON(http.StatusOK, model.NewSuccessResponse("Ingredient report movements retrieved successfully", rows, http.StatusOK))
 }
+
+// GetIngredientInventoryStatusReport retrieves per-ingredient report anchored at most recent inventory count
+// @Summary Get ingredient inventory status report
+// @Description Retrieve ingredient report where begin_qty is anchored at the most recent inventory count
+// @Tags reports
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param storage_id query string true "Storage ID"
+// @Param end query string false "End datetime (RFC3339) or date (YYYY-MM-DD)"
+// @Param ingredient_id query string false "Ingredient ID (optional filter)"
+// @Param limit query int false "Limit (default: 20)"
+// @Param offset query int false "Offset (default: 0)"
+// @Param expand query string false "Expand related fields"
+// @Success 200 {array} model.IngredientReportItem "Inventory status report retrieved successfully"
+// @Failure 400 {object} model.ErrorResponse "Invalid request parameters"
+// @Failure 401 {object} model.ErrorResponse "Unauthorized"
+// @Failure 500 {object} model.ErrorResponse "Internal server error"
+// @Router /api/v1/ingredient-reports/inventory-status [get]
+func (h *Handler) GetIngredientInventoryStatusReport(c echo.Context) error {
+	storageID := c.QueryParam("storage_id")
+	if storageID == "" {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"storage_id is required",
+			"missing query parameter: storage_id",
+			http.StatusBadRequest,
+		))
+	}
+	if _, err := uuid.Parse(storageID); err != nil {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"invalid storage_id format",
+			err.Error(),
+			http.StatusBadRequest,
+		))
+	}
+
+	end, err := parseReportEndTimeParam(c.QueryParam("end"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"invalid end format",
+			err.Error(),
+			http.StatusBadRequest,
+		))
+	}
+
+	var ingredientID *string
+	if v := c.QueryParam("ingredient_id"); v != "" {
+		if _, err := uuid.Parse(v); err != nil {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"invalid ingredient_id format",
+				err.Error(),
+				http.StatusBadRequest,
+			))
+		}
+		ingredientID = &v
+	}
+
+	limit := int32(20)
+	if v := c.QueryParam("limit"); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n < 0 {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"invalid limit",
+				"limit must be a non-negative integer",
+				http.StatusBadRequest,
+			))
+		}
+		limit = int32(n)
+	}
+
+	offset := int32(0)
+	if v := c.QueryParam("offset"); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n < 0 {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"invalid offset",
+				"offset must be a non-negative integer",
+				http.StatusBadRequest,
+			))
+		}
+		offset = int32(n)
+	}
+
+	resp, err := h.service.Ingredient().GetIngredientInventoryStatusReport(c.Request().Context(), model.GetIngredientInventoryStatusReportRequest{
+		StorageID:    storageID,
+		End:          end,
+		IngredientID: ingredientID,
+		Limit:        limit,
+		Offset:       offset,
+	})
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+			"failed to get inventory status report",
+			err.Error(),
+			http.StatusInternalServerError,
+		))
+	}
+
+	total := int32(resp.Totals.TotalCount)
+	if maps, expanded, err := h.expandListResponse(c, resp.Items, "ingredients"); expanded {
+		if err != nil {
+			return nil
+		}
+		return c.JSON(http.StatusOK, model.NewPaginatedWithTotalsResponse(
+			"Inventory status report retrieved successfully",
+			maps, resp.Totals, total, limit, offset, http.StatusOK,
+		))
+	}
+	return c.JSON(http.StatusOK, model.NewPaginatedWithTotalsResponse(
+		"Inventory status report retrieved successfully",
+		resp.Items, resp.Totals, total, limit, offset, http.StatusOK,
+	))
+}

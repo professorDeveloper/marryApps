@@ -362,6 +362,78 @@ func (i *IngredientS) GetIngredientReportMovements(ctx context.Context, req mode
 	return out, nil
 }
 
+func (i *IngredientS) GetIngredientInventoryStatusReport(ctx context.Context, req model.GetIngredientInventoryStatusReportRequest) (*model.IngredientReportResponse, error) {
+	storageUUID, err := uuid.Parse(req.StorageID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid storage_id: %w", err)
+	}
+
+	endTime := time.Now()
+	if req.End != nil {
+		endTime = *req.End
+	}
+	end := pgtype.Timestamptz{Time: endTime, Valid: true}
+
+	var ingredientUUID *uuid.UUID
+	if req.IngredientID != nil && *req.IngredientID != "" {
+		u, err := uuid.Parse(*req.IngredientID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid ingredient_id: %w", err)
+		}
+		ingredientUUID = &u
+	}
+
+	limit := req.Limit
+	if limit <= 0 {
+		limit = 20
+	}
+
+	params := pg.GetIngredientInventoryStatusReportParams{
+		StorageID:    storageUUID,
+		End:          end,
+		IngredientID: ingredientUUID,
+		Limit:        limit,
+		Offset:       req.Offset,
+	}
+
+	totalsRow, err := i.repo.Tenant(ctx).GetIngredientInventoryStatusReportTotals(ctx, params)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get inventory status report totals: %w", err)
+	}
+
+	rows, err := i.repo.Tenant(ctx).GetIngredientInventoryStatusReport(ctx, params)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get inventory status report: %w", err)
+	}
+
+	items := make([]model.IngredientReportItem, 0, len(rows))
+	for _, r := range rows {
+		items = append(items, model.IngredientReportItem{
+			IngredientID:   r.IngredientID.String(),
+			IngredientName: r.IngredientName,
+			Measurement:    r.Measurement,
+			PictureUrl:     r.PictureUrl,
+			ColorCode:      r.ColorCode,
+
+			BeginQuantity: numericToStr(r.BeginQty),
+			EndQuantity:   numericToStr(r.EndQty),
+			In:            numericToStr(r.InQty),
+			Out:           numericToStr(r.OutQty),
+			Shortage:      numericToStr(r.ShortageQty),
+			Surplus:       numericToStr(r.SurplusQty),
+		})
+	}
+
+	return &model.IngredientReportResponse{
+		Items: items,
+		Totals: model.IngredientReportTotals{
+			TotalCount:         totalsRow.TotalCount,
+			TotalAddedAmount:   numericToStr(totalsRow.TotalAddedAmount),
+			TotalRemovedAmount: numericToStr(totalsRow.TotalRemovedAmount),
+		},
+	}, nil
+}
+
 // RestoreIngredientGroup restores a deleted ingredient group
 func (i *IngredientS) RestoreIngredientGroup(ctx context.Context, groupID string) error {
 	id, err := uuid.Parse(groupID)

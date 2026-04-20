@@ -246,6 +246,7 @@ func (h *Handler) Register(router *echo.Echo) {
 		ingredientReports := api.Group("/ingredient-reports", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
 		{
 			ingredientReports.GET("", h.GetIngredientReport, mw.CheckLanguage())
+			ingredientReports.GET("/inventory-status", h.GetIngredientInventoryStatusReport, mw.CheckLanguage())
 			ingredientReports.GET("/:ingredientId", h.GetIngredientReportItem, mw.CheckLanguage())
 			ingredientReports.GET("/:ingredientId/movements", h.GetIngredientReportMovements, mw.CheckLanguage())
 		}

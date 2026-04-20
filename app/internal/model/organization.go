@@ -280,6 +280,14 @@ type GetIngredientReportRequest struct {
 	Offset       int32      `json:"offset"`
 }
 
+type GetIngredientInventoryStatusReportRequest struct {
+	StorageID    string     `json:"storage_id"`
+	End          *time.Time `json:"end,omitempty"`
+	IngredientID *string    `json:"ingredient_id,omitempty"`
+	Limit        int32      `json:"limit"`
+	Offset       int32      `json:"offset"`
+}
+
 type IngredientReportTotals struct {
 	TotalCount       int64  `json:"total_count"`
 	TotalAddedAmount string `json:"total_added_amount"`
