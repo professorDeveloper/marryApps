@@ -285,7 +285,10 @@ func (s *OrderS) CreateOrder(ctx context.Context, req model.CreateOrderRequest) 
 				if activeErr != nil && activeErr != pgx.ErrNoRows {
 					return nil, fmt.Errorf("failed to check active order by table: %w", activeErr)
 				}
-				return nil, fmt.Errorf("table is busy")
+				log.Printf("CreateOrder: healing stale busy status for table %s", tableUUID)
+				if _, healErr := s.repo.Tenant(ctx).SetTableFree(ctx, tableUUID); healErr != nil {
+					log.Printf("CreateOrder: failed to heal table status: %v", healErr)
+				}
 			}
 		}
 
@@ -1223,6 +1226,15 @@ func (s *OrderS) DeleteOrder(ctx context.Context, orderID string) error {
 		return fmt.Errorf("invalid order id: %w", err)
 	}
 
+	orderBefore, err := s.repo.Tenant(ctx).GetOrderByID(ctx, id)
+	if err == nil && orderBefore.TableID.Valid {
+		defer func() {
+			if _, freeErr := s.repo.Tenant(ctx).SetTableFree(ctx, orderBefore.TableID.Bytes); freeErr != nil {
+				log.Printf("DeleteOrder: failed to set table free for order %s: %v", orderID, freeErr)
+			}
+		}()
+	}
+
 	if err := s.repo.Tenant(ctx).DeleteOrder(ctx, id); err != nil {
 		return fmt.Errorf("failed to delete order: %w", err)
 	}
@@ -1281,10 +1293,22 @@ func (s *OrderS) CancelOrder(ctx context.Context, orderID string) (*model.OrderR
 		return nil, fmt.Errorf("invalid order id: %w", err)
 	}
 
+	orderBefore, err := s.repo.Tenant(ctx).GetOrderByID(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("order not found: %w", err)
+	}
+
 	order, err := s.repo.Tenant(ctx).CancelOrder(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to cancel order: %w", err)
 	}
+
+	if orderBefore.TableID.Valid {
+		if _, freeErr := s.repo.Tenant(ctx).SetTableFree(ctx, orderBefore.TableID.Bytes); freeErr != nil {
+			log.Printf("CancelOrder: failed to set table free for order %s: %v", orderID, freeErr)
+		}
+	}
+
 	return toOrderResponse(order), nil
 }
 
