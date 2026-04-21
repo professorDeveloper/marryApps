@@ -354,13 +354,22 @@ const getAvailableTablesByCapacity = `-- name: GetAvailableTablesByCapacity :man
 SELECT id, hall_id, number, capacity, status, table_type, pos_x, pos_y, width, height, rotation, price_per_hour, shape, created_at, updated_at, deleted_at
 FROM cafe_tables
 WHERE capacity >= $1 
-AND status = 'free' 
-AND cafe_tables.deleted_at = 0
-AND EXISTS (
-  SELECT 1 FROM halls h
-  WHERE h.id = cafe_tables.hall_id
-    AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-)
+  AND status = 'free' 
+  AND cafe_tables.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM halls h
+    WHERE h.id = cafe_tables.hall_id
+      AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
+  AND NOT EXISTS (
+    SELECT 1
+    FROM orders o
+    WHERE o.table_id = cafe_tables.id
+      AND o.order_type = 'dine_in'
+      AND o.status IN ('open', 'cooking', 'ready', 'served')
+      AND COALESCE(o.deleted_at, 0) = 0
+      AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 ORDER BY capacity ASC, number ASC
 LIMIT $2 OFFSET $3
 `
@@ -431,13 +440,22 @@ const getAvailableTablesByHall = `-- name: GetAvailableTablesByHall :many
 SELECT id, hall_id, number, capacity, status, table_type, pos_x, pos_y, width, height, rotation, price_per_hour, shape, created_at, updated_at, deleted_at
 FROM cafe_tables
 WHERE hall_id = $1
-AND status = 'free'
-AND cafe_tables.deleted_at = 0
-AND EXISTS (
-  SELECT 1 FROM halls h
-  WHERE h.id = cafe_tables.hall_id
-    AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-)
+  AND status = 'free'
+  AND cafe_tables.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM halls h
+    WHERE h.id = cafe_tables.hall_id
+      AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
+  AND NOT EXISTS (
+    SELECT 1
+    FROM orders o
+    WHERE o.table_id = cafe_tables.id
+      AND o.order_type = 'dine_in'
+      AND o.status IN ('open', 'cooking', 'ready', 'served')
+      AND COALESCE(o.deleted_at, 0) = 0
+      AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 ORDER BY number ASC
 `
 
@@ -501,14 +519,23 @@ const getAvailableTablesByHallAndCapacity = `-- name: GetAvailableTablesByHallAn
 SELECT id, hall_id, number, capacity, status, table_type, pos_x, pos_y, width, height, rotation, price_per_hour, shape, created_at, updated_at, deleted_at
 FROM cafe_tables
 WHERE hall_id = $1 
-AND capacity >= $2 
-AND status = 'free' 
-AND cafe_tables.deleted_at = 0
-AND EXISTS (
-  SELECT 1 FROM halls h
-  WHERE h.id = cafe_tables.hall_id
-    AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-)
+  AND capacity >= $2 
+  AND status = 'free' 
+  AND cafe_tables.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM halls h
+    WHERE h.id = cafe_tables.hall_id
+      AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
+  AND NOT EXISTS (
+    SELECT 1
+    FROM orders o
+    WHERE o.table_id = cafe_tables.id
+      AND o.order_type = 'dine_in'
+      AND o.status IN ('open', 'cooking', 'ready', 'served')
+      AND COALESCE(o.deleted_at, 0) = 0
+      AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 ORDER BY capacity ASC, number ASC
 `
 
