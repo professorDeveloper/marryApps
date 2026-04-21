@@ -22,6 +22,82 @@ func NewTransferS(repo *repository.Repository) *TransferS {
 	return &TransferS{repo: repo}
 }
 
+type transferTouchedKey struct {
+	StorageID    uuid.UUID
+	IngredientID uuid.UUID
+}
+
+func transferEffectiveAt(ts pgtype.Timestamptz) *pgtype.Timestamptz {
+	if !ts.Valid {
+		return nil
+	}
+	effective := pgtype.Timestamptz{
+		Time:  ts.Time.In(time.UTC),
+		Valid: true,
+	}
+	return &effective
+}
+
+func (s *TransferS) rebalanceTransferIngredientLedger(
+	ctx context.Context,
+	q *pg.Queries,
+	storageID pgtype.UUID,
+	ingredientID uuid.UUID,
+) error {
+	if !storageID.Valid {
+		return fmt.Errorf("storage_id is required for transfer ledger rebalance")
+	}
+
+	_, _ = q.EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
+		ID:           uuid.New(),
+		IngredientID: ingredientID,
+		StorageID:    storageID,
+	})
+
+	rows, err := q.ListIngredientStockMovementsForRebalance(ctx, storageID.Bytes, ingredientID)
+	if err != nil {
+		return fmt.Errorf("failed to list transfer stock movements for rebalance: %w", err)
+	}
+
+	running := inventoryZeroNumeric()
+
+	for _, row := range rows {
+		before := running
+
+		after, err := applyMovementDelta(before, row.QtyIn, row.QtyOut, 6)
+		if err != nil {
+			return fmt.Errorf("failed to calculate transfer balance for movement %s: %w", row.ID, err)
+		}
+
+		if err := q.UpdateIngredientStockMovementBalances(ctx, pg.UpdateIngredientStockMovementBalancesParams{
+			ID:          row.ID,
+			StockBefore: before,
+			StockAfter:  after,
+		}); err != nil {
+			return fmt.Errorf("failed to update transfer balances for movement %s: %w", row.ID, err)
+		}
+
+		running = after
+	}
+
+	stockRow, err := q.GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
+		IngredientID: ingredientID,
+		StorageID:    storageID,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to lock ingredient stock for transfer final sync: %w", err)
+	}
+
+	if _, err := q.UpdateIngredientStock(ctx, pg.UpdateIngredientStockParams{
+		ID:       stockRow.ID,
+		Quantity: running,
+	}); err != nil {
+		return fmt.Errorf("failed to sync ingredient_stock quantity after transfer rebalance: %w", err)
+	}
+
+	return nil
+}
+
 // resolveTransferStatus resolves the requested status string to a pg.TransferStatus.
 // Defaults to active if nil. Returns error if "deleted" is requested (use DELETE endpoint).
 func resolveTransferStatus(s *string, defaultStatus pg.TransferStatus) (pg.TransferStatus, error) {
@@ -116,6 +192,10 @@ func (s *TransferS) CreateTransferBatch(ctx context.Context, req model.CreateTra
 		if err != nil {
 			return nil, fmt.Errorf("failed to fetch transfer: %w", err)
 		}
+	}
+
+	for i := range items {
+		hideTransferDraftStockSnapshot(&items[i], transfer.Status)
 	}
 
 	resp := toTransferResponse(transfer)
@@ -243,7 +323,11 @@ func (s *TransferS) GetTransferByID(ctx context.Context, transferID string) (*mo
 	resp := toTransferResponse(transfer)
 	resp.Items = make([]model.TransferItemResponse, 0, len(items))
 	for _, item := range items {
-		resp.Items = append(resp.Items, *toTransferItemResponse(item))
+		itemResp := toTransferItemResponse(item)
+		itemResp = hideTransferDraftStockSnapshot(itemResp, transfer.Status)
+		if itemResp != nil {
+			resp.Items = append(resp.Items, *itemResp)
+		}
 	}
 	return resp, nil
 }
@@ -385,7 +469,9 @@ func (s *TransferS) DeleteTransfer(ctx context.Context, transferID string) error
 		if err != nil {
 			return fmt.Errorf("failed to fetch items: %w", err)
 		}
-		s.reverseTransferItemsStock(ctx, q, items, transfer.FromStorageID, transfer.ToStorageID)
+		if err := s.reverseTransferItemsStock(ctx, q, transfer.ID, items, transfer.FromStorageID, transfer.ToStorageID, transfer.Date); err != nil {
+			return fmt.Errorf("failed to reverse transfer stock before delete: %w", err)
+		}
 	}
 
 	if err := q.DeleteTransferItemsByTransferID(ctx, id); err != nil {
@@ -419,7 +505,9 @@ func (s *TransferS) DeleteTransferItem(ctx context.Context, itemID string) error
 	}
 
 	if transfer.Status == pg.TransferStatusActive {
-		s.reverseTransferItemsStock(ctx, q, []pg.TransferItem{item}, transfer.FromStorageID, transfer.ToStorageID)
+		if err := s.reverseTransferItemsStock(ctx, q, transfer.ID, []pg.TransferItem{item}, transfer.FromStorageID, transfer.ToStorageID, transfer.Date); err != nil {
+			return fmt.Errorf("failed to reverse transfer item stock before delete: %w", err)
+		}
 	}
 
 	if err := q.DeleteTransferItem(ctx, id); err != nil {
@@ -477,7 +565,9 @@ func (s *TransferS) UpsertTransferItems(ctx context.Context, transferID string, 
 		if err != nil {
 			return nil, fmt.Errorf("failed to fetch existing items: %w", err)
 		}
-		s.reverseTransferItemsStock(ctx, q, existing, transfer.FromStorageID, transfer.ToStorageID)
+		if err := s.reverseTransferItemsStock(ctx, q, transfer.ID, existing, transfer.FromStorageID, transfer.ToStorageID, transfer.Date); err != nil {
+			return nil, fmt.Errorf("failed to reverse transfer stock before replace: %w", err)
+		}
 	}
 
 	// Step 2: Resolve storages to use for new items (may be overridden by request)
@@ -548,24 +638,130 @@ func (s *TransferS) UpsertTransferItems(ctx context.Context, transferID string, 
 
 // ==================== HELPERS ====================
 
-// reverseTransferItemsStock adds qty back to sender and deducts from receiver (allowing negatives).
-func (s *TransferS) reverseTransferItemsStock(ctx context.Context, q *pg.Queries, items []pg.TransferItem, fromStorageID, toStorageID uuid.UUID) {
+func (s *TransferS) reverseTransferItemsStock(ctx context.Context, q *pg.Queries, transferID uuid.UUID, items []pg.TransferItem, fromStorageID, toStorageID uuid.UUID, transferDate pgtype.Timestamptz) error {
 	fromStorageUUID := pgtype.UUID{Bytes: fromStorageID, Valid: true}
 	toStorageUUID := pgtype.UUID{Bytes: toStorageID, Valid: true}
 
+	zero := inventoryZeroNumeric()
+	effectiveAt := transferEffectiveAt(transferDate)
+	srcType := "transfer"
+
+	touched := make(map[transferTouchedKey]struct{})
+
 	for _, item := range items {
+		// 1) sender (fromStorage) ga quantity qaytadi => transfer_in
 		senderStockID := s.getStockID(ctx, q, item.IngredientID, fromStorageUUID)
-		if senderStockID != uuid.Nil {
-			_, _ = q.AddStockByID(ctx, pg.AddStockByIDParams{
-				ID:       senderStockID,
-				Quantity: item.Quantity,
+		if senderStockID == uuid.Nil {
+			ensuredID, err := q.EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
+				ID:           uuid.New(),
+				IngredientID: item.IngredientID,
+				StorageID:    fromStorageUUID,
 			})
+			if err != nil {
+				return fmt.Errorf("failed to ensure sender stock during transfer reverse: %w", err)
+			}
+			senderStockID = ensuredID
 		}
+
+		senderLocked, err := q.GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
+			IngredientID: item.IngredientID,
+			StorageID:    fromStorageUUID,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to lock sender stock during transfer reverse: %w", err)
+		}
+
+		senderUpdated, err := q.AddStockByID(ctx, pg.AddStockByIDParams{
+			ID:       senderStockID,
+			Quantity: item.Quantity,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to restore sender stock during transfer reverse: %w", err)
+		}
+
+		if !shouldSkipStockMovement(item.Quantity, zero) {
+			if err := q.InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+				ID:           uuid.New(),
+				StorageID:    fromStorageID,
+				IngredientID: item.IngredientID,
+				EventType:    string(pg.TransferIn),
+				QtyIn:        item.Quantity,
+				QtyOut:       zero,
+				StockBefore:  senderLocked.Quantity,
+				StockAfter:   senderUpdated.Quantity,
+				PricePerUnit: item.Price,
+				SourceType:   &srcType,
+				SourceID:     &transferID,
+				EffectiveAt:  effectiveAt,
+			}); err != nil {
+				return fmt.Errorf("failed to insert sender reverse movement: %w", err)
+			}
+		}
+
+		touched[transferTouchedKey{
+			StorageID:    fromStorageID,
+			IngredientID: item.IngredientID,
+		}] = struct{}{}
+
+		// 2) receiver (toStorage) dan quantity ayriladi => transfer_out
 		receiverStockID := s.getStockID(ctx, q, item.IngredientID, toStorageUUID)
-		if receiverStockID != uuid.Nil {
-			_, _ = q.DeductStockAllowNegative(ctx, receiverStockID, item.Quantity)
+		if receiverStockID == uuid.Nil {
+			ensuredID, err := q.EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
+				ID:           uuid.New(),
+				IngredientID: item.IngredientID,
+				StorageID:    toStorageUUID,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to ensure receiver stock during transfer reverse: %w", err)
+			}
+			receiverStockID = ensuredID
+		}
+
+		receiverLocked, err := q.GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
+			IngredientID: item.IngredientID,
+			StorageID:    toStorageUUID,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to lock receiver stock during transfer reverse: %w", err)
+		}
+
+		receiverUpdated, err := q.DeductStockAllowNegative(ctx, receiverStockID, item.Quantity)
+		if err != nil {
+			return fmt.Errorf("failed to deduct receiver stock during transfer reverse: %w", err)
+		}
+
+		if !shouldSkipStockMovement(zero, item.Quantity) {
+			if err := q.InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+				ID:           uuid.New(),
+				StorageID:    toStorageID,
+				IngredientID: item.IngredientID,
+				EventType:    string(pg.TransferOut),
+				QtyIn:        zero,
+				QtyOut:       item.Quantity,
+				StockBefore:  receiverLocked.Quantity,
+				StockAfter:   receiverUpdated.Quantity,
+				PricePerUnit: item.Price,
+				SourceType:   &srcType,
+				SourceID:     &transferID,
+				EffectiveAt:  effectiveAt,
+			}); err != nil {
+				return fmt.Errorf("failed to insert receiver reverse movement: %w", err)
+			}
+		}
+
+		touched[transferTouchedKey{
+			StorageID:    toStorageID,
+			IngredientID: item.IngredientID,
+		}] = struct{}{}
+	}
+
+	for key := range touched {
+		if err := s.rebalanceTransferIngredientLedger(ctx, q, pgtype.UUID{Bytes: key.StorageID, Valid: true}, key.IngredientID); err != nil {
+			return fmt.Errorf("failed to rebalance transfer reverse ledger: %w", err)
 		}
 	}
+
+	return nil
 }
 
 // processTransferItems creates item records; applies stock changes only when applyStock == true.
@@ -575,8 +771,11 @@ func (s *TransferS) processTransferItems(ctx context.Context, q *pg.Queries, tra
 	fromBranchUUID := pgtype.UUID{Bytes: fromBranchID, Valid: true}
 	toBranchUUID := pgtype.UUID{Bytes: toBranchID, Valid: true}
 
-	zero := pgtype.Numeric{Int: big.NewInt(0), Exp: 0, Valid: true}
+	zero := inventoryZeroNumeric()
+	effectiveAt := transferEffectiveAt(transferDate)
+	sourceType := "transfer"
 
+	touched := make(map[transferTouchedKey]struct{})
 	var responses []model.TransferItemResponse
 
 	for i, entry := range entries {
@@ -597,7 +796,6 @@ func (s *TransferS) processTransferItems(ctx context.Context, q *pg.Queries, tra
 			return nil, fmt.Errorf("items[%d]: invalid quantity: %w", i, err)
 		}
 
-		// Get ingredient price
 		ingredient, err := q.GetIngredientByID(ctx, ingredientID)
 		if err != nil {
 			log.Printf("items[%d]: failed to fetch ingredient price, using 0: %v", i, err)
@@ -608,7 +806,7 @@ func (s *TransferS) processTransferItems(ctx context.Context, q *pg.Queries, tra
 		var stockBefore, stockAfter pgtype.Numeric
 
 		if applyStock {
-			// Ensure sender stock row (creates with 0 if missing)
+			// sender
 			senderStock, err := q.EnsureIngredientStockByStorageWithBranch(ctx, pg.EnsureIngredientStockByStorageWithBranchParams{
 				ID:           uuid.New(),
 				IngredientID: ingredientID,
@@ -619,16 +817,23 @@ func (s *TransferS) processTransferItems(ctx context.Context, q *pg.Queries, tra
 				return nil, fmt.Errorf("items[%d]: failed to ensure sender stock: %w", i, err)
 			}
 
-			stockBefore = senderStock.Quantity
+			senderLocked, err := q.GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
+				IngredientID: ingredientID,
+				StorageID:    fromStorageUUID,
+			})
+			if err != nil {
+				return nil, fmt.Errorf("items[%d]: failed to lock sender stock: %w", i, err)
+			}
 
-			// Deduct from sender (stock may go negative)
-			if _, err = q.DeductStockAllowNegative(ctx, senderStock.ID, qty); err != nil {
+			updatedSender, err := q.DeductStockAllowNegative(ctx, senderStock.ID, qty)
+			if err != nil {
 				return nil, fmt.Errorf("items[%d]: failed to deduct sender stock for ingredient %s: %w", i, ingredientID, err)
 			}
 
-			stockAfter = subtractNumeric(stockBefore, qty)
+			stockBefore = senderLocked.Quantity
+			stockAfter = updatedSender.Quantity
 
-			// Ensure receiver stock row and add
+			// receiver
 			receiverStock, err := q.EnsureIngredientStockByStorageWithBranch(ctx, pg.EnsureIngredientStockByStorageWithBranchParams{
 				ID:           uuid.New(),
 				IngredientID: ingredientID,
@@ -639,55 +844,74 @@ func (s *TransferS) processTransferItems(ctx context.Context, q *pg.Queries, tra
 				return nil, fmt.Errorf("items[%d]: failed to ensure receiver stock: %w", i, err)
 			}
 
-			if _, err = q.AddStockByID(ctx, pg.AddStockByIDParams{
+			receiverLocked, err := q.GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
+				IngredientID: ingredientID,
+				StorageID:    toStorageUUID,
+			})
+			if err != nil {
+				return nil, fmt.Errorf("items[%d]: failed to lock receiver stock: %w", i, err)
+			}
+
+			updatedReceiver, err := q.AddStockByID(ctx, pg.AddStockByIDParams{
 				ID:       receiverStock.ID,
 				Quantity: qty,
-			}); err != nil {
+			})
+			if err != nil {
 				return nil, fmt.Errorf("items[%d]: failed to add to receiver stock: %w", i, err)
 			}
 
-			// Auto-set visibility for receiver branch
 			_ = q.EnsureIngredientVisibility(ctx, pg.EnsureIngredientVisibilityParams{
 				IngredientID: ingredientID,
 				BranchID:     toBranchID,
 			})
 
-			// Record stock movements
-			sourceType := "transfer"
-			var effectiveAt *pgtype.Timestamptz
-			if transferDate.Valid && !transferDate.Time.After(time.Now()) {
-				effectiveAt = &transferDate
+			if !shouldSkipStockMovement(zero, qty) {
+				if err := q.InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+					ID:           uuid.New(),
+					StorageID:    fromStorageID,
+					IngredientID: ingredientID,
+					EventType:    string(pg.TransferOut),
+					QtyIn:        zero,
+					QtyOut:       qty,
+					StockBefore:  senderLocked.Quantity,
+					StockAfter:   updatedSender.Quantity,
+					PricePerUnit: price,
+					SourceType:   &sourceType,
+					SourceID:     &transferID,
+					EffectiveAt:  effectiveAt,
+				}); err != nil {
+					return nil, fmt.Errorf("items[%d]: failed to insert sender transfer movement: %w", i, err)
+				}
 			}
-			_ = q.InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
-				ID:           uuid.New(),
+
+			if !shouldSkipStockMovement(qty, zero) {
+				if err := q.InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+					ID:           uuid.New(),
+					StorageID:    toStorageID,
+					IngredientID: ingredientID,
+					EventType:    string(pg.TransferIn),
+					QtyIn:        qty,
+					QtyOut:       zero,
+					StockBefore:  receiverLocked.Quantity,
+					StockAfter:   updatedReceiver.Quantity,
+					PricePerUnit: price,
+					SourceType:   &sourceType,
+					SourceID:     &transferID,
+					EffectiveAt:  effectiveAt,
+				}); err != nil {
+					return nil, fmt.Errorf("items[%d]: failed to insert receiver transfer movement: %w", i, err)
+				}
+			}
+
+			touched[transferTouchedKey{
 				StorageID:    fromStorageID,
 				IngredientID: ingredientID,
-				EventType:    string(pg.TransferOut),
-				QtyIn:        zero,
-				QtyOut:       qty,
-				StockBefore:  stockBefore,
-				StockAfter:   stockAfter,
-				PricePerUnit: price,
-				SourceType:   &sourceType,
-				SourceID:     &transferID,
-				EffectiveAt:  effectiveAt,
-			})
-			_ = q.InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
-				ID:           uuid.New(),
+			}] = struct{}{}
+			touched[transferTouchedKey{
 				StorageID:    toStorageID,
 				IngredientID: ingredientID,
-				EventType:    string(pg.TransferIn),
-				QtyIn:        qty,
-				QtyOut:       zero,
-				StockBefore:  receiverStock.Quantity,
-				StockAfter:   addNumeric(receiverStock.Quantity, qty),
-				PricePerUnit: price,
-				SourceType:   &sourceType,
-				SourceID:     &transferID,
-				EffectiveAt:  effectiveAt,
-			})
+			}] = struct{}{}
 		} else {
-			// Draft: no stock movement; record zeros
 			stockBefore = zero
 			stockAfter = zero
 		}
@@ -707,6 +931,12 @@ func (s *TransferS) processTransferItems(ctx context.Context, q *pg.Queries, tra
 		}
 
 		responses = append(responses, *toTransferItemResponse(item))
+	}
+
+	for key := range touched {
+		if err := s.rebalanceTransferIngredientLedger(ctx, q, pgtype.UUID{Bytes: key.StorageID, Valid: true}, key.IngredientID); err != nil {
+			return nil, fmt.Errorf("failed to rebalance transfer ledger: %w", err)
+		}
 	}
 
 	return responses, nil
@@ -789,6 +1019,17 @@ func toTransferItemResponse(item pg.TransferItem) *model.TransferItemResponse {
 		CreatedAt:      createdAt,
 		UpdatedAt:      updatedAt,
 	}
+}
+
+func hideTransferDraftStockSnapshot(resp *model.TransferItemResponse, transferStatus any) *model.TransferItemResponse {
+	if resp == nil {
+		return nil
+	}
+	if fmt.Sprint(transferStatus) == "draft" {
+		resp.StockQtyBefore = ""
+		resp.StockQtyAfter = ""
+	}
+	return resp
 }
 
 // ==================== NUMERIC HELPERS ====================
