@@ -153,6 +153,7 @@ type IngredientI interface {
 	GetIngredientReport(ctx context.Context, req model.GetIngredientReportRequest) (*model.IngredientReportResponse, error)
 	GetIngredientReportItem(ctx context.Context, req model.GetIngredientReportRequest) (*model.IngredientReportItem, error)
 	GetIngredientReportMovements(ctx context.Context, req model.GetIngredientReportMovementsRequest) ([]model.IngredientStockMovementResponse, error)
+	GetIngredientInventoryStatusReport(ctx context.Context, req model.GetIngredientInventoryStatusReportRequest) (*model.IngredientReportResponse, error)
 }
 
 type CategoryI interface {

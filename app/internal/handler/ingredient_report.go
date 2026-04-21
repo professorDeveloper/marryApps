@@ -357,3 +357,116 @@ func (h *Handler) GetIngredientReportMovements(c echo.Context) error {
 	}
 	return c.JSON(http.StatusOK, model.NewSuccessResponse("Ingredient report movements retrieved successfully", rows, http.StatusOK))
 }
+
+// GetIngredientInventoryStatusReport retrieves per-ingredient report anchored at most recent inventory count
+// @Summary Get ingredient inventory status report
+// @Description Retrieve ingredient report where begin_qty is anchored at the most recent inventory count event. For each ingredient, the report finds the latest inventory_surplus_in or inventory_shortage_out event and uses its stock_after as begin_qty. Subsequent movements are summed normally. If an ingredient has no inventory event, begin_qty defaults to 0 and all movements are included.
+// @Tags reports
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param storage_id query string true "Storage ID (UUID)" example:"550e8400-e29b-41d4-a716-446655440000"
+// @Param end query string false "End datetime (RFC3339 or YYYY-MM-DD format). Defaults to current time" example:"2026-04-20"
+// @Param ingredient_id query string false "Optional filter: return only this ingredient (UUID)" example:"550e8400-e29b-41d4-a716-446655440001"
+// @Param limit query int false "Pagination: items per page (default: 20)" default(20) example:"20"
+// @Param offset query int false "Pagination: offset from start (default: 0)" default(0) example:"0"
+// @Param expand query string false "Expand related fields (comma-separated)"
+// @Success 200 {object} model.IngredientReportPaginatedResponse "Inventory status report retrieved successfully"
+// @Failure 400 {object} model.ErrorResponse "Invalid request parameters"
+// @Failure 401 {object} model.ErrorResponse "Unauthorized"
+// @Failure 500 {object} model.ErrorResponse "Internal server error"
+// @Router /api/v1/ingredient-reports/inventory-status [get]
+func (h *Handler) GetIngredientInventoryStatusReport(c echo.Context) error {
+	storageID := c.QueryParam("storage_id")
+	if storageID == "" {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"storage_id is required",
+			"missing query parameter: storage_id",
+			http.StatusBadRequest,
+		))
+	}
+	if _, err := uuid.Parse(storageID); err != nil {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"invalid storage_id format",
+			err.Error(),
+			http.StatusBadRequest,
+		))
+	}
+
+	end, err := parseReportEndTimeParam(c.QueryParam("end"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"invalid end format",
+			err.Error(),
+			http.StatusBadRequest,
+		))
+	}
+
+	var ingredientID *string
+	if v := c.QueryParam("ingredient_id"); v != "" {
+		if _, err := uuid.Parse(v); err != nil {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"invalid ingredient_id format",
+				err.Error(),
+				http.StatusBadRequest,
+			))
+		}
+		ingredientID = &v
+	}
+
+	limit := int32(20)
+	if v := c.QueryParam("limit"); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n < 0 {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"invalid limit",
+				"limit must be a non-negative integer",
+				http.StatusBadRequest,
+			))
+		}
+		limit = int32(n)
+	}
+
+	offset := int32(0)
+	if v := c.QueryParam("offset"); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n < 0 {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"invalid offset",
+				"offset must be a non-negative integer",
+				http.StatusBadRequest,
+			))
+		}
+		offset = int32(n)
+	}
+
+	resp, err := h.service.Ingredient().GetIngredientInventoryStatusReport(c.Request().Context(), model.GetIngredientInventoryStatusReportRequest{
+		StorageID:    storageID,
+		End:          end,
+		IngredientID: ingredientID,
+		Limit:        limit,
+		Offset:       offset,
+	})
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+			"failed to get inventory status report",
+			err.Error(),
+			http.StatusInternalServerError,
+		))
+	}
+
+	total := int32(resp.Totals.TotalCount)
+	if maps, expanded, err := h.expandListResponse(c, resp.Items, "ingredients"); expanded {
+		if err != nil {
+			return nil
+		}
+		return c.JSON(http.StatusOK, model.NewPaginatedWithTotalsResponse(
+			"Inventory status report retrieved successfully",
+			maps, resp.Totals, total, limit, offset, http.StatusOK,
+		))
+	}
+	return c.JSON(http.StatusOK, model.NewPaginatedWithTotalsResponse(
+		"Inventory status report retrieved successfully",
+		resp.Items, resp.Totals, total, limit, offset, http.StatusOK,
+	))
+}
