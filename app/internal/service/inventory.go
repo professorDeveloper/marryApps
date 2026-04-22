@@ -292,6 +292,9 @@ func (s *InventoryS) UpdateInventory(ctx context.Context, id string, req *model.
 	if err != nil {
 		return nil, fmt.Errorf("failed to get inventory: %w", err)
 	}
+	if err := assertCanMutateInventorySnapshot(ctx, s.repo, invForApply.StorageID, inventoryID, invFull.Date, "inventory"); err != nil {
+		return nil, err
+	}
 
 	effectiveDate := invFull.Date
 	if req.Date != nil && *req.Date != "" {
@@ -393,6 +396,20 @@ func (s *InventoryS) UpdateInventoryItem(ctx context.Context, inventoryItemID st
 		return nil, fmt.Errorf("invalid inventory item id: %w", err)
 	}
 
+	item, err := s.repo.Tenant(ctx).GetInventoryItemByID(ctx, itemID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get inventory item: %w", err)
+	}
+
+	invFull, err := s.repo.Tenant(ctx).GetInventoryByID(ctx, item.InventoryID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get inventory details: %w", err)
+	}
+
+	if err := assertCanMutateInventorySnapshot(ctx, s.repo, invFull.StorageID, invFull.ID, invFull.Date, "inventory item"); err != nil {
+		return nil, err
+	}
+
 	qty := pgtype.Numeric{}
 	if err := qty.Scan(req.CountedQuantity); err != nil {
 		return nil, fmt.Errorf("invalid counted_quantity: %w", err)
@@ -446,6 +463,9 @@ func (s *InventoryS) ReplaceInventoryItems(ctx context.Context, inventoryID stri
 			return nil, fmt.Errorf("inventory not found")
 		}
 		return nil, fmt.Errorf("failed to get inventory: %w", err)
+	}
+	if err := assertCanMutateInventorySnapshot(ctx, s.repo, inv.StorageID, invID, inv.Date, "inventory items"); err != nil {
+		return nil, err
 	}
 
 	// Replace endpoint uchun items authoritative list hisoblanadi.
@@ -625,6 +645,9 @@ func (s *InventoryS) DeleteInventory(ctx context.Context, id string) error {
 	if err != nil {
 		return fmt.Errorf("failed to get inventory: %w", err)
 	}
+	if err := assertCanMutateInventorySnapshot(ctx, s.repo, inv.StorageID, inventoryID, invFull.Date, "inventory"); err != nil {
+		return err
+	}
 
 	// If active, reverse stock before deleting
 	if inv.Status == "active" {
@@ -696,6 +719,10 @@ func (s *InventoryS) DeleteInventoryItem(ctx context.Context, inventoryItemID st
 	invFull, err := s.repo.Tenant(ctx).GetInventoryByID(ctx, item.InventoryID)
 	if err != nil {
 		return fmt.Errorf("failed to get inventory details: %w", err)
+	}
+
+	if err := assertCanMutateInventorySnapshot(ctx, s.repo, inv.StorageID, item.InventoryID, invFull.Date, "inventory item"); err != nil {
+		return err
 	}
 
 	// Convert inventory date to timestamptz for effective_at

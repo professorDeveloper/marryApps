@@ -16,6 +16,12 @@ type InventoryItemForProcess struct {
 	SystemQuantity  pgtype.Numeric
 }
 
+type LastActiveInventoryByStorageRow struct {
+	ID        uuid.UUID
+	Date      pgtype.Date
+	AppliedAt pgtype.Timestamptz
+}
+
 // GetInventoryItemsByInventoryIDAll returns all non-deleted items for an inventory without pagination.
 func (q *Queries) GetInventoryItemsByInventoryIDAll(ctx context.Context, inventoryID uuid.UUID) ([]InventoryItemForProcess, error) {
 	const sql = `
@@ -139,4 +145,43 @@ func (q *Queries) DeleteInventoryItemByID(ctx context.Context, id uuid.UUID) err
 	`
 	_, err := q.db.Exec(ctx, sql, id)
 	return err
+}
+
+func (q *Queries) GetLastActiveInventoryByStorage(ctx context.Context, storageID uuid.UUID) (LastActiveInventoryByStorageRow, error) {
+	const sql = `
+		SELECT id, date, applied_at
+		FROM inventories
+		WHERE storage_id = $1
+		  AND status = 'active'
+		  AND deleted_at = 0
+		ORDER BY date DESC, applied_at DESC NULLS LAST, created_at DESC, id DESC
+		LIMIT 1
+	`
+
+	row := q.db.QueryRow(ctx, sql, storageID)
+	var out LastActiveInventoryByStorageRow
+	if err := row.Scan(&out.ID, &out.Date, &out.AppliedAt); err != nil {
+		return LastActiveInventoryByStorageRow{}, err
+	}
+	return out, nil
+}
+
+func (q *Queries) HasNewerActiveInventoryByStorage(ctx context.Context, storageID, currentInventoryID uuid.UUID, currentDate pgtype.Date) (bool, error) {
+	const sql = `
+		SELECT EXISTS (
+			SELECT 1
+			FROM inventories
+			WHERE storage_id = $1
+			  AND status = 'active'
+			  AND deleted_at = 0
+			  AND id <> $2
+			  AND date >= $3
+		)
+	`
+
+	var exists bool
+	if err := q.db.QueryRow(ctx, sql, storageID, currentInventoryID, currentDate).Scan(&exists); err != nil {
+		return false, err
+	}
+	return exists, nil
 }
