@@ -25,6 +25,8 @@ var (
 	}
 
 	RolesCanPayOrder = []string{
+		//keyin olib tashash kerak model.RoleWaiter,
+		model.RoleWaiter,
 		model.RoleCashier,
 		model.RoleAdmin,
 		model.RoleManager,
