@@ -17,6 +17,7 @@ import (
 
 func SetupMiddleware(e *echo.Echo, cfg *config.Config) {
 	e.Use(CheckLanguage())
+	e.Use(LocalizeErrorResponse())
 
 	e.Use(middleware.RequestID())
 
@@ -279,12 +280,13 @@ func ValidateRefreshInput(next echo.HandlerFunc) echo.HandlerFunc {
 func CheckLanguage() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
-			lang := "uz"
+			lang := strings.TrimSpace(c.QueryParam("lang"))
 
-			acceptLang := c.Request().Header.Get("Accept-Language")
-			if acceptLang != "" {
+			if lang == "" {
+				lang = "uz"
+				acceptLang := c.Request().Header.Get("Accept-Language")
 				langs := strings.Split(acceptLang, ",")
-				if len(langs) > 0 {
+				if acceptLang != "" && len(langs) > 0 {
 					langParts := strings.Split(strings.TrimSpace(langs[0]), "-")
 					if len(langParts) > 0 {
 						lang = strings.ToLower(langParts[0])
@@ -292,12 +294,7 @@ func CheckLanguage() echo.MiddlewareFunc {
 				}
 			}
 
-			switch lang {
-			case "ru", "uz", "en":
-				c.Set("language", lang)
-			default:
-				c.Set("language", "uz") // Fallback to default
-			}
+			c.Set("language", model.NormalizeLanguage(lang))
 
 			return next(c)
 		}
@@ -318,7 +315,7 @@ func SanitizeInput() echo.MiddlewareFunc {
 
 func getLanguage(c echo.Context) string {
 	if lang, ok := c.Get("language").(string); ok {
-		return lang
+		return model.NormalizeLanguage(lang)
 	}
 	return "uz"
 }

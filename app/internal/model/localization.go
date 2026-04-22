@@ -1,6 +1,8 @@
 package model
 
 func GetLocalizedMessage(lang, key string) string {
+	lang = NormalizeLanguage(lang)
+
 	messages := map[string]map[string]string{
 		"uz": {
 			"too_many_attempts":           "Juda ko'p urinishlar",
@@ -48,6 +50,30 @@ func GetLocalizedMessage(lang, key string) string {
 			"oneof":                       "Недопустимое значение",
 			"uuid":                        "Неверный формат UUID",
 		},
+		"en": {
+			"too_many_attempts":           "Too many attempts",
+			"not_logged_in":               "You are not logged in",
+			"invalid_token":               "Invalid token",
+			"invalid_request_body":        "Invalid request body",
+			"invalid_app_type":            "Invalid app type",
+			"invalid_request_format":      "Invalid request format",
+			"invalid_phone_format":        "Invalid phone number format",
+			"password_too_short":          "Password is too short (minimum 8 characters)",
+			"refresh_token_required":      "Refresh token is required",
+			"file_not_fount":              "File not found",
+			"file_too_large":              "File is too large (maximum 50MB)",
+			"error_while_getting_file":    "Error while getting file",
+			"bad_request":                 "Request is in an invalid format",
+			"user_info_cannot_be_reached": "Failed to update user information",
+			"invalid_date_of_birth":       "Invalid date of birth",
+			"internal_server_error":       "Internal server error",
+			"required":                    "Required field",
+			"min":                         "Value is too small",
+			"max":                         "Value is too large",
+			"email":                       "Invalid email format",
+			"oneof":                       "Invalid value",
+			"uuid":                        "Invalid UUID format",
+		},
 	}
 
 	if langMessages, ok := messages[lang]; ok {
@@ -59,9 +85,6 @@ func GetLocalizedMessage(lang, key string) string {
 	if message, ok := messages["uz"][key]; ok {
 		return message
 	}
-
-	
-
 	return "Unknown error"
 }
 
@@ -70,8 +93,7 @@ type SuccessResponses[T any] struct {
 	Data   T      `json:"data"`
 }
 
-
 type ErrorResponses struct {
-    Status string      `json:"status" example:"error"`
-    Error  interface{} `json:"error"`
+	Status string      `json:"status" example:"error"`
+	Error  interface{} `json:"error"`
 }
