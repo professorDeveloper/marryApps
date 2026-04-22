@@ -138,6 +138,10 @@ func (s *OrderS) AddOrderItems(ctx context.Context, orderID string, req model.Ad
 			return nil, fmt.Errorf("items[%d]: %w", i, err)
 		}
 
+		if err := s.consumeItemStockWithModifiers(ctx, item.ID); err != nil {
+			return nil, fmt.Errorf("items[%d]: failed to deduct stock: %w", i, err)
+		}
+
 		if resp := toOrderItemResponse(item); resp != nil {
 			created = append(created, *resp)
 		}
@@ -176,7 +180,6 @@ func (s *OrderS) CreateOrder(ctx context.Context, req model.CreateOrderRequest) 
 
 		_, err = s.repo.Tenant(ctx).GetOrderByID(ctx, orderUUID)
 		if err == nil {
-			// Bu order oldin yaratilgan, duplicate create qilmaymiz
 			return s.GetOrderByID(ctx, orderUUID.String())
 		}
 		if err != nil && err != pgx.ErrNoRows {
@@ -389,6 +392,9 @@ func (s *OrderS) CreateOrder(ctx context.Context, req model.CreateOrderRequest) 
 			}
 			if err := s.saveOrderItemModifiers(ctx, createdIt.ID, goodUUID, it.Modifiers); err != nil {
 				return nil, err
+			}
+			if err := s.consumeItemStockWithModifiers(ctx, createdIt.ID); err != nil {
+				return nil, fmt.Errorf("failed to deduct stock for created order item: %w", err)
 			}
 
 		}
@@ -1227,12 +1233,17 @@ func (s *OrderS) DeleteOrder(ctx context.Context, orderID string) error {
 	}
 
 	orderBefore, err := s.repo.Tenant(ctx).GetOrderByID(ctx, id)
-	if err == nil && orderBefore.TableID.Valid {
-		defer func() {
-			if _, freeErr := s.repo.Tenant(ctx).SetTableFree(ctx, orderBefore.TableID.Bytes); freeErr != nil {
-				log.Printf("DeleteOrder: failed to set table free for order %s: %v", orderID, freeErr)
-			}
-		}()
+	if err == nil {
+		if err := s.reverseOrderItemsStockByOrder(ctx, id, "order_deleted_in"); err != nil {
+			return fmt.Errorf("failed to restore order stock before delete: %w", err)
+		}
+		if orderBefore.TableID.Valid {
+			defer func() {
+				if _, freeErr := s.repo.Tenant(ctx).SetTableFree(ctx, orderBefore.TableID.Bytes); freeErr != nil {
+					log.Printf("DeleteOrder: failed to set table free for order %s: %v", orderID, freeErr)
+				}
+			}()
+		}
 	}
 
 	if err := s.repo.Tenant(ctx).DeleteOrder(ctx, id); err != nil {
@@ -1301,6 +1312,10 @@ func (s *OrderS) CancelOrder(ctx context.Context, orderID string) (*model.OrderR
 	order, err := s.repo.Tenant(ctx).CancelOrder(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to cancel order: %w", err)
+	}
+
+	if err := s.reverseOrderItemsStockByOrder(ctx, id, "order_cancelled_in"); err != nil {
+		return nil, fmt.Errorf("failed to restore order stock before cancel: %w", err)
 	}
 
 	if orderBefore.TableID.Valid {
@@ -1648,7 +1663,7 @@ func (s *OrderS) GetBillDetails(ctx context.Context, billID string) (*model.Bill
 		})
 	}
 
-	return &model.BillDetails{
+	resp := &model.BillDetails{
 		ID:                 h.ID.String(),
 		BillNo:             h.BillNo,
 		BillStatus:         h.BillStatus,
@@ -1680,7 +1695,115 @@ func (s *OrderS) GetBillDetails(ctx context.Context, billID string) (*model.Bill
 		ChangeAmount:       numericPtrToStringPtr(h.ChangeAmount),
 		Comment:            h.Comment,
 		Items:              outItems,
-	}, nil
+	}
+
+	if err := s.attachBillTimeBasedDetails(ctx, id, resp); err != nil {
+		return nil, fmt.Errorf("failed to attach bill time-based details: %w", err)
+	}
+
+	return resp, nil
+}
+
+func toBillPausePeriods(rows []pg.ListTableTimeEventsBySessionIDRow) []model.BillPausePeriod {
+	if len(rows) == 0 {
+		return nil
+	}
+
+	out := make([]model.BillPausePeriod, 0)
+	var openPauseIndex = -1
+
+	for _, row := range rows {
+		switch row.EventType {
+		case "paused":
+			t := row.CreatedAt
+			out = append(out, model.BillPausePeriod{
+				PausedAt:        &t,
+				ResumedAt:       nil,
+				DurationMinutes: 0,
+			})
+			openPauseIndex = len(out) - 1
+
+		case "resumed":
+			if openPauseIndex < 0 || openPauseIndex >= len(out) {
+				continue
+			}
+
+			t := row.CreatedAt
+			out[openPauseIndex].ResumedAt = &t
+
+			if out[openPauseIndex].PausedAt != nil && !t.Before(*out[openPauseIndex].PausedAt) {
+				out[openPauseIndex].DurationMinutes = int32(t.Sub(*out[openPauseIndex].PausedAt) / time.Minute)
+			}
+
+			openPauseIndex = -1
+		}
+	}
+
+	return out
+}
+
+func (s *OrderS) attachBillTimeBasedDetails(ctx context.Context, orderID uuid.UUID, resp *model.BillDetails) error {
+	if resp == nil {
+		return nil
+	}
+
+	ctxRow, err := s.repo.Tenant(ctx).GetOrderTimerContext(ctx, orderID)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil
+		}
+		return fmt.Errorf("failed to get order timer context: %w", err)
+	}
+
+	if ctxRow.OrderType != "dine_in" {
+		return nil
+	}
+	if !ctxRow.TableID.Valid {
+		return nil
+	}
+	if ctxRow.TableType != string(model.TableTypeTimeBased) {
+		return nil
+	}
+
+	tableType := ctxRow.TableType
+	resp.TableType = &tableType
+
+	if ctxRow.PricePerHour.Valid {
+		v := numericToStr(ctxRow.PricePerHour)
+		resp.PricePerHour = &v
+	}
+
+	session, err := s.repo.Tenant(ctx).GetLatestTableTimeSessionByOrderID(ctx, orderID)
+	switch {
+	case err == nil:
+		timer := toTableTimerResponse(ctxRow, &session, time.Now())
+
+		if timer.StartedAt != nil {
+			resp.TableStartedAt = timer.StartedAt
+		}
+
+		if timer.FinalAmount != nil && *timer.FinalAmount != "" {
+			resp.TableAmount = timer.FinalAmount
+		} else if timer.CurrentAmount != nil && *timer.CurrentAmount != "" {
+			resp.TableAmount = timer.CurrentAmount
+		}
+
+		events, err := s.repo.Tenant(ctx).ListTableTimeEventsBySessionID(ctx, session.ID)
+		if err != nil {
+			return fmt.Errorf("failed to list table timer events: %w", err)
+		}
+		resp.PausePeriods = toBillPausePeriods(events)
+
+	case err == pgx.ErrNoRows:
+		zero := "0.00"
+		resp.TableAmount = &zero
+		return nil
+
+	default:
+		return fmt.Errorf("failed to get latest table timer session: %w", err)
+	}
+
+	return nil
 }
 
 func (s *OrderS) consumeItemStockTx(
@@ -1896,6 +2019,11 @@ func (s *OrderS) consumeItemStockWithModifiers(ctx context.Context, orderItemID 
 		return fmt.Errorf("failed to get order item: %w", err)
 	}
 
+	order, err := s.repo.Tenant(ctx).GetOrderByID(ctx, item.OrderID)
+	if err != nil {
+		return fmt.Errorf("failed to get order: %w", err)
+	}
+
 	goodID := item.GoodID
 	quantity := item.Quantity
 	orderID := item.OrderID
@@ -1907,6 +2035,13 @@ func (s *OrderS) consumeItemStockWithModifiers(ctx context.Context, orderItemID 
 	if !storageID.Valid {
 		return fmt.Errorf("no active storage configured for good %s", goodID)
 	}
+
+	if err := assertOrderStorageMutationAllowed(ctx, s.repo, order, storageID.Bytes, "order item"); err != nil {
+		return err
+	}
+
+	effectiveAt := orderMutationEffectiveAt(order)
+	touched := make(map[orderTouchedKey]struct{})
 
 	mult := pgtype.Numeric{}
 	mult.Valid = true
@@ -1921,6 +2056,11 @@ func (s *OrderS) consumeItemStockWithModifiers(ctx context.Context, orderItemID 
 	if len(usages) == 0 {
 		return fmt.Errorf("no calculation configured for good %s", goodID)
 	}
+
+	zero := inventoryZeroNumeric()
+	sourceType := "order"
+	srcID := orderID
+
 	for _, u := range usages {
 		stockID, err := s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
 			ID:           uuid.New(),
@@ -1956,60 +2096,39 @@ func (s *OrderS) consumeItemStockWithModifiers(ctx context.Context, orderItemID 
 			return fmt.Errorf("failed to consume ingredient stock: %w", err)
 		}
 
-		zero := pgtype.Numeric{}
-		_ = zero.Scan("0")
-		sourceType := "order"
-		srcID := orderID
-
-		now := pgtype.Timestamptz{
-			Time:  time.Now().UTC(),
-			Valid: true,
+		if !shouldSkipStockMovement(zero, u.quantity) {
+			if err := s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+				ID:           uuid.New(),
+				StorageID:    uuid.UUID(storageID.Bytes),
+				IngredientID: u.ingredientID,
+				EventType:    "order_out",
+				QtyIn:        zero,
+				QtyOut:       u.quantity,
+				StockBefore:  locked.Quantity,
+				StockAfter:   updated.Quantity,
+				PricePerUnit: price,
+				SourceType:   &sourceType,
+				SourceID:     &srcID,
+				EffectiveAt:  effectiveAt,
+			}); err != nil {
+				return fmt.Errorf("failed to insert order stock movement: %w", err)
+			}
 		}
-		effectiveAt := &now
 
-		if shouldSkipStockMovement(zero, u.quantity) {
-			continue
-		}
-
-		if err := s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
-			ID:           uuid.New(),
-			StorageID:    uuid.UUID(storageID.Bytes),
+		touched[orderTouchedKey{
+			StorageID:    storageID.Bytes,
 			IngredientID: u.ingredientID,
-			EventType:    string(pg.OrderOut),
-			QtyIn:        zero,
-			QtyOut:       u.quantity,
-			StockBefore:  locked.Quantity,
-			StockAfter:   updated.Quantity,
-			PricePerUnit: price,
-			SourceType:   &sourceType,
-			SourceID:     &srcID,
-			EffectiveAt:  effectiveAt,
-		}); err != nil {
-			return fmt.Errorf("failed to insert stock movement: %w", err)
-		}
+		}] = struct{}{}
 	}
 
-	modRows, err := s.repo.Tenant(ctx).GetOrderItemModifiersByOrderItemID(ctx, orderItemID)
+	modRows, err := s.repo.Tenant(ctx).ListOrderItemModifiersByOrderID(ctx, orderID)
 	if err != nil {
-		return fmt.Errorf("failed to get order item modifiers: %w", err)
+		return fmt.Errorf("failed to list order item modifiers: %w", err)
 	}
 
 	for _, om := range modRows {
-		if _, err := s.repo.Tenant(ctx).GetActiveGoodModifierByGoodAndModifierID(ctx, pg.GetActiveGoodModifierByGoodAndModifierIDParams{
-			GoodID:     goodID,
-			ModifierID: om.ModifierID,
-		}); err != nil {
-			if err == pgx.ErrNoRows {
-				return fmt.Errorf("modifier not allowed for this good: %s", om.ModifierID.String())
-			}
-			return fmt.Errorf("failed to validate good modifier: %w", err)
-		}
-		mod, err := s.repo.Tenant(ctx).GetModifierByID(ctx, om.ModifierID)
-		if err != nil {
-			return fmt.Errorf("failed to get modifier: %w", err)
-		}
-		if !mod.IsActive {
-			return fmt.Errorf("modifier is inactive: %s", om.ModifierID.String())
+		if om.OrderItemID != orderItemID {
+			continue
 		}
 
 		comb := int64(quantity) * int64(om.Units)
@@ -2023,6 +2142,7 @@ func (s *OrderS) consumeItemStockWithModifiers(ctx context.Context, orderItemID 
 		if err != nil {
 			return err
 		}
+
 		for _, u := range modUsages {
 			stockID, err := s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
 				ID:           uuid.New(),
@@ -2030,7 +2150,7 @@ func (s *OrderS) consumeItemStockWithModifiers(ctx context.Context, orderItemID 
 				StorageID:    storageID,
 			})
 			if err != nil {
-				return fmt.Errorf("failed to ensure ingredient stock row: %w", err)
+				return fmt.Errorf("failed to ensure modifier ingredient stock row: %w", err)
 			}
 
 			locked, err := s.repo.Tenant(ctx).GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
@@ -2038,12 +2158,12 @@ func (s *OrderS) consumeItemStockWithModifiers(ctx context.Context, orderItemID 
 				StorageID:    storageID,
 			})
 			if err != nil {
-				return fmt.Errorf("failed to lock ingredient stock row: %w", err)
+				return fmt.Errorf("failed to lock modifier ingredient stock row: %w", err)
 			}
 
 			ing, err := s.repo.Tenant(ctx).GetIngredientByID(ctx, u.ingredientID)
 			if err != nil {
-				return fmt.Errorf("failed to get ingredient: %w", err)
+				return fmt.Errorf("failed to get modifier ingredient: %w", err)
 			}
 			price := ing.PricePerUnit
 			if !price.Valid {
@@ -2055,33 +2175,38 @@ func (s *OrderS) consumeItemStockWithModifiers(ctx context.Context, orderItemID 
 				Quantity: u.quantity,
 			})
 			if err != nil {
-				return fmt.Errorf("failed to consume ingredient stock: %w", err)
+				return fmt.Errorf("failed to consume modifier ingredient stock: %w", err)
 			}
 
-			zero := pgtype.Numeric{}
-			_ = zero.Scan("0")
-			sourceType := "order"
-			srcID := orderID
-
-			if shouldSkipStockMovement(zero, u.quantity) {
-				continue
+			if !shouldSkipStockMovement(zero, u.quantity) {
+				if err := s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+					ID:           uuid.New(),
+					StorageID:    uuid.UUID(storageID.Bytes),
+					IngredientID: u.ingredientID,
+					EventType:    "order_out",
+					QtyIn:        zero,
+					QtyOut:       u.quantity,
+					StockBefore:  locked.Quantity,
+					StockAfter:   updated.Quantity,
+					PricePerUnit: price,
+					SourceType:   &sourceType,
+					SourceID:     &srcID,
+					EffectiveAt:  effectiveAt,
+				}); err != nil {
+					return fmt.Errorf("failed to insert modifier order stock movement: %w", err)
+				}
 			}
 
-			if err := s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
-				ID:           uuid.New(),
-				StorageID:    uuid.UUID(storageID.Bytes),
+			touched[orderTouchedKey{
+				StorageID:    storageID.Bytes,
 				IngredientID: u.ingredientID,
-				EventType:    string(pg.OrderOut),
-				QtyIn:        zero,
-				QtyOut:       u.quantity,
-				StockBefore:  locked.Quantity,
-				StockAfter:   updated.Quantity,
-				PricePerUnit: price,
-				SourceType:   &sourceType,
-				SourceID:     &srcID,
-			}); err != nil {
-				return fmt.Errorf("failed to insert stock movement: %w", err)
-			}
+			}] = struct{}{}
+		}
+	}
+
+	for key := range touched {
+		if err := s.rebalanceOrderIngredientLedger(ctx, pgtype.UUID{Bytes: key.StorageID, Valid: true}, key.IngredientID); err != nil {
+			return err
 		}
 	}
 
@@ -2324,6 +2449,10 @@ func (s *OrderS) CreateOrderItems(ctx context.Context, req model.CreateOrderItem
 			return nil, fmt.Errorf("items[%d]: %w", i, err)
 		}
 
+		if err := s.consumeItemStockWithModifiers(ctx, item.ID); err != nil {
+			return nil, fmt.Errorf("items[%d]: failed to deduct stock: %w", i, err)
+		}
+
 		responses = append(responses, *toOrderItemResponse(item))
 	}
 
@@ -2506,9 +2635,25 @@ func (s *OrderS) UpdateOrderItemQuantity(ctx context.Context, itemID string, qua
 		return nil, fmt.Errorf("quantity must be greater than 0")
 	}
 
-	item, err := s.repo.Tenant(ctx).UpdateOrderItemQuantity(ctx, pg.UpdateOrderItemQuantityParams{ID: id, Quantity: quantity})
+	existing, err := s.repo.Tenant(ctx).GetOrderItemByID(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get existing order item: %w", err)
+	}
+
+	if err := s.reverseOrderItemStockWithModifiers(ctx, existing.ID, "order_item_qty_revert_in"); err != nil {
+		return nil, fmt.Errorf("failed to restore previous stock before quantity update: %w", err)
+	}
+
+	item, err := s.repo.Tenant(ctx).UpdateOrderItemQuantity(ctx, pg.UpdateOrderItemQuantityParams{
+		ID:       id,
+		Quantity: quantity,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to update order item quantity: %w", err)
+	}
+
+	if err := s.consumeItemStockWithModifiers(ctx, item.ID); err != nil {
+		return nil, fmt.Errorf("failed to deduct stock for updated quantity: %w", err)
 	}
 
 	_ = s.repo.Tenant(ctx).RecalculateOrderTotalsFromItems(ctx, item.OrderID)
@@ -2618,11 +2763,11 @@ func (s *OrderS) UpdateOrderItemStatus(ctx context.Context, itemID string, statu
 		return nil, fmt.Errorf("invalid order item status transition: %s -> %s", currentStatus, nextStatus)
 	}
 
-	if currentStatus == string(model.OrderItemStatusPending) && nextStatus == string(model.OrderItemStatusCooking) {
-		if err := s.consumeItemStockWithModifiers(txCtx, existing.ID); err != nil {
-			return nil, fmt.Errorf("failed to deduct stock for order item: %w", err)
-		}
-	}
+	// if currentStatus == string(model.OrderItemStatusPending) && nextStatus == string(model.OrderItemStatusCooking) {
+	// 	if err := s.consumeItemStockWithModifiers(txCtx, existing.ID); err != nil {
+	// 		return nil, fmt.Errorf("failed to deduct stock for order item: %w", err)
+	// 	}
+	// }
 
 	st := pg.NullOrderItemsStatus{
 		OrderItemsStatus: pg.OrderItemsStatus(nextStatus),
@@ -2657,6 +2802,10 @@ func (s *OrderS) DeleteOrderItem(ctx context.Context, itemID string) error {
 		return fmt.Errorf("failed to get order item: %w", err)
 	}
 
+	if err := s.reverseOrderItemStockWithModifiers(ctx, existing.ID, "order_item_deleted_in"); err != nil {
+		return fmt.Errorf("failed to restore order item stock before delete: %w", err)
+	}
+
 	if err := s.repo.Tenant(ctx).DeleteOrderItem(ctx, id); err != nil {
 		return fmt.Errorf("failed to delete order item: %w", err)
 	}
@@ -2685,6 +2834,19 @@ func (s *OrderS) CancelOrderItem(ctx context.Context, itemID string) (*model.Ord
 	if err != nil {
 		return nil, fmt.Errorf("invalid order item id: %w", err)
 	}
+
+	existing, err := s.repo.Tenant(ctx).GetOrderItemByID(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get order item: %w", err)
+	}
+	if existing.Status.Valid && string(existing.Status.OrderItemsStatus) == "cancelled" {
+		return nil, fmt.Errorf("order item is already cancelled")
+	}
+
+	if err := s.reverseOrderItemStockWithModifiers(ctx, existing.ID, "order_item_cancelled_in"); err != nil {
+		return nil, fmt.Errorf("failed to restore order item stock before cancel: %w", err)
+	}
+
 	item, err := s.repo.Tenant(ctx).CancelOrderItem(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to cancel order item: %w", err)

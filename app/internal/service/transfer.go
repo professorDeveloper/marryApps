@@ -38,6 +38,78 @@ func transferEffectiveAt(ts pgtype.Timestamptz) *pgtype.Timestamptz {
 	return &effective
 }
 
+func transferFreezeDate(ts pgtype.Timestamptz, entityName string) (time.Time, error) {
+	if !ts.Valid {
+		return time.Time{}, fmt.Errorf("%s date is required for inventory freeze check", entityName)
+	}
+	return ts.Time, nil
+}
+
+func assertCanMutateTransferCurrent(
+	ctx context.Context,
+	repo *repository.Repository,
+	tr pg.Transfer,
+	entityName string,
+) error {
+	effectiveAt, err := transferFreezeDate(tr.Date, entityName)
+	if err != nil {
+		return err
+	}
+
+	if err := assertCanMutateAfterInventory(ctx, repo, tr.FromStorageID, effectiveAt, entityName); err != nil {
+		return err
+	}
+	if err := assertCanMutateAfterInventory(ctx, repo, tr.ToStorageID, effectiveAt, entityName); err != nil {
+		return err
+	}
+	return nil
+}
+
+func assertCanMutateTransferTarget(
+	ctx context.Context,
+	repo *repository.Repository,
+	fromStorageID pgtype.UUID,
+	toStorageID pgtype.UUID,
+	transferDate pgtype.Timestamptz,
+	entityName string,
+) error {
+	effectiveAt, err := transferFreezeDate(transferDate, entityName)
+	if err != nil {
+		return err
+	}
+
+	if fromStorageID.Valid {
+		if err := assertCanMutateAfterInventory(ctx, repo, fromStorageID.Bytes, effectiveAt, entityName); err != nil {
+			return err
+		}
+	}
+	if toStorageID.Valid {
+		if err := assertCanMutateAfterInventory(ctx, repo, toStorageID.Bytes, effectiveAt, entityName); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func assertCanMutateTransferChange(
+	ctx context.Context,
+	repo *repository.Repository,
+	current pg.Transfer,
+	targetFromStorageID pgtype.UUID,
+	targetToStorageID pgtype.UUID,
+	targetDate pgtype.Timestamptz,
+	entityName string,
+) error {
+	if err := assertCanMutateTransferCurrent(ctx, repo, current, entityName); err != nil {
+		return err
+	}
+	if err := assertCanMutateTransferTarget(ctx, repo, targetFromStorageID, targetToStorageID, targetDate, entityName); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (s *TransferS) rebalanceTransferIngredientLedger(
 	ctx context.Context,
 	q *pg.Queries,
@@ -80,15 +152,15 @@ func (s *TransferS) rebalanceTransferIngredientLedger(
 		running = after
 	}
 
-	stockRow, err := q.GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
+	stockRow, err := q.GetStockByIngredientAndStorageExplicit(ctx, pg.GetStockByIngredientAndStorageExplicitParams{
 		IngredientID: ingredientID,
 		StorageID:    storageID,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to lock ingredient stock for transfer final sync: %w", err)
+		return fmt.Errorf("failed to get ingredient stock for transfer final sync: %w", err)
 	}
 
-	if _, err := q.UpdateIngredientStock(ctx, pg.UpdateIngredientStockParams{
+	if _, err := q.UpdateIngredientStockExplicit(ctx, pg.UpdateIngredientStockExplicitParams{
 		ID:       stockRow.ID,
 		Quantity: running,
 	}); err != nil {
@@ -160,6 +232,18 @@ func (s *TransferS) CreateTransferBatch(ctx context.Context, req model.CreateTra
 		actGroupID = pgtype.UUID{Bytes: id, Valid: true}
 	}
 
+	transferDate := pgtype.Timestamptz{Time: time.Now(), Valid: true}
+	if err := assertCanMutateTransferTarget(
+		ctx,
+		s.repo,
+		pgtype.UUID{Bytes: fromStorageID, Valid: true},
+		pgtype.UUID{Bytes: toStorageID, Valid: true},
+		transferDate,
+		"transfer",
+	); err != nil {
+		return nil, err
+	}
+
 	q := s.repo.Tenant(ctx)
 
 	transfer, err := q.CreateTransfer(ctx, pg.CreateTransferParams{
@@ -171,7 +255,7 @@ func (s *TransferS) CreateTransferBatch(ctx context.Context, req model.CreateTra
 		ActGroupID:    actGroupID,
 		Description:   req.Description,
 		Status:        status,
-		Date:          pgtype.Timestamptz{Time: time.Now(), Valid: true},
+		Date:          transferDate,
 		TotalAmount:   pgtype.Numeric{Int: big.NewInt(0), Exp: 0, Valid: true},
 	})
 	if err != nil {
@@ -243,6 +327,18 @@ func (s *TransferS) CreateTransfer(ctx context.Context, req model.CreateTransfer
 		actGroupID = pgtype.UUID{Bytes: id, Valid: true}
 	}
 
+	transferDate := pgtype.Timestamptz{Time: time.Now(), Valid: true}
+	if err := assertCanMutateTransferTarget(
+		ctx,
+		s.repo,
+		pgtype.UUID{Bytes: fromStorageID, Valid: true},
+		pgtype.UUID{Bytes: toStorageID, Valid: true},
+		transferDate,
+		"transfer",
+	); err != nil {
+		return nil, err
+	}
+
 	transfer, err := s.repo.Tenant(ctx).CreateTransfer(ctx, pg.CreateTransferParams{
 		ID:            uuid.New(),
 		FromBranchID:  fromBranchID,
@@ -252,7 +348,7 @@ func (s *TransferS) CreateTransfer(ctx context.Context, req model.CreateTransfer
 		ActGroupID:    actGroupID,
 		Description:   req.Description,
 		Status:        status,
-		Date:          pgtype.Timestamptz{Time: time.Now(), Valid: true},
+		Date:          transferDate,
 		TotalAmount:   pgtype.Numeric{Int: big.NewInt(0), Exp: 0, Valid: true},
 	})
 	if err != nil {
@@ -284,6 +380,10 @@ func (s *TransferS) AddTransferItems(ctx context.Context, req model.CreateTransf
 	}
 	if transfer.Status == pg.TransferStatusDeleted {
 		return nil, fmt.Errorf("cannot add items to a deleted transfer")
+	}
+
+	if err := assertCanMutateTransferCurrent(ctx, s.repo, transfer, "transfer items"); err != nil {
+		return nil, err
 	}
 
 	applyStock := transfer.Status == pg.TransferStatusActive
@@ -463,7 +563,10 @@ func (s *TransferS) DeleteTransfer(ctx context.Context, transferID string) error
 		return fmt.Errorf("transfer not found: %w", err)
 	}
 
-	// Only reverse stock if the transfer was active
+	if err := assertCanMutateTransferCurrent(ctx, s.repo, transfer, "transfer"); err != nil {
+		return err
+	}
+
 	if transfer.Status == pg.TransferStatusActive {
 		items, err := q.GetTransferItemsByTransferID(ctx, id)
 		if err != nil {
@@ -504,6 +607,10 @@ func (s *TransferS) DeleteTransferItem(ctx context.Context, itemID string) error
 		return fmt.Errorf("transfer not found: %w", err)
 	}
 
+	if err := assertCanMutateTransferCurrent(ctx, s.repo, transfer, "transfer item"); err != nil {
+		return err
+	}
+
 	if transfer.Status == pg.TransferStatusActive {
 		if err := s.reverseTransferItemsStock(ctx, q, transfer.ID, []pg.TransferItem{item}, transfer.FromStorageID, transfer.ToStorageID, transfer.Date); err != nil {
 			return fmt.Errorf("failed to reverse transfer item stock before delete: %w", err)
@@ -532,17 +639,16 @@ func (s *TransferS) UpsertTransferItems(ctx context.Context, transferID string, 
 
 	q := s.repo.Tenant(ctx)
 
-	transfer, err := q.GetTransferByID(ctx, id)
+	current, err := q.GetTransferByID(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("transfer not found: %w", err)
 	}
-	if transfer.Status == pg.TransferStatusDeleted {
+	if current.Status == pg.TransferStatusDeleted {
 		return nil, fmt.Errorf("cannot update a deleted transfer")
 	}
 
-	oldStatus := transfer.Status
+	oldStatus := current.Status
 
-	// Validate + resolve new status
 	newStatus := oldStatus
 	if req.Status != nil {
 		ns, err := resolveTransferStatus(req.Status, oldStatus)
@@ -550,84 +656,128 @@ func (s *TransferS) UpsertTransferItems(ctx context.Context, transferID string, 
 			return nil, err
 		}
 		if ns != oldStatus {
-			// Only draft↔active transitions are allowed
 			if !((oldStatus == pg.TransferStatusDraft && ns == pg.TransferStatusActive) ||
 				(oldStatus == pg.TransferStatusActive && ns == pg.TransferStatusDraft)) {
-				return nil, fmt.Errorf("invalid status transition: %s → %s", oldStatus, ns)
+				return nil, fmt.Errorf("invalid status transition: %s -> %s", oldStatus, ns)
 			}
 		}
 		newStatus = ns
 	}
 
-	// Step 1: Reverse stock if transfer was active
+	newFromStorageID := current.FromStorageID
+	newToStorageID := current.ToStorageID
+
+	if req.FromStorageID != nil && *req.FromStorageID != "" {
+		parsed, err := uuid.Parse(*req.FromStorageID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid from_storage_id: %w", err)
+		}
+		newFromStorageID = parsed
+	}
+
+	if req.ToStorageID != nil && *req.ToStorageID != "" {
+		parsed, err := uuid.Parse(*req.ToStorageID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid to_storage_id: %w", err)
+		}
+		newToStorageID = parsed
+	}
+
+	newDate := current.Date
+	if req.Date != nil && *req.Date != "" {
+		t, err := time.Parse("2006-01-02", *req.Date)
+		if err != nil {
+			return nil, fmt.Errorf("invalid date: %w", err)
+		}
+		newDate = pgtype.Timestamptz{Time: t, Valid: true}
+	}
+
+	if err := assertCanMutateTransferChange(
+		ctx,
+		s.repo,
+		current,
+		pgtype.UUID{Bytes: newFromStorageID, Valid: true},
+		pgtype.UUID{Bytes: newToStorageID, Valid: true},
+		newDate,
+		"transfer",
+	); err != nil {
+		return nil, err
+	}
+
+	// IMPORTANT:
+	// reverse OLD active state BEFORE updating header/date/storage
 	if oldStatus == pg.TransferStatusActive {
 		existing, err := q.GetTransferItemsByTransferID(ctx, id)
 		if err != nil {
 			return nil, fmt.Errorf("failed to fetch existing items: %w", err)
 		}
-		if err := s.reverseTransferItemsStock(ctx, q, transfer.ID, existing, transfer.FromStorageID, transfer.ToStorageID, transfer.Date); err != nil {
-			return nil, fmt.Errorf("failed to reverse transfer stock before replace: %w", err)
+
+		if len(existing) > 0 {
+			if err := s.reverseTransferItemsStock(
+				ctx,
+				q,
+				current.ID,
+				existing,
+				current.FromStorageID,
+				current.ToStorageID,
+				current.Date,
+			); err != nil {
+				return nil, fmt.Errorf("failed to reverse old transfer stock: %w", err)
+			}
 		}
 	}
 
-	// Step 2: Resolve storages to use for new items (may be overridden by request)
-	newFromStorageID := transfer.FromStorageID
-	newToStorageID := transfer.ToStorageID
-
-	if req.FromStorageID != nil {
-		if parsed, err := uuid.Parse(*req.FromStorageID); err == nil {
-			newFromStorageID = parsed
-		}
-	}
-	if req.ToStorageID != nil {
-		if parsed, err := uuid.Parse(*req.ToStorageID); err == nil {
-			newToStorageID = parsed
-		}
-	}
-
-	// Step 3: Update transfer-level fields in DB
 	updateParams := pg.UpdateTransferParams{
 		ID:            id,
-		FromBranchID:  transfer.FromBranchID,
-		ToBranchID:    transfer.ToBranchID,
+		FromBranchID:  current.FromBranchID,
+		ToBranchID:    current.ToBranchID,
 		FromStorageID: newFromStorageID,
 		ToStorageID:   newToStorageID,
-		ActGroupID:    transfer.ActGroupID,
-		Description:   transfer.Description,
+		ActGroupID:    current.ActGroupID,
+		Description:   current.Description,
 		Status:        newStatus,
-		Date:          transfer.Date,
-		TotalAmount:   transfer.TotalAmount,
+		Date:          newDate,
+		TotalAmount:   current.TotalAmount,
 	}
+
 	if req.ActGroupID != nil {
 		if *req.ActGroupID == "" {
 			updateParams.ActGroupID = pgtype.UUID{}
-		} else if parsed, err := uuid.Parse(*req.ActGroupID); err == nil {
+		} else {
+			parsed, err := uuid.Parse(*req.ActGroupID)
+			if err != nil {
+				return nil, fmt.Errorf("invalid act_group_id: %w", err)
+			}
 			updateParams.ActGroupID = pgtype.UUID{Bytes: parsed, Valid: true}
 		}
 	}
+
 	if req.Description != nil {
 		updateParams.Description = req.Description
 	}
-	if req.Date != nil {
-		t, err := time.Parse("2006-01-02", *req.Date)
-		if err == nil {
-			updateParams.Date = pgtype.Timestamptz{Time: t, Valid: true}
-		}
-	}
 
-	transfer, err = q.UpdateTransfer(ctx, updateParams)
+	updated, err := q.UpdateTransfer(ctx, updateParams)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update transfer: %w", err)
 	}
 
-	// Step 4: Delete existing items
 	if err := q.DeleteTransferItemsByTransferID(ctx, id); err != nil {
 		return nil, fmt.Errorf("failed to delete existing items: %w", err)
 	}
 
-	// Step 5: Create new items; apply stock only if newStatus == active
 	applyStock := newStatus == pg.TransferStatusActive
-	if _, err := s.processTransferItems(ctx, q, id, newFromStorageID, newToStorageID, transfer.FromBranchID, transfer.ToBranchID, req.Items, applyStock, transfer.Date); err != nil {
+	if _, err := s.processTransferItems(
+		ctx,
+		q,
+		id,
+		newFromStorageID,
+		newToStorageID,
+		updated.FromBranchID,
+		updated.ToBranchID,
+		req.Items,
+		applyStock,
+		updated.Date,
+	); err != nil {
 		return nil, err
 	}
 
@@ -644,12 +794,13 @@ func (s *TransferS) reverseTransferItemsStock(ctx context.Context, q *pg.Queries
 
 	zero := inventoryZeroNumeric()
 	effectiveAt := transferEffectiveAt(transferDate)
-	srcType := "transfer"
+	sourceType := "transfer"
 
 	touched := make(map[transferTouchedKey]struct{})
 
 	for _, item := range items {
-		// 1) sender (fromStorage) ga quantity qaytadi => transfer_in
+		// 1) SOURCE storage rollback:
+		// old transfer_out ni qaytarish => source storagega IN
 		senderStockID := s.getStockID(ctx, q, item.IngredientID, fromStorageUUID)
 		if senderStockID == uuid.Nil {
 			ensuredID, err := q.EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
@@ -663,7 +814,7 @@ func (s *TransferS) reverseTransferItemsStock(ctx context.Context, q *pg.Queries
 			senderStockID = ensuredID
 		}
 
-		senderLocked, err := q.GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
+		senderLocked, err := q.GetStockByIngredientAndStorageExplicit(ctx, pg.GetStockByIngredientAndStorageExplicitParams{
 			IngredientID: item.IngredientID,
 			StorageID:    fromStorageUUID,
 		})
@@ -684,13 +835,13 @@ func (s *TransferS) reverseTransferItemsStock(ctx context.Context, q *pg.Queries
 				ID:           uuid.New(),
 				StorageID:    fromStorageID,
 				IngredientID: item.IngredientID,
-				EventType:    string(pg.TransferIn),
+				EventType:    "transfer_reverted_from_in",
 				QtyIn:        item.Quantity,
 				QtyOut:       zero,
 				StockBefore:  senderLocked.Quantity,
 				StockAfter:   senderUpdated.Quantity,
 				PricePerUnit: item.Price,
-				SourceType:   &srcType,
+				SourceType:   &sourceType,
 				SourceID:     &transferID,
 				EffectiveAt:  effectiveAt,
 			}); err != nil {
@@ -703,7 +854,8 @@ func (s *TransferS) reverseTransferItemsStock(ctx context.Context, q *pg.Queries
 			IngredientID: item.IngredientID,
 		}] = struct{}{}
 
-		// 2) receiver (toStorage) dan quantity ayriladi => transfer_out
+		// 2) DESTINATION storage rollback:
+		// old transfer_in ni qaytarish => destination storagedan OUT
 		receiverStockID := s.getStockID(ctx, q, item.IngredientID, toStorageUUID)
 		if receiverStockID == uuid.Nil {
 			ensuredID, err := q.EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
@@ -717,7 +869,7 @@ func (s *TransferS) reverseTransferItemsStock(ctx context.Context, q *pg.Queries
 			receiverStockID = ensuredID
 		}
 
-		receiverLocked, err := q.GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
+		receiverLocked, err := q.GetStockByIngredientAndStorageExplicit(ctx, pg.GetStockByIngredientAndStorageExplicitParams{
 			IngredientID: item.IngredientID,
 			StorageID:    toStorageUUID,
 		})
@@ -735,13 +887,13 @@ func (s *TransferS) reverseTransferItemsStock(ctx context.Context, q *pg.Queries
 				ID:           uuid.New(),
 				StorageID:    toStorageID,
 				IngredientID: item.IngredientID,
-				EventType:    string(pg.TransferOut),
+				EventType:    "transfer_reverted_to_out",
 				QtyIn:        zero,
 				QtyOut:       item.Quantity,
 				StockBefore:  receiverLocked.Quantity,
 				StockAfter:   receiverUpdated.Quantity,
 				PricePerUnit: item.Price,
-				SourceType:   &srcType,
+				SourceType:   &sourceType,
 				SourceID:     &transferID,
 				EffectiveAt:  effectiveAt,
 			}); err != nil {
@@ -756,7 +908,12 @@ func (s *TransferS) reverseTransferItemsStock(ctx context.Context, q *pg.Queries
 	}
 
 	for key := range touched {
-		if err := s.rebalanceTransferIngredientLedger(ctx, q, pgtype.UUID{Bytes: key.StorageID, Valid: true}, key.IngredientID); err != nil {
+		if err := s.rebalanceTransferIngredientLedger(
+			ctx,
+			q,
+			pgtype.UUID{Bytes: key.StorageID, Valid: true},
+			key.IngredientID,
+		); err != nil {
 			return fmt.Errorf("failed to rebalance transfer reverse ledger: %w", err)
 		}
 	}
@@ -776,7 +933,7 @@ func (s *TransferS) processTransferItems(ctx context.Context, q *pg.Queries, tra
 	sourceType := "transfer"
 
 	touched := make(map[transferTouchedKey]struct{})
-	var responses []model.TransferItemResponse
+	responses := make([]model.TransferItemResponse, 0, len(entries))
 
 	for i, entry := range entries {
 		if entry.IngredientID == "" {
@@ -806,7 +963,7 @@ func (s *TransferS) processTransferItems(ctx context.Context, q *pg.Queries, tra
 		var stockBefore, stockAfter pgtype.Numeric
 
 		if applyStock {
-			// sender
+			// 1) SOURCE storage => OUT
 			senderStock, err := q.EnsureIngredientStockByStorageWithBranch(ctx, pg.EnsureIngredientStockByStorageWithBranchParams{
 				ID:           uuid.New(),
 				IngredientID: ingredientID,
@@ -817,7 +974,7 @@ func (s *TransferS) processTransferItems(ctx context.Context, q *pg.Queries, tra
 				return nil, fmt.Errorf("items[%d]: failed to ensure sender stock: %w", i, err)
 			}
 
-			senderLocked, err := q.GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
+			senderLocked, err := q.GetStockByIngredientAndStorageExplicit(ctx, pg.GetStockByIngredientAndStorageExplicitParams{
 				IngredientID: ingredientID,
 				StorageID:    fromStorageUUID,
 			})
@@ -830,10 +987,11 @@ func (s *TransferS) processTransferItems(ctx context.Context, q *pg.Queries, tra
 				return nil, fmt.Errorf("items[%d]: failed to deduct sender stock for ingredient %s: %w", i, ingredientID, err)
 			}
 
+			// Transfer item response snapshot sifatida source storage holatini saqlaymiz
 			stockBefore = senderLocked.Quantity
 			stockAfter = updatedSender.Quantity
 
-			// receiver
+			// 2) DESTINATION storage => IN
 			receiverStock, err := q.EnsureIngredientStockByStorageWithBranch(ctx, pg.EnsureIngredientStockByStorageWithBranchParams{
 				ID:           uuid.New(),
 				IngredientID: ingredientID,
@@ -844,7 +1002,7 @@ func (s *TransferS) processTransferItems(ctx context.Context, q *pg.Queries, tra
 				return nil, fmt.Errorf("items[%d]: failed to ensure receiver stock: %w", i, err)
 			}
 
-			receiverLocked, err := q.GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
+			receiverLocked, err := q.GetStockByIngredientAndStorageExplicit(ctx, pg.GetStockByIngredientAndStorageExplicitParams{
 				IngredientID: ingredientID,
 				StorageID:    toStorageUUID,
 			})
@@ -865,12 +1023,13 @@ func (s *TransferS) processTransferItems(ctx context.Context, q *pg.Queries, tra
 				BranchID:     toBranchID,
 			})
 
+			// SOURCE movement => transfer_out
 			if !shouldSkipStockMovement(zero, qty) {
 				if err := q.InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
 					ID:           uuid.New(),
 					StorageID:    fromStorageID,
 					IngredientID: ingredientID,
-					EventType:    string(pg.TransferOut),
+					EventType:    "transfer_out",
 					QtyIn:        zero,
 					QtyOut:       qty,
 					StockBefore:  senderLocked.Quantity,
@@ -884,12 +1043,13 @@ func (s *TransferS) processTransferItems(ctx context.Context, q *pg.Queries, tra
 				}
 			}
 
+			// DESTINATION movement => transfer_in
 			if !shouldSkipStockMovement(qty, zero) {
 				if err := q.InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
 					ID:           uuid.New(),
 					StorageID:    toStorageID,
 					IngredientID: ingredientID,
-					EventType:    string(pg.TransferIn),
+					EventType:    "transfer_in",
 					QtyIn:        qty,
 					QtyOut:       zero,
 					StockBefore:  receiverLocked.Quantity,
@@ -930,11 +1090,19 @@ func (s *TransferS) processTransferItems(ctx context.Context, q *pg.Queries, tra
 			return nil, fmt.Errorf("items[%d]: failed to create transfer item: %w", i, err)
 		}
 
-		responses = append(responses, *toTransferItemResponse(item))
+		resp := toTransferItemResponse(item)
+		if resp != nil {
+			responses = append(responses, *resp)
+		}
 	}
 
 	for key := range touched {
-		if err := s.rebalanceTransferIngredientLedger(ctx, q, pgtype.UUID{Bytes: key.StorageID, Valid: true}, key.IngredientID); err != nil {
+		if err := s.rebalanceTransferIngredientLedger(
+			ctx,
+			q,
+			pgtype.UUID{Bytes: key.StorageID, Valid: true},
+			key.IngredientID,
+		); err != nil {
 			return nil, fmt.Errorf("failed to rebalance transfer ledger: %w", err)
 		}
 	}

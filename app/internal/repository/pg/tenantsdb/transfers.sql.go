@@ -52,6 +52,36 @@ func (q *Queries) AddStockByID(ctx context.Context, arg AddStockByIDParams) (Add
 	return i, err
 }
 
+const updateIngredientStockExplicit = `-- name: UpdateIngredientStockExplicit :one
+UPDATE ingredient_stock
+SET quantity = $2,
+    updated_at = NOW()
+WHERE id = $1
+  AND deleted_at = 0
+RETURNING id, ingredient_id, quantity, branch_id, storage_id, created_at, updated_at, deleted_at
+`
+
+type UpdateIngredientStockExplicitParams struct {
+	ID       uuid.UUID      `json:"id"`
+	Quantity pgtype.Numeric `json:"quantity"`
+}
+
+func (q *Queries) UpdateIngredientStockExplicit(ctx context.Context, arg UpdateIngredientStockExplicitParams) (AddStockByIDRow, error) {
+	row := q.db.QueryRow(ctx, updateIngredientStockExplicit, arg.ID, arg.Quantity)
+	var i AddStockByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.IngredientID,
+		&i.Quantity,
+		&i.BranchID,
+		&i.StorageID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
 const countTransfers = `-- name: CountTransfers :one
 SELECT COUNT(*) as count
 FROM transfers

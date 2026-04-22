@@ -39,6 +39,39 @@ func deductionEffectiveAt(ts pgtype.Timestamptz) *pgtype.Timestamptz {
 	return &effective
 }
 
+func deductionFreezeDate(d pgtype.Date, entityName string) (time.Time, error) {
+	if !d.Valid {
+		return time.Time{}, fmt.Errorf("%s date is required for inventory freeze check", entityName)
+	}
+	return d.Time, nil
+}
+
+func assertCanMutateDeductionCurrent(ctx context.Context, repo *repository.Repository, d pg.Deduction, entityName string) error {
+	effectiveAt, err := deductionFreezeDate(d.Date, entityName)
+	if err != nil {
+		return err
+	}
+	return assertCanMutateAfterInventory(ctx, repo, d.StorageID, effectiveAt, entityName)
+}
+
+func assertCanMutateDeductionTarget(ctx context.Context, repo *repository.Repository, storageID uuid.UUID, date pgtype.Date, entityName string) error {
+	effectiveAt, err := deductionFreezeDate(date, entityName)
+	if err != nil {
+		return err
+	}
+	return assertCanMutateAfterInventory(ctx, repo, storageID, effectiveAt, entityName)
+}
+
+func assertCanMutateDeductionChange(ctx context.Context, repo *repository.Repository, current pg.Deduction, targetStorage uuid.UUID, targetDate pgtype.Date, entityName string) error {
+	if err := assertCanMutateDeductionCurrent(ctx, repo, current, entityName); err != nil {
+		return err
+	}
+	if err := assertCanMutateDeductionTarget(ctx, repo, targetStorage, targetDate, entityName); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (s *DeductionS) rebalanceDeductionIngredientLedger(
 	ctx context.Context,
 	storageID pgtype.UUID,
@@ -737,6 +770,9 @@ func (s *DeductionS) CreateDeduction(ctx context.Context, req *model.CreateDeduc
 		return nil, fmt.Errorf("invalid storage_id: %w", err)
 	}
 	storagePg := pgtype.UUID{Bytes: storageUUID, Valid: true}
+	if err := assertCanMutateDeductionTarget(ctx, s.repo, storageUUID, pgtype.Date{Time: date, Valid: true}, "deduction"); err != nil {
+		return nil, err
+	}
 
 	actGroupPg := pgtype.UUID{Valid: false}
 	if req.ActGroupID != nil && *req.ActGroupID != "" {
@@ -1188,6 +1224,9 @@ func (s *DeductionS) UpdateDeduction(ctx context.Context, id string, req *model.
 		}
 	}
 
+	if err := assertCanMutateDeductionChange(ctx, s.repo, current, storageVal, dateVal, "deduction"); err != nil {
+		return nil, err
+	}
 	statusVal := current.Status
 	if req.Status != nil && *req.Status != "" {
 		newStatus := *req.Status
@@ -1197,33 +1236,42 @@ func (s *DeductionS) UpdateDeduction(ctx context.Context, id string, req *model.
 		if current.Status == "deleted" {
 			return nil, fmt.Errorf("cannot update a deleted deduction")
 		}
-		storagePg := pgtype.UUID{Bytes: current.StorageID, Valid: true}
-		_ = storagePg
-		if current.Status == "active" && newStatus == "draft" {
-			deductionDate := pgtype.Timestamptz{}
-			if current.Date.Valid {
-				deductionDate = pgtype.Timestamptz{Time: current.Date.Time.In(time.UTC), Valid: true}
-			}
-			if err := s.reverseAllDeductionStock(ctx, deductionID, current.StorageID, "deduction_draft_in", deductionDate); err != nil {
-				return nil, fmt.Errorf("failed to reverse stock: %w", err)
-			}
-		} else if current.Status == "draft" && newStatus == "active" {
-			items, err := s.repo.Tenant(ctx).GetDeductionItemsByDeductionID(ctx, deductionID)
-			if err != nil {
-				return nil, fmt.Errorf("failed to get deduction items: %w", err)
-			}
-			deductionDate := pgtype.Timestamptz{}
-			if current.Date.Valid {
-				deductionDate = pgtype.Timestamptz{Time: current.Date.Time.In(time.UTC), Valid: true}
-			}
-			sPg := pgtype.UUID{Bytes: current.StorageID, Valid: true}
-			for _, item := range items {
-				if _, _, err := s.applyDeductionItemStock(ctx, deductionID, sPg, item, deductionDate); err != nil {
-					return nil, fmt.Errorf("failed to apply stock: %w", err)
-				}
+		statusVal = newStatus
+	}
+
+	dateChanged := current.Date.Valid && dateVal.Valid && !current.Date.Time.Equal(dateVal.Time)
+	oldActive := current.Status == "active"
+	newActive := statusVal == "active"
+
+	// If old state affected stock, reverse using OLD date/storage.
+	if oldActive && (statusVal == "draft" || dateChanged) {
+		deductionDate := pgtype.Timestamptz{}
+		if current.Date.Valid {
+			deductionDate = pgtype.Timestamptz{Time: current.Date.Time.In(time.UTC), Valid: true}
+		}
+		if err := s.reverseAllDeductionStock(ctx, deductionID, current.StorageID, "deduction_updated_in", deductionDate); err != nil {
+			return nil, fmt.Errorf("failed to reverse stock: %w", err)
+		}
+	}
+
+	// If new state should affect stock, apply using NEW date/storage.
+	if newActive && (current.Status == "draft" || dateChanged) {
+		items, err := s.repo.Tenant(ctx).GetDeductionItemsByDeductionID(ctx, deductionID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get deduction items: %w", err)
+		}
+
+		newDeductionDate := pgtype.Timestamptz{}
+		if dateVal.Valid {
+			newDeductionDate = pgtype.Timestamptz{Time: dateVal.Time.In(time.UTC), Valid: true}
+		}
+
+		sPg := pgtype.UUID{Bytes: storageVal, Valid: true}
+		for _, item := range items {
+			if _, _, err := s.applyDeductionItemStock(ctx, deductionID, sPg, item, newDeductionDate); err != nil {
+				return nil, fmt.Errorf("failed to apply stock: %w", err)
 			}
 		}
-		statusVal = newStatus
 	}
 
 	_, err = s.repo.Tenant(ctx).UpdateDeduction(ctx, pg.UpdateDeductionParams{
@@ -1255,6 +1303,9 @@ func (s *DeductionS) DeleteDeduction(ctx context.Context, id string) error {
 	}
 	if deduction.DeletedAt > 0 {
 		return fmt.Errorf("deduction already deleted")
+	}
+	if err := assertCanMutateDeductionCurrent(ctx, s.repo, deduction, "deduction"); err != nil {
+		return err
 	}
 
 	if deduction.Status == "active" {
@@ -1326,11 +1377,23 @@ func (s *DeductionS) UpsertDeductionItems(ctx context.Context, id string, req *m
 	}
 	storagePg := pgtype.UUID{Bytes: storageID, Valid: true}
 
+	finalDate := deduction.Date
+	if req.Date != nil && *req.Date != "" {
+		dt, err := parseDateYYYYMMDD(*req.Date)
+		if err != nil {
+			return nil, fmt.Errorf("invalid date: %w", err)
+		}
+		finalDate = pgtype.Date{Time: dt, Valid: true}
+	}
+	if err := assertCanMutateDeductionChange(ctx, s.repo, deduction, storageID, finalDate, "deduction"); err != nil {
+		return nil, err
+	}
+
 	// Step 1: Reverse stock if was active (using OLD storage)
 	if oldStatus == "active" {
 		deductionDate := pgtype.Timestamptz{}
-		if deduction.Date.Valid {
-			deductionDate = pgtype.Timestamptz{Time: deduction.Date.Time.In(time.UTC), Valid: true}
+		if finalDate.Valid {
+			deductionDate = pgtype.Timestamptz{Time: finalDate.Time.In(time.UTC), Valid: true}
 		}
 		if err := s.reverseAllDeductionStock(ctx, deductionID, deduction.StorageID, "deduction_updated_in", deductionDate); err != nil {
 			return nil, fmt.Errorf("failed to reverse stock: %w", err)
@@ -1559,6 +1622,9 @@ func (s *DeductionS) DeleteDeductionItem(ctx context.Context, deductionID, itemI
 	deduction, err := s.repo.Tenant(ctx).GetDeductionByID(ctx, dedID)
 	if err != nil {
 		return nil, fmt.Errorf("deduction not found: %w", err)
+	}
+	if err := assertCanMutateDeductionCurrent(ctx, s.repo, deduction, "deduction item"); err != nil {
+		return nil, err
 	}
 
 	item, err := s.repo.Tenant(ctx).GetDeductionItemByID(ctx, itemUUID)
