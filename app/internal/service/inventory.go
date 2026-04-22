@@ -292,7 +292,7 @@ func (s *InventoryS) UpdateInventory(ctx context.Context, id string, req *model.
 	if err != nil {
 		return nil, fmt.Errorf("failed to get inventory: %w", err)
 	}
-	if err := assertCanMutateInventorySnapshot(ctx, s.repo, invForApply.StorageID, inventoryID, invFull.Date, "inventory"); err != nil {
+	if err := assertCanMutateInventorySnapshot(ctx, s.repo, invFull.StorageID, inventoryID, invFull.Date, "inventory"); err != nil {
 		return nil, err
 	}
 

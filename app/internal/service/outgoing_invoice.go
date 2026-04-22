@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"gitlab.yurtal.tech/company/maryai/back/internal/model"
@@ -60,10 +61,20 @@ func (s *OutgoingInvoiceS) CreateOutgoingInvoice(ctx context.Context, req *model
 		if err != nil {
 			return nil, fmt.Errorf("invalid group_id: %w", err)
 		}
+		if _, err := s.repo.Tenant(ctx).GetGroupTransactionByID(ctx, id); err != nil {
+			if err == pgx.ErrNoRows {
+				return nil, fmt.Errorf("group_id not found")
+			}
+			return nil, fmt.Errorf("failed to validate group_id: %w", err)
+		}
 		params.GroupID = pgtype.UUID{Bytes: id, Valid: true}
 	}
 
 	params.Description = req.Description
+
+	if err := assertCanMutateOutgoingInvoiceTarget(ctx, s.repo, params.StorageID, params.Date, "outgoing invoice"); err != nil {
+		return nil, err
+	}
 
 	row, err := s.repo.Tenant(ctx).CreateOutgoingInvoice(ctx, params)
 	if err != nil {
@@ -209,21 +220,64 @@ func (s *OutgoingInvoiceS) UpdateOutgoingInvoice(ctx context.Context, id string,
 	if err != nil {
 		return nil, fmt.Errorf("invalid invoice id: %w", err)
 	}
-	params := pg.UpdateOutgoingInvoiceParams{ID: invoiceID}
-	if req.Date != nil {
-		if t, err := time.Parse(time.RFC3339, *req.Date); err == nil {
-			params.Date = pgtype.Timestamp{Time: t, Valid: true}
-		}
+
+	current, err := s.repo.Tenant(ctx).GetOutgoingInvoiceByID(ctx, invoiceID)
+	if err != nil {
+		return nil, fmt.Errorf("outgoing invoice not found: %w", err)
 	}
-	if req.StorageID != nil {
-		if id2, err := uuid.Parse(*req.StorageID); err == nil {
-			params.StorageID = pgtype.UUID{Bytes: id2, Valid: true}
-		}
+
+	if current.Status == pg.OutgoingInvoiceStatusCancelled {
+		return nil, fmt.Errorf("cannot update a cancelled outgoing invoice")
 	}
-	if req.GroupID != nil {
-		if id2, err := uuid.Parse(*req.GroupID); err == nil {
-			params.GroupID = pgtype.UUID{Bytes: id2, Valid: true}
+
+	effectiveDate := current.Date
+	if req.Date != nil && *req.Date != "" {
+		t, err := time.Parse(time.RFC3339, *req.Date)
+		if err != nil {
+			t, err = time.Parse(time.RFC3339Nano, *req.Date)
+			if err != nil {
+				return nil, fmt.Errorf("invalid date: %w", err)
+			}
 		}
+		effectiveDate = pgtype.Timestamp{Time: t, Valid: true}
+	}
+
+	effectiveStorage := current.StorageID
+	if req.StorageID != nil && *req.StorageID != "" {
+		id2, err := uuid.Parse(*req.StorageID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid storage_id: %w", err)
+		}
+		effectiveStorage = pgtype.UUID{Bytes: id2, Valid: true}
+	}
+
+	if err := assertCanMutateOutgoingInvoiceChange(ctx, s.repo, current, effectiveStorage, effectiveDate, "outgoing invoice"); err != nil {
+		return nil, err
+	}
+
+	params := pg.UpdateOutgoingInvoiceParams{
+		ID: invoiceID,
+	}
+
+	if effectiveDate.Valid {
+		params.Date = effectiveDate
+	}
+	if effectiveStorage.Valid {
+		params.StorageID = effectiveStorage
+	}
+
+	if req.GroupID != nil && *req.GroupID != "" {
+		id2, err := uuid.Parse(*req.GroupID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid group_id: %w", err)
+		}
+		if _, err := s.repo.Tenant(ctx).GetGroupTransactionByID(ctx, id2); err != nil {
+			if err == pgx.ErrNoRows {
+				return nil, fmt.Errorf("group_id not found")
+			}
+			return nil, fmt.Errorf("failed to validate group_id: %w", err)
+		}
+		params.GroupID = pgtype.UUID{Bytes: id2, Valid: true}
 	}
 	params.Description = req.Description
 
@@ -231,6 +285,31 @@ func (s *OutgoingInvoiceS) UpdateOutgoingInvoice(ctx context.Context, id string,
 	if err != nil {
 		return nil, fmt.Errorf("failed to update outgoing invoice: %w", err)
 	}
+
+	sameStorage := current.StorageID.Valid == row.StorageID.Valid &&
+		(!current.StorageID.Valid || current.StorageID.Bytes == row.StorageID.Bytes)
+
+	dateChanged := current.Date.Valid &&
+		row.Date.Valid &&
+		!current.Date.Time.Equal(row.Date.Time)
+
+	if current.Status == pg.OutgoingInvoiceStatusActive && (!sameStorage || dateChanged) {
+		items, err := s.repo.Tenant(ctx).GetOutgoingInvoiceItemsByInvoiceID(ctx, invoiceID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get outgoing invoice items: %w", err)
+		}
+
+		if len(items) > 0 {
+			if err := s.reverseOutgoingInvoiceActiveStock(ctx, current, items, "outgoing_invoice_update_revert_in"); err != nil {
+				return nil, err
+			}
+
+			if err := s.applyOutgoingInvoiceActiveStock(ctx, row, items, "outgoing_invoice_update_out", true); err != nil {
+				return nil, err
+			}
+		}
+	}
+
 	return outgoingInvoiceToResponse(row), nil
 }
 
@@ -259,79 +338,11 @@ func (s *OutgoingInvoiceS) ConfirmOutgoingInvoice(ctx context.Context, id string
 		return nil, fmt.Errorf("invoice has no items")
 	}
 
-	storageID := invoice.StorageID
-	effectiveAt := outgoingInvoiceEffectiveAt(invoice.Date)
-
-	touched := make(map[outgoingTouchedKey]struct{})
-	srcType := "outgoing_invoice"
-	srcID := invoiceID
-	zero := inventoryZeroNumeric()
-
-	for _, item := range items {
-		stockID, err := s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
-			ID:           uuid.New(),
-			IngredientID: item.IngredientID,
-			StorageID:    storageID,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("failed to ensure stock row: %w", err)
-		}
-
-		locked, err := s.repo.Tenant(ctx).GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
-			IngredientID: item.IngredientID,
-			StorageID:    storageID,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("failed to lock stock row: %w", err)
-		}
-
-		updated, err := s.repo.Tenant(ctx).RemoveFromIngredientStock(ctx, pg.RemoveFromIngredientStockParams{
-			ID:       stockID,
-			Quantity: item.Quantity,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("failed to deduct stock: %w", err)
-		}
-
-		if _, err := s.repo.Tenant(ctx).UpdateOutgoingInvoiceItemStockSnapshot(ctx, pg.UpdateOutgoingInvoiceItemStockSnapshotParams{
-			ID:          item.ID,
-			StockBefore: locked.Quantity,
-			StockAfter:  updated.Quantity,
-		}); err != nil {
-			return nil, fmt.Errorf("failed to save stock snapshot: %w", err)
-		}
-
-		if shouldSkipStockMovement(zero, item.Quantity) {
-			continue
-		}
-
-		if err := s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
-			ID:           uuid.New(),
-			StorageID:    uuid.UUID(storageID.Bytes),
-			IngredientID: item.IngredientID,
-			EventType:    "outgoing_invoice_out",
-			QtyIn:        zero,
-			QtyOut:       item.Quantity,
-			StockBefore:  locked.Quantity,
-			StockAfter:   updated.Quantity,
-			PricePerUnit: item.PricePerUnit,
-			SourceType:   &srcType,
-			SourceID:     &srcID,
-			EffectiveAt:  effectiveAt,
-		}); err != nil {
-			return nil, fmt.Errorf("failed to log stock movement: %w", err)
-		}
-
-		touched[outgoingTouchedKey{
-			StorageID:    storageID.Bytes,
-			IngredientID: item.IngredientID,
-		}] = struct{}{}
+	if err := assertCanMutateOutgoingInvoiceCurrent(ctx, s.repo, invoice, "outgoing invoice"); err != nil {
+		return nil, err
 	}
-
-	for key := range touched {
-		if err := s.rebalanceOutgoingIngredientLedger(ctx, pgtype.UUID{Bytes: key.StorageID, Valid: true}, key.IngredientID); err != nil {
-			return nil, fmt.Errorf("failed to rebalance outgoing invoice ledger: %w", err)
-		}
+	if err := s.applyOutgoingInvoiceActiveStock(ctx, invoice, items, "outgoing_invoice_out", true); err != nil {
+		return nil, err
 	}
 
 	confirmed, err := s.repo.Tenant(ctx).ConfirmOutgoingInvoice(ctx, invoiceID)
@@ -347,6 +358,31 @@ func (s *OutgoingInvoiceS) CancelOutgoingInvoice(ctx context.Context, id string)
 		return nil, fmt.Errorf("invalid invoice id: %w", err)
 	}
 
+	invoice, err := s.repo.Tenant(ctx).GetOutgoingInvoiceByID(ctx, invoiceID)
+	if err != nil {
+		return nil, fmt.Errorf("outgoing invoice not found: %w", err)
+	}
+
+	if invoice.Status == pg.OutgoingInvoiceStatusCancelled {
+		return nil, fmt.Errorf("outgoing invoice is already cancelled")
+	}
+
+	if err := assertCanMutateOutgoingInvoiceCurrent(ctx, s.repo, invoice, "outgoing invoice"); err != nil {
+		return nil, err
+	}
+
+	if invoice.Status == pg.OutgoingInvoiceStatusActive {
+		items, err := s.repo.Tenant(ctx).GetOutgoingInvoiceItemsByInvoiceID(ctx, invoiceID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get items for stock reversal: %w", err)
+		}
+		if len(items) > 0 {
+			if err := s.reverseOutgoingInvoiceActiveStock(ctx, invoice, items, "outgoing_invoice_cancelled_in"); err != nil {
+				return nil, fmt.Errorf("failed to reverse stock: %w", err)
+			}
+		}
+	}
+
 	row, err := s.repo.Tenant(ctx).CancelOutgoingInvoice(ctx, invoiceID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to cancel outgoing invoice: %w", err)
@@ -354,6 +390,7 @@ func (s *OutgoingInvoiceS) CancelOutgoingInvoice(ctx context.Context, id string)
 
 	return outgoingInvoiceToResponse(row), nil
 }
+
 func (s *OutgoingInvoiceS) DeleteOutgoingInvoice(ctx context.Context, id string) error {
 	invoiceID, err := uuid.Parse(id)
 	if err != nil {
@@ -365,79 +402,19 @@ func (s *OutgoingInvoiceS) DeleteOutgoingInvoice(ctx context.Context, id string)
 		return fmt.Errorf("failed to get outgoing invoice: %w", err)
 	}
 
+	if err := assertCanMutateOutgoingInvoiceCurrent(ctx, s.repo, invoice, "outgoing invoice"); err != nil {
+		return err
+	}
+
 	if invoice.Status == "active" && invoice.StorageID.Valid {
 		items, err := s.repo.Tenant(ctx).GetOutgoingInvoiceItemsByInvoiceID(ctx, invoiceID)
 		if err != nil {
 			return fmt.Errorf("failed to get outgoing invoice items: %w", err)
 		}
 
-		storageID := invoice.StorageID
-		srcType := "outgoing_invoice_deleted"
-		zero := inventoryZeroNumeric()
-		effectiveAt := outgoingInvoiceEffectiveAt(invoice.Date)
-
-		touched := make(map[outgoingTouchedKey]struct{})
-
-		for _, item := range items {
-			if !item.StockBefore.Valid {
-				return fmt.Errorf("cannot reverse outgoing invoice item %s: stock snapshot is missing", item.ID.String())
-			}
-
-			stockID, err := s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
-				ID:           uuid.New(),
-				IngredientID: item.IngredientID,
-				StorageID:    storageID,
-			})
-			if err != nil {
-				return fmt.Errorf("failed to ensure stock row during outgoing invoice delete: %w", err)
-			}
-
-			locked, err := s.repo.Tenant(ctx).GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
-				IngredientID: item.IngredientID,
-				StorageID:    storageID,
-			})
-			if err != nil {
-				return fmt.Errorf("failed to lock stock row during outgoing invoice delete: %w", err)
-			}
-
-			updated, err := s.repo.Tenant(ctx).AddToIngredientStock(ctx, pg.AddToIngredientStockParams{
-				ID:       stockID,
-				Quantity: item.Quantity,
-			})
-			if err != nil {
-				return fmt.Errorf("failed to restore stock during outgoing invoice delete: %w", err)
-			}
-
-			if shouldSkipStockMovement(item.Quantity, zero) {
-				continue
-			}
-
-			if err := s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
-				ID:           uuid.New(),
-				StorageID:    uuid.UUID(storageID.Bytes),
-				IngredientID: item.IngredientID,
-				EventType:    "outgoing_invoice_deleted_in",
-				QtyIn:        item.Quantity,
-				QtyOut:       zero,
-				StockBefore:  locked.Quantity,
-				StockAfter:   updated.Quantity,
-				PricePerUnit: item.PricePerUnit,
-				SourceType:   &srcType,
-				SourceID:     &invoiceID,
-				EffectiveAt:  effectiveAt,
-			}); err != nil {
-				return fmt.Errorf("failed to log reverse stock movement during outgoing invoice delete: %w", err)
-			}
-
-			touched[outgoingTouchedKey{
-				StorageID:    storageID.Bytes,
-				IngredientID: item.IngredientID,
-			}] = struct{}{}
-		}
-
-		for key := range touched {
-			if err := s.rebalanceOutgoingIngredientLedger(ctx, pgtype.UUID{Bytes: key.StorageID, Valid: true}, key.IngredientID); err != nil {
-				return fmt.Errorf("failed to rebalance outgoing invoice delete ledger: %w", err)
+		if len(items) > 0 {
+			if err := s.reverseOutgoingInvoiceActiveStock(ctx, invoice, items, "outgoing_invoice_deleted_in"); err != nil {
+				return fmt.Errorf("failed to reverse stock for active invoice: %w", err)
 			}
 		}
 	}
@@ -454,6 +431,10 @@ func (s *OutgoingInvoiceS) UpsertOutgoingInvoiceItems(ctx context.Context, invoi
 	invoice, err := s.repo.Tenant(ctx).GetOutgoingInvoiceByID(ctx, iID)
 	if err != nil {
 		return nil, fmt.Errorf("outgoing invoice not found: %w", err)
+	}
+
+	if err := assertCanMutateOutgoingInvoiceCurrent(ctx, s.repo, invoice, "outgoing invoice items"); err != nil {
+		return nil, err
 	}
 
 	if invoice.Status != "draft" {
@@ -553,6 +534,10 @@ func (s *OutgoingInvoiceS) DeleteOutgoingInvoiceItem(ctx context.Context, itemID
 		return fmt.Errorf("outgoing invoice not found: %w", err)
 	}
 
+	if err := assertCanMutateOutgoingInvoiceCurrent(ctx, s.repo, invoice, "outgoing invoice item"); err != nil {
+		return err
+	}
+
 	if invoice.Status != "draft" {
 		return fmt.Errorf("can only delete items from a draft invoice")
 	}
@@ -624,6 +609,45 @@ func outgoingInvoiceToResponse(row pg.OutgoingInvoice) *model.OutgoingInvoiceRes
 		r.UpdatedAt = &t
 	}
 	return r
+}
+
+func outgoingInvoiceFreezeDate(ts pgtype.Timestamp, entityName string) (time.Time, error) {
+	if !ts.Valid {
+		return time.Time{}, fmt.Errorf("%s date is required for inventory freeze check", entityName)
+	}
+	return ts.Time, nil
+}
+
+func assertCanMutateOutgoingInvoiceCurrent(ctx context.Context, repo *repository.Repository, inv pg.OutgoingInvoice, entityName string) error {
+	if !inv.StorageID.Valid {
+		return nil
+	}
+	effectiveAt, err := outgoingInvoiceFreezeDate(inv.Date, entityName)
+	if err != nil {
+		return err
+	}
+	return assertCanMutateAfterInventory(ctx, repo, uuid.UUID(inv.StorageID.Bytes), effectiveAt, entityName)
+}
+
+func assertCanMutateOutgoingInvoiceTarget(ctx context.Context, repo *repository.Repository, storageID pgtype.UUID, invoiceDate pgtype.Timestamp, entityName string) error {
+	if !storageID.Valid {
+		return nil
+	}
+	effectiveAt, err := outgoingInvoiceFreezeDate(invoiceDate, entityName)
+	if err != nil {
+		return err
+	}
+	return assertCanMutateAfterInventory(ctx, repo, uuid.UUID(storageID.Bytes), effectiveAt, entityName)
+}
+
+func assertCanMutateOutgoingInvoiceChange(ctx context.Context, repo *repository.Repository, current pg.OutgoingInvoice, targetStorage pgtype.UUID, targetDate pgtype.Timestamp, entityName string) error {
+	if err := assertCanMutateOutgoingInvoiceCurrent(ctx, repo, current, entityName); err != nil {
+		return err
+	}
+	if err := assertCanMutateOutgoingInvoiceTarget(ctx, repo, targetStorage, targetDate, entityName); err != nil {
+		return err
+	}
+	return nil
 }
 
 func hideOutgoingDraftStockSnapshot(resp model.OutgoingInvoiceItemResponse, invoiceStatus pg.OutgoingInvoiceStatus) model.OutgoingInvoiceItemResponse {

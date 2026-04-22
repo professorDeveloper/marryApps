@@ -45,14 +45,37 @@ type GetIngredientInventoryStatusReportParams struct {
 	Offset       int32
 }
 
+const activeIngredientMovementsCTE = `
+active_movements AS (
+	SELECT m.*
+	FROM ingredient_stock_movements m
+	LEFT JOIN inventories inv ON m.source_type = 'inventory' AND m.source_id = inv.id
+	LEFT JOIN invoices i ON m.source_type = 'invoice' AND m.source_id = i.id
+	LEFT JOIN deductions d ON m.source_type = 'deduction' AND m.source_id = d.id
+	LEFT JOIN shipments s ON m.source_type = 'shipment' AND m.source_id = s.id
+	LEFT JOIN outgoing_invoices oi ON m.source_type = 'outgoing_invoice' AND m.source_id = oi.id
+	LEFT JOIN transfers t ON m.source_type = 'transfer' AND m.source_id = t.id
+	LEFT JOIN orders o ON m.source_type = 'order' AND m.source_id = o.id
+	LEFT JOIN separation_acts sa ON m.source_type = 'separation_act' AND m.source_id = sa.id
+	WHERE (m.source_type IS NULL)
+	   OR (m.source_type = 'inventory' AND inv.deleted_at = 0 AND inv.status = 'active')
+	   OR (m.source_type = 'invoice' AND i.deleted_at = 0 AND i.status = 'received')
+	   OR (m.source_type = 'deduction' AND d.deleted_at = 0 AND d.status = 'active')
+	   OR (m.source_type = 'shipment' AND s.deleted_at = 0 AND s.status = 'active')
+	   OR (m.source_type = 'outgoing_invoice' AND oi.deleted_at = 0 AND oi.status = 'active')
+	   OR (m.source_type = 'transfer' AND t.deleted_at = 0 AND t.status = 'active')
+	   OR (m.source_type = 'order' AND o.deleted_at = 0 AND o.status <> 'cancelled')
+	   OR (m.source_type = 'separation_act' AND sa.deleted_at = 0 AND sa.status = 'active')
+)`
+
 func (q *Queries) GetIngredientReport(ctx context.Context, arg GetIngredientReportParams) ([]IngredientReportRow, error) {
 	const sql = `
 WITH params AS (
 	SELECT $1::uuid AS storage_id, $2::timestamptz AS start_ts, $3::timestamptz AS end_ts, $4::uuid AS ingredient_id
-),
+), ` + activeIngredientMovementsCTE + `,
 base_ingredients AS (
 	SELECT DISTINCT m.ingredient_id
-	FROM ingredient_stock_movements m
+	FROM active_movements m
 	JOIN params p ON p.storage_id = m.storage_id
 	WHERE COALESCE(m.effective_at, m.created_at) <= p.end_ts
 		AND (p.ingredient_id IS NULL OR m.ingredient_id = p.ingredient_id)
@@ -63,7 +86,7 @@ begin_qty AS (
 		COALESCE(SUM(m.qty_in - m.qty_out), 0)::numeric(18,6) AS begin_qty
 	FROM base_ingredients bi
 	CROSS JOIN params p
-	LEFT JOIN ingredient_stock_movements m
+	LEFT JOIN active_movements m
 		ON m.ingredient_id = bi.ingredient_id
 		AND m.storage_id = p.storage_id
 		AND COALESCE(m.effective_at, m.created_at) < p.start_ts
@@ -75,7 +98,7 @@ end_qty AS (
 		COALESCE(SUM(m.qty_in - m.qty_out), 0)::numeric(18,6) AS end_qty
 	FROM base_ingredients bi
 	CROSS JOIN params p
-	LEFT JOIN ingredient_stock_movements m
+	LEFT JOIN active_movements m
 		ON m.ingredient_id = bi.ingredient_id
 		AND m.storage_id = p.storage_id
 		AND COALESCE(m.effective_at, m.created_at) < p.end_ts
@@ -88,7 +111,7 @@ sums AS (
 		COALESCE(SUM(m.qty_out), 0)::numeric(18,6) AS out_qty,
 		COALESCE(SUM(CASE WHEN m.event_type = 'inventory_shortage_out' THEN m.qty_out ELSE 0 END), 0)::numeric(18,6) AS shortage_qty,
 		COALESCE(SUM(CASE WHEN m.event_type = 'inventory_surplus_in' THEN m.qty_in ELSE 0 END), 0)::numeric(18,6) AS surplus_qty
-	FROM ingredient_stock_movements m
+	FROM active_movements m
 	JOIN params p ON p.storage_id = m.storage_id
 	WHERE COALESCE(m.effective_at, m.created_at) >= p.start_ts AND COALESCE(m.effective_at, m.created_at) < p.end_ts
 		AND (p.ingredient_id IS NULL OR m.ingredient_id = p.ingredient_id)
@@ -160,10 +183,10 @@ func (q *Queries) GetIngredientReportTotals(ctx context.Context, arg GetIngredie
 	const sql = `
 WITH params AS (
 	SELECT $1::uuid AS storage_id, $2::timestamptz AS start_ts, $3::timestamptz AS end_ts, $4::uuid AS ingredient_id
-),
+), ` + activeIngredientMovementsCTE + `,
 base_ingredients AS (
 	SELECT DISTINCT m.ingredient_id
-	FROM ingredient_stock_movements m
+	FROM active_movements m
 	JOIN params p ON p.storage_id = m.storage_id
 	WHERE COALESCE(m.effective_at, m.created_at) <= p.end_ts
 		AND (p.ingredient_id IS NULL OR m.ingredient_id = p.ingredient_id)
@@ -207,7 +230,7 @@ sums AS (
 		COALESCE(SUM(CASE WHEN m.event_type = 'manual_out' THEN (m.qty_out * m.price_per_unit) ELSE 0 END), 0)::numeric(18,2) AS manual_out_amount,
 		COALESCE(SUM(CASE WHEN m.event_type IN ('inventory_in', 'inventory_item_removed', 'inventory_item_deleted', 'manual_adjustment') THEN (m.qty_in * m.price_per_unit) ELSE 0 END), 0)::numeric(18,2) AS inventory_in_amount,
 		COALESCE(SUM(CASE WHEN m.event_type IN ('inventory_out', 'inventory_surplus_in', 'inventory_shortage_out') THEN (m.qty_out * m.price_per_unit) ELSE 0 END), 0)::numeric(18,2) AS inventory_out_amount
-	FROM ingredient_stock_movements m
+	FROM active_movements m
 	JOIN params p ON p.storage_id = m.storage_id
 	WHERE COALESCE(m.effective_at, m.created_at) >= p.start_ts AND COALESCE(m.effective_at, m.created_at) < p.end_ts
 		AND (p.ingredient_id IS NULL OR m.ingredient_id = p.ingredient_id)
@@ -237,10 +260,10 @@ func (q *Queries) GetIngredientInventoryStatusReport(ctx context.Context, arg Ge
 	const sql = `
 WITH params AS (
 	SELECT $1::uuid AS storage_id, $2::timestamptz AS end_ts, $3::uuid AS ingredient_id
-),
+), ` + activeIngredientMovementsCTE + `,
 base_ingredients AS (
 	SELECT DISTINCT m.ingredient_id
-	FROM ingredient_stock_movements m
+	FROM active_movements m
 	JOIN params p ON p.storage_id = m.storage_id
 	WHERE COALESCE(m.effective_at, m.created_at) <= p.end_ts
 		AND (p.ingredient_id IS NULL OR m.ingredient_id = p.ingredient_id)
@@ -250,7 +273,7 @@ last_inventory_event AS (
 		m.ingredient_id,
 		m.stock_after                           AS begin_qty,
 		COALESCE(m.effective_at, m.created_at)  AS anchor_ts
-	FROM ingredient_stock_movements m
+	FROM active_movements m
 	JOIN params p ON p.storage_id = m.storage_id
 	WHERE m.event_type IN ('inventory_surplus_in', 'inventory_shortage_out')
 		AND COALESCE(m.effective_at, m.created_at) <= p.end_ts
@@ -274,7 +297,7 @@ sums AS (
 		COALESCE(SUM(CASE WHEN m.event_type = 'inventory_surplus_in'  THEN m.qty_in  ELSE 0 END), 0)::numeric(18,6) AS surplus_qty
 	FROM anchors a
 	JOIN params  p ON TRUE
-	LEFT JOIN ingredient_stock_movements m
+	LEFT JOIN active_movements m
 		ON m.ingredient_id = a.ingredient_id
 		AND m.storage_id = p.storage_id
 		AND COALESCE(m.effective_at, m.created_at) > a.anchor_ts
@@ -346,10 +369,10 @@ func (q *Queries) GetIngredientInventoryStatusReportTotals(ctx context.Context, 
 	const sql = `
 WITH params AS (
 	SELECT $1::uuid AS storage_id, $2::timestamptz AS end_ts, $3::uuid AS ingredient_id
-),
+), ` + activeIngredientMovementsCTE + `,
 base_ingredients AS (
 	SELECT DISTINCT m.ingredient_id
-	FROM ingredient_stock_movements m
+	FROM active_movements m
 	JOIN params p ON p.storage_id = m.storage_id
 	WHERE COALESCE(m.effective_at, m.created_at) <= p.end_ts
 		AND (p.ingredient_id IS NULL OR m.ingredient_id = p.ingredient_id)
@@ -358,7 +381,7 @@ last_inventory_event AS (
 	SELECT DISTINCT ON (m.ingredient_id)
 		m.ingredient_id,
 		COALESCE(m.effective_at, m.created_at) AS anchor_ts
-	FROM ingredient_stock_movements m
+	FROM active_movements m
 	JOIN params p ON p.storage_id = m.storage_id
 	WHERE m.event_type IN ('inventory_surplus_in', 'inventory_shortage_out')
 		AND COALESCE(m.effective_at, m.created_at) <= p.end_ts
@@ -379,7 +402,7 @@ sums AS (
 		COALESCE(SUM(m.qty_out * m.price_per_unit), 0)::numeric(18,2) AS total_out_amount
 	FROM anchors a
 	JOIN params  p ON TRUE
-	LEFT JOIN ingredient_stock_movements m
+	LEFT JOIN active_movements m
 		ON m.ingredient_id = a.ingredient_id
 		AND m.storage_id = p.storage_id
 		AND COALESCE(m.effective_at, m.created_at) > a.anchor_ts

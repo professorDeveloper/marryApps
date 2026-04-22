@@ -51,6 +51,51 @@ func shipmentEffectiveAt(ts pgtype.Timestamptz) *pgtype.Timestamptz {
 	return &effective
 }
 
+func shipmentFreezeDate(ts pgtype.Timestamp, entityName string) (time.Time, error) {
+	if !ts.Valid {
+		return time.Time{}, fmt.Errorf("%s date is required for inventory freeze check", entityName)
+	}
+	return ts.Time, nil
+}
+
+func assertCanMutateShipmentCurrent(ctx context.Context, repo *repository.Repository, sh pg.Shipment, entityName string) error {
+	if !sh.StorageID.Valid {
+		return nil
+	}
+
+	effectiveAt, err := shipmentFreezeDate(sh.Date, entityName)
+	if err != nil {
+		return err
+	}
+
+	return assertCanMutateAfterInventory(ctx, repo, sh.StorageID.Bytes, effectiveAt, entityName)
+}
+
+func assertCanMutateShipmentTarget(ctx context.Context, repo *repository.Repository, storageID pgtype.UUID, shipmentDate pgtype.Timestamp, entityName string) error {
+	if !storageID.Valid {
+		return nil
+	}
+
+	effectiveAt, err := shipmentFreezeDate(shipmentDate, entityName)
+	if err != nil {
+		return err
+	}
+
+	return assertCanMutateAfterInventory(ctx, repo, storageID.Bytes, effectiveAt, entityName)
+}
+
+func assertCanMutateShipmentChange(ctx context.Context, repo *repository.Repository, current pg.Shipment, targetStorage pgtype.UUID, targetDate pgtype.Timestamp, entityName string) error {
+	if err := assertCanMutateShipmentCurrent(ctx, repo, current, entityName); err != nil {
+		return err
+	}
+
+	if err := assertCanMutateShipmentTarget(ctx, repo, targetStorage, targetDate, entityName); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (s *ShipmentS) rebalanceShipmentIngredientLedger(
 	ctx context.Context,
 	storageID pgtype.UUID,
@@ -140,6 +185,10 @@ func (s *ShipmentS) CreateShipment(ctx context.Context, req *model.CreateShipmen
 		if st == pg.ShipmentStatusActive || st == pg.ShipmentStatusDraft {
 			params.Column5 = st
 		}
+	}
+
+	if err := assertCanMutateShipmentTarget(ctx, s.repo, params.StorageID, params.Date, "shipment"); err != nil {
+		return nil, err
 	}
 
 	row, err := s.repo.Tenant(ctx).CreateShipment(ctx, params)
@@ -332,23 +381,56 @@ func (s *ShipmentS) UpdateShipment(ctx context.Context, id string, req *model.Up
 		return nil, fmt.Errorf("shipment not found: %w", err)
 	}
 
-	// Build update params for header fields only.
-	params := pg.UpdateShipmentParams{ID: shipmentID}
-
+	// Build effective target values first.
+	effectiveDate := current.Date
 	if req.Date != nil && strings.TrimSpace(*req.Date) != "" {
 		t, err := time.Parse(time.RFC3339, strings.TrimSpace(*req.Date))
 		if err != nil {
 			return nil, fmt.Errorf("invalid date: %w", err)
 		}
-		params.Date = pgtype.Timestamp{Time: t, Valid: true}
+		effectiveDate = pgtype.Timestamp{Time: t, Valid: true}
 	}
 
+	effectiveStorage := current.StorageID
 	if req.StorageID != nil && strings.TrimSpace(*req.StorageID) != "" {
 		stID, err := uuid.Parse(strings.TrimSpace(*req.StorageID))
 		if err != nil {
 			return nil, fmt.Errorf("invalid storage_id: %w", err)
 		}
-		params.StorageID = pgtype.UUID{Bytes: stID, Valid: true}
+		effectiveStorage = pgtype.UUID{Bytes: stID, Valid: true}
+	}
+
+	targetStatus := current.Status
+	if req.Status != nil && strings.TrimSpace(*req.Status) != "" {
+		targetStatus = pg.ShipmentStatus(strings.TrimSpace(*req.Status))
+	}
+
+	// Validate requested transition before any DB write.
+	if req.Status != nil && strings.TrimSpace(*req.Status) != "" {
+		switch {
+		case current.Status == pg.ShipmentStatusDraft && targetStatus == pg.ShipmentStatusActive:
+			// allowed
+		case current.Status == pg.ShipmentStatusActive && targetStatus == pg.ShipmentStatusDraft:
+			// allowed
+		case current.Status == targetStatus:
+			// no-op status update, allowed
+		default:
+			return nil, fmt.Errorf("invalid shipment status transition: %s -> %s", current.Status, targetStatus)
+		}
+	}
+
+	// Historical lock check for both current and target state.
+	if err := assertCanMutateShipmentChange(ctx, s.repo, current, effectiveStorage, effectiveDate, "shipment"); err != nil {
+		return nil, err
+	}
+
+	// Build update params for header fields only.
+	params := pg.UpdateShipmentParams{ID: shipmentID}
+	if effectiveDate.Valid {
+		params.Date = effectiveDate
+	}
+	if effectiveStorage.Valid {
+		params.StorageID = effectiveStorage
 	}
 
 	if req.SupplierID != nil && strings.TrimSpace(*req.SupplierID) != "" {
@@ -368,28 +450,12 @@ func (s *ShipmentS) UpdateShipment(ctx context.Context, id string, req *model.Up
 		return nil, fmt.Errorf("failed to update shipment: %w", err)
 	}
 
-	// Resolve target status after this request.
-	targetStatus := current.Status
-	if req.Status != nil && strings.TrimSpace(*req.Status) != "" {
-		targetStatus = pg.ShipmentStatus(strings.TrimSpace(*req.Status))
-	}
-
-	// Validate requested transition.
-	if req.Status != nil && strings.TrimSpace(*req.Status) != "" {
-		switch {
-		case current.Status == pg.ShipmentStatusDraft && targetStatus == pg.ShipmentStatusActive:
-			// allowed
-		case current.Status == pg.ShipmentStatusActive && targetStatus == pg.ShipmentStatusDraft:
-			// allowed
-		case current.Status == targetStatus:
-			// no-op status update, allowed
-		default:
-			return nil, fmt.Errorf("invalid shipment status transition: %s -> %s", current.Status, targetStatus)
-		}
-	}
-
 	sameStorage := current.StorageID.Valid == row.StorageID.Valid &&
 		(!current.StorageID.Valid || current.StorageID.Bytes == row.StorageID.Bytes)
+
+	dateChanged := current.Date.Valid &&
+		row.Date.Valid &&
+		!current.Date.Time.Equal(row.Date.Time)
 
 	switch {
 	// draft -> active
@@ -471,20 +537,47 @@ func (s *ShipmentS) UpdateShipment(ctx context.Context, id string, req *model.Up
 			}
 		}
 
-		// Reverse old storage contribution first.
 		if err := s.reverseStock(ctx, shipmentID, current.StorageID, "shipment_storage_change", oldShipmentDate); err != nil {
 			return nil, fmt.Errorf("failed to reverse old storage on shipment storage change: %w", err)
 		}
 
-		// Then deduct from the new storage.
 		if err := s.deductStock(ctx, shipmentID, row.StorageID, "shipment_storage_change_out", newShipmentDate); err != nil {
 			return nil, fmt.Errorf("failed to deduct new storage on shipment storage change: %w", err)
+		}
+
+	// active -> active with same storage but date change
+	case current.Status == pg.ShipmentStatusActive && targetStatus == pg.ShipmentStatusActive && sameStorage && dateChanged:
+		if !current.StorageID.Valid {
+			return nil, fmt.Errorf("current active shipment has no storage_id")
+		}
+
+		oldShipmentDate := pgtype.Timestamptz{}
+		if current.Date.Valid {
+			oldShipmentDate = pgtype.Timestamptz{
+				Time:  current.Date.Time.In(time.UTC),
+				Valid: true,
+			}
+		}
+
+		newShipmentDate := pgtype.Timestamptz{}
+		if row.Date.Valid {
+			newShipmentDate = pgtype.Timestamptz{
+				Time:  row.Date.Time.In(time.UTC),
+				Valid: true,
+			}
+		}
+
+		if err := s.reverseStock(ctx, shipmentID, current.StorageID, "shipment_date_change", oldShipmentDate); err != nil {
+			return nil, fmt.Errorf("failed to reverse old shipment date contribution: %w", err)
+		}
+
+		if err := s.deductStock(ctx, shipmentID, row.StorageID, "shipment_date_change_out", newShipmentDate); err != nil {
+			return nil, fmt.Errorf("failed to deduct shipment on new date: %w", err)
 		}
 	}
 
 	return shipmentToResponse(row), nil
 }
-
 func (s *ShipmentS) DeleteShipment(ctx context.Context, id string) error {
 	shipmentID, err := uuid.Parse(id)
 	if err != nil {
@@ -494,6 +587,9 @@ func (s *ShipmentS) DeleteShipment(ctx context.Context, id string) error {
 	shipment, err := s.repo.Tenant(ctx).GetShipmentByID(ctx, shipmentID)
 	if err != nil {
 		return fmt.Errorf("shipment not found: %w", err)
+	}
+	if err := assertCanMutateShipmentCurrent(ctx, s.repo, shipment, "shipment"); err != nil {
+		return err
 	}
 
 	// Reverse stock if active
@@ -519,6 +615,10 @@ func (s *ShipmentS) UpsertShipmentItems(ctx context.Context, shipmentID string, 
 	shipment, err := s.repo.Tenant(ctx).GetShipmentByID(ctx, sID)
 	if err != nil {
 		return nil, fmt.Errorf("shipment not found: %w", err)
+	}
+
+	if err := assertCanMutateShipmentCurrent(ctx, s.repo, shipment, "shipment items"); err != nil {
+		return nil, err
 	}
 
 	// active shipment uchun old qty map kerak
@@ -729,6 +829,10 @@ func (s *ShipmentS) DeleteShipmentItem(ctx context.Context, itemID string) error
 	shipment, err := s.repo.Tenant(ctx).GetShipmentByID(ctx, item.ShipmentID)
 	if err != nil {
 		return fmt.Errorf("failed to get shipment: %w", err)
+	}
+
+	if err := assertCanMutateShipmentCurrent(ctx, s.repo, shipment, "shipment item"); err != nil {
+		return err
 	}
 
 	// If shipment is active, reverse this item's stock contribution before deleting it.

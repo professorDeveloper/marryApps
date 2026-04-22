@@ -341,6 +341,14 @@ SELECT COUNT(*) FROM ingredient_stock
 WHERE ingredient_id = $1 AND deleted_at = 0
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;
 
+-- name: UpdateIngredientStockExplicit :one
+UPDATE ingredient_stocks
+SET quantity = $2,
+    updated_at = NOW()
+WHERE id = $1
+  AND deleted_at = 0
+RETURNING id, ingredient_id, storage_id, quantity, created_at, updated_at, deleted_at;
+
 -- ==================== WITH LANGUAGE QUERIES ====================
 
 -- name: GetIngredientGroupByIDWithLanguage :one

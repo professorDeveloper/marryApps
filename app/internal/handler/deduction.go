@@ -240,7 +240,7 @@ func (h *Handler) CreateDeduction(c echo.Context) error {
 	resp, err := h.service.Deduction().CreateDeduction(c.Request().Context(), &req)
 	if err != nil {
 		log.Printf("CreateDeduction failed: %v", err)
-		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to create deduction", "see logs for details", http.StatusInternalServerError))
+		return respondDomainError(c, "failed to create deduction", err)
 	}
 
 	return c.JSON(http.StatusCreated, model.NewSuccessResponse("Deduction created successfully", resp, http.StatusCreated))

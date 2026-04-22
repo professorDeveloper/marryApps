@@ -16,7 +16,9 @@ const cancelOutgoingInvoice = `-- name: CancelOutgoingInvoice :one
 UPDATE outgoing_invoices
 SET status     = 'cancelled',
     updated_at = NOW()
-WHERE id = $1 AND deleted_at = 0 AND status = 'draft'
+WHERE id = $1
+  AND deleted_at = 0
+  AND status IN ('draft', 'active')
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 RETURNING id, number, date, storage_id, group_id, branch_id, description, status, total_amount, created_at, updated_at, deleted_at
 `
@@ -149,7 +151,9 @@ const deleteOutgoingInvoice = `-- name: DeleteOutgoingInvoice :exec
 UPDATE outgoing_invoices
 SET deleted_at = EXTRACT(EPOCH FROM NOW())::BIGINT,
     updated_at = NOW()
-WHERE id = $1 AND deleted_at = 0 AND status = 'draft'
+WHERE id = $1
+  AND deleted_at = 0
+  AND status IN ('draft', 'active', 'cancelled')
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 `
 
@@ -364,7 +368,9 @@ SET date        = COALESCE($2, date),
     group_id    = COALESCE($4, group_id),
     description = COALESCE($5, description),
     updated_at  = NOW()
-WHERE id = $1 AND deleted_at = 0 AND status = 'draft'
+WHERE id = $1
+  AND deleted_at = 0
+  AND status IN ('draft', 'active')
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 RETURNING id, number, date, storage_id, group_id, branch_id, description, status, total_amount, created_at, updated_at, deleted_at
 `
