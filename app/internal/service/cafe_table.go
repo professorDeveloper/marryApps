@@ -245,18 +245,18 @@ func (s *CafeTableS) GetCafeTablesByStatus(ctx context.Context, status string, l
 		return nil, 0, fmt.Errorf("status is required")
 	}
 
-	nullStatus := pg.NullTableStatus{
-		TableStatus: pg.TableStatus(status),
-		Valid:       true,
+	status = strings.ToLower(strings.TrimSpace(status))
+	if status != "free" && status != "busy" {
+		return nil, 0, fmt.Errorf("invalid status: must be free or busy")
 	}
 
-	total, err := s.repo.Tenant(ctx).CountCafeTablesByStatus(ctx, nullStatus)
+	total, err := s.repo.Tenant(ctx).CountCafeTablesByStatus(ctx, status)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to count cafe tables by status: %w", err)
 	}
 
 	tables, err := s.repo.Tenant(ctx).GetCafeTablesByStatus(ctx, pg.GetCafeTablesByStatusParams{
-		Status: nullStatus,
+		Status: status,
 		Limit:  limit,
 		Offset: offset,
 	})
@@ -279,14 +279,14 @@ func (s *CafeTableS) GetCafeTablesByHallAndStatus(ctx context.Context, hallID, s
 		return nil, fmt.Errorf("invalid hall ID: %w", err)
 	}
 
-	nullStatus := pg.NullTableStatus{
-		TableStatus: pg.TableStatus(status),
-		Valid:       true,
+	status = strings.ToLower(strings.TrimSpace(status))
+	if status != "free" && status != "busy" {
+		return nil, fmt.Errorf("invalid status: must be free or busy")
 	}
 
 	tables, err := s.repo.Tenant(ctx).GetCafeTablesByHallAndStatus(ctx, pg.GetCafeTablesByHallAndStatusParams{
 		HallID: hID,
-		Status: nullStatus,
+		Status: status,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get cafe tables: %w", err)
@@ -415,10 +415,21 @@ func (s *CafeTableS) UpdateCafeTable(
 		updatedCapacity = *capacity
 	}
 
-	updatedStatus := currentTable.Status
+	currentStatus := strings.ToLower(strings.TrimSpace(string(currentTable.Status)))
+
+	updatedStatus := pg.NullTableStatus{
+		TableStatus: pg.TableStatus(currentStatus),
+		Valid:       currentStatus != "",
+	}
+
 	if status != nil && strings.TrimSpace(*status) != "" {
+		normalizedStatus := strings.ToLower(strings.TrimSpace(*status))
+		if normalizedStatus != "free" && normalizedStatus != "busy" {
+			return nil, fmt.Errorf("invalid status: must be free or busy")
+		}
+
 		updatedStatus = pg.NullTableStatus{
-			TableStatus: pg.TableStatus(strings.TrimSpace(*status)),
+			TableStatus: pg.TableStatus(normalizedStatus),
 			Valid:       true,
 		}
 	}
@@ -497,8 +508,12 @@ func (s *CafeTableS) UpdateCafeTable(
 
 // UpdateCafeTableStatus updates only the status of a cafe table
 func (s *CafeTableS) UpdateCafeTableStatus(ctx context.Context, tableID string, status string) (*model.CafeTableResponse, error) {
+	status = strings.ToLower(strings.TrimSpace(status))
 	if status == "" {
 		return nil, fmt.Errorf("status is required")
+	}
+	if status != "free" && status != "busy" {
+		return nil, fmt.Errorf("invalid status: must be free or busy")
 	}
 
 	id, err := uuid.Parse(tableID)
@@ -601,25 +616,38 @@ func (s *CafeTableS) GetTableOccupancyStats(ctx context.Context) (*model.TableOc
 // Helper function to convert database model to response model
 func toCafeTableResponse(table any) *model.CafeTableResponse {
 	extract := func(
-		id, hallID uuid.UUID,
-		number, capacity int32,
-		status pg.NullTableStatus,
+		id uuid.UUID,
+		hallID uuid.UUID,
+		number int32,
+		capacity int32,
+		status any,
 		tableType string,
-		posX, posY float64, width, height, rotation int32,
+		posX, posY float64,
+		width, height, rotation int32,
 		pricePerHour pgtype.Numeric,
-		createdAt, updatedAt pgtype.Timestamptz, shape string,
+		createdAt, updatedAt pgtype.Timestamptz,
+		shape string,
 	) *model.CafeTableResponse {
-		var ca, ua *time.Time
-		if createdAt.Valid {
-			ca = &createdAt.Time
-		}
-		if updatedAt.Valid {
-			ua = &updatedAt.Time
-		}
+		statusValue := model.TableStatusFree
 
-		s := model.TableStatusFree
-		if status.Valid {
-			s = model.TableStatus(status.TableStatus)
+		switch v := status.(type) {
+		case string:
+			s := strings.ToLower(strings.TrimSpace(v))
+			if s != "" {
+				statusValue = model.TableStatus(s)
+			}
+		case pg.TableStatus:
+			s := strings.ToLower(strings.TrimSpace(string(v)))
+			if s != "" {
+				statusValue = model.TableStatus(s)
+			}
+		case pg.NullTableStatus:
+			if v.Valid {
+				s := strings.ToLower(strings.TrimSpace(string(v.TableStatus)))
+				if s != "" {
+					statusValue = model.TableStatus(s)
+				}
+			}
 		}
 
 		var pph *string
@@ -628,12 +656,20 @@ func toCafeTableResponse(table any) *model.CafeTableResponse {
 			pph = &v
 		}
 
+		var ca, ua *time.Time
+		if createdAt.Valid {
+			ca = &createdAt.Time
+		}
+		if updatedAt.Valid {
+			ua = &updatedAt.Time
+		}
+
 		return &model.CafeTableResponse{
 			ID:           id.String(),
 			HallID:       hallID.String(),
 			Number:       number,
 			Capacity:     capacity,
-			Status:       s,
+			Status:       statusValue,
 			TableType:    tableType,
 			PosX:         posX,
 			PosY:         posY,

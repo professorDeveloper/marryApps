@@ -4,22 +4,79 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
 RETURNING id, hall_id, number, capacity, status, table_type, pos_x, pos_y, width, height, rotation, price_per_hour, shape, created_at, updated_at, deleted_at;
 
 -- name: GetCafeTableByID :one
-SELECT id, hall_id, number, capacity, status, table_type, pos_x, pos_y, width, height, rotation, price_per_hour, shape, created_at, updated_at, deleted_at
-FROM cafe_tables
-WHERE cafe_tables.id = $1 AND cafe_tables.deleted_at = 0
+SELECT
+    ct.id,
+    ct.hall_id,
+    ct.number,
+    ct.capacity,
+    CASE
+        WHEN EXISTS (
+            SELECT 1
+            FROM orders o
+            WHERE o.table_id = ct.id
+              AND o.order_type = 'dine_in'
+              AND o.status IN ('open', 'cooking', 'ready', 'served')
+              AND COALESCE(o.deleted_at, 0) = 0
+              AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+        ) THEN 'busy'::table_status
+        ELSE 'free'::table_status
+    END AS status,
+    ct.table_type,
+    ct.pos_x,
+    ct.pos_y,
+    ct.width,
+    ct.height,
+    ct.rotation,
+    ct.price_per_hour,
+    ct.shape,
+    ct.created_at,
+    ct.updated_at,
+    ct.deleted_at
+FROM cafe_tables ct
+WHERE ct.id = $1
+  AND ct.deleted_at = 0
   AND EXISTS (
     SELECT 1 FROM halls h
-    WHERE h.id = cafe_tables.hall_id
+    WHERE h.id = ct.hall_id
       AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   );
 
 -- name: GetCafeTableByNumber :one
-SELECT id, hall_id, number, capacity, status, table_type, pos_x, pos_y, width, height, rotation, price_per_hour, shape, created_at, updated_at, deleted_at
-FROM cafe_tables
-WHERE cafe_tables.hall_id = $1 AND cafe_tables.number = $2 AND cafe_tables.deleted_at = 0
+SELECT
+    ct.id,
+    ct.hall_id,
+    ct.number,
+    ct.capacity,
+    CASE
+        WHEN EXISTS (
+            SELECT 1
+            FROM orders o
+            WHERE o.table_id = ct.id
+              AND o.order_type = 'dine_in'
+              AND o.status IN ('open', 'cooking', 'ready', 'served')
+              AND COALESCE(o.deleted_at, 0) = 0
+              AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+        ) THEN 'busy'::table_status
+        ELSE 'free'::table_status
+    END AS status,
+    ct.table_type,
+    ct.pos_x,
+    ct.pos_y,
+    ct.width,
+    ct.height,
+    ct.rotation,
+    ct.price_per_hour,
+    ct.shape,
+    ct.created_at,
+    ct.updated_at,
+    ct.deleted_at
+FROM cafe_tables ct
+WHERE ct.hall_id = $1
+  AND ct.number = $2
+  AND ct.deleted_at = 0
   AND EXISTS (
     SELECT 1 FROM halls h
-    WHERE h.id = cafe_tables.hall_id
+    WHERE h.id = ct.hall_id
       AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   );
 
@@ -29,7 +86,18 @@ SELECT
     ct.hall_id,
     ct.number,
     ct.capacity,
-    ct.status,
+    CASE
+        WHEN EXISTS (
+            SELECT 1
+            FROM orders o
+            WHERE o.table_id = ct.id
+              AND o.order_type = 'dine_in'
+              AND o.status IN ('open', 'cooking', 'ready', 'served')
+              AND COALESCE(o.deleted_at, 0) = 0
+              AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+        ) THEN 'busy'::table_status
+        ELSE 'free'::table_status
+    END AS status,
     ct.pos_x,
     ct.pos_y,
     ct.width,
@@ -59,7 +127,20 @@ WHERE ct.deleted_at = 0
       )
   AND (
         sqlc.arg('status')::text = ''
-        OR ct.status::text = sqlc.arg('status')::text
+        OR (
+            CASE
+                WHEN EXISTS (
+                    SELECT 1
+                    FROM orders o
+                    WHERE o.table_id = ct.id
+                      AND o.order_type = 'dine_in'
+                      AND o.status IN ('open', 'cooking', 'ready', 'served')
+                      AND COALESCE(o.deleted_at, 0) = 0
+                      AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+                ) THEN 'busy'
+                ELSE 'free'
+            END
+        ) = sqlc.arg('status')::text
       )
   AND (
       sqlc.arg('table_type')::text = ''
@@ -106,7 +187,20 @@ WHERE ct.deleted_at = 0
       )
   AND (
         sqlc.arg('status')::text = ''
-        OR ct.status::text = sqlc.arg('status')::text
+        OR (
+            CASE
+                WHEN EXISTS (
+                    SELECT 1
+                    FROM orders o
+                    WHERE o.table_id = ct.id
+                      AND o.order_type = 'dine_in'
+                      AND o.status IN ('open', 'cooking', 'ready', 'served')
+                      AND COALESCE(o.deleted_at, 0) = 0
+                      AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+                ) THEN 'busy'
+                ELSE 'free'
+            END
+        ) = sqlc.arg('status')::text
       )
   AND (
       sqlc.arg('table_type')::text = ''
@@ -114,49 +208,188 @@ WHERE ct.deleted_at = 0
     );
 
 -- name: GetCafeTablesByHallID :many
-SELECT id, hall_id, number, capacity, status, table_type, pos_x, pos_y, width, height, rotation, price_per_hour, shape, created_at, updated_at, deleted_at
-FROM cafe_tables
-WHERE cafe_tables.hall_id = $1 AND cafe_tables.deleted_at = 0
+SELECT
+    ct.id,
+    ct.hall_id,
+    ct.number,
+    ct.capacity,
+    CASE
+        WHEN EXISTS (
+            SELECT 1
+            FROM orders o
+            WHERE o.table_id = ct.id
+              AND o.order_type = 'dine_in'
+              AND o.status IN ('open', 'cooking', 'ready', 'served')
+              AND COALESCE(o.deleted_at, 0) = 0
+              AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+        ) THEN 'busy'::table_status
+        ELSE 'free'::table_status
+    END AS status,
+    ct.table_type,
+    ct.pos_x,
+    ct.pos_y,
+    ct.width,
+    ct.height,
+    ct.rotation,
+    ct.price_per_hour,
+    ct.shape,
+    ct.created_at,
+    ct.updated_at,
+    ct.deleted_at
+FROM cafe_tables ct
+WHERE ct.hall_id = $1
+  AND ct.deleted_at = 0
   AND EXISTS (
     SELECT 1 FROM halls h
-    WHERE h.id = cafe_tables.hall_id
+    WHERE h.id = ct.hall_id
       AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
-ORDER BY number ASC;
+ORDER BY ct.number ASC;
 
 -- name: GetCafeTablesByStatus :many
-SELECT id, hall_id, number, capacity, status, table_type, pos_x, pos_y, width, height, rotation, price_per_hour, shape, created_at, updated_at, deleted_at
-FROM cafe_tables
-WHERE cafe_tables.status = $1 AND cafe_tables.deleted_at = 0
+SELECT
+    ct.id,
+    ct.hall_id,
+    ct.number,
+    ct.capacity,
+    CASE
+        WHEN EXISTS (
+            SELECT 1
+            FROM orders o
+            WHERE o.table_id = ct.id
+              AND o.order_type = 'dine_in'
+              AND o.status IN ('open', 'cooking', 'ready', 'served')
+              AND COALESCE(o.deleted_at, 0) = 0
+              AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+        ) THEN 'busy'
+        ELSE 'free'
+    END AS status,
+    ct.table_type,
+    ct.pos_x,
+    ct.pos_y,
+    ct.width,
+    ct.height,
+    ct.rotation,
+    ct.price_per_hour,
+    ct.shape,
+    ct.created_at,
+    ct.updated_at,
+    ct.deleted_at
+FROM cafe_tables ct
+WHERE (
+        CASE
+            WHEN EXISTS (
+                SELECT 1
+                FROM orders o
+                WHERE o.table_id = ct.id
+                  AND o.order_type = 'dine_in'
+                  AND o.status IN ('open', 'cooking', 'ready', 'served')
+                  AND COALESCE(o.deleted_at, 0) = 0
+                  AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+            ) THEN 'busy'
+            ELSE 'free'
+        END
+      ) = sqlc.arg('status')::text
+  AND ct.deleted_at = 0
   AND EXISTS (
     SELECT 1 FROM halls h
-    WHERE h.id = cafe_tables.hall_id
+    WHERE h.id = ct.hall_id
       AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
-ORDER BY hall_id ASC, number ASC
-LIMIT $2 OFFSET $3;
+ORDER BY ct.hall_id ASC, ct.number ASC
+LIMIT sqlc.arg('limit')::int OFFSET sqlc.arg('offset')::int;
 
 -- name: GetCafeTablesByHallAndStatus :many
-SELECT id, hall_id, number, capacity, status, table_type, pos_x, pos_y, width, height, rotation, price_per_hour, shape, created_at, updated_at, deleted_at
-FROM cafe_tables
-WHERE cafe_tables.hall_id = $1 AND cafe_tables.status = $2 AND cafe_tables.deleted_at = 0
+SELECT
+    ct.id,
+    ct.hall_id,
+    ct.number,
+    ct.capacity,
+    CASE
+        WHEN EXISTS (
+            SELECT 1
+            FROM orders o
+            WHERE o.table_id = ct.id
+              AND o.order_type = 'dine_in'
+              AND o.status IN ('open', 'cooking', 'ready', 'served')
+              AND COALESCE(o.deleted_at, 0) = 0
+              AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+        ) THEN 'busy'
+        ELSE 'free'
+    END AS status,
+    ct.table_type,
+    ct.pos_x,
+    ct.pos_y,
+    ct.width,
+    ct.height,
+    ct.rotation,
+    ct.price_per_hour,
+    ct.shape,
+    ct.created_at,
+    ct.updated_at,
+    ct.deleted_at
+FROM cafe_tables ct
+WHERE ct.hall_id = sqlc.arg('hall_id')::uuid
+  AND (
+        CASE
+            WHEN EXISTS (
+                SELECT 1
+                FROM orders o
+                WHERE o.table_id = ct.id
+                  AND o.order_type = 'dine_in'
+                  AND o.status IN ('open', 'cooking', 'ready', 'served')
+                  AND COALESCE(o.deleted_at, 0) = 0
+                  AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+            ) THEN 'busy'
+            ELSE 'free'
+        END
+      ) = sqlc.arg('status')::text
+  AND ct.deleted_at = 0
   AND EXISTS (
     SELECT 1 FROM halls h
-    WHERE h.id = cafe_tables.hall_id
+    WHERE h.id = ct.hall_id
       AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
-ORDER BY number ASC;
+ORDER BY ct.number ASC;
 
 -- name: GetCafeTablesByCapacity :many
-SELECT id, hall_id, number, capacity, status, table_type, pos_x, pos_y, width, height, rotation, price_per_hour, shape, created_at, updated_at, deleted_at
-FROM cafe_tables
-WHERE cafe_tables.capacity >= $1 AND cafe_tables.deleted_at = 0
+SELECT
+    ct.id,
+    ct.hall_id,
+    ct.number,
+    ct.capacity,
+    CASE
+        WHEN EXISTS (
+            SELECT 1
+            FROM orders o
+            WHERE o.table_id = ct.id
+              AND o.order_type = 'dine_in'
+              AND o.status IN ('open', 'cooking', 'ready', 'served')
+              AND COALESCE(o.deleted_at, 0) = 0
+              AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+        ) THEN 'busy'::table_status
+        ELSE 'free'::table_status
+    END AS status,
+    ct.table_type,
+    ct.pos_x,
+    ct.pos_y,
+    ct.width,
+    ct.height,
+    ct.rotation,
+    ct.price_per_hour,
+    ct.shape,
+    ct.created_at,
+    ct.updated_at,
+    ct.deleted_at
+FROM cafe_tables ct
+WHERE ct.capacity >= $1
+  AND ct.deleted_at = 0
   AND EXISTS (
     SELECT 1 FROM halls h
-    WHERE h.id = cafe_tables.hall_id
+    WHERE h.id = ct.hall_id
       AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
-ORDER BY capacity ASC, number ASC
+ORDER BY ct.capacity ASC, ct.number ASC
 LIMIT $2 OFFSET $3;
 
 -- name: UpdateCafeTable :one
@@ -248,24 +481,53 @@ WHERE cafe_tables.hall_id = $1 AND cafe_tables.deleted_at = 0
   );
 
 -- name: CountCafeTablesByStatus :one
-SELECT COUNT(*) FROM cafe_tables
-WHERE cafe_tables.status = $1 AND cafe_tables.deleted_at = 0
+SELECT COUNT(*)
+FROM cafe_tables ct
+WHERE (
+        CASE
+            WHEN EXISTS (
+                SELECT 1
+                FROM orders o
+                WHERE o.table_id = ct.id
+                  AND o.order_type = 'dine_in'
+                  AND o.status IN ('open', 'cooking', 'ready', 'served')
+                  AND COALESCE(o.deleted_at, 0) = 0
+                  AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+            ) THEN 'busy'
+            ELSE 'free'
+        END
+      ) = sqlc.arg('status')::text
+  AND ct.deleted_at = 0
   AND EXISTS (
     SELECT 1 FROM halls h
-    WHERE h.id = cafe_tables.hall_id
+    WHERE h.id = ct.hall_id
       AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   );
 
 -- name: CountCafeTablesByHallAndStatus :one
-SELECT COUNT(*) FROM cafe_tables
-WHERE cafe_tables.hall_id = $1 AND cafe_tables.status = $2 AND cafe_tables.deleted_at = 0
+SELECT COUNT(*)
+FROM cafe_tables ct
+WHERE ct.hall_id = sqlc.arg('hall_id')::uuid
+  AND (
+        CASE
+            WHEN EXISTS (
+                SELECT 1
+                FROM orders o
+                WHERE o.table_id = ct.id
+                  AND o.order_type = 'dine_in'
+                  AND o.status IN ('open', 'cooking', 'ready', 'served')
+                  AND COALESCE(o.deleted_at, 0) = 0
+                  AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+            ) THEN 'busy'
+            ELSE 'free'
+        END
+      ) = sqlc.arg('status')::text
+  AND ct.deleted_at = 0
   AND EXISTS (
     SELECT 1 FROM halls h
-    WHERE h.id = cafe_tables.hall_id
+    WHERE h.id = ct.hall_id
       AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   );
-
-
 
 -- name: GetCafeTableWithHall :one
 SELECT 
@@ -273,7 +535,18 @@ SELECT
     ct.hall_id,
     ct.number,
     ct.capacity,
-    ct.status,
+    CASE
+        WHEN EXISTS (
+            SELECT 1
+            FROM orders o
+            WHERE o.table_id = ct.id
+              AND o.order_type = 'dine_in'
+              AND o.status IN ('open', 'cooking', 'ready', 'served')
+              AND COALESCE(o.deleted_at, 0) = 0
+              AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+        ) THEN 'busy'::table_status
+        ELSE 'free'::table_status
+    END AS status,
     ct.pos_x,
     ct.pos_y,
     ct.width,
@@ -288,7 +561,8 @@ SELECT
 FROM cafe_tables ct
 LEFT JOIN halls h ON ct.hall_id = h.id AND h.deleted_at = 0
 LEFT JOIN branches b ON h.branch_id = b.id AND b.deleted_at = 0
-WHERE ct.id = $1 AND ct.deleted_at = 0
+WHERE ct.id = $1
+  AND ct.deleted_at = 0
   AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;
 
 
@@ -364,12 +638,81 @@ ORDER BY capacity ASC, number ASC;
 -- name: GetTableOccupancyStats :one
 SELECT 
     COUNT(*) as total_tables,
-    SUM(CASE WHEN status = 'free' THEN 1 ELSE 0 END) as free_tables,
-    SUM(CASE WHEN status = 'busy' THEN 1 ELSE 0 END) as busy_tables,
-    SUM(CASE WHEN status = 'free' THEN 1 ELSE 0 END)::FLOAT / NULLIF(COUNT(*), 0) * 100 as free_percentage,
-    SUM(CASE WHEN status = 'busy' THEN 1 ELSE 0 END)::FLOAT / NULLIF(COUNT(*), 0) * 100 as busy_percentage,
+    SUM(
+        CASE
+            WHEN EXISTS (
+                SELECT 1
+                FROM orders o
+                WHERE o.table_id = cafe_tables.id
+                  AND o.order_type = 'dine_in'
+                  AND o.status IN ('open', 'cooking', 'ready', 'served')
+                  AND COALESCE(o.deleted_at, 0) = 0
+                  AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+            ) THEN 0
+            ELSE 1
+        END
+    ) as free_tables,
+    SUM(
+        CASE
+            WHEN EXISTS (
+                SELECT 1
+                FROM orders o
+                WHERE o.table_id = cafe_tables.id
+                  AND o.order_type = 'dine_in'
+                  AND o.status IN ('open', 'cooking', 'ready', 'served')
+                  AND COALESCE(o.deleted_at, 0) = 0
+                  AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+            ) THEN 1
+            ELSE 0
+        END
+    ) as busy_tables,
+    (
+        SUM(
+            CASE
+                WHEN EXISTS (
+                    SELECT 1
+                    FROM orders o
+                    WHERE o.table_id = cafe_tables.id
+                      AND o.order_type = 'dine_in'
+                      AND o.status IN ('open', 'cooking', 'ready', 'served')
+                      AND COALESCE(o.deleted_at, 0) = 0
+                      AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+                ) THEN 0
+                ELSE 1
+            END
+        )::FLOAT / NULLIF(COUNT(*), 0) * 100
+    ) as free_percentage,
+    (
+        SUM(
+            CASE
+                WHEN EXISTS (
+                    SELECT 1
+                    FROM orders o
+                    WHERE o.table_id = cafe_tables.id
+                      AND o.order_type = 'dine_in'
+                      AND o.status IN ('open', 'cooking', 'ready', 'served')
+                      AND COALESCE(o.deleted_at, 0) = 0
+                      AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+                ) THEN 1
+                ELSE 0
+            END
+        )::FLOAT / NULLIF(COUNT(*), 0) * 100
+    ) as busy_percentage,
     SUM(capacity) as total_capacity,
-    SUM(CASE WHEN status = 'free' THEN capacity ELSE 0 END) as available_seats
+    SUM(
+        CASE
+            WHEN EXISTS (
+                SELECT 1
+                FROM orders o
+                WHERE o.table_id = cafe_tables.id
+                  AND o.order_type = 'dine_in'
+                  AND o.status IN ('open', 'cooking', 'ready', 'served')
+                  AND COALESCE(o.deleted_at, 0) = 0
+                  AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+            ) THEN 0
+            ELSE capacity
+        END
+    ) as available_seats
 FROM cafe_tables
 WHERE cafe_tables.deleted_at = 0
   AND EXISTS (

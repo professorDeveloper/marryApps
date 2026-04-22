@@ -32,7 +32,20 @@ WHERE ct.deleted_at = 0
       )
   AND (
         $3::text = ''
-        OR ct.status::text = $3::text
+        OR (
+            CASE
+                WHEN EXISTS (
+                    SELECT 1
+                    FROM orders o
+                    WHERE o.table_id = ct.id
+                      AND o.order_type = 'dine_in'
+                      AND o.status IN ('open', 'cooking', 'ready', 'served')
+                      AND COALESCE(o.deleted_at, 0) = 0
+                      AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+                ) THEN 'busy'
+                ELSE 'free'
+            END
+        ) = $3::text
       )
   AND (
       $4::text = ''
@@ -77,18 +90,34 @@ func (q *Queries) CountCafeTablesByHall(ctx context.Context, hallID uuid.UUID) (
 }
 
 const countCafeTablesByHallAndStatus = `-- name: CountCafeTablesByHallAndStatus :one
-SELECT COUNT(*) FROM cafe_tables
-WHERE cafe_tables.hall_id = $1 AND cafe_tables.status = $2 AND cafe_tables.deleted_at = 0
+SELECT COUNT(*)
+FROM cafe_tables ct
+WHERE ct.hall_id = $1::uuid
+  AND (
+        CASE
+            WHEN EXISTS (
+                SELECT 1
+                FROM orders o
+                WHERE o.table_id = ct.id
+                  AND o.order_type = 'dine_in'
+                  AND o.status IN ('open', 'cooking', 'ready', 'served')
+                  AND COALESCE(o.deleted_at, 0) = 0
+                  AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+            ) THEN 'busy'
+            ELSE 'free'
+        END
+      ) = $2::text
+  AND ct.deleted_at = 0
   AND EXISTS (
     SELECT 1 FROM halls h
-    WHERE h.id = cafe_tables.hall_id
+    WHERE h.id = ct.hall_id
       AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
 `
 
 type CountCafeTablesByHallAndStatusParams struct {
-	HallID uuid.UUID       `json:"hall_id"`
-	Status NullTableStatus `json:"status"`
+	HallID uuid.UUID `json:"hall_id"`
+	Status string    `json:"status"`
 }
 
 func (q *Queries) CountCafeTablesByHallAndStatus(ctx context.Context, arg CountCafeTablesByHallAndStatusParams) (int64, error) {
@@ -99,16 +128,31 @@ func (q *Queries) CountCafeTablesByHallAndStatus(ctx context.Context, arg CountC
 }
 
 const countCafeTablesByStatus = `-- name: CountCafeTablesByStatus :one
-SELECT COUNT(*) FROM cafe_tables
-WHERE cafe_tables.status = $1 AND cafe_tables.deleted_at = 0
+SELECT COUNT(*)
+FROM cafe_tables ct
+WHERE (
+        CASE
+            WHEN EXISTS (
+                SELECT 1
+                FROM orders o
+                WHERE o.table_id = ct.id
+                  AND o.order_type = 'dine_in'
+                  AND o.status IN ('open', 'cooking', 'ready', 'served')
+                  AND COALESCE(o.deleted_at, 0) = 0
+                  AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+            ) THEN 'busy'
+            ELSE 'free'
+        END
+      ) = $1::text
+  AND ct.deleted_at = 0
   AND EXISTS (
     SELECT 1 FROM halls h
-    WHERE h.id = cafe_tables.hall_id
+    WHERE h.id = ct.hall_id
       AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
 `
 
-func (q *Queries) CountCafeTablesByStatus(ctx context.Context, status NullTableStatus) (int64, error) {
+func (q *Queries) CountCafeTablesByStatus(ctx context.Context, status string) (int64, error) {
 	row := q.db.QueryRow(ctx, countCafeTablesByStatus, status)
 	var count int64
 	err := row.Scan(&count)
@@ -216,7 +260,18 @@ SELECT
     ct.hall_id,
     ct.number,
     ct.capacity,
-    ct.status,
+    CASE
+        WHEN EXISTS (
+            SELECT 1
+            FROM orders o
+            WHERE o.table_id = ct.id
+              AND o.order_type = 'dine_in'
+              AND o.status IN ('open', 'cooking', 'ready', 'served')
+              AND COALESCE(o.deleted_at, 0) = 0
+              AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+        ) THEN 'busy'::table_status
+        ELSE 'free'::table_status
+    END AS status,
     ct.pos_x,
     ct.pos_y,
     ct.width,
@@ -246,7 +301,20 @@ WHERE ct.deleted_at = 0
       )
   AND (
         $3::text = ''
-        OR ct.status::text = $3::text
+        OR (
+            CASE
+                WHEN EXISTS (
+                    SELECT 1
+                    FROM orders o
+                    WHERE o.table_id = ct.id
+                      AND o.order_type = 'dine_in'
+                      AND o.status IN ('open', 'cooking', 'ready', 'served')
+                      AND COALESCE(o.deleted_at, 0) = 0
+                      AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+                ) THEN 'busy'
+                ELSE 'free'
+            END
+        ) = $3::text
       )
   AND (
       $4::text = ''
@@ -290,7 +358,7 @@ type GetAllCafeTablesRow struct {
 	HallID       uuid.UUID          `json:"hall_id"`
 	Number       int32              `json:"number"`
 	Capacity     int32              `json:"capacity"`
-	Status       NullTableStatus    `json:"status"`
+	Status       TableStatus        `json:"status"`
 	PosX         float64            `json:"pos_x"`
 	PosY         float64            `json:"pos_y"`
 	Width        int32              `json:"width"`
@@ -601,12 +669,40 @@ func (q *Queries) GetAvailableTablesByHallAndCapacity(ctx context.Context, arg G
 }
 
 const getCafeTableByID = `-- name: GetCafeTableByID :one
-SELECT id, hall_id, number, capacity, status, table_type, pos_x, pos_y, width, height, rotation, price_per_hour, shape, created_at, updated_at, deleted_at
-FROM cafe_tables
-WHERE cafe_tables.id = $1 AND cafe_tables.deleted_at = 0
+SELECT
+    ct.id,
+    ct.hall_id,
+    ct.number,
+    ct.capacity,
+    CASE
+        WHEN EXISTS (
+            SELECT 1
+            FROM orders o
+            WHERE o.table_id = ct.id
+              AND o.order_type = 'dine_in'
+              AND o.status IN ('open', 'cooking', 'ready', 'served')
+              AND COALESCE(o.deleted_at, 0) = 0
+              AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+        ) THEN 'busy'::table_status
+        ELSE 'free'::table_status
+    END AS status,
+    ct.table_type,
+    ct.pos_x,
+    ct.pos_y,
+    ct.width,
+    ct.height,
+    ct.rotation,
+    ct.price_per_hour,
+    ct.shape,
+    ct.created_at,
+    ct.updated_at,
+    ct.deleted_at
+FROM cafe_tables ct
+WHERE ct.id = $1
+  AND ct.deleted_at = 0
   AND EXISTS (
     SELECT 1 FROM halls h
-    WHERE h.id = cafe_tables.hall_id
+    WHERE h.id = ct.hall_id
       AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
 `
@@ -616,7 +712,7 @@ type GetCafeTableByIDRow struct {
 	HallID       uuid.UUID          `json:"hall_id"`
 	Number       int32              `json:"number"`
 	Capacity     int32              `json:"capacity"`
-	Status       NullTableStatus    `json:"status"`
+	Status       TableStatus        `json:"status"`
 	TableType    string             `json:"table_type"`
 	PosX         float64            `json:"pos_x"`
 	PosY         float64            `json:"pos_y"`
@@ -655,12 +751,41 @@ func (q *Queries) GetCafeTableByID(ctx context.Context, id uuid.UUID) (GetCafeTa
 }
 
 const getCafeTableByNumber = `-- name: GetCafeTableByNumber :one
-SELECT id, hall_id, number, capacity, status, table_type, pos_x, pos_y, width, height, rotation, price_per_hour, shape, created_at, updated_at, deleted_at
-FROM cafe_tables
-WHERE cafe_tables.hall_id = $1 AND cafe_tables.number = $2 AND cafe_tables.deleted_at = 0
+SELECT
+    ct.id,
+    ct.hall_id,
+    ct.number,
+    ct.capacity,
+    CASE
+        WHEN EXISTS (
+            SELECT 1
+            FROM orders o
+            WHERE o.table_id = ct.id
+              AND o.order_type = 'dine_in'
+              AND o.status IN ('open', 'cooking', 'ready', 'served')
+              AND COALESCE(o.deleted_at, 0) = 0
+              AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+        ) THEN 'busy'::table_status
+        ELSE 'free'::table_status
+    END AS status,
+    ct.table_type,
+    ct.pos_x,
+    ct.pos_y,
+    ct.width,
+    ct.height,
+    ct.rotation,
+    ct.price_per_hour,
+    ct.shape,
+    ct.created_at,
+    ct.updated_at,
+    ct.deleted_at
+FROM cafe_tables ct
+WHERE ct.hall_id = $1
+  AND ct.number = $2
+  AND ct.deleted_at = 0
   AND EXISTS (
     SELECT 1 FROM halls h
-    WHERE h.id = cafe_tables.hall_id
+    WHERE h.id = ct.hall_id
       AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
 `
@@ -675,7 +800,7 @@ type GetCafeTableByNumberRow struct {
 	HallID       uuid.UUID          `json:"hall_id"`
 	Number       int32              `json:"number"`
 	Capacity     int32              `json:"capacity"`
-	Status       NullTableStatus    `json:"status"`
+	Status       TableStatus        `json:"status"`
 	TableType    string             `json:"table_type"`
 	PosX         float64            `json:"pos_x"`
 	PosY         float64            `json:"pos_y"`
@@ -719,7 +844,18 @@ SELECT
     ct.hall_id,
     ct.number,
     ct.capacity,
-    ct.status,
+    CASE
+        WHEN EXISTS (
+            SELECT 1
+            FROM orders o
+            WHERE o.table_id = ct.id
+              AND o.order_type = 'dine_in'
+              AND o.status IN ('open', 'cooking', 'ready', 'served')
+              AND COALESCE(o.deleted_at, 0) = 0
+              AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+        ) THEN 'busy'::table_status
+        ELSE 'free'::table_status
+    END AS status,
     ct.pos_x,
     ct.pos_y,
     ct.width,
@@ -734,7 +870,8 @@ SELECT
 FROM cafe_tables ct
 LEFT JOIN halls h ON ct.hall_id = h.id AND h.deleted_at = 0
 LEFT JOIN branches b ON h.branch_id = b.id AND b.deleted_at = 0
-WHERE ct.id = $1 AND ct.deleted_at = 0
+WHERE ct.id = $1
+  AND ct.deleted_at = 0
   AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 `
 
@@ -743,7 +880,7 @@ type GetCafeTableWithHallRow struct {
 	HallID     uuid.UUID          `json:"hall_id"`
 	Number     int32              `json:"number"`
 	Capacity   int32              `json:"capacity"`
-	Status     NullTableStatus    `json:"status"`
+	Status     TableStatus        `json:"status"`
 	PosX       float64            `json:"pos_x"`
 	PosY       float64            `json:"pos_y"`
 	Width      int32              `json:"width"`
@@ -782,15 +919,43 @@ func (q *Queries) GetCafeTableWithHall(ctx context.Context, id uuid.UUID) (GetCa
 }
 
 const getCafeTablesByCapacity = `-- name: GetCafeTablesByCapacity :many
-SELECT id, hall_id, number, capacity, status, table_type, pos_x, pos_y, width, height, rotation, price_per_hour, shape, created_at, updated_at, deleted_at
-FROM cafe_tables
-WHERE cafe_tables.capacity >= $1 AND cafe_tables.deleted_at = 0
+SELECT
+    ct.id,
+    ct.hall_id,
+    ct.number,
+    ct.capacity,
+    CASE
+        WHEN EXISTS (
+            SELECT 1
+            FROM orders o
+            WHERE o.table_id = ct.id
+              AND o.order_type = 'dine_in'
+              AND o.status IN ('open', 'cooking', 'ready', 'served')
+              AND COALESCE(o.deleted_at, 0) = 0
+              AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+        ) THEN 'busy'::table_status
+        ELSE 'free'::table_status
+    END AS status,
+    ct.table_type,
+    ct.pos_x,
+    ct.pos_y,
+    ct.width,
+    ct.height,
+    ct.rotation,
+    ct.price_per_hour,
+    ct.shape,
+    ct.created_at,
+    ct.updated_at,
+    ct.deleted_at
+FROM cafe_tables ct
+WHERE ct.capacity >= $1
+  AND ct.deleted_at = 0
   AND EXISTS (
     SELECT 1 FROM halls h
-    WHERE h.id = cafe_tables.hall_id
+    WHERE h.id = ct.hall_id
       AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
-ORDER BY capacity ASC, number ASC
+ORDER BY ct.capacity ASC, ct.number ASC
 LIMIT $2 OFFSET $3
 `
 
@@ -805,7 +970,7 @@ type GetCafeTablesByCapacityRow struct {
 	HallID       uuid.UUID          `json:"hall_id"`
 	Number       int32              `json:"number"`
 	Capacity     int32              `json:"capacity"`
-	Status       NullTableStatus    `json:"status"`
+	Status       TableStatus        `json:"status"`
 	TableType    string             `json:"table_type"`
 	PosX         float64            `json:"pos_x"`
 	PosY         float64            `json:"pos_y"`
@@ -857,20 +1022,62 @@ func (q *Queries) GetCafeTablesByCapacity(ctx context.Context, arg GetCafeTables
 }
 
 const getCafeTablesByHallAndStatus = `-- name: GetCafeTablesByHallAndStatus :many
-SELECT id, hall_id, number, capacity, status, table_type, pos_x, pos_y, width, height, rotation, price_per_hour, shape, created_at, updated_at, deleted_at
-FROM cafe_tables
-WHERE cafe_tables.hall_id = $1 AND cafe_tables.status = $2 AND cafe_tables.deleted_at = 0
+SELECT
+    ct.id,
+    ct.hall_id,
+    ct.number,
+    ct.capacity,
+    CASE
+        WHEN EXISTS (
+            SELECT 1
+            FROM orders o
+            WHERE o.table_id = ct.id
+              AND o.order_type = 'dine_in'
+              AND o.status IN ('open', 'cooking', 'ready', 'served')
+              AND COALESCE(o.deleted_at, 0) = 0
+              AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+        ) THEN 'busy'
+        ELSE 'free'
+    END AS status,
+    ct.table_type,
+    ct.pos_x,
+    ct.pos_y,
+    ct.width,
+    ct.height,
+    ct.rotation,
+    ct.price_per_hour,
+    ct.shape,
+    ct.created_at,
+    ct.updated_at,
+    ct.deleted_at
+FROM cafe_tables ct
+WHERE ct.hall_id = $1::uuid
+  AND (
+        CASE
+            WHEN EXISTS (
+                SELECT 1
+                FROM orders o
+                WHERE o.table_id = ct.id
+                  AND o.order_type = 'dine_in'
+                  AND o.status IN ('open', 'cooking', 'ready', 'served')
+                  AND COALESCE(o.deleted_at, 0) = 0
+                  AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+            ) THEN 'busy'
+            ELSE 'free'
+        END
+      ) = $2::text
+  AND ct.deleted_at = 0
   AND EXISTS (
     SELECT 1 FROM halls h
-    WHERE h.id = cafe_tables.hall_id
+    WHERE h.id = ct.hall_id
       AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
-ORDER BY number ASC
+ORDER BY ct.number ASC
 `
 
 type GetCafeTablesByHallAndStatusParams struct {
-	HallID uuid.UUID       `json:"hall_id"`
-	Status NullTableStatus `json:"status"`
+	HallID uuid.UUID `json:"hall_id"`
+	Status string    `json:"status"`
 }
 
 type GetCafeTablesByHallAndStatusRow struct {
@@ -878,7 +1085,7 @@ type GetCafeTablesByHallAndStatusRow struct {
 	HallID       uuid.UUID          `json:"hall_id"`
 	Number       int32              `json:"number"`
 	Capacity     int32              `json:"capacity"`
-	Status       NullTableStatus    `json:"status"`
+	Status       string             `json:"status"`
 	TableType    string             `json:"table_type"`
 	PosX         float64            `json:"pos_x"`
 	PosY         float64            `json:"pos_y"`
@@ -930,15 +1137,43 @@ func (q *Queries) GetCafeTablesByHallAndStatus(ctx context.Context, arg GetCafeT
 }
 
 const getCafeTablesByHallID = `-- name: GetCafeTablesByHallID :many
-SELECT id, hall_id, number, capacity, status, table_type, pos_x, pos_y, width, height, rotation, price_per_hour, shape, created_at, updated_at, deleted_at
-FROM cafe_tables
-WHERE cafe_tables.hall_id = $1 AND cafe_tables.deleted_at = 0
+SELECT
+    ct.id,
+    ct.hall_id,
+    ct.number,
+    ct.capacity,
+    CASE
+        WHEN EXISTS (
+            SELECT 1
+            FROM orders o
+            WHERE o.table_id = ct.id
+              AND o.order_type = 'dine_in'
+              AND o.status IN ('open', 'cooking', 'ready', 'served')
+              AND COALESCE(o.deleted_at, 0) = 0
+              AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+        ) THEN 'busy'::table_status
+        ELSE 'free'::table_status
+    END AS status,
+    ct.table_type,
+    ct.pos_x,
+    ct.pos_y,
+    ct.width,
+    ct.height,
+    ct.rotation,
+    ct.price_per_hour,
+    ct.shape,
+    ct.created_at,
+    ct.updated_at,
+    ct.deleted_at
+FROM cafe_tables ct
+WHERE ct.hall_id = $1
+  AND ct.deleted_at = 0
   AND EXISTS (
     SELECT 1 FROM halls h
-    WHERE h.id = cafe_tables.hall_id
+    WHERE h.id = ct.hall_id
       AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
-ORDER BY number ASC
+ORDER BY ct.number ASC
 `
 
 type GetCafeTablesByHallIDRow struct {
@@ -946,7 +1181,7 @@ type GetCafeTablesByHallIDRow struct {
 	HallID       uuid.UUID          `json:"hall_id"`
 	Number       int32              `json:"number"`
 	Capacity     int32              `json:"capacity"`
-	Status       NullTableStatus    `json:"status"`
+	Status       TableStatus        `json:"status"`
 	TableType    string             `json:"table_type"`
 	PosX         float64            `json:"pos_x"`
 	PosY         float64            `json:"pos_y"`
@@ -998,22 +1233,63 @@ func (q *Queries) GetCafeTablesByHallID(ctx context.Context, hallID uuid.UUID) (
 }
 
 const getCafeTablesByStatus = `-- name: GetCafeTablesByStatus :many
-SELECT id, hall_id, number, capacity, status, table_type, pos_x, pos_y, width, height, rotation, price_per_hour, shape, created_at, updated_at, deleted_at
-FROM cafe_tables
-WHERE cafe_tables.status = $1 AND cafe_tables.deleted_at = 0
+SELECT
+    ct.id,
+    ct.hall_id,
+    ct.number,
+    ct.capacity,
+    CASE
+        WHEN EXISTS (
+            SELECT 1
+            FROM orders o
+            WHERE o.table_id = ct.id
+              AND o.order_type = 'dine_in'
+              AND o.status IN ('open', 'cooking', 'ready', 'served')
+              AND COALESCE(o.deleted_at, 0) = 0
+              AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+        ) THEN 'busy'
+        ELSE 'free'
+    END AS status,
+    ct.table_type,
+    ct.pos_x,
+    ct.pos_y,
+    ct.width,
+    ct.height,
+    ct.rotation,
+    ct.price_per_hour,
+    ct.shape,
+    ct.created_at,
+    ct.updated_at,
+    ct.deleted_at
+FROM cafe_tables ct
+WHERE (
+        CASE
+            WHEN EXISTS (
+                SELECT 1
+                FROM orders o
+                WHERE o.table_id = ct.id
+                  AND o.order_type = 'dine_in'
+                  AND o.status IN ('open', 'cooking', 'ready', 'served')
+                  AND COALESCE(o.deleted_at, 0) = 0
+                  AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+            ) THEN 'busy'
+            ELSE 'free'
+        END
+      ) = $1::text
+  AND ct.deleted_at = 0
   AND EXISTS (
     SELECT 1 FROM halls h
-    WHERE h.id = cafe_tables.hall_id
+    WHERE h.id = ct.hall_id
       AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
-ORDER BY hall_id ASC, number ASC
-LIMIT $2 OFFSET $3
+ORDER BY ct.hall_id ASC, ct.number ASC
+LIMIT $3::int OFFSET $2::int
 `
 
 type GetCafeTablesByStatusParams struct {
-	Status NullTableStatus `json:"status"`
-	Limit  int32           `json:"limit"`
-	Offset int32           `json:"offset"`
+	Status string `json:"status"`
+	Offset int32  `json:"offset"`
+	Limit  int32  `json:"limit"`
 }
 
 type GetCafeTablesByStatusRow struct {
@@ -1021,7 +1297,7 @@ type GetCafeTablesByStatusRow struct {
 	HallID       uuid.UUID          `json:"hall_id"`
 	Number       int32              `json:"number"`
 	Capacity     int32              `json:"capacity"`
-	Status       NullTableStatus    `json:"status"`
+	Status       string             `json:"status"`
 	TableType    string             `json:"table_type"`
 	PosX         float64            `json:"pos_x"`
 	PosY         float64            `json:"pos_y"`
@@ -1036,7 +1312,7 @@ type GetCafeTablesByStatusRow struct {
 }
 
 func (q *Queries) GetCafeTablesByStatus(ctx context.Context, arg GetCafeTablesByStatusParams) ([]GetCafeTablesByStatusRow, error) {
-	rows, err := q.db.Query(ctx, getCafeTablesByStatus, arg.Status, arg.Limit, arg.Offset)
+	rows, err := q.db.Query(ctx, getCafeTablesByStatus, arg.Status, arg.Offset, arg.Limit)
 	if err != nil {
 		return nil, err
 	}
@@ -1075,12 +1351,81 @@ func (q *Queries) GetCafeTablesByStatus(ctx context.Context, arg GetCafeTablesBy
 const getTableOccupancyStats = `-- name: GetTableOccupancyStats :one
 SELECT 
     COUNT(*) as total_tables,
-    SUM(CASE WHEN status = 'free' THEN 1 ELSE 0 END) as free_tables,
-    SUM(CASE WHEN status = 'busy' THEN 1 ELSE 0 END) as busy_tables,
-    SUM(CASE WHEN status = 'free' THEN 1 ELSE 0 END)::FLOAT / NULLIF(COUNT(*), 0) * 100 as free_percentage,
-    SUM(CASE WHEN status = 'busy' THEN 1 ELSE 0 END)::FLOAT / NULLIF(COUNT(*), 0) * 100 as busy_percentage,
+    SUM(
+        CASE
+            WHEN EXISTS (
+                SELECT 1
+                FROM orders o
+                WHERE o.table_id = cafe_tables.id
+                  AND o.order_type = 'dine_in'
+                  AND o.status IN ('open', 'cooking', 'ready', 'served')
+                  AND COALESCE(o.deleted_at, 0) = 0
+                  AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+            ) THEN 0
+            ELSE 1
+        END
+    ) as free_tables,
+    SUM(
+        CASE
+            WHEN EXISTS (
+                SELECT 1
+                FROM orders o
+                WHERE o.table_id = cafe_tables.id
+                  AND o.order_type = 'dine_in'
+                  AND o.status IN ('open', 'cooking', 'ready', 'served')
+                  AND COALESCE(o.deleted_at, 0) = 0
+                  AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+            ) THEN 1
+            ELSE 0
+        END
+    ) as busy_tables,
+    (
+        SUM(
+            CASE
+                WHEN EXISTS (
+                    SELECT 1
+                    FROM orders o
+                    WHERE o.table_id = cafe_tables.id
+                      AND o.order_type = 'dine_in'
+                      AND o.status IN ('open', 'cooking', 'ready', 'served')
+                      AND COALESCE(o.deleted_at, 0) = 0
+                      AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+                ) THEN 0
+                ELSE 1
+            END
+        )::FLOAT / NULLIF(COUNT(*), 0) * 100
+    ) as free_percentage,
+    (
+        SUM(
+            CASE
+                WHEN EXISTS (
+                    SELECT 1
+                    FROM orders o
+                    WHERE o.table_id = cafe_tables.id
+                      AND o.order_type = 'dine_in'
+                      AND o.status IN ('open', 'cooking', 'ready', 'served')
+                      AND COALESCE(o.deleted_at, 0) = 0
+                      AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+                ) THEN 1
+                ELSE 0
+            END
+        )::FLOAT / NULLIF(COUNT(*), 0) * 100
+    ) as busy_percentage,
     SUM(capacity) as total_capacity,
-    SUM(CASE WHEN status = 'free' THEN capacity ELSE 0 END) as available_seats
+    SUM(
+        CASE
+            WHEN EXISTS (
+                SELECT 1
+                FROM orders o
+                WHERE o.table_id = cafe_tables.id
+                  AND o.order_type = 'dine_in'
+                  AND o.status IN ('open', 'cooking', 'ready', 'served')
+                  AND COALESCE(o.deleted_at, 0) = 0
+                  AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+            ) THEN 0
+            ELSE capacity
+        END
+    ) as available_seats
 FROM cafe_tables
 WHERE cafe_tables.deleted_at = 0
   AND EXISTS (
