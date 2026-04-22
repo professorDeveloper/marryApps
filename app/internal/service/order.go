@@ -1663,7 +1663,7 @@ func (s *OrderS) GetBillDetails(ctx context.Context, billID string) (*model.Bill
 		})
 	}
 
-	return &model.BillDetails{
+	resp := &model.BillDetails{
 		ID:                 h.ID.String(),
 		BillNo:             h.BillNo,
 		BillStatus:         h.BillStatus,
@@ -1695,7 +1695,115 @@ func (s *OrderS) GetBillDetails(ctx context.Context, billID string) (*model.Bill
 		ChangeAmount:       numericPtrToStringPtr(h.ChangeAmount),
 		Comment:            h.Comment,
 		Items:              outItems,
-	}, nil
+	}
+
+	if err := s.attachBillTimeBasedDetails(ctx, id, resp); err != nil {
+		return nil, fmt.Errorf("failed to attach bill time-based details: %w", err)
+	}
+
+	return resp, nil
+}
+
+func toBillPausePeriods(rows []pg.ListTableTimeEventsBySessionIDRow) []model.BillPausePeriod {
+	if len(rows) == 0 {
+		return nil
+	}
+
+	out := make([]model.BillPausePeriod, 0)
+	var openPauseIndex = -1
+
+	for _, row := range rows {
+		switch row.EventType {
+		case "paused":
+			t := row.CreatedAt
+			out = append(out, model.BillPausePeriod{
+				PausedAt:        &t,
+				ResumedAt:       nil,
+				DurationMinutes: 0,
+			})
+			openPauseIndex = len(out) - 1
+
+		case "resumed":
+			if openPauseIndex < 0 || openPauseIndex >= len(out) {
+				continue
+			}
+
+			t := row.CreatedAt
+			out[openPauseIndex].ResumedAt = &t
+
+			if out[openPauseIndex].PausedAt != nil && !t.Before(*out[openPauseIndex].PausedAt) {
+				out[openPauseIndex].DurationMinutes = int32(t.Sub(*out[openPauseIndex].PausedAt) / time.Minute)
+			}
+
+			openPauseIndex = -1
+		}
+	}
+
+	return out
+}
+
+func (s *OrderS) attachBillTimeBasedDetails(ctx context.Context, orderID uuid.UUID, resp *model.BillDetails) error {
+	if resp == nil {
+		return nil
+	}
+
+	ctxRow, err := s.repo.Tenant(ctx).GetOrderTimerContext(ctx, orderID)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil
+		}
+		return fmt.Errorf("failed to get order timer context: %w", err)
+	}
+
+	if ctxRow.OrderType != "dine_in" {
+		return nil
+	}
+	if !ctxRow.TableID.Valid {
+		return nil
+	}
+	if ctxRow.TableType != string(model.TableTypeTimeBased) {
+		return nil
+	}
+
+	tableType := ctxRow.TableType
+	resp.TableType = &tableType
+
+	if ctxRow.PricePerHour.Valid {
+		v := numericToStr(ctxRow.PricePerHour)
+		resp.PricePerHour = &v
+	}
+
+	session, err := s.repo.Tenant(ctx).GetLatestTableTimeSessionByOrderID(ctx, orderID)
+	switch {
+	case err == nil:
+		timer := toTableTimerResponse(ctxRow, &session, time.Now())
+
+		if timer.StartedAt != nil {
+			resp.TableStartedAt = timer.StartedAt
+		}
+
+		if timer.FinalAmount != nil && *timer.FinalAmount != "" {
+			resp.TableAmount = timer.FinalAmount
+		} else if timer.CurrentAmount != nil && *timer.CurrentAmount != "" {
+			resp.TableAmount = timer.CurrentAmount
+		}
+
+		events, err := s.repo.Tenant(ctx).ListTableTimeEventsBySessionID(ctx, session.ID)
+		if err != nil {
+			return fmt.Errorf("failed to list table timer events: %w", err)
+		}
+		resp.PausePeriods = toBillPausePeriods(events)
+
+	case err == pgx.ErrNoRows:
+		zero := "0.00"
+		resp.TableAmount = &zero
+		return nil
+
+	default:
+		return fmt.Errorf("failed to get latest table timer session: %w", err)
+	}
+
+	return nil
 }
 
 func (s *OrderS) consumeItemStockTx(

@@ -71,29 +71,35 @@ type BillItem struct {
 	Comment  *string `json:"comment,omitempty"`
 }
 
+type BillPausePeriod struct {
+	PausedAt        *time.Time `json:"paused_at,omitempty"`
+	ResumedAt       *time.Time `json:"resumed_at,omitempty"`
+	DurationMinutes int32      `json:"duration_minutes"`
+}
+
 type BillDetails struct {
-	ID              string     `json:"id"`
-	BillNo          int32      `json:"bill_no"`
-	BillStatus      string     `json:"bill_status"`
-	OpenedAt        *time.Time `json:"opened_at,omitempty"`
-	ClosedAt        *time.Time `json:"closed_at,omitempty"`
-	PaidAt          *time.Time `json:"paid_at,omitempty"`
-	PaymentType     *string    `json:"payment_type,omitempty"`
-	TableID         *string    `json:"table_id,omitempty"`
-	TableNumber     *int32     `json:"table_number,omitempty"`
-	HallName        *string    `json:"hall_name,omitempty"`
-	WaiterID        *string    `json:"waiter_id,omitempty"`
-	WaiterName      *string    `json:"waiter_name,omitempty"`
-	CashierID       *string    `json:"cashier_id,omitempty"`
-	CashierName     *string    `json:"cashier_name,omitempty"`
-	CashRegisterID  *string    `json:"cash_register_id,omitempty"`
-	GuestCount      *int32     `json:"guest_count,omitempty"`
-	FoodCost        string     `json:"food_cost"`
-	FoodTotal       string     `json:"food_total"`
-	ServicePercent  string     `json:"service_percent"`
-	ServiceAmount   string     `json:"service_amount"`
-	DiscountPercent string     `json:"discount_percent"`
-	DiscountAmount  string     `json:"discount_amount"`
+	ID                 string     `json:"id"`
+	BillNo             int32      `json:"bill_no"`
+	BillStatus         string     `json:"bill_status"`
+	OpenedAt           *time.Time `json:"opened_at,omitempty"`
+	ClosedAt           *time.Time `json:"closed_at,omitempty"`
+	PaidAt             *time.Time `json:"paid_at,omitempty"`
+	PaymentType        *string    `json:"payment_type,omitempty"`
+	TableID            *string    `json:"table_id,omitempty"`
+	TableNumber        *int32     `json:"table_number,omitempty"`
+	HallName           *string    `json:"hall_name,omitempty"`
+	WaiterID           *string    `json:"waiter_id,omitempty"`
+	WaiterName         *string    `json:"waiter_name,omitempty"`
+	CashierID          *string    `json:"cashier_id,omitempty"`
+	CashierName        *string    `json:"cashier_name,omitempty"`
+	CashRegisterID     *string    `json:"cash_register_id,omitempty"`
+	GuestCount         *int32     `json:"guest_count,omitempty"`
+	FoodCost           string     `json:"food_cost"`
+	FoodTotal          string     `json:"food_total"`
+	ServicePercent     string     `json:"service_percent"`
+	ServiceAmount      string     `json:"service_amount"`
+	DiscountPercent    string     `json:"discount_percent"`
+	DiscountAmount     string     `json:"discount_amount"`
 	DiscountComment    *string    `json:"discount_comment,omitempty"`
 	GrandTotal         string     `json:"grand_total"`
 	TableCharge        string     `json:"table_charge"`
@@ -103,4 +109,10 @@ type BillDetails struct {
 	ChangeAmount       *string    `json:"change_amount,omitempty"`
 	Comment            *string    `json:"comment,omitempty"`
 	Items              []BillItem `json:"items"`
+
+	TableType      *string           `json:"table_type,omitempty"`
+	PricePerHour   *string           `json:"price_per_hour,omitempty"`
+	TableStartedAt *time.Time        `json:"table_started_at,omitempty"`
+	TableAmount    *string           `json:"table_amount,omitempty"`
+	PausePeriods   []BillPausePeriod `json:"pause_periods,omitempty"`
 }

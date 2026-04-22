@@ -440,6 +440,68 @@ WHERE table_id = $1
 LIMIT 1
 `
 
+type ListTableTimeEventsBySessionIDRow struct {
+	ID          uuid.UUID   `json:"id"`
+	SessionID   uuid.UUID   `json:"session_id"`
+	OrderID     uuid.UUID   `json:"order_id"`
+	TableID     uuid.UUID   `json:"table_id"`
+	EventType   string      `json:"event_type"`
+	ActorUserID pgtype.UUID `json:"actor_user_id"`
+	ActorRole   *string     `json:"actor_role"`
+	Comment     *string     `json:"comment"`
+	CreatedAt   time.Time   `json:"created_at"`
+}
+
+const listTableTimeEventsBySessionID = `
+SELECT
+    id,
+    session_id,
+    order_id,
+    table_id,
+    event_type,
+    actor_user_id,
+    actor_role,
+    comment,
+    created_at
+FROM table_time_events
+WHERE session_id = $1
+  AND COALESCE(deleted_at, 0) = 0
+ORDER BY created_at ASC
+`
+
+func (q *Queries) ListTableTimeEventsBySessionID(ctx context.Context, sessionID uuid.UUID) ([]ListTableTimeEventsBySessionIDRow, error) {
+	rows, err := q.db.Query(ctx, listTableTimeEventsBySessionID, sessionID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var items []ListTableTimeEventsBySessionIDRow
+	for rows.Next() {
+		var i ListTableTimeEventsBySessionIDRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.SessionID,
+			&i.OrderID,
+			&i.TableID,
+			&i.EventType,
+			&i.ActorUserID,
+			&i.ActorRole,
+			&i.Comment,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return items, nil
+}
+
 func (q *Queries) GetOpenTableTimeSessionByTableID(ctx context.Context, tableID uuid.UUID) (TableTimeSessionRow, error) {
 	row := q.db.QueryRow(ctx, getOpenTableTimeSessionByTableID, tableID)
 	var i TableTimeSessionRow
