@@ -113,7 +113,7 @@ SELECT
 FROM base_ingredients bi
 JOIN ingredients i ON i.id = bi.ingredient_id AND i.deleted_at = 0
 	AND (NULLIF($7::text, '') IS NULL OR i.measurement::text = $7::text)
-	AND (NULLIF($8::text, '') IS NULL OR i.id = ANY($8::uuid[]))
+	AND (NULLIF($8::text, '') IS NULL OR string_to_array($8::text, ',')::uuid[] @> ARRAY[i.id]::uuid[])
 JOIN begin_qty b ON b.ingredient_id = bi.ingredient_id
 JOIN end_qty e ON e.ingredient_id = bi.ingredient_id
 LEFT JOIN sums s ON s.ingredient_id = bi.ingredient_id
@@ -269,7 +269,7 @@ SELECT
 FROM base_ingredients bi
 JOIN ingredients i ON i.id = bi.ingredient_id AND i.deleted_at = 0
 	AND (NULLIF($5::text, '') IS NULL OR i.measurement::text = $5::text)
-	AND (NULLIF($6::text, '') IS NULL OR i.id = ANY($6::uuid[]))
+	AND (NULLIF($6::text, '') IS NULL OR string_to_array($6::text, ',')::uuid[] @> ARRAY[i.id]::uuid[])
 LEFT JOIN sums s ON s.ingredient_id = bi.ingredient_id
 `
 	var ingredientID any

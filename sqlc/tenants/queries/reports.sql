@@ -28,7 +28,7 @@ WHERE oi.deleted_at = 0
   AND (NULLIF($6::text, '') IS NULL OR o.waiter_id      = NULLIF($6::text, '')::uuid)
   AND (NULLIF($7::text, '') IS NULL OR ct.hall_id        = NULLIF($7::text, '')::uuid)
   AND (NULLIF($8::text, '') IS NULL OR o.table_id        = NULLIF($8::text, '')::uuid)
-  AND (NULLIF($11::text, '') IS NULL OR g.id = ANY($11::uuid[]))
+  AND (NULLIF($11::text, '') IS NULL OR string_to_array($11::text, ',')::uuid[] @> ARRAY[g.id]::uuid[])
 GROUP BY g.id, g.name
 ORDER BY
   CASE
