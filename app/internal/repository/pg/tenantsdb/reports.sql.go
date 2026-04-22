@@ -224,8 +224,58 @@ WHERE oi.deleted_at = 0
   AND (NULLIF($6::text, '') IS NULL OR o.waiter_id      = NULLIF($6::text, '')::uuid)
   AND (NULLIF($7::text, '') IS NULL OR ct.hall_id        = NULLIF($7::text, '')::uuid)
   AND (NULLIF($8::text, '') IS NULL OR o.table_id        = NULLIF($8::text, '')::uuid)
+  AND (NULLIF($11::text, '') IS NULL OR g.id = ANY($11::uuid[]))
 GROUP BY g.id, g.name
-ORDER BY g.name
+ORDER BY
+  CASE
+    WHEN $12::text = 'total_qty' AND $13::text = 'asc' THEN COALESCE(SUM(oi.quantity), 0)
+  END ASC,
+  CASE
+    WHEN $12::text = 'total_qty' AND $13::text = 'desc' THEN COALESCE(SUM(oi.quantity), 0)
+  END DESC,
+  CASE
+    WHEN $12::text = 'avg_sell_price' AND $13::text = 'asc' THEN COALESCE(AVG(oi.price), 0)
+  END ASC,
+  CASE
+    WHEN $12::text = 'avg_sell_price' AND $13::text = 'desc' THEN COALESCE(AVG(oi.price), 0)
+  END DESC,
+  CASE
+    WHEN $12::text = 'total_sell' AND $13::text = 'asc' THEN COALESCE(SUM(oi.quantity::numeric * oi.price), 0)
+  END ASC,
+  CASE
+    WHEN $12::text = 'total_sell' AND $13::text = 'desc' THEN COALESCE(SUM(oi.quantity::numeric * oi.price), 0)
+  END DESC,
+  CASE
+    WHEN $12::text = 'avg_cost_price' AND $13::text = 'asc' THEN COALESCE(AVG(oi.cost_price), 0)
+  END ASC,
+  CASE
+    WHEN $12::text = 'avg_cost_price' AND $13::text = 'desc' THEN COALESCE(AVG(oi.cost_price), 0)
+  END DESC,
+  CASE
+    WHEN $12::text = 'total_cost' AND $13::text = 'asc' THEN COALESCE(SUM(oi.quantity::numeric * oi.cost_price), 0)
+  END ASC,
+  CASE
+    WHEN $12::text = 'total_cost' AND $13::text = 'desc' THEN COALESCE(SUM(oi.quantity::numeric * oi.cost_price), 0)
+  END DESC,
+  CASE
+    WHEN $12::text = 'avg_markup' AND $13::text = 'asc' THEN COALESCE(AVG(oi.price - oi.cost_price), 0)
+  END ASC,
+  CASE
+    WHEN $12::text = 'avg_markup' AND $13::text = 'desc' THEN COALESCE(AVG(oi.price - oi.cost_price), 0)
+  END DESC,
+  CASE
+    WHEN $12::text = 'total_markup' AND $13::text = 'asc' THEN COALESCE(SUM(oi.quantity::numeric * (oi.price - oi.cost_price)), 0)
+  END ASC,
+  CASE
+    WHEN $12::text = 'total_markup' AND $13::text = 'desc' THEN COALESCE(SUM(oi.quantity::numeric * (oi.price - oi.cost_price)), 0)
+  END DESC,
+  CASE
+    WHEN $12::text = 'name' AND $13::text = 'asc' THEN g.name
+  END ASC,
+  CASE
+    WHEN $12::text = 'name' AND $13::text = 'desc' THEN g.name
+  END DESC,
+  g.name
 LIMIT  $9
 OFFSET $10
 `
@@ -241,6 +291,9 @@ type GoodsReportParams struct {
 	Column8     string             `json:"column_8"`
 	Limit       int32              `json:"limit"`
 	Offset      int32              `json:"offset"`
+	GoodIDs     string             `json:"good_ids"`
+	SortBy      string             `json:"sort_by"`
+	SortOrder   string             `json:"sort_order"`
 }
 
 type GoodsReportRow struct {
@@ -268,6 +321,9 @@ func (q *Queries) GoodsReport(ctx context.Context, arg GoodsReportParams) ([]Goo
 		arg.Column8,
 		arg.Limit,
 		arg.Offset,
+		arg.GoodIDs,
+		arg.SortBy,
+		arg.SortOrder,
 	)
 	if err != nil {
 		return nil, err

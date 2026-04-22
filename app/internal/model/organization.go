@@ -272,12 +272,16 @@ type IngredientStockResponse struct {
 }
 
 type GetIngredientReportRequest struct {
-	StorageID    string     `json:"storage_id"`
-	Start        *time.Time `json:"start,omitempty"`
-	End          *time.Time `json:"end,omitempty"`
-	IngredientID *string    `json:"ingredient_id,omitempty"`
-	Limit        int32      `json:"limit"`
-	Offset       int32      `json:"offset"`
+	StorageID     string     `json:"storage_id"`
+	Start         *time.Time `json:"start,omitempty"`
+	End           *time.Time `json:"end,omitempty"`
+	IngredientID  *string    `json:"ingredient_id,omitempty"`
+	Measurement   *string    `json:"measurement,omitempty"`
+	IngredientIDs *string    `json:"ingredient_ids,omitempty"`
+	SortBy        *string    `json:"sort_by,omitempty"`
+	SortOrder     *string    `json:"sort_order,omitempty"`
+	Limit         int32      `json:"limit"`
+	Offset        int32      `json:"offset"`
 }
 
 type GetIngredientInventoryStatusReportRequest struct {
