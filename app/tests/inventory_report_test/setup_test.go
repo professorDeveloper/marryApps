@@ -367,9 +367,9 @@ var (
 	tuesday   = ts(2026, time.January, 6, 0, 0)
 	wednesday = ts(2026, time.January, 7, 0, 0)
 	thursday  = ts(2026, time.January, 8, 0, 0)
-	friday    = ts(2026, time.January, 2, 0, 0)  // previous Friday
-	saturday  = ts(2026, time.January, 3, 0, 0)  // previous Saturday
-	sunday    = ts(2026, time.January, 4, 0, 0)  // previous Sunday
+	friday    = ts(2026, time.January, 2, 0, 0) // previous Friday
+	saturday  = ts(2026, time.January, 3, 0, 0) // previous Saturday
+	sunday    = ts(2026, time.January, 4, 0, 0) // previous Sunday
 )
 
 // assertFloat asserts that a float64 matches expected within 0.0001 tolerance.

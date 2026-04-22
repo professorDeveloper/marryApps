@@ -10,14 +10,15 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"gitlab.yurtal.tech/company/maryai/back/internal/model"
-	pg "gitlab.yurtal.tech/company/maryai/back/internal/repository/pg/tenantsdb"
 	"gitlab.yurtal.tech/company/maryai/back/internal/repository"
+	pg "gitlab.yurtal.tech/company/maryai/back/internal/repository/pg/tenantsdb"
 )
 
 type ReportI interface {
 	GoodsReport(ctx context.Context,
 		startDate, endDate string,
 		departmentID, categoryID, goodID, waiterID, hallID, tableID *string,
+		sortBy, sortOrder, goodIDs *string,
 		limit, offset int32,
 	) (*model.GoodsReportResponse, error)
 	GoodOrdersReport(ctx context.Context,
@@ -38,6 +39,7 @@ func NewReportS(repo *repository.Repository) *ReportS {
 func (s *ReportS) GoodsReport(ctx context.Context,
 	startDate, endDate string,
 	departmentID, categoryID, goodID, waiterID, hallID, tableID *string,
+	sortBy, sortOrder, goodIDs *string,
 	limit, offset int32,
 ) (*model.GoodsReportResponse, error) {
 	start, err := parseReportDate(startDate)
@@ -67,6 +69,9 @@ func (s *ReportS) GoodsReport(ctx context.Context,
 		Column8:     strOrEmpty(tableID),
 		Limit:       limit,
 		Offset:      offset,
+		GoodIDs:     strOrEmpty(goodIDs),
+		SortBy:      strOrEmpty(sortBy),
+		SortOrder:   strOrEmpty(sortOrder),
 	}
 	totalsParams := pg.GoodsReportTotalsParams{
 		CreatedAt:   startTs,

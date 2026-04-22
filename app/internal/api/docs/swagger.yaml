@@ -12805,7 +12805,8 @@ paths:
     get:
       consumes:
       - application/json
-      description: Retrieve ingredient report for a storage within a date range
+      description: Retrieve ingredient report for a storage within a date range. Supports
+        sorting by numeric fields and filtering by measurement and ingredient IDs.
       parameters:
       - description: Storage ID
         in: query
@@ -12823,6 +12824,33 @@ paths:
       - description: Ingredient ID (optional filter)
         in: query
         name: ingredient_id
+        type: string
+      - description: Filter by exact measurement/unit
+        in: query
+        name: measurement
+        type: string
+      - description: Comma-separated ingredient UUIDs to filter
+        in: query
+        name: ingredient_ids
+        type: string
+      - description: Sort by field
+        enum:
+        - begin_quantity
+        - end_quantity
+        - in
+        - out
+        - shortage
+        - surplus
+        - ingredient_name
+        in: query
+        name: sort_by
+        type: string
+      - description: Sort order
+        enum:
+        - asc
+        - desc
+        in: query
+        name: sort_order
         type: string
       - default: 20
         description: Limit
@@ -18446,7 +18474,8 @@ paths:
     get:
       description: 'Paginated report: qty sold, selling price, cost price, markup
         per dish. Only paid orders. Filters by date range, department, category, dish,
-        waiter, hall, table.'
+        waiter, hall, table, good IDs. Sortable by total_qty, avg_sell_price, total_sell,
+        avg_cost_price, total_cost, avg_markup, total_markup, name.'
       parameters:
       - description: Start date (YYYY-MM-DD)
         in: query
@@ -18481,6 +18510,30 @@ paths:
       - description: Filter by table UUID
         in: query
         name: table_id
+        type: string
+      - description: Comma-separated good UUIDs to filter
+        in: query
+        name: good_ids
+        type: string
+      - description: Sort by field
+        enum:
+        - name
+        - total_qty
+        - avg_sell_price
+        - total_sell
+        - avg_cost_price
+        - total_cost
+        - avg_markup
+        - total_markup
+        in: query
+        name: sort_by
+        type: string
+      - description: Sort order
+        enum:
+        - asc
+        - desc
+        in: query
+        name: sort_order
         type: string
       - default: 20
         description: Limit

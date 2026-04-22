@@ -11538,7 +11538,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retrieve ingredient report for a storage within a date range",
+                "description": "Retrieve ingredient report for a storage within a date range. Supports sorting by numeric fields and filtering by measurement and ingredient IDs.",
                 "consumes": [
                     "application/json"
                 ],
@@ -11573,6 +11573,43 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Ingredient ID (optional filter)",
                         "name": "ingredient_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by exact measurement/unit",
+                        "name": "measurement",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Comma-separated ingredient UUIDs to filter",
+                        "name": "ingredient_ids",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "begin_quantity",
+                            "end_quantity",
+                            "in",
+                            "out",
+                            "shortage",
+                            "surplus",
+                            "ingredient_name"
+                        ],
+                        "type": "string",
+                        "description": "Sort by field",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "asc",
+                            "desc"
+                        ],
+                        "type": "string",
+                        "description": "Sort order",
+                        "name": "sort_order",
                         "in": "query"
                     },
                     {
@@ -20208,7 +20245,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Paginated report: qty sold, selling price, cost price, markup per dish. Only paid orders. Filters by date range, department, category, dish, waiter, hall, table.",
+                "description": "Paginated report: qty sold, selling price, cost price, markup per dish. Only paid orders. Filters by date range, department, category, dish, waiter, hall, table, good IDs. Sortable by total_qty, avg_sell_price, total_sell, avg_cost_price, total_cost, avg_markup, total_markup, name.",
                 "produces": [
                     "application/json"
                 ],
@@ -20265,6 +20302,38 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Filter by table UUID",
                         "name": "table_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Comma-separated good UUIDs to filter",
+                        "name": "good_ids",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "name",
+                            "total_qty",
+                            "avg_sell_price",
+                            "total_sell",
+                            "avg_cost_price",
+                            "total_cost",
+                            "avg_markup",
+                            "total_markup"
+                        ],
+                        "type": "string",
+                        "description": "Sort by field",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "asc",
+                            "desc"
+                        ],
+                        "type": "string",
+                        "description": "Sort order",
+                        "name": "sort_order",
                         "in": "query"
                     },
                     {

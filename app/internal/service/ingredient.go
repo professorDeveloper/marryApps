@@ -238,13 +238,34 @@ func (i *IngredientS) GetIngredientReport(ctx context.Context, req model.GetIngr
 		limit = 20
 	}
 
+	measurement := ""
+	if req.Measurement != nil {
+		measurement = *req.Measurement
+	}
+	ingredientIDs := ""
+	if req.IngredientIDs != nil {
+		ingredientIDs = *req.IngredientIDs
+	}
+	sortBy := ""
+	if req.SortBy != nil {
+		sortBy = *req.SortBy
+	}
+	sortOrder := ""
+	if req.SortOrder != nil {
+		sortOrder = *req.SortOrder
+	}
+
 	params := pg.GetIngredientReportParams{
-		StorageID:    storageUUID,
-		Start:        start,
-		End:          end,
-		IngredientID: ingredientUUID,
-		Limit:        limit,
-		Offset:       req.Offset,
+		StorageID:     storageUUID,
+		Start:         start,
+		End:           end,
+		IngredientID:  ingredientUUID,
+		Limit:         limit,
+		Offset:        req.Offset,
+		Measurement:   measurement,
+		IngredientIDs: ingredientIDs,
+		SortBy:        sortBy,
+		SortOrder:     sortOrder,
 	}
 
 	totalsRow, err := i.repo.Tenant(ctx).GetIngredientReportTotals(ctx, params)

@@ -3,6 +3,7 @@ package handler
 import (
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -42,7 +43,7 @@ func parseReportEndTimeParam(v string) (*time.Time, error) {
 
 // GetIngredientReport retrieves aggregated ingredient stock movements report
 // @Summary Get ingredient report
-// @Description Retrieve ingredient report for a storage within a date range
+// @Description Retrieve ingredient report for a storage within a date range. Supports sorting by numeric fields and filtering by measurement and ingredient IDs.
 // @Tags reports
 // @Accept json
 // @Produce json
@@ -51,6 +52,10 @@ func parseReportEndTimeParam(v string) (*time.Time, error) {
 // @Param start query string false "Start datetime (RFC3339) or date (YYYY-MM-DD)"
 // @Param end query string false "End datetime (RFC3339) or date (YYYY-MM-DD)"
 // @Param ingredient_id query string false "Ingredient ID (optional filter)"
+// @Param measurement query string false "Filter by exact measurement/unit"
+// @Param ingredient_ids query string false "Comma-separated ingredient UUIDs to filter"
+// @Param sort_by query string false "Sort by field" Enums(begin_quantity,end_quantity,in,out,shortage,surplus,ingredient_name)
+// @Param sort_order query string false "Sort order" Enums(asc,desc)
 // @Param limit query int false "Limit" default(20)
 // @Param offset query int false "Offset" default(0)
 // @Param expand query string false "Expand related fields"
@@ -105,6 +110,35 @@ func (h *Handler) GetIngredientReport(c echo.Context) error {
 		ingredientID = &v
 	}
 
+	// Extract and validate sort_by parameter
+	sortBy := strings.TrimSpace(c.QueryParam("sort_by"))
+	allowedSortBy := map[string]bool{
+		"begin_quantity":  true,
+		"end_quantity":    true,
+		"in":              true,
+		"out":             true,
+		"shortage":        true,
+		"surplus":         true,
+		"ingredient_name": true,
+	}
+	if sortBy != "" && !allowedSortBy[sortBy] {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"invalid sort_by",
+			"allowed values: begin_quantity, end_quantity, in, out, shortage, surplus, ingredient_name",
+			http.StatusBadRequest,
+		))
+	}
+
+	// Extract and validate sort_order parameter
+	sortOrder := strings.TrimSpace(c.QueryParam("sort_order"))
+	if sortOrder != "" && sortOrder != "asc" && sortOrder != "desc" {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"invalid sort_order",
+			"allowed values: asc, desc",
+			http.StatusBadRequest,
+		))
+	}
+
 	limit := int32(20)
 	offset := int32(0)
 	if l, err2 := strconv.Atoi(c.QueryParam("limit")); err2 == nil && l > 0 {
@@ -114,13 +148,24 @@ func (h *Handler) GetIngredientReport(c echo.Context) error {
 		offset = int32(o)
 	}
 
+	optStr := func(key string) *string {
+		if v := c.QueryParam(key); v != "" {
+			return &v
+		}
+		return nil
+	}
+
 	resp, err := h.service.Ingredient().GetIngredientReport(c.Request().Context(), model.GetIngredientReportRequest{
-		StorageID:    storageID,
-		Start:        start,
-		End:          end,
-		IngredientID: ingredientID,
-		Limit:        limit,
-		Offset:       offset,
+		StorageID:     storageID,
+		Start:         start,
+		End:           end,
+		IngredientID:  ingredientID,
+		Measurement:   optStr("measurement"),
+		IngredientIDs: optStr("ingredient_ids"),
+		SortBy:        optStr("sort_by"),
+		SortOrder:     optStr("sort_order"),
+		Limit:         limit,
+		Offset:        offset,
 	})
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(

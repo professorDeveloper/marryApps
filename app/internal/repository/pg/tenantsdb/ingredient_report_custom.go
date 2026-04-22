@@ -23,12 +23,16 @@ type IngredientReportRow struct {
 }
 
 type GetIngredientReportParams struct {
-	StorageID    uuid.UUID
-	Start        pgtype.Timestamptz
-	End          pgtype.Timestamptz
-	IngredientID *uuid.UUID
-	Limit        int32
-	Offset       int32
+	StorageID     uuid.UUID
+	Start         pgtype.Timestamptz
+	End           pgtype.Timestamptz
+	IngredientID  *uuid.UUID
+	Limit         int32
+	Offset        int32
+	Measurement   string
+	IngredientIDs string
+	SortBy        string
+	SortOrder     string
 }
 
 type IngredientReportTotalsRow struct {
@@ -131,10 +135,55 @@ SELECT
 	COALESCE(s.surplus_qty, 0)::numeric(18,6) AS surplus_qty
 FROM base_ingredients bi
 JOIN ingredients i ON i.id = bi.ingredient_id AND i.deleted_at = 0
+	AND (NULLIF($7::text, '') IS NULL OR i.measurement::text = $7::text)
+	AND (NULLIF($8::text, '') IS NULL OR string_to_array($8::text, ',')::uuid[] @> ARRAY[i.id]::uuid[])
 JOIN begin_qty b ON b.ingredient_id = bi.ingredient_id
 JOIN end_qty e ON e.ingredient_id = bi.ingredient_id
 LEFT JOIN sums s ON s.ingredient_id = bi.ingredient_id
-ORDER BY i.name ASC
+ORDER BY
+  CASE
+    WHEN $9::text = 'begin_quantity' AND $10::text = 'asc' THEN b.begin_qty
+  END ASC,
+  CASE
+    WHEN $9::text = 'begin_quantity' AND $10::text = 'desc' THEN b.begin_qty
+  END DESC,
+  CASE
+    WHEN $9::text = 'end_quantity' AND $10::text = 'asc' THEN e.end_qty
+  END ASC,
+  CASE
+    WHEN $9::text = 'end_quantity' AND $10::text = 'desc' THEN e.end_qty
+  END DESC,
+  CASE
+    WHEN $9::text = 'in' AND $10::text = 'asc' THEN COALESCE(s.in_qty, 0)
+  END ASC,
+  CASE
+    WHEN $9::text = 'in' AND $10::text = 'desc' THEN COALESCE(s.in_qty, 0)
+  END DESC,
+  CASE
+    WHEN $9::text = 'out' AND $10::text = 'asc' THEN COALESCE(s.out_qty, 0)
+  END ASC,
+  CASE
+    WHEN $9::text = 'out' AND $10::text = 'desc' THEN COALESCE(s.out_qty, 0)
+  END DESC,
+  CASE
+    WHEN $9::text = 'shortage' AND $10::text = 'asc' THEN COALESCE(s.shortage_qty, 0)
+  END ASC,
+  CASE
+    WHEN $9::text = 'shortage' AND $10::text = 'desc' THEN COALESCE(s.shortage_qty, 0)
+  END DESC,
+  CASE
+    WHEN $9::text = 'surplus' AND $10::text = 'asc' THEN COALESCE(s.surplus_qty, 0)
+  END ASC,
+  CASE
+    WHEN $9::text = 'surplus' AND $10::text = 'desc' THEN COALESCE(s.surplus_qty, 0)
+  END DESC,
+  CASE
+    WHEN $9::text = 'ingredient_name' AND $10::text = 'asc' THEN i.name
+  END ASC,
+  CASE
+    WHEN $9::text = 'ingredient_name' AND $10::text = 'desc' THEN i.name
+  END DESC,
+  i.name ASC
 LIMIT $5 OFFSET $6
 `
 
@@ -147,7 +196,7 @@ LIMIT $5 OFFSET $6
 		limit = 20
 	}
 
-	rows, err := q.db.Query(ctx, sql, arg.StorageID, arg.Start, arg.End, ingredientID, limit, arg.Offset)
+	rows, err := q.db.Query(ctx, sql, arg.StorageID, arg.Start, arg.End, ingredientID, limit, arg.Offset, arg.Measurement, arg.IngredientIDs, arg.SortBy, arg.SortOrder)
 	if err != nil {
 		return nil, err
 	}
@@ -242,13 +291,15 @@ SELECT
 	COALESCE(SUM(s.invoice_out_amount + s.order_out_amount + s.deduction_out_amount + s.transfer_out_amount + s.outgoing_invoice_out_amount + s.separation_act_out_amount + s.shipment_out_amount + s.manual_out_amount + s.inventory_out_amount), 0)::numeric(18,2) AS total_removed_amount
 FROM base_ingredients bi
 JOIN ingredients i ON i.id = bi.ingredient_id AND i.deleted_at = 0
+	AND (NULLIF($5::text, '') IS NULL OR i.measurement::text = $5::text)
+	AND (NULLIF($6::text, '') IS NULL OR string_to_array($6::text, ',')::uuid[] @> ARRAY[i.id]::uuid[])
 LEFT JOIN sums s ON s.ingredient_id = bi.ingredient_id
 `
 	var ingredientID any
 	if arg.IngredientID != nil {
 		ingredientID = *arg.IngredientID
 	}
-	row := q.db.QueryRow(ctx, sql, arg.StorageID, arg.Start, arg.End, ingredientID)
+	row := q.db.QueryRow(ctx, sql, arg.StorageID, arg.Start, arg.End, ingredientID, arg.Measurement, arg.IngredientIDs)
 	var out IngredientReportTotalsRow
 	if err := row.Scan(&out.TotalCount, &out.TotalAddedAmount, &out.TotalRemovedAmount); err != nil {
 		return IngredientReportTotalsRow{}, err
