@@ -153,13 +153,21 @@ func (h *Handler) CreateOrder(c echo.Context) error {
 		(req.ScheduledAt == nil || *req.ScheduledAt == "")
 
 	if shouldAutoStartTimer && order != nil {
-		if _, timerErr := h.service.TableTimer().StartTableTimerIfNeeded(
-			c.Request().Context(),
-			order.ID,
-			userID,
-			role,
-		); timerErr != nil {
-			log.Printf("CreateOrder auto-start timer skipped/failed for order %s: %v", order.ID, timerErr)
+		// Check if table is free before auto-starting timer
+		table, tableErr := h.service.CafeTable().GetCafeTableByID(c.Request().Context(), req.TableID)
+		if tableErr != nil {
+			log.Printf("CreateOrder auto-start timer skipped: failed to get table %s: %v", req.TableID, tableErr)
+		} else if table.Status != "free" {
+			log.Printf("CreateOrder auto-start timer skipped: table %s is not free (status: %s)", req.TableID, table.Status)
+		} else {
+			if _, timerErr := h.service.TableTimer().StartTableTimerIfNeeded(
+				c.Request().Context(),
+				order.ID,
+				userID,
+				role,
+			); timerErr != nil {
+				log.Printf("CreateOrder auto-start timer skipped/failed for order %s: %v", order.ID, timerErr)
+			}
 		}
 	}
 
@@ -255,13 +263,21 @@ func (h *Handler) CreateOrdersBatch(c echo.Context) error {
 			(srcReq.ScheduledAt == nil || *srcReq.ScheduledAt == "")
 
 		if shouldAutoStartTimer {
-			if _, timerErr := h.service.TableTimer().StartTableTimerIfNeeded(
-				c.Request().Context(),
-				result.Order.ID,
-				userID,
-				role,
-			); timerErr != nil {
-				log.Printf("CreateOrdersBatch auto-start timer skipped/failed for order %s: %v", result.Order.ID, timerErr)
+			// Check if table is free before auto-starting timer
+			table, tableErr := h.service.CafeTable().GetCafeTableByID(c.Request().Context(), srcReq.TableID)
+			if tableErr != nil {
+				log.Printf("CreateOrdersBatch auto-start timer skipped: failed to get table %s: %v", srcReq.TableID, tableErr)
+			} else if table.Status != "free" {
+				log.Printf("CreateOrdersBatch auto-start timer skipped: table %s is not free (status: %s)", srcReq.TableID, table.Status)
+			} else {
+				if _, timerErr := h.service.TableTimer().StartTableTimerIfNeeded(
+					c.Request().Context(),
+					result.Order.ID,
+					userID,
+					role,
+				); timerErr != nil {
+					log.Printf("CreateOrdersBatch auto-start timer skipped/failed for order %s: %v", result.Order.ID, timerErr)
+				}
 			}
 		}
 	}
@@ -1297,6 +1313,20 @@ func (h *Handler) CancelOrder(c echo.Context) error {
 		))
 	}
 
+	// Close table timer before cancelling order (for time_based tables)
+	role, _ := c.Get("role").(string)
+	userID, _ := c.Get("user_id").(string)
+	if _, timerErr := h.service.TableTimer().CloseTableTimer(
+		c.Request().Context(),
+		orderID,
+		userID,
+		role,
+	); timerErr != nil {
+		if !isIgnorableTableTimerCloseError(timerErr) {
+			log.Printf("CancelOrder failed to close table timer for order %s: %v", orderID, timerErr)
+		}
+	}
+
 	order, err := h.service.Order().CancelOrder(c.Request().Context(), orderID)
 	if err != nil {
 		log.Printf("CancelOrder failed: %v", err)
@@ -1496,6 +1526,20 @@ func (h *Handler) DeleteOrder(c echo.Context) error {
 		))
 	}
 
+	// Close table timer before deleting order (for time_based tables)
+	role, _ := c.Get("role").(string)
+	userID, _ := c.Get("user_id").(string)
+	if _, timerErr := h.service.TableTimer().CloseTableTimer(
+		c.Request().Context(),
+		orderID,
+		userID,
+		role,
+	); timerErr != nil {
+		if !isIgnorableTableTimerCloseError(timerErr) {
+			log.Printf("DeleteOrder failed to close table timer for order %s: %v", orderID, timerErr)
+		}
+	}
+
 	if err := h.service.Order().DeleteOrder(c.Request().Context(), orderID); err != nil {
 		log.Printf("DeleteOrder failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
@@ -1549,6 +1593,28 @@ func (h *Handler) RestoreOrder(c echo.Context) error {
 			err.Error(),
 			http.StatusInternalServerError,
 		))
+	}
+
+	// Auto-start table timer for restored dine_in orders on time_based tables
+	role, _ := c.Get("role").(string)
+	userID, _ := c.Get("user_id").(string)
+	order, getOrderErr := h.service.Order().GetOrderByID(c.Request().Context(), orderID)
+	if getOrderErr == nil && order != nil && order.OrderType == "dine_in" && order.TableID != "" {
+		table, tableErr := h.service.CafeTable().GetCafeTableByID(c.Request().Context(), order.TableID)
+		if tableErr != nil {
+			log.Printf("RestoreOrder auto-start timer skipped: failed to get table %s: %v", order.TableID, tableErr)
+		} else if table.Status == "free" {
+			if _, timerErr := h.service.TableTimer().StartTableTimerIfNeeded(
+				c.Request().Context(),
+				order.ID,
+				userID,
+				role,
+			); timerErr != nil {
+				log.Printf("RestoreOrder auto-start timer skipped/failed for order %s: %v", order.ID, timerErr)
+			}
+		} else {
+			log.Printf("RestoreOrder auto-start timer skipped: table %s is not free (status: %s)", order.TableID, table.Status)
+		}
 	}
 
 	return c.JSON(http.StatusOK, model.NewSuccessResponse(
@@ -2402,15 +2468,15 @@ func (h *Handler) ActivateOrder(c echo.Context) error {
 			))
 		case errors.Is(err, service.ErrOrderAlreadyActive):
 			return c.JSON(http.StatusConflict, model.NewErrorResponse(
-				"order is already active",
+				"order already active",
 				err.Error(),
 				http.StatusConflict,
 			))
 		case errors.Is(err, service.ErrOrderCannotBeActivated):
-			return c.JSON(http.StatusConflict, model.NewErrorResponse(
-				"order cannot be activated from current status",
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"order cannot be activated",
 				err.Error(),
-				http.StatusConflict,
+				http.StatusBadRequest,
 			))
 		default:
 			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
@@ -2418,6 +2484,27 @@ func (h *Handler) ActivateOrder(c echo.Context) error {
 				err.Error(),
 				http.StatusInternalServerError,
 			))
+		}
+	}
+
+	// Auto-start table timer for activated dine-in orders on time_based tables
+	role, _ := c.Get("role").(string)
+	userID, _ := c.Get("user_id").(string)
+	if order != nil && order.OrderType == "dine_in" && order.TableID != "" {
+		table, tableErr := h.service.CafeTable().GetCafeTableByID(c.Request().Context(), order.TableID)
+		if tableErr != nil {
+			log.Printf("ActivateOrder auto-start timer skipped: failed to get table %s: %v", order.TableID, tableErr)
+		} else if table.Status == "free" {
+			if _, timerErr := h.service.TableTimer().StartTableTimerIfNeeded(
+				c.Request().Context(),
+				order.ID,
+				userID,
+				role,
+			); timerErr != nil {
+				log.Printf("ActivateOrder auto-start timer skipped/failed for order %s: %v", order.ID, timerErr)
+			}
+		} else {
+			log.Printf("ActivateOrder auto-start timer skipped: table %s is not free (status: %s)", order.TableID, table.Status)
 		}
 	}
 
