@@ -10,7 +10,10 @@
       "Bash(go build *)",
       "Bash(git commit -m ' *)",
       "Bash(go install *)",
-      "Bash(swag init *)"
+      "Bash(swag init *)",
+      "Bash(xargs cat *)",
+      "Bash(grep \"\\\\.go$\")",
+      "Bash(xargs ls *)"
     ]
   }
 }
