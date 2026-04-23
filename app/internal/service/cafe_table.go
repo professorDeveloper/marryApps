@@ -544,6 +544,12 @@ func (s *CafeTableS) SetTableFree(ctx context.Context, tableID string) (*model.C
 		return nil, fmt.Errorf("invalid table ID: %w", err)
 	}
 
+	// Idempotent: check if already free
+	existing, err := s.repo.Tenant(ctx).GetCafeTableByID(ctx, id)
+	if err == nil && existing.Status == "free" {
+		return toCafeTableResponse(existing), nil
+	}
+
 	table, err := s.repo.Tenant(ctx).SetTableFree(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to set table free: %w", err)
@@ -557,6 +563,12 @@ func (s *CafeTableS) SetTableBusy(ctx context.Context, tableID string) (*model.C
 	id, err := uuid.Parse(tableID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid table ID: %w", err)
+	}
+
+	// Idempotent: check if already busy
+	existing, err := s.repo.Tenant(ctx).GetCafeTableByID(ctx, id)
+	if err == nil && existing.Status == "busy" {
+		return toCafeTableResponse(existing), nil
 	}
 
 	table, err := s.repo.Tenant(ctx).SetTableBusy(ctx, id)

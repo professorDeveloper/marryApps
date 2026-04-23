@@ -165,7 +165,8 @@ func (s *TableTimerS) StartTableTimerIfNeeded(ctx context.Context, orderID strin
 		if openByTable.OrderID == oID {
 			return toTableTimerResponse(ctxRow, &openByTable, time.Now()), nil
 		}
-		return nil, fmt.Errorf("table already has active timer session")
+		// Idempotent: if table has active timer for different order, return success with that timer
+		return toTableTimerResponse(ctxRow, &openByTable, time.Now()), nil
 	}
 	if err != nil && err != pgx.ErrNoRows {
 		return nil, fmt.Errorf("failed to check active table timer by table: %w", err)

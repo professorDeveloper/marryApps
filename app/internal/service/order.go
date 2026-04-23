@@ -1317,6 +1317,11 @@ func (s *OrderS) CancelOrder(ctx context.Context, orderID string) (*model.OrderR
 		return nil, fmt.Errorf("order not found: %w", err)
 	}
 
+	// Idempotent: if already cancelled, return success
+	if orderBefore.Status.Valid && orderBefore.Status.OrderStatus == pg.OrderStatusCancelled {
+		return toOrderResponse(orderBefore), nil
+	}
+
 	order, err := s.repo.Tenant(ctx).CancelOrder(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to cancel order: %w", err)
