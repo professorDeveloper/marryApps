@@ -215,12 +215,12 @@ func (s *TableTimerS) GetTableTimerState(ctx context.Context, orderID string) (*
 		return nil, err
 	}
 
-	session, err := s.repo.Tenant(ctx).GetLatestTableTimeSessionByOrderID(ctx, oID)
+	session, err := s.repo.Tenant(ctx).GetOpenTableTimeSessionByOrderID(ctx, oID)
 	if err == pgx.ErrNoRows {
 		return toTableTimerResponse(ctxRow, nil, time.Now()), nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("failed to get latest timer session: %w", err)
+		return nil, fmt.Errorf("failed to get open timer session: %w", err)
 	}
 
 	return toTableTimerResponse(ctxRow, &session, time.Now()), nil
