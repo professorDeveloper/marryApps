@@ -380,3 +380,25 @@ func (s *TableTimerS) CloseTableTimer(ctx context.Context, orderID string, actor
 
 	return toTableTimerResponse(ctxRow, &updated, now), nil
 }
+
+func (s *TableTimerS) GetTableTimerByTableID(ctx context.Context, tableID string) (*model.TableTimerResponse, error) {
+	tID, err := uuid.Parse(tableID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid table id: %w", err)
+	}
+
+	session, err := s.repo.Tenant(ctx).GetOpenTableTimeSessionByTableID(ctx, tID)
+	if err == pgx.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to get open timer session by table: %w", err)
+	}
+
+	ctxRow, err := s.repo.Tenant(ctx).GetOrderTimerContext(ctx, session.OrderID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get order timer context: %w", err)
+	}
+
+	return toTableTimerResponse(ctxRow, &session, time.Now()), nil
+}

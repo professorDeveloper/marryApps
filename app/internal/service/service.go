@@ -386,6 +386,7 @@ type OrderI interface {
 type TableTimerI interface {
 	StartTableTimerIfNeeded(ctx context.Context, orderID string, actorUserID string, actorRole string) (*model.TableTimerResponse, error)
 	GetTableTimerState(ctx context.Context, orderID string) (*model.TableTimerResponse, error)
+	GetTableTimerByTableID(ctx context.Context, tableID string) (*model.TableTimerResponse, error)
 	PauseTableTimer(ctx context.Context, orderID string, actorUserID string, actorRole string) (*model.TableTimerResponse, error)
 	ResumeTableTimer(ctx context.Context, orderID string, actorUserID string, actorRole string) (*model.TableTimerResponse, error)
 	CloseTableTimer(ctx context.Context, orderID string, actorUserID string, actorRole string) (*model.TableTimerResponse, error)

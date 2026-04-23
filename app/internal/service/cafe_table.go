@@ -144,7 +144,7 @@ func (s *CafeTableS) CreateCafeTable(
 		return nil, fmt.Errorf("failed to create cafe table: %w", err)
 	}
 
-	return toCafeTableResponse(table), nil
+	return toCafeTableResponse(table, nil), nil
 }
 
 func (s *CafeTableS) GetCafeTableByID(ctx context.Context, tableID string) (*model.CafeTableResponse, error) {
@@ -158,7 +158,16 @@ func (s *CafeTableS) GetCafeTableByID(ctx context.Context, tableID string) (*mod
 		return nil, fmt.Errorf("failed to get cafe table: %w", err)
 	}
 
-	return toCafeTableResponse(table), nil
+	var currentAmount *string
+	if table.TableType == string(model.TableTypeTimeBased) {
+		timerS := NewTableTimerS(s.repo)
+		timer, err := timerS.GetTableTimerByTableID(ctx, tableID)
+		if err == nil && timer != nil && timer.CurrentAmount != nil {
+			currentAmount = timer.CurrentAmount
+		}
+	}
+
+	return toCafeTableResponse(table, currentAmount), nil
 }
 
 func (s *CafeTableS) GetAllCafeTables(ctx context.Context, filter model.CafeTableListFilter, limit, offset int32) ([]*model.CafeTableResponse, int64, error) {
@@ -200,7 +209,7 @@ func (s *CafeTableS) GetAllCafeTables(ctx context.Context, filter model.CafeTabl
 
 	resp := make([]*model.CafeTableResponse, 0, len(rows))
 	for _, row := range rows {
-		resp = append(resp, toCafeTableResponse(row))
+		resp = append(resp, toCafeTableResponse(row, nil))
 	}
 
 	return resp, total, nil
@@ -233,7 +242,7 @@ func (s *CafeTableS) GetCafeTablesByHallID(ctx context.Context, hallID string, l
 
 	var responses []model.CafeTableResponse
 	for _, t := range tables[start:end] {
-		responses = append(responses, *toCafeTableResponse(t))
+		responses = append(responses, *toCafeTableResponse(t, nil))
 	}
 
 	return responses, total, nil
@@ -266,7 +275,7 @@ func (s *CafeTableS) GetCafeTablesByStatus(ctx context.Context, status string, l
 
 	var responses []model.CafeTableResponse
 	for _, t := range tables {
-		responses = append(responses, *toCafeTableResponse(t))
+		responses = append(responses, *toCafeTableResponse(t, nil))
 	}
 
 	return responses, total, nil
@@ -294,7 +303,7 @@ func (s *CafeTableS) GetCafeTablesByHallAndStatus(ctx context.Context, hallID, s
 
 	var responses []model.CafeTableResponse
 	for _, t := range tables {
-		responses = append(responses, *toCafeTableResponse(t))
+		responses = append(responses, *toCafeTableResponse(t, nil))
 	}
 
 	return responses, nil
@@ -314,7 +323,7 @@ func (s *CafeTableS) GetAvailableTablesByHall(ctx context.Context, hallID string
 
 	var responses []model.CafeTableResponse
 	for _, t := range tables {
-		responses = append(responses, *toCafeTableResponse(t))
+		responses = append(responses, *toCafeTableResponse(t, nil))
 	}
 
 	return responses, nil
@@ -337,7 +346,7 @@ func (s *CafeTableS) GetAvailableTablesByCapacity(ctx context.Context, capacity,
 
 	var responses []model.CafeTableResponse
 	for _, t := range tables {
-		responses = append(responses, *toCafeTableResponse(t))
+		responses = append(responses, *toCafeTableResponse(t, nil))
 	}
 
 	return responses, nil
@@ -360,7 +369,7 @@ func (s *CafeTableS) GetAvailableTablesByHallAndCapacity(ctx context.Context, ha
 
 	var responses []model.CafeTableResponse
 	for _, t := range tables {
-		responses = append(responses, *toCafeTableResponse(t))
+		responses = append(responses, *toCafeTableResponse(t, nil))
 	}
 
 	return responses, nil
@@ -503,7 +512,7 @@ func (s *CafeTableS) UpdateCafeTable(
 		return nil, fmt.Errorf("failed to update cafe table: %w", err)
 	}
 
-	return toCafeTableResponse(table), nil
+	return toCafeTableResponse(table, nil), nil
 }
 
 // UpdateCafeTableStatus updates only the status of a cafe table
@@ -534,7 +543,7 @@ func (s *CafeTableS) UpdateCafeTableStatus(ctx context.Context, tableID string, 
 		return nil, fmt.Errorf("failed to update cafe table status: %w", err)
 	}
 
-	return toCafeTableResponse(table), nil
+	return toCafeTableResponse(table, nil), nil
 }
 
 // SetTableFree marks a table as free
@@ -547,7 +556,7 @@ func (s *CafeTableS) SetTableFree(ctx context.Context, tableID string) (*model.C
 	// Idempotent: check if already free
 	existing, err := s.repo.Tenant(ctx).GetCafeTableByID(ctx, id)
 	if err == nil && existing.Status == "free" {
-		return toCafeTableResponse(existing), nil
+		return toCafeTableResponse(existing, nil), nil
 	}
 
 	table, err := s.repo.Tenant(ctx).SetTableFree(ctx, id)
@@ -555,7 +564,7 @@ func (s *CafeTableS) SetTableFree(ctx context.Context, tableID string) (*model.C
 		return nil, fmt.Errorf("failed to set table free: %w", err)
 	}
 
-	return toCafeTableResponse(table), nil
+	return toCafeTableResponse(table, nil), nil
 }
 
 // SetTableBusy marks a table as busy
@@ -568,7 +577,7 @@ func (s *CafeTableS) SetTableBusy(ctx context.Context, tableID string) (*model.C
 	// Idempotent: check if already busy
 	existing, err := s.repo.Tenant(ctx).GetCafeTableByID(ctx, id)
 	if err == nil && existing.Status == "busy" {
-		return toCafeTableResponse(existing), nil
+		return toCafeTableResponse(existing, nil), nil
 	}
 
 	table, err := s.repo.Tenant(ctx).SetTableBusy(ctx, id)
@@ -576,7 +585,7 @@ func (s *CafeTableS) SetTableBusy(ctx context.Context, tableID string) (*model.C
 		return nil, fmt.Errorf("failed to set table busy: %w", err)
 	}
 
-	return toCafeTableResponse(table), nil
+	return toCafeTableResponse(table, nil), nil
 }
 
 // DeleteCafeTable soft deletes a cafe table
@@ -626,7 +635,7 @@ func (s *CafeTableS) GetTableOccupancyStats(ctx context.Context) (*model.TableOc
 }
 
 // Helper function to convert database model to response model
-func toCafeTableResponse(table any) *model.CafeTableResponse {
+func toCafeTableResponse(table any, currentAmount *string) *model.CafeTableResponse {
 	extract := func(
 		id uuid.UUID,
 		hallID uuid.UUID,
@@ -677,21 +686,22 @@ func toCafeTableResponse(table any) *model.CafeTableResponse {
 		}
 
 		return &model.CafeTableResponse{
-			ID:           id.String(),
-			HallID:       hallID.String(),
-			Number:       number,
-			Capacity:     capacity,
-			Status:       statusValue,
-			TableType:    tableType,
-			PosX:         posX,
-			PosY:         posY,
-			Shape:        shape,
-			Width:        width,
-			Height:       height,
-			Rotation:     rotation,
-			PricePerHour: pph,
-			CreatedAt:    ca,
-			UpdatedAt:    ua,
+			ID:            id.String(),
+			HallID:        hallID.String(),
+			Number:        number,
+			Capacity:      capacity,
+			Status:        statusValue,
+			TableType:     tableType,
+			PosX:          posX,
+			PosY:          posY,
+			Shape:         shape,
+			Width:         width,
+			Height:        height,
+			Rotation:      rotation,
+			PricePerHour:  pph,
+			CurrentAmount: currentAmount,
+			CreatedAt:     ca,
+			UpdatedAt:     ua,
 		}
 	}
 
