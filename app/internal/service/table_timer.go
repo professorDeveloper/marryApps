@@ -216,14 +216,24 @@ func (s *TableTimerS) GetTableTimerState(ctx context.Context, orderID string) (*
 	}
 
 	session, err := s.repo.Tenant(ctx).GetOpenTableTimeSessionByOrderID(ctx, oID)
-	if err == pgx.ErrNoRows {
-		return toTableTimerResponse(ctxRow, nil, time.Now()), nil
+	if err == nil {
+		return toTableTimerResponse(ctxRow, &session, time.Now()), nil
 	}
-	if err != nil {
+	if err != pgx.ErrNoRows {
 		return nil, fmt.Errorf("failed to get open timer session: %w", err)
 	}
 
-	return toTableTimerResponse(ctxRow, &session, time.Now()), nil
+	// No session found by order, check by table (similar to StartTableTimerIfNeeded)
+	openByTable, err := s.repo.Tenant(ctx).GetOpenTableTimeSessionByTableID(ctx, uuid.UUID(ctxRow.TableID.Bytes))
+	if err == nil {
+		return toTableTimerResponse(ctxRow, &openByTable, time.Now()), nil
+	}
+	if err != pgx.ErrNoRows {
+		return nil, fmt.Errorf("failed to check active table timer by table: %w", err)
+	}
+
+	// No session exists, return empty state instead of trying to create one
+	return toTableTimerResponse(ctxRow, nil, time.Now()), nil
 }
 
 func (s *TableTimerS) PauseTableTimer(ctx context.Context, orderID string, actorUserID string, actorRole string) (*model.TableTimerResponse, error) {
