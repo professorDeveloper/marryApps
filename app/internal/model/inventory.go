@@ -14,6 +14,7 @@ type InventoryResponse struct {
 	ID              string          `json:"id" example:"c0f18a64-7f5c-4425-9414-1b01cddee9d9"`
 	Number          int64           `json:"number" example:"1"`
 	Date            *time.Time      `json:"date,omitempty"`
+	CountedAt       *time.Time      `json:"counted_at,omitempty"`
 	StorageID       string          `json:"storage_id" example:"d1f29b75-8g6d-5536-0525-2c12deeef0e0"`
 	Description     *string         `json:"description,omitempty" example:"Monthly inventory"`
 	DescriptionI18n *string         `json:"description_i18n,omitempty" example:"c0f18a64-7f5c-4425-9414-1b01cddee9d9"`
@@ -27,6 +28,7 @@ type InventoryResponse struct {
 
 type CreateInventoryRequest struct {
 	Date            string  `json:"date" validate:"required" example:"2024-01-01"`
+	CountedAt       string  `json:"counted_at" validate:"required" example:"2024-01-01T14:30:00+05:00"`
 	StorageID       string  `json:"storage_id" validate:"required" example:"d1f29b75-8g6d-5536-0525-2c12deeef0e0"`
 	Description     *string `json:"description,omitempty" example:"Monthly inventory"`
 	DescriptionI18n *string `json:"description_i18n,omitempty" example:"c0f18a64-7f5c-4425-9414-1b01cddee9d9"`
@@ -35,6 +37,7 @@ type CreateInventoryRequest struct {
 
 type UpdateInventoryRequest struct {
 	Date            *string `json:"date,omitempty" example:"2024-01-01"`
+	CountedAt       *string `json:"counted_at,omitempty" example:"2024-01-01T14:30:00+05:00"`
 	StorageID       *string `json:"storage_id,omitempty" example:"d1f29b75-8g6d-5536-0525-2c12deeef0e0"`
 	Description     *string `json:"description,omitempty" example:"Monthly inventory"`
 	DescriptionI18n *string `json:"description_i18n,omitempty" example:"c0f18a64-7f5c-4425-9414-1b01cddee9d9"`
@@ -47,17 +50,12 @@ type UpsertInventoryItemRequest struct {
 }
 
 type UpsertInventoryItemsRequest struct {
-	// Optional inventory-level fields (update inventory + items in one call)
-	Date            *string                      `json:"date,omitempty" example:"2024-01-01"`
-	StorageID       *string                      `json:"storage_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
-	Status          *string                      `json:"status,omitempty" example:"active"`
-	Description     *string                      `json:"description,omitempty"`
-	DescriptionI18n *string                      `json:"description_i18n,omitempty"`
-	Items           []UpsertInventoryItemRequest `json:"items" validate:"required,min=1,dive"`
+	Items []UpsertInventoryItemRequest `json:"items" validate:"required,min=1,dive"`
 }
 
 type CreateInventoryBatchRequest struct {
 	Date            string                       `json:"date" validate:"required" example:"2024-01-01"`
+	CountedAt       string                       `json:"counted_at" validate:"required" example:"2024-01-01T14:30:00+05:00"`
 	StorageID       string                       `json:"storage_id" validate:"required" example:"d1f29b75-8g6d-5536-0525-2c12deeef0e0"`
 	Description     *string                      `json:"description,omitempty" example:"Monthly inventory"`
 	DescriptionI18n *string                      `json:"description_i18n,omitempty"`

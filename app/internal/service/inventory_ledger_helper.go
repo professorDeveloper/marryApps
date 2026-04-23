@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"math/big"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -24,15 +23,11 @@ func inventoryZeroNumeric() pgtype.Numeric {
 	return n
 }
 
-func inventoryEffectiveAt(date pgtype.Date) *pgtype.Timestamptz {
-	if !date.Valid {
+func inventoryEffectiveAt(countedAt pgtype.Timestamptz) *pgtype.Timestamptz {
+	if !countedAt.Valid {
 		return nil
 	}
-	ts := pgtype.Timestamptz{
-		Time:  date.Time.In(time.UTC),
-		Valid: true,
-	}
-	return &ts
+	return &countedAt
 }
 
 func buildInventoryTransitionPlan(fromQty, toQty pgtype.Numeric) (inventoryMovementPlan, error) {
@@ -77,7 +72,7 @@ func buildInventoryTransitionPlan(fromQty, toQty pgtype.Numeric) (inventoryMovem
 	}
 }
 
-func (s *InventoryS) applyInventoryMovementPlan(ctx context.Context,inventoryID uuid.UUID,storageID uuid.UUID,ingredientID uuid.UUID,plan inventoryMovementPlan,effectiveAt *pgtype.Timestamptz) error {
+func (s *InventoryS) applyInventoryMovementPlan(ctx context.Context, inventoryID uuid.UUID, storageID uuid.UUID, ingredientID uuid.UUID, plan inventoryMovementPlan, effectiveAt *pgtype.Timestamptz) error {
 	if !plan.HasMovement || shouldSkipStockMovement(plan.QtyIn, plan.QtyOut) {
 		return nil
 	}
@@ -110,7 +105,7 @@ func (s *InventoryS) applyInventoryMovementPlan(ctx context.Context,inventoryID 
 	return nil
 }
 
-func (s *InventoryS) rebalanceInventoryIngredientLedger(ctx context.Context,storageID pgtype.UUID,ingredientID uuid.UUID) error {
+func (s *InventoryS) rebalanceInventoryIngredientLedger(ctx context.Context, storageID pgtype.UUID, ingredientID uuid.UUID) error {
 	if !storageID.Valid {
 		return fmt.Errorf("storage_id is required for inventory ledger rebalance")
 	}

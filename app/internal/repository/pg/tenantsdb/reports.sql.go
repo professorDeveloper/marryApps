@@ -291,9 +291,9 @@ type GoodsReportParams struct {
 	Column8     string             `json:"column_8"`
 	Limit       int32              `json:"limit"`
 	Offset      int32              `json:"offset"`
-	GoodIDs     string             `json:"good_ids"`
-	SortBy      string             `json:"sort_by"`
-	SortOrder   string             `json:"sort_order"`
+	Column11    string             `json:"column_11"`
+	Column12    string             `json:"column_12"`
+	Column13    string             `json:"column_13"`
 }
 
 type GoodsReportRow struct {
@@ -321,9 +321,9 @@ func (q *Queries) GoodsReport(ctx context.Context, arg GoodsReportParams) ([]Goo
 		arg.Column8,
 		arg.Limit,
 		arg.Offset,
-		arg.GoodIDs,
-		arg.SortBy,
-		arg.SortOrder,
+		arg.Column11,
+		arg.Column12,
+		arg.Column13,
 	)
 	if err != nil {
 		return nil, err

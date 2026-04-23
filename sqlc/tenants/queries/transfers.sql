@@ -120,7 +120,7 @@ SET quantity = quantity + $2,
 WHERE id = $1 AND deleted_at = 0
 RETURNING id, ingredient_id, quantity, branch_id, storage_id, created_at, updated_at, deleted_at;
 
--- name: UpdateIngredientStockExplicit :one
+-- name: UpdateIngredientStockExplicitForTransfer :one
 UPDATE ingredient_stock
 SET quantity = $2,
     updated_at = NOW()

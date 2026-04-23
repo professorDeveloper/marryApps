@@ -27042,11 +27042,16 @@ const docTemplate = `{
         "model.CreateInventoryBatchRequest": {
             "type": "object",
             "required": [
+                "counted_at",
                 "date",
                 "items",
                 "storage_id"
             ],
             "properties": {
+                "counted_at": {
+                    "type": "string",
+                    "example": "2024-01-01T14:30:00+05:00"
+                },
                 "date": {
                     "type": "string",
                     "example": "2024-01-01"
@@ -27086,10 +27091,15 @@ const docTemplate = `{
         "model.CreateInventoryRequest": {
             "type": "object",
             "required": [
+                "counted_at",
                 "date",
                 "storage_id"
             ],
             "properties": {
+                "counted_at": {
+                    "type": "string",
+                    "example": "2024-01-01T14:30:00+05:00"
+                },
                 "date": {
                     "type": "string",
                     "example": "2024-01-01"
@@ -29114,6 +29124,9 @@ const docTemplate = `{
         "model.InventoryResponse": {
             "type": "object",
             "properties": {
+                "counted_at": {
+                    "type": "string"
+                },
                 "created_at": {
                     "type": "string"
                 },
@@ -31986,6 +31999,10 @@ const docTemplate = `{
         "model.UpdateInventoryRequest": {
             "type": "object",
             "properties": {
+                "counted_at": {
+                    "type": "string",
+                    "example": "2024-01-01T14:30:00+05:00"
+                },
                 "date": {
                     "type": "string",
                     "example": "2024-01-01"
@@ -32577,31 +32594,12 @@ const docTemplate = `{
                 "items"
             ],
             "properties": {
-                "date": {
-                    "description": "Optional inventory-level fields (update inventory + items in one call)",
-                    "type": "string",
-                    "example": "2024-01-01"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "description_i18n": {
-                    "type": "string"
-                },
                 "items": {
                     "type": "array",
                     "minItems": 1,
                     "items": {
                         "$ref": "#/definitions/model.UpsertInventoryItemRequest"
                     }
-                },
-                "status": {
-                    "type": "string",
-                    "example": "active"
-                },
-                "storage_id": {
-                    "type": "string",
-                    "example": "123e4567-e89b-12d3-a456-426614174000"
                 }
             }
         },

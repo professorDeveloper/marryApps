@@ -896,6 +896,7 @@ type Inventory struct {
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt       int64              `json:"deleted_at"`
+	CountedAt       time.Time          `json:"counted_at"`
 }
 
 type InventoryItem struct {

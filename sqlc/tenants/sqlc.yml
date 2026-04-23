@@ -43,6 +43,7 @@ sql:
       - "../../app/migrations/tenants/41_modifier_calculation.up.sql"
       - "../../app/migrations/tenants/43_cafe_tables_shape_and_float_position.up.sql"
       - "../../app/migrations/tenants/44_orders_client_created_at.up.sql"
+      - "../../app/migrations/tenants/45_inventory_counted_at.up.sql"
 
 
     gen:

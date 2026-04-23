@@ -69,9 +69,9 @@ func (s *ReportS) GoodsReport(ctx context.Context,
 		Column8:     strOrEmpty(tableID),
 		Limit:       limit,
 		Offset:      offset,
-		GoodIDs:     strOrEmpty(goodIDs),
-		SortBy:      strOrEmpty(sortBy),
-		SortOrder:   strOrEmpty(sortOrder),
+		Column11:    strOrEmpty(goodIDs),
+		Column12:    strOrEmpty(sortBy),
+		Column13:    strOrEmpty(sortOrder),
 	}
 	totalsParams := pg.GoodsReportTotalsParams{
 		CreatedAt:   startTs,

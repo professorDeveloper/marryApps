@@ -7,6 +7,7 @@ package pg
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -95,11 +96,11 @@ func (q *Queries) CountInventoriesFiltered(ctx context.Context, arg CountInvento
 
 const createInventory = `-- name: CreateInventory :one
 
-INSERT INTO inventories (id, date, storage_id, description, description_i18n, status)
-VALUES ($1, $2, $3, $4, $5, $6)
+INSERT INTO inventories (id, date, storage_id, description, description_i18n, status, counted_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
 RETURNING id, number, date, storage_id, description, description_i18n, status,
           surplus_amount, shortage_amount, remaining_amount,
-          created_at, updated_at, deleted_at
+          counted_at, created_at, updated_at, deleted_at
 `
 
 type CreateInventoryParams struct {
@@ -109,6 +110,7 @@ type CreateInventoryParams struct {
 	Description     *string     `json:"description"`
 	DescriptionI18n pgtype.UUID `json:"description_i18n"`
 	Status          string      `json:"status"`
+	CountedAt       time.Time   `json:"counted_at"`
 }
 
 type CreateInventoryRow struct {
@@ -122,6 +124,7 @@ type CreateInventoryRow struct {
 	SurplusAmount   pgtype.Numeric     `json:"surplus_amount"`
 	ShortageAmount  pgtype.Numeric     `json:"shortage_amount"`
 	RemainingAmount pgtype.Numeric     `json:"remaining_amount"`
+	CountedAt       time.Time          `json:"counted_at"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt       int64              `json:"deleted_at"`
@@ -136,6 +139,7 @@ func (q *Queries) CreateInventory(ctx context.Context, arg CreateInventoryParams
 		arg.Description,
 		arg.DescriptionI18n,
 		arg.Status,
+		arg.CountedAt,
 	)
 	var i CreateInventoryRow
 	err := row.Scan(
@@ -149,6 +153,7 @@ func (q *Queries) CreateInventory(ctx context.Context, arg CreateInventoryParams
 		&i.SurplusAmount,
 		&i.ShortageAmount,
 		&i.RemainingAmount,
+		&i.CountedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -209,14 +214,14 @@ func (q *Queries) DeleteInventoryItem(ctx context.Context, id uuid.UUID) error {
 const getAllInventories = `-- name: GetAllInventories :many
 SELECT id, number, date, storage_id, description, description_i18n, status,
        surplus_amount, shortage_amount, remaining_amount,
-       created_at, updated_at, deleted_at
+       counted_at, created_at, updated_at, deleted_at
 FROM inventories
 WHERE EXISTS (
     SELECT 1 FROM storages s
     WHERE s.id = inventories.storage_id
       AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
-ORDER BY date DESC, number DESC
+ORDER BY date DESC, counted_at DESC, number DESC
 LIMIT $1 OFFSET $2
 `
 
@@ -236,6 +241,7 @@ type GetAllInventoriesRow struct {
 	SurplusAmount   pgtype.Numeric     `json:"surplus_amount"`
 	ShortageAmount  pgtype.Numeric     `json:"shortage_amount"`
 	RemainingAmount pgtype.Numeric     `json:"remaining_amount"`
+	CountedAt       time.Time          `json:"counted_at"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt       int64              `json:"deleted_at"`
@@ -261,6 +267,7 @@ func (q *Queries) GetAllInventories(ctx context.Context, arg GetAllInventoriesPa
 			&i.SurplusAmount,
 			&i.ShortageAmount,
 			&i.RemainingAmount,
+			&i.CountedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
@@ -337,7 +344,7 @@ func (q *Queries) GetAllInventoryItems(ctx context.Context, arg GetAllInventoryI
 const getInventoriesByStatus = `-- name: GetInventoriesByStatus :many
 SELECT id, number, date, storage_id, description, description_i18n, status,
        surplus_amount, shortage_amount, remaining_amount,
-       created_at, updated_at, deleted_at
+       counted_at, created_at, updated_at, deleted_at
 FROM inventories
 WHERE status = $1 AND deleted_at = 0
   AND EXISTS (
@@ -345,7 +352,7 @@ WHERE status = $1 AND deleted_at = 0
     WHERE s.id = inventories.storage_id
       AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
-ORDER BY date DESC, number DESC
+ORDER BY date DESC, counted_at DESC, number DESC
 LIMIT $2 OFFSET $3
 `
 
@@ -366,6 +373,7 @@ type GetInventoriesByStatusRow struct {
 	SurplusAmount   pgtype.Numeric     `json:"surplus_amount"`
 	ShortageAmount  pgtype.Numeric     `json:"shortage_amount"`
 	RemainingAmount pgtype.Numeric     `json:"remaining_amount"`
+	CountedAt       time.Time          `json:"counted_at"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt       int64              `json:"deleted_at"`
@@ -391,6 +399,7 @@ func (q *Queries) GetInventoriesByStatus(ctx context.Context, arg GetInventories
 			&i.SurplusAmount,
 			&i.ShortageAmount,
 			&i.RemainingAmount,
+			&i.CountedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
@@ -408,7 +417,7 @@ func (q *Queries) GetInventoriesByStatus(ctx context.Context, arg GetInventories
 const getInventoriesByStorageID = `-- name: GetInventoriesByStorageID :many
 SELECT id, number, date, storage_id, description, description_i18n, status,
        surplus_amount, shortage_amount, remaining_amount,
-       created_at, updated_at, deleted_at
+       counted_at, created_at, updated_at, deleted_at
 FROM inventories
 WHERE storage_id = $1 AND deleted_at = 0
   AND EXISTS (
@@ -416,7 +425,7 @@ WHERE storage_id = $1 AND deleted_at = 0
     WHERE s.id = inventories.storage_id
       AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
-ORDER BY date DESC, number DESC
+ORDER BY date DESC, counted_at DESC, number DESC
 LIMIT $2 OFFSET $3
 `
 
@@ -437,6 +446,7 @@ type GetInventoriesByStorageIDRow struct {
 	SurplusAmount   pgtype.Numeric     `json:"surplus_amount"`
 	ShortageAmount  pgtype.Numeric     `json:"shortage_amount"`
 	RemainingAmount pgtype.Numeric     `json:"remaining_amount"`
+	CountedAt       time.Time          `json:"counted_at"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt       int64              `json:"deleted_at"`
@@ -462,6 +472,7 @@ func (q *Queries) GetInventoriesByStorageID(ctx context.Context, arg GetInventor
 			&i.SurplusAmount,
 			&i.ShortageAmount,
 			&i.RemainingAmount,
+			&i.CountedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
@@ -489,6 +500,7 @@ WITH filtered AS (
         inv.surplus_amount,
         inv.shortage_amount,
         inv.remaining_amount,
+        inv.counted_at,
         inv.created_at,
         inv.updated_at,
         inv.deleted_at
@@ -524,6 +536,7 @@ SELECT
     surplus_amount,
     shortage_amount,
     remaining_amount,
+    counted_at,
     created_at,
     updated_at,
     deleted_at
@@ -554,6 +567,7 @@ ORDER BY
         THEN created_at
     END DESC,
     date DESC,
+    counted_at DESC,
     number DESC
 LIMIT $4::int
 OFFSET $3::int
@@ -583,6 +597,7 @@ type GetInventoriesFilteredRow struct {
 	SurplusAmount   pgtype.Numeric     `json:"surplus_amount"`
 	ShortageAmount  pgtype.Numeric     `json:"shortage_amount"`
 	RemainingAmount pgtype.Numeric     `json:"remaining_amount"`
+	CountedAt       time.Time          `json:"counted_at"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt       int64              `json:"deleted_at"`
@@ -619,6 +634,7 @@ func (q *Queries) GetInventoriesFiltered(ctx context.Context, arg GetInventories
 			&i.SurplusAmount,
 			&i.ShortageAmount,
 			&i.RemainingAmount,
+			&i.CountedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
@@ -636,7 +652,7 @@ func (q *Queries) GetInventoriesFiltered(ctx context.Context, arg GetInventories
 const getInventoryByID = `-- name: GetInventoryByID :one
 SELECT id, number, date, storage_id, description, description_i18n, status,
        surplus_amount, shortage_amount, remaining_amount,
-       created_at, updated_at, deleted_at
+       counted_at, created_at, updated_at, deleted_at
 FROM inventories
 WHERE inventories.id = $1 AND inventories.deleted_at = 0
   AND EXISTS (
@@ -657,6 +673,7 @@ type GetInventoryByIDRow struct {
 	SurplusAmount   pgtype.Numeric     `json:"surplus_amount"`
 	ShortageAmount  pgtype.Numeric     `json:"shortage_amount"`
 	RemainingAmount pgtype.Numeric     `json:"remaining_amount"`
+	CountedAt       time.Time          `json:"counted_at"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt       int64              `json:"deleted_at"`
@@ -676,6 +693,7 @@ func (q *Queries) GetInventoryByID(ctx context.Context, id uuid.UUID) (GetInvent
 		&i.SurplusAmount,
 		&i.ShortageAmount,
 		&i.RemainingAmount,
+		&i.CountedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -878,7 +896,7 @@ WHERE inventories.id = $1 AND inventories.deleted_at != 0
   )
 RETURNING id, number, date, storage_id, description, description_i18n, status,
           surplus_amount, shortage_amount, remaining_amount,
-          created_at, updated_at, deleted_at
+          counted_at, created_at, updated_at, deleted_at
 `
 
 type RestoreInventoryRow struct {
@@ -892,6 +910,7 @@ type RestoreInventoryRow struct {
 	SurplusAmount   pgtype.Numeric     `json:"surplus_amount"`
 	ShortageAmount  pgtype.Numeric     `json:"shortage_amount"`
 	RemainingAmount pgtype.Numeric     `json:"remaining_amount"`
+	CountedAt       time.Time          `json:"counted_at"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt       int64              `json:"deleted_at"`
@@ -911,6 +930,7 @@ func (q *Queries) RestoreInventory(ctx context.Context, id uuid.UUID) (RestoreIn
 		&i.SurplusAmount,
 		&i.ShortageAmount,
 		&i.RemainingAmount,
+		&i.CountedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -925,6 +945,7 @@ SET date = COALESCE($2, date),
     description = COALESCE($4, description),
     description_i18n = COALESCE($5, description_i18n),
     status = COALESCE($6, status),
+    counted_at = COALESCE($7, counted_at),
     updated_at = NOW()
 WHERE inventories.id = $1 AND inventories.deleted_at = 0
   AND EXISTS (
@@ -934,7 +955,7 @@ WHERE inventories.id = $1 AND inventories.deleted_at = 0
   )
 RETURNING id, number, date, storage_id, description, description_i18n, status,
           surplus_amount, shortage_amount, remaining_amount,
-          created_at, updated_at, deleted_at
+          counted_at, created_at, updated_at, deleted_at
 `
 
 type UpdateInventoryParams struct {
@@ -944,6 +965,7 @@ type UpdateInventoryParams struct {
 	Description     *string     `json:"description"`
 	DescriptionI18n pgtype.UUID `json:"description_i18n"`
 	Status          string      `json:"status"`
+	CountedAt       time.Time   `json:"counted_at"`
 }
 
 type UpdateInventoryRow struct {
@@ -957,6 +979,7 @@ type UpdateInventoryRow struct {
 	SurplusAmount   pgtype.Numeric     `json:"surplus_amount"`
 	ShortageAmount  pgtype.Numeric     `json:"shortage_amount"`
 	RemainingAmount pgtype.Numeric     `json:"remaining_amount"`
+	CountedAt       time.Time          `json:"counted_at"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt       int64              `json:"deleted_at"`
@@ -970,6 +993,7 @@ func (q *Queries) UpdateInventory(ctx context.Context, arg UpdateInventoryParams
 		arg.Description,
 		arg.DescriptionI18n,
 		arg.Status,
+		arg.CountedAt,
 	)
 	var i UpdateInventoryRow
 	err := row.Scan(
@@ -983,6 +1007,7 @@ func (q *Queries) UpdateInventory(ctx context.Context, arg UpdateInventoryParams
 		&i.SurplusAmount,
 		&i.ShortageAmount,
 		&i.RemainingAmount,
+		&i.CountedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -1004,7 +1029,7 @@ WHERE inventories.id = $1 AND inventories.deleted_at = 0
   )
 RETURNING id, number, date, storage_id, description, description_i18n, status,
           surplus_amount, shortage_amount, remaining_amount,
-          created_at, updated_at, deleted_at
+          counted_at, created_at, updated_at, deleted_at
 `
 
 type UpdateInventoryAmountsParams struct {
@@ -1025,6 +1050,7 @@ type UpdateInventoryAmountsRow struct {
 	SurplusAmount   pgtype.Numeric     `json:"surplus_amount"`
 	ShortageAmount  pgtype.Numeric     `json:"shortage_amount"`
 	RemainingAmount pgtype.Numeric     `json:"remaining_amount"`
+	CountedAt       time.Time          `json:"counted_at"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt       int64              `json:"deleted_at"`
@@ -1049,6 +1075,7 @@ func (q *Queries) UpdateInventoryAmounts(ctx context.Context, arg UpdateInventor
 		&i.SurplusAmount,
 		&i.ShortageAmount,
 		&i.RemainingAmount,
+		&i.CountedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
