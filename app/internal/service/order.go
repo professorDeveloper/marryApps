@@ -924,6 +924,11 @@ func (s *OrderS) UpdateOrderStatus(ctx context.Context, orderID string, status s
 		return nil, fmt.Errorf("use the payment endpoint to mark an order as paid")
 	}
 
+	// Block cancelled — must go through CancelOrder endpoint (handles timer and table status)
+	if status == string(pg.OrderStatusCancelled) {
+		return nil, fmt.Errorf("use the cancel order endpoint to cancel an order")
+	}
+
 	existing, err := s.repo.Tenant(ctx).GetOrderByID(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get order: %w", err)
@@ -1261,6 +1266,9 @@ func (s *OrderS) RestoreOrder(ctx context.Context, orderID string) error {
 	if err := s.repo.Tenant(ctx).RestoreOrder(ctx, id); err != nil {
 		return fmt.Errorf("failed to restore order: %w", err)
 	}
+
+	// Note: Timer auto-start for restored orders is handled at handler level
+	// to avoid circular dependency with TableTimer service
 	return nil
 }
 
