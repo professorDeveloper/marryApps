@@ -205,21 +205,6 @@ func (s *OrderS) reverseOrderItemStockWithModifiers(
 		return fmt.Errorf("failed to get order: %w", err)
 	}
 
-	storageID, err := s.repo.Tenant(ctx).GetStorageByGoodID(ctx, item.GoodID)
-	if err != nil {
-		return fmt.Errorf("failed to get storage for good: %w", err)
-	}
-	if !storageID.Valid {
-		return fmt.Errorf("no active storage configured for good %s", item.GoodID)
-	}
-
-	if err := assertOrderStorageMutationAllowed(ctx, s.repo, order, storageID.Bytes, "order item"); err != nil {
-		return err
-	}
-
-	effectiveAt := orderMutationEffectiveAt(order)
-	touched := make(map[orderTouchedKey]struct{})
-
 	mult := pgtype.Numeric{}
 	mult.Valid = true
 	if err := mult.Scan(strconv.Itoa(int(item.Quantity))); err != nil {
@@ -231,16 +216,11 @@ func (s *OrderS) reverseOrderItemStockWithModifiers(
 		return err
 	}
 
-	for _, u := range usages {
-		if err := s.restoreIngredientUsageToStock(ctx, storageID, item.OrderID, effectiveAt, eventType, u.ingredientID, u.quantity); err != nil {
-			return err
-		}
-		touched[orderTouchedKey{
-			StorageID:    storageID.Bytes,
-			IngredientID: u.ingredientID,
-		}] = struct{}{}
-	}
+	// Collect all usages from base good and modifiers
+	allUsages := make([]ingredientUsage, 0, len(usages))
+	allUsages = append(allUsages, usages...)
 
+	// Collect modifier usages
 	modRows, err := s.repo.Tenant(ctx).ListOrderItemModifiersByOrderID(ctx, item.OrderID)
 	if err != nil {
 		return fmt.Errorf("failed to list order item modifiers: %w", err)
@@ -262,16 +242,38 @@ func (s *OrderS) reverseOrderItemStockWithModifiers(
 		if err != nil {
 			return err
 		}
+		allUsages = append(allUsages, modUsages...)
+	}
 
-		for _, u := range modUsages {
-			if err := s.restoreIngredientUsageToStock(ctx, storageID, item.OrderID, effectiveAt, eventType, u.ingredientID, u.quantity); err != nil {
-				return err
-			}
-			touched[orderTouchedKey{
-				StorageID:    storageID.Bytes,
-				IngredientID: u.ingredientID,
-			}] = struct{}{}
+	// If no calculations at all, skip stock restoration silently
+	if len(allUsages) == 0 {
+		return nil
+	}
+
+	storageID, err := s.repo.Tenant(ctx).GetStorageByGoodID(ctx, item.GoodID)
+	if err != nil {
+		return fmt.Errorf("failed to get storage for good: %w", err)
+	}
+	if !storageID.Valid {
+		return fmt.Errorf("no active storage configured for good %s", item.GoodID)
+	}
+
+	if err := assertOrderStorageMutationAllowed(ctx, s.repo, order, storageID.Bytes, "order item"); err != nil {
+		return err
+	}
+
+	effectiveAt := orderMutationEffectiveAt(order)
+	touched := make(map[orderTouchedKey]struct{})
+
+	// Process all usages (base good + modifiers)
+	for _, u := range allUsages {
+		if err := s.restoreIngredientUsageToStock(ctx, storageID, item.OrderID, effectiveAt, eventType, u.ingredientID, u.quantity); err != nil {
+			return err
 		}
+		touched[orderTouchedKey{
+			StorageID:    storageID.Bytes,
+			IngredientID: u.ingredientID,
+		}] = struct{}{}
 	}
 
 	for key := range touched {
