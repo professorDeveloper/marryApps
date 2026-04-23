@@ -52,36 +52,6 @@ func (q *Queries) AddStockByID(ctx context.Context, arg AddStockByIDParams) (Add
 	return i, err
 }
 
-const updateIngredientStockExplicit = `-- name: UpdateIngredientStockExplicit :one
-UPDATE ingredient_stock
-SET quantity = $2,
-    updated_at = NOW()
-WHERE id = $1
-  AND deleted_at = 0
-RETURNING id, ingredient_id, quantity, branch_id, storage_id, created_at, updated_at, deleted_at
-`
-
-type UpdateIngredientStockExplicitParams struct {
-	ID       uuid.UUID      `json:"id"`
-	Quantity pgtype.Numeric `json:"quantity"`
-}
-
-func (q *Queries) UpdateIngredientStockExplicit(ctx context.Context, arg UpdateIngredientStockExplicitParams) (AddStockByIDRow, error) {
-	row := q.db.QueryRow(ctx, updateIngredientStockExplicit, arg.ID, arg.Quantity)
-	var i AddStockByIDRow
-	err := row.Scan(
-		&i.ID,
-		&i.IngredientID,
-		&i.Quantity,
-		&i.BranchID,
-		&i.StorageID,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.DeletedAt,
-	)
-	return i, err
-}
-
 const countTransfers = `-- name: CountTransfers :one
 SELECT COUNT(*) as count
 FROM transfers
@@ -514,6 +484,47 @@ WHERE id = $1 AND deleted_at = 0
 func (q *Queries) RecalculateTransferTotal(ctx context.Context, transferID uuid.UUID) error {
 	_, err := q.db.Exec(ctx, recalculateTransferTotal, transferID)
 	return err
+}
+
+const updateIngredientStockExplicitForTransfer = `-- name: UpdateIngredientStockExplicitForTransfer :one
+UPDATE ingredient_stock
+SET quantity = $2,
+    updated_at = NOW()
+WHERE id = $1
+  AND deleted_at = 0
+RETURNING id, ingredient_id, quantity, branch_id, storage_id, created_at, updated_at, deleted_at
+`
+
+type UpdateIngredientStockExplicitForTransferParams struct {
+	ID       uuid.UUID      `json:"id"`
+	Quantity pgtype.Numeric `json:"quantity"`
+}
+
+type UpdateIngredientStockExplicitForTransferRow struct {
+	ID           uuid.UUID          `json:"id"`
+	IngredientID uuid.UUID          `json:"ingredient_id"`
+	Quantity     pgtype.Numeric     `json:"quantity"`
+	BranchID     pgtype.UUID        `json:"branch_id"`
+	StorageID    pgtype.UUID        `json:"storage_id"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt    *int64             `json:"deleted_at"`
+}
+
+func (q *Queries) UpdateIngredientStockExplicitForTransfer(ctx context.Context, arg UpdateIngredientStockExplicitForTransferParams) (UpdateIngredientStockExplicitForTransferRow, error) {
+	row := q.db.QueryRow(ctx, updateIngredientStockExplicitForTransfer, arg.ID, arg.Quantity)
+	var i UpdateIngredientStockExplicitForTransferRow
+	err := row.Scan(
+		&i.ID,
+		&i.IngredientID,
+		&i.Quantity,
+		&i.BranchID,
+		&i.StorageID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
 }
 
 const updateTransfer = `-- name: UpdateTransfer :one

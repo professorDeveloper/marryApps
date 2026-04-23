@@ -1373,6 +1373,45 @@ func (q *Queries) UpdateIngredientStock(ctx context.Context, arg UpdateIngredien
 	return i, err
 }
 
+const updateIngredientStockExplicit = `-- name: UpdateIngredientStockExplicit :one
+UPDATE ingredient_stock
+SET quantity = $2,
+    updated_at = NOW()
+WHERE id = $1
+  AND deleted_at = 0
+RETURNING id, ingredient_id, storage_id, quantity, created_at, updated_at, deleted_at
+`
+
+type UpdateIngredientStockExplicitParams struct {
+	ID       uuid.UUID      `json:"id"`
+	Quantity pgtype.Numeric `json:"quantity"`
+}
+
+type UpdateIngredientStockExplicitRow struct {
+	ID           uuid.UUID          `json:"id"`
+	IngredientID uuid.UUID          `json:"ingredient_id"`
+	StorageID    pgtype.UUID        `json:"storage_id"`
+	Quantity     pgtype.Numeric     `json:"quantity"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt    *int64             `json:"deleted_at"`
+}
+
+func (q *Queries) UpdateIngredientStockExplicit(ctx context.Context, arg UpdateIngredientStockExplicitParams) (UpdateIngredientStockExplicitRow, error) {
+	row := q.db.QueryRow(ctx, updateIngredientStockExplicit, arg.ID, arg.Quantity)
+	var i UpdateIngredientStockExplicitRow
+	err := row.Scan(
+		&i.ID,
+		&i.IngredientID,
+		&i.StorageID,
+		&i.Quantity,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
 const upsertAddIngredientStockByStorage = `-- name: UpsertAddIngredientStockByStorage :one
 INSERT INTO ingredient_stock (id, ingredient_id, storage_id, quantity, deleted_at)
 VALUES ($1, $2, $3, $4, 0)

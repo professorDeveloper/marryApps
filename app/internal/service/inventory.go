@@ -39,6 +39,11 @@ func (s *InventoryS) CreateInventory(ctx context.Context, req *model.CreateInven
 		return nil, fmt.Errorf("invalid date: %w", err)
 	}
 
+	countedAt, err := time.Parse(time.RFC3339, req.CountedAt)
+	if err != nil {
+		return nil, fmt.Errorf("invalid counted_at: %w", err)
+	}
+
 	descriptionI18n := pgtype.UUID{Valid: false}
 	if req.DescriptionI18n != nil && *req.DescriptionI18n != "" {
 		i18nID, err := uuid.Parse(*req.DescriptionI18n)
@@ -63,6 +68,7 @@ func (s *InventoryS) CreateInventory(ctx context.Context, req *model.CreateInven
 		Description:     req.Description,
 		DescriptionI18n: descriptionI18n,
 		Status:          status,
+		CountedAt:       countedAt,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create inventory: %w", err)
@@ -73,6 +79,7 @@ func (s *InventoryS) CreateInventory(ctx context.Context, req *model.CreateInven
 func (s *InventoryS) CreateInventoryBatch(ctx context.Context, req *model.CreateInventoryBatchRequest) (*model.CreateInventoryBatchResponse, error) {
 	inv, err := s.CreateInventory(ctx, &model.CreateInventoryRequest{
 		Date:            req.Date,
+		CountedAt:       req.CountedAt,
 		StorageID:       req.StorageID,
 		Description:     req.Description,
 		DescriptionI18n: req.DescriptionI18n,
@@ -287,25 +294,31 @@ func (s *InventoryS) UpdateInventory(ctx context.Context, id string, req *model.
 		return nil, fmt.Errorf("cannot set status to 'deleted'; use the DELETE endpoint instead")
 	}
 
-	// Get full inventory record for date information
+	// Get full inventory record for counted_at information
 	invFull, err := s.repo.Tenant(ctx).GetInventoryByID(ctx, inventoryID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get inventory: %w", err)
 	}
-	if err := assertCanMutateInventorySnapshot(ctx, s.repo, invFull.StorageID, inventoryID, invFull.Date, "inventory"); err != nil {
+	if err := assertCanMutateInventorySnapshot(ctx, s.repo, invFull.StorageID, inventoryID, invFull.CountedAt, "inventory"); err != nil {
 		return nil, err
 	}
 
-	effectiveDate := invFull.Date
-	if req.Date != nil && *req.Date != "" {
-		d, err := parseDateYYYYMMDD(*req.Date)
+	// Compute final counted_at BEFORE status transition to ensure consistency
+	finalCountedAt := invFull.CountedAt
+	if req.CountedAt != nil && *req.CountedAt != "" {
+		ca, err := time.Parse(time.RFC3339, *req.CountedAt)
 		if err != nil {
-			return nil, fmt.Errorf("invalid date: %w", err)
+			return nil, fmt.Errorf("invalid counted_at: %w", err)
 		}
-		effectiveDate = pgtype.Date{Time: d, Valid: true}
+		finalCountedAt = ca
 	}
 
-	// Handle status transition with stock effects
+	// Validate counted_at change: active inventory cannot change counted_at
+	if invForApply.Status == "active" && !isSameTime(invFull.CountedAt, finalCountedAt) {
+		return nil, fmt.Errorf("cannot change counted_at for active inventory")
+	}
+
+	// Handle status transition with stock effects using FINAL counted_at
 	if req.Status != nil && *req.Status != "" && *req.Status != invForApply.Status {
 		newStatus := *req.Status
 		storagePg := pgtype.UUID{Bytes: invForApply.StorageID, Valid: true}
@@ -315,13 +328,15 @@ func (s *InventoryS) UpdateInventory(ctx context.Context, id string, req *model.
 			return nil, fmt.Errorf("failed to get inventory items: %w", err)
 		}
 
+		effectiveAt := pgtype.Timestamptz{Time: finalCountedAt, Valid: true}
+
 		switch {
 		case invForApply.Status == "draft" && newStatus == "active":
-			if err := s.applyStockForItems(ctx, inventoryID, invForApply.StorageID, storagePg, items, "draft_to_active", effectiveDate); err != nil {
+			if err := s.applyStockForItems(ctx, inventoryID, invForApply.StorageID, storagePg, items, "draft_to_active", &effectiveAt); err != nil {
 				return nil, err
 			}
 		case invForApply.Status == "active" && newStatus == "draft":
-			if err := s.reverseStockForItems(ctx, inventoryID, invForApply.StorageID, storagePg, items, "active_to_draft", effectiveDate); err != nil {
+			if err := s.reverseStockForItems(ctx, inventoryID, invForApply.StorageID, storagePg, items, "active_to_draft", &effectiveAt); err != nil {
 				return nil, err
 			}
 		default:
@@ -382,6 +397,7 @@ func (s *InventoryS) UpdateInventory(ctx context.Context, id string, req *model.
 		Description:     finalDescription,
 		DescriptionI18n: finalDescriptionI18n,
 		Status:          finalStatus,
+		CountedAt:       finalCountedAt,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to update inventory: %w", err)
@@ -406,7 +422,7 @@ func (s *InventoryS) UpdateInventoryItem(ctx context.Context, inventoryItemID st
 		return nil, fmt.Errorf("failed to get inventory details: %w", err)
 	}
 
-	if err := assertCanMutateInventorySnapshot(ctx, s.repo, invFull.StorageID, invFull.ID, invFull.Date, "inventory item"); err != nil {
+	if err := assertCanMutateInventorySnapshot(ctx, s.repo, invFull.StorageID, invFull.ID, invFull.CountedAt, "inventory item"); err != nil {
 		return nil, err
 	}
 
@@ -464,7 +480,7 @@ func (s *InventoryS) ReplaceInventoryItems(ctx context.Context, inventoryID stri
 		}
 		return nil, fmt.Errorf("failed to get inventory: %w", err)
 	}
-	if err := assertCanMutateInventorySnapshot(ctx, s.repo, inv.StorageID, invID, inv.Date, "inventory items"); err != nil {
+	if err := assertCanMutateInventorySnapshot(ctx, s.repo, inv.StorageID, invID, inv.CountedAt, "inventory items"); err != nil {
 		return nil, err
 	}
 
@@ -482,7 +498,7 @@ func (s *InventoryS) ReplaceInventoryItems(ctx context.Context, inventoryID stri
 
 	seen := make(map[uuid.UUID]struct{}, len(req.Items))
 	isActive := inv.Status == "active"
-	effectiveAt := inventoryEffectiveAt(inv.Date)
+	effectiveAt := pgtype.Timestamptz{Time: inv.CountedAt, Valid: true}
 	zero := inventoryZeroNumeric()
 
 	for i, input := range req.Items {
@@ -549,7 +565,7 @@ func (s *InventoryS) ReplaceInventoryItems(ctx context.Context, inventoryID stri
 				inv.StorageID,
 				ingID,
 				plan,
-				effectiveAt,
+				&effectiveAt,
 			); err != nil {
 				return nil, fmt.Errorf("items[%d]: failed to apply inventory movement plan: %w", i, err)
 			}
@@ -582,7 +598,7 @@ func (s *InventoryS) ReplaceInventoryItems(ctx context.Context, inventoryID stri
 			inv.StorageID,
 			ingID,
 			plan,
-			effectiveAt,
+			&effectiveAt,
 		); err != nil {
 			return nil, fmt.Errorf("items[%d]: failed to apply inventory adjustment plan: %w", i, err)
 		}
@@ -608,7 +624,7 @@ func (s *InventoryS) ReplaceInventoryItems(ctx context.Context, inventoryID stri
 				inv.StorageID,
 				item.IngredientID,
 				plan,
-				effectiveAt,
+				&effectiveAt,
 			); err != nil {
 				return nil, fmt.Errorf("failed to apply inventory delete reversal for ingredient %s: %w", item.IngredientID.String(), err)
 			}
@@ -645,7 +661,7 @@ func (s *InventoryS) DeleteInventory(ctx context.Context, id string) error {
 	if err != nil {
 		return fmt.Errorf("failed to get inventory: %w", err)
 	}
-	if err := assertCanMutateInventorySnapshot(ctx, s.repo, inv.StorageID, inventoryID, invFull.Date, "inventory"); err != nil {
+	if err := assertCanMutateInventorySnapshot(ctx, s.repo, inv.StorageID, inventoryID, invFull.CountedAt, "inventory"); err != nil {
 		return err
 	}
 
@@ -656,7 +672,8 @@ func (s *InventoryS) DeleteInventory(ctx context.Context, id string) error {
 		if err != nil {
 			return fmt.Errorf("failed to get inventory items: %w", err)
 		}
-		if err := s.reverseStockForItems(ctx, inventoryID, inv.StorageID, storagePg, items, "inventory_deleted", invFull.Date); err != nil {
+		effectiveAt := pgtype.Timestamptz{Time: invFull.CountedAt, Valid: true}
+		if err := s.reverseStockForItems(ctx, inventoryID, inv.StorageID, storagePg, items, "inventory_deleted", &effectiveAt); err != nil {
 			return err
 		}
 	}
@@ -721,13 +738,15 @@ func (s *InventoryS) DeleteInventoryItem(ctx context.Context, inventoryItemID st
 		return fmt.Errorf("failed to get inventory details: %w", err)
 	}
 
-	if err := assertCanMutateInventorySnapshot(ctx, s.repo, inv.StorageID, item.InventoryID, invFull.Date, "inventory item"); err != nil {
+	if err := assertCanMutateInventorySnapshot(ctx, s.repo, inv.StorageID, item.InventoryID, invFull.CountedAt, "inventory item"); err != nil {
 		return err
 	}
 
-	// Convert inventory date to timestamptz for effective_at
+	// Use counted_at for effective_at
 	var invDate pgtype.Timestamptz
-	if invFull.Date.Valid {
+	if !invFull.CountedAt.IsZero() {
+		invDate = pgtype.Timestamptz{Time: invFull.CountedAt, Valid: true}
+	} else if invFull.Date.Valid {
 		invDate = pgtype.Timestamptz{Time: invFull.Date.Time.In(time.UTC), Valid: true}
 	}
 
@@ -844,7 +863,7 @@ func (s *InventoryS) UpsertInventoryItems(ctx context.Context, inventoryID strin
 
 // applyStockForItems refreshes each item's system_quantity to current stock then sets stock = counted.
 // Used when transitioning draft → active.
-func (s *InventoryS) applyStockForItems(ctx context.Context, invID uuid.UUID, storageID uuid.UUID, storagePg pgtype.UUID, items []pg.InventoryItemForProcess, eventType string, inventoryDate pgtype.Date) error {
+func (s *InventoryS) applyStockForItems(ctx context.Context, invID uuid.UUID, storageID uuid.UUID, storagePg pgtype.UUID, items []pg.InventoryItemForProcess, eventType string, effectiveAt *pgtype.Timestamptz) error {
 	zero := pgtype.Numeric{}
 	_ = zero.Scan("0")
 	sourceType := "inventory"
@@ -888,7 +907,7 @@ func (s *InventoryS) applyStockForItems(ctx context.Context, invID uuid.UUID, st
 					EventType: string(ev), QtyIn: deltaQty, QtyOut: zero,
 					StockBefore: locked.Quantity, StockAfter: updated.Quantity,
 					PricePerUnit: zero, SourceType: &sourceType, SourceID: &srcID,
-					EffectiveAt: &pgtype.Timestamptz{Time: inventoryDate.Time.In(time.UTC), Valid: true},
+					EffectiveAt: effectiveAt,
 				})
 			} else {
 				ev = pg.InventoryShortageOut
@@ -898,7 +917,7 @@ func (s *InventoryS) applyStockForItems(ctx context.Context, invID uuid.UUID, st
 					EventType: string(ev), QtyIn: zero, QtyOut: deltaQty,
 					StockBefore: locked.Quantity, StockAfter: updated.Quantity,
 					PricePerUnit: zero, SourceType: &sourceType, SourceID: &srcID,
-					EffectiveAt: &pgtype.Timestamptz{Time: inventoryDate.Time.In(time.UTC), Valid: true},
+					EffectiveAt: effectiveAt,
 				})
 			}
 		}
@@ -908,8 +927,7 @@ func (s *InventoryS) applyStockForItems(ctx context.Context, invID uuid.UUID, st
 
 // reverseStockForItems reverses the delta (counted - system_quantity) for each item.
 // Used when transitioning active → draft or deleting an active inventory.
-func (s *InventoryS) reverseStockForItems(ctx context.Context, invID uuid.UUID, storageID uuid.UUID, storagePg pgtype.UUID, items []pg.InventoryItemForProcess, eventType string, inventoryDate pgtype.Date) error {
-	effectiveAt := inventoryEffectiveAt(inventoryDate)
+func (s *InventoryS) reverseStockForItems(ctx context.Context, invID uuid.UUID, storageID uuid.UUID, storagePg pgtype.UUID, items []pg.InventoryItemForProcess, eventType string, effectiveAt *pgtype.Timestamptz) error {
 
 	for _, item := range items {
 		plan, err := buildInventoryTransitionPlan(item.CountedQuantity, item.SystemQuantity)
@@ -949,11 +967,17 @@ func dateToTime(d pgtype.Date) *time.Time {
 	return &t
 }
 
+// isSameTime compares two time.Time values for equality with UTC normalization
+func isSameTime(a, b time.Time) bool {
+	return a.UTC().Equal(b.UTC())
+}
+
 func toInventoryResponse(inv any) *model.InventoryResponse {
 	var (
 		id              uuid.UUID
 		number          int64
 		date            pgtype.Date
+		countedAt       time.Time
 		storageID       uuid.UUID
 		description     *string
 		descriptionI18n pgtype.UUID
@@ -968,42 +992,42 @@ func toInventoryResponse(inv any) *model.InventoryResponse {
 
 	switch row := inv.(type) {
 	case pg.Inventory:
-		id, number, date, storageID = row.ID, row.Number, row.Date, row.StorageID
+		id, number, date, countedAt, storageID = row.ID, row.Number, row.Date, row.CountedAt, row.StorageID
 		description, descriptionI18n, status = row.Description, row.DescriptionI18n, row.Status
 		surplusAmount, shortageAmount, remainingAmount = row.SurplusAmount, row.ShortageAmount, row.RemainingAmount
 		createdAt, updatedAt, deletedAt = row.CreatedAt, row.UpdatedAt, row.DeletedAt
 	case pg.CreateInventoryRow:
-		id, number, date, storageID = row.ID, row.Number, row.Date, row.StorageID
+		id, number, date, countedAt, storageID = row.ID, row.Number, row.Date, row.CountedAt, row.StorageID
 		description, descriptionI18n, status = row.Description, row.DescriptionI18n, row.Status
 		surplusAmount, shortageAmount, remainingAmount = row.SurplusAmount, row.ShortageAmount, row.RemainingAmount
 		createdAt, updatedAt = row.CreatedAt, row.UpdatedAt
 	case pg.GetInventoryByIDRow:
-		id, number, date, storageID = row.ID, row.Number, row.Date, row.StorageID
+		id, number, date, countedAt, storageID = row.ID, row.Number, row.Date, row.CountedAt, row.StorageID
 		description, descriptionI18n, status = row.Description, row.DescriptionI18n, row.Status
 		surplusAmount, shortageAmount, remainingAmount = row.SurplusAmount, row.ShortageAmount, row.RemainingAmount
 		createdAt, updatedAt = row.CreatedAt, row.UpdatedAt
 	case pg.GetAllInventoriesRow:
-		id, number, date, storageID = row.ID, row.Number, row.Date, row.StorageID
+		id, number, date, countedAt, storageID = row.ID, row.Number, row.Date, row.CountedAt, row.StorageID
 		description, descriptionI18n, status = row.Description, row.DescriptionI18n, row.Status
 		surplusAmount, shortageAmount, remainingAmount = row.SurplusAmount, row.ShortageAmount, row.RemainingAmount
 		createdAt, updatedAt, deletedAt = row.CreatedAt, row.UpdatedAt, row.DeletedAt
 	case pg.GetInventoriesFilteredRow:
-		id, number, date, storageID = row.ID, row.Number, row.Date, row.StorageID
+		id, number, date, countedAt, storageID = row.ID, row.Number, row.Date, row.CountedAt, row.StorageID
 		description, descriptionI18n, status = row.Description, row.DescriptionI18n, row.Status
 		surplusAmount, shortageAmount, remainingAmount = row.SurplusAmount, row.ShortageAmount, row.RemainingAmount
 		createdAt, updatedAt, deletedAt = row.CreatedAt, row.UpdatedAt, row.DeletedAt
 	case pg.UpdateInventoryRow:
-		id, number, date, storageID = row.ID, row.Number, row.Date, row.StorageID
+		id, number, date, countedAt, storageID = row.ID, row.Number, row.Date, row.CountedAt, row.StorageID
 		description, descriptionI18n, status = row.Description, row.DescriptionI18n, row.Status
 		surplusAmount, shortageAmount, remainingAmount = row.SurplusAmount, row.ShortageAmount, row.RemainingAmount
 		createdAt, updatedAt = row.CreatedAt, row.UpdatedAt
 	case pg.UpdateInventoryAmountsRow:
-		id, number, date, storageID = row.ID, row.Number, row.Date, row.StorageID
+		id, number, date, countedAt, storageID = row.ID, row.Number, row.Date, row.CountedAt, row.StorageID
 		description, descriptionI18n, status = row.Description, row.DescriptionI18n, row.Status
 		surplusAmount, shortageAmount, remainingAmount = row.SurplusAmount, row.ShortageAmount, row.RemainingAmount
 		createdAt, updatedAt = row.CreatedAt, row.UpdatedAt
 	case pg.RestoreInventoryRow:
-		id, number, date, storageID = row.ID, row.Number, row.Date, row.StorageID
+		id, number, date, countedAt, storageID = row.ID, row.Number, row.Date, row.CountedAt, row.StorageID
 		description, descriptionI18n, status = row.Description, row.DescriptionI18n, row.Status
 		surplusAmount, shortageAmount, remainingAmount = row.SurplusAmount, row.ShortageAmount, row.RemainingAmount
 		createdAt, updatedAt = row.CreatedAt, row.UpdatedAt
@@ -1026,6 +1050,9 @@ func toInventoryResponse(inv any) *model.InventoryResponse {
 		RemainingAmount: numericToString(remainingAmount),
 	}
 	resp.Date = dateToTime(date)
+	if !countedAt.IsZero() {
+		resp.CountedAt = &countedAt
+	}
 	resp.CreatedAt = timestampToTime(createdAt)
 	resp.UpdatedAt = timestampToTime(updatedAt)
 

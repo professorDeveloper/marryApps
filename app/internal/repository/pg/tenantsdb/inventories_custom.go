@@ -2,6 +2,7 @@ package pg
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -19,6 +20,7 @@ type InventoryItemForProcess struct {
 type LastActiveInventoryByStorageRow struct {
 	ID        uuid.UUID
 	Date      pgtype.Date
+	CountedAt time.Time
 	AppliedAt pgtype.Timestamptz
 }
 
@@ -110,7 +112,7 @@ func (q *Queries) InsertInventoryItemWithSystemQty(ctx context.Context, id, inve
 	return item, nil
 }
 
-// UpdateInventoryItemSystemQuantityFromMovements refreshes system_quantity by reconstructing balance from movements at the inventory date.
+// UpdateInventoryItemSystemQuantityFromMovements refreshes system_quantity by reconstructing balance from movements at the inventory counted_at timestamp.
 // This ensures inventory comparisons use point-in-time stock, not current stock.
 func (q *Queries) UpdateInventoryItemSystemQuantityFromMovements(ctx context.Context, itemID uuid.UUID) (InventoryItemForProcess, error) {
 	const sql = `
@@ -120,7 +122,7 @@ func (q *Queries) UpdateInventoryItemSystemQuantityFromMovements(ctx context.Con
 			FROM ingredient_stock_movements m
 			WHERE m.ingredient_id = ii.ingredient_id
 			  AND m.storage_id = (SELECT storage_id FROM inventories WHERE id = ii.inventory_id)
-			  AND COALESCE(m.effective_at, m.created_at) <= (SELECT date::timestamptz AT TIME ZONE 'UTC' FROM inventories WHERE id = ii.inventory_id)
+			  AND COALESCE(m.effective_at, m.created_at) <= (SELECT counted_at FROM inventories WHERE id = ii.inventory_id)
 			ORDER BY COALESCE(m.effective_at, m.created_at) DESC, m.id DESC
 			LIMIT 1
 		), 0),
@@ -149,24 +151,24 @@ func (q *Queries) DeleteInventoryItemByID(ctx context.Context, id uuid.UUID) err
 
 func (q *Queries) GetLastActiveInventoryByStorage(ctx context.Context, storageID uuid.UUID) (LastActiveInventoryByStorageRow, error) {
 	const sql = `
-		SELECT id, date, applied_at
+		SELECT id, date, counted_at, applied_at
 		FROM inventories
 		WHERE storage_id = $1
 		  AND status = 'active'
 		  AND deleted_at = 0
-		ORDER BY date DESC, applied_at DESC NULLS LAST, created_at DESC, id DESC
+		ORDER BY counted_at DESC, applied_at DESC NULLS LAST, created_at DESC, id DESC
 		LIMIT 1
 	`
 
 	row := q.db.QueryRow(ctx, sql, storageID)
 	var out LastActiveInventoryByStorageRow
-	if err := row.Scan(&out.ID, &out.Date, &out.AppliedAt); err != nil {
+	if err := row.Scan(&out.ID, &out.Date, &out.CountedAt, &out.AppliedAt); err != nil {
 		return LastActiveInventoryByStorageRow{}, err
 	}
 	return out, nil
 }
 
-func (q *Queries) HasNewerActiveInventoryByStorage(ctx context.Context, storageID, currentInventoryID uuid.UUID, currentDate pgtype.Date) (bool, error) {
+func (q *Queries) HasNewerActiveInventoryByStorage(ctx context.Context, storageID, currentInventoryID uuid.UUID, currentCountedAt time.Time) (bool, error) {
 	const sql = `
 		SELECT EXISTS (
 			SELECT 1
@@ -175,12 +177,12 @@ func (q *Queries) HasNewerActiveInventoryByStorage(ctx context.Context, storageI
 			  AND status = 'active'
 			  AND deleted_at = 0
 			  AND id <> $2
-			  AND date >= $3
+			  AND counted_at > $3
 		)
 	`
 
 	var exists bool
-	if err := q.db.QueryRow(ctx, sql, storageID, currentInventoryID, currentDate).Scan(&exists); err != nil {
+	if err := q.db.QueryRow(ctx, sql, storageID, currentInventoryID, currentCountedAt).Scan(&exists); err != nil {
 		return false, err
 	}
 	return exists, nil

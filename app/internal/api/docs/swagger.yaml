@@ -1115,6 +1115,9 @@ definitions:
     type: object
   model.CreateInventoryBatchRequest:
     properties:
+      counted_at:
+        example: "2024-01-01T14:30:00+05:00"
+        type: string
       date:
         example: "2024-01-01"
         type: string
@@ -1135,6 +1138,7 @@ definitions:
         example: d1f29b75-8g6d-5536-0525-2c12deeef0e0
         type: string
     required:
+    - counted_at
     - date
     - items
     - storage_id
@@ -1146,6 +1150,9 @@ definitions:
     type: object
   model.CreateInventoryRequest:
     properties:
+      counted_at:
+        example: "2024-01-01T14:30:00+05:00"
+        type: string
       date:
         example: "2024-01-01"
         type: string
@@ -1162,6 +1169,7 @@ definitions:
         example: d1f29b75-8g6d-5536-0525-2c12deeef0e0
         type: string
     required:
+    - counted_at
     - date
     - storage_id
     type: object
@@ -2560,6 +2568,8 @@ definitions:
     type: object
   model.InventoryResponse:
     properties:
+      counted_at:
+        type: string
       created_at:
         type: string
       date:
@@ -4555,6 +4565,9 @@ definitions:
     type: object
   model.UpdateInventoryRequest:
     properties:
+      counted_at:
+        example: "2024-01-01T14:30:00+05:00"
+        type: string
       date:
         example: "2024-01-01"
         type: string
@@ -4967,26 +4980,11 @@ definitions:
     type: object
   model.UpsertInventoryItemsRequest:
     properties:
-      date:
-        description: Optional inventory-level fields (update inventory + items in
-          one call)
-        example: "2024-01-01"
-        type: string
-      description:
-        type: string
-      description_i18n:
-        type: string
       items:
         items:
           $ref: '#/definitions/model.UpsertInventoryItemRequest'
         minItems: 1
         type: array
-      status:
-        example: active
-        type: string
-      storage_id:
-        example: 123e4567-e89b-12d3-a456-426614174000
-        type: string
     required:
     - items
     type: object
