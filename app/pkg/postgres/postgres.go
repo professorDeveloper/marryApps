@@ -52,6 +52,10 @@ func tryToConnectWithAttempts(ctx context.Context, maxAttempts int, maxPoolSize 
 		log.Fatalf("Unable to parse config: %v\n", err)
 	}
 	poolConfig.MaxConns = maxPoolSize
+	poolConfig.MinConns = 2
+	poolConfig.MaxConnIdleTime = 5 * time.Minute
+	poolConfig.MaxConnLifetime = 30 * time.Minute
+	poolConfig.HealthCheckPeriod = 1 * time.Minute
 	if simpleProtocol {
 		poolConfig.ConnConfig.DefaultQueryExecMode = pgx.QueryExecModeSimpleProtocol
 	}

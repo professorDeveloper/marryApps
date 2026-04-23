@@ -2,11 +2,13 @@ package middleware
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
 	"strings"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/labstack/echo/v4"
 	"gitlab.yurtal.tech/company/maryai/back/internal/repository"
 	"gitlab.yurtal.tech/company/maryai/back/internal/service"
@@ -52,8 +54,13 @@ func TenantMiddleware(repo *repository.Repository) echo.MiddlewareFunc {
 			tenantCfg, err := resolver.ResolveTenantByBrandID(ctx, brandIDStr)
 			if err != nil {
 				log.Printf("Failed to resolve tenant %s: %v", brandIDStr, err)
-				return c.JSON(http.StatusForbidden, map[string]interface{}{
-					"message": "Tenant not found or access denied",
+				if errors.Is(err, pgx.ErrNoRows) {
+					return c.JSON(http.StatusForbidden, map[string]interface{}{
+						"message": "Tenant not found",
+					})
+				}
+				return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+					"message": "DB error resolving tenant",
 				})
 			}
 
@@ -69,8 +76,8 @@ func TenantMiddleware(repo *repository.Repository) echo.MiddlewareFunc {
 			if _, err := tx.Exec(ctx, fmt.Sprintf("SET LOCAL search_path TO \"%s\", public", schemaName)); err != nil {
 				log.Printf("Tenant schema %s not found for brand %s: %v", schemaName, brandIDStr, err)
 				tx.Rollback(ctx)
-				return c.JSON(http.StatusForbidden, map[string]interface{}{
-					"message": "Tenant schema not initialized",
+				return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+					"message": "DB error setting search path",
 				})
 			}
 
