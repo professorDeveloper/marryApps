@@ -1813,15 +1813,6 @@ func (s *OrderS) consumeItemStockTx(
 	quantity int32,
 	orderID uuid.UUID,
 ) error {
-	storageID, err := q.GetStorageByGoodID(ctx, goodID)
-	if err != nil {
-		log.Printf("❌ ERROR: Failed to get storage for good %s: %v", goodID, err)
-		return fmt.Errorf("failed to get storage for good: %w", err)
-	}
-	if !storageID.Valid {
-		return fmt.Errorf("no active storage configured for good %s", goodID)
-	}
-
 	mult := pgtype.Numeric{}
 	mult.Valid = true
 	if err := mult.Scan(strconv.Itoa(int(quantity))); err != nil {
@@ -1833,8 +1824,19 @@ func (s *OrderS) consumeItemStockTx(
 		log.Printf("❌ ERROR: Failed to expand good %s to ingredients: %v", goodID, err)
 		return err
 	}
+
+	// If no calculations, skip stock deduction silently
 	if len(usages) == 0 {
-		return fmt.Errorf("no calculation configured for good %s", goodID)
+		return nil
+	}
+
+	storageID, err := q.GetStorageByGoodID(ctx, goodID)
+	if err != nil {
+		log.Printf("❌ ERROR: Failed to get storage for good %s: %v", goodID, err)
+		return fmt.Errorf("failed to get storage for good: %w", err)
+	}
+	if !storageID.Valid {
+		return fmt.Errorf("no active storage configured for good %s", goodID)
 	}
 
 	for _, u := range usages {
@@ -1909,14 +1911,6 @@ func (s *OrderS) consumeItemStockTx(
 }
 
 func (s *OrderS) consumeItemStock(ctx context.Context, goodID uuid.UUID, quantity int32, orderID uuid.UUID) error {
-	storageID, err := s.repo.Tenant(ctx).GetStorageByGoodID(ctx, goodID)
-	if err != nil {
-		return fmt.Errorf("failed to get storage for good: %w", err)
-	}
-	if !storageID.Valid {
-		return fmt.Errorf("no active storage configured for good %s", goodID)
-	}
-
 	mult := pgtype.Numeric{}
 	mult.Valid = true
 	if err := mult.Scan(strconv.Itoa(int(quantity))); err != nil {
@@ -1927,8 +1921,18 @@ func (s *OrderS) consumeItemStock(ctx context.Context, goodID uuid.UUID, quantit
 	if err != nil {
 		return err
 	}
+
+	// If no calculations, skip stock deduction silently
 	if len(usages) == 0 {
-		return fmt.Errorf("no calculation configured for good %s", goodID)
+		return nil
+	}
+
+	storageID, err := s.repo.Tenant(ctx).GetStorageByGoodID(ctx, goodID)
+	if err != nil {
+		return fmt.Errorf("failed to get storage for good: %w", err)
+	}
+	if !storageID.Valid {
+		return fmt.Errorf("no active storage configured for good %s", goodID)
 	}
 
 	for _, u := range usages {
@@ -2028,6 +2032,55 @@ func (s *OrderS) consumeItemStockWithModifiers(ctx context.Context, orderItemID 
 	quantity := item.Quantity
 	orderID := item.OrderID
 
+	mult := pgtype.Numeric{}
+	mult.Valid = true
+	if err := mult.Scan(strconv.Itoa(int(quantity))); err != nil {
+		return fmt.Errorf("invalid item quantity: %w", err)
+	}
+
+	usages, err := s.expandGoodToIngredientsByCalculations(ctx, goodID, mult)
+	if err != nil {
+		return err
+	}
+
+	zero := inventoryZeroNumeric()
+	sourceType := "order"
+	srcID := orderID
+
+	// Collect all usages from base good and modifiers
+	allUsages := make([]ingredientUsage, 0, len(usages))
+	allUsages = append(allUsages, usages...)
+
+	// Collect modifier usages
+	modRows, err := s.repo.Tenant(ctx).ListOrderItemModifiersByOrderID(ctx, orderID)
+	if err != nil {
+		return fmt.Errorf("failed to list order item modifiers: %w", err)
+	}
+
+	for _, om := range modRows {
+		if om.OrderItemID != orderItemID {
+			continue
+		}
+
+		comb := int64(quantity) * int64(om.Units)
+		modMult := pgtype.Numeric{}
+		modMult.Valid = true
+		if err := modMult.Scan(fmt.Sprintf("%d", comb)); err != nil {
+			return fmt.Errorf("invalid modifier multiplier: %w", err)
+		}
+
+		modUsages, err := s.expandModifierToIngredientsByCalculations(ctx, om.ModifierID, modMult)
+		if err != nil {
+			return err
+		}
+		allUsages = append(allUsages, modUsages...)
+	}
+
+	// If no calculations at all (base good + modifiers), skip stock deduction silently
+	if len(allUsages) == 0 {
+		return nil
+	}
+
 	storageID, err := s.repo.Tenant(ctx).GetStorageByGoodID(ctx, goodID)
 	if err != nil {
 		return fmt.Errorf("failed to get storage for good: %w", err)
@@ -2043,25 +2096,8 @@ func (s *OrderS) consumeItemStockWithModifiers(ctx context.Context, orderItemID 
 	effectiveAt := orderMutationEffectiveAt(order)
 	touched := make(map[orderTouchedKey]struct{})
 
-	mult := pgtype.Numeric{}
-	mult.Valid = true
-	if err := mult.Scan(strconv.Itoa(int(quantity))); err != nil {
-		return fmt.Errorf("invalid item quantity: %w", err)
-	}
-
-	usages, err := s.expandGoodToIngredientsByCalculations(ctx, goodID, mult)
-	if err != nil {
-		return err
-	}
-	if len(usages) == 0 {
-		return fmt.Errorf("no calculation configured for good %s", goodID)
-	}
-
-	zero := inventoryZeroNumeric()
-	sourceType := "order"
-	srcID := orderID
-
-	for _, u := range usages {
+	// Process all usages (base good + modifiers)
+	for _, u := range allUsages {
 		stockID, err := s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
 			ID:           uuid.New(),
 			IngredientID: u.ingredientID,
@@ -2119,89 +2155,6 @@ func (s *OrderS) consumeItemStockWithModifiers(ctx context.Context, orderItemID 
 			StorageID:    storageID.Bytes,
 			IngredientID: u.ingredientID,
 		}] = struct{}{}
-	}
-
-	modRows, err := s.repo.Tenant(ctx).ListOrderItemModifiersByOrderID(ctx, orderID)
-	if err != nil {
-		return fmt.Errorf("failed to list order item modifiers: %w", err)
-	}
-
-	for _, om := range modRows {
-		if om.OrderItemID != orderItemID {
-			continue
-		}
-
-		comb := int64(quantity) * int64(om.Units)
-		modMult := pgtype.Numeric{}
-		modMult.Valid = true
-		if err := modMult.Scan(fmt.Sprintf("%d", comb)); err != nil {
-			return fmt.Errorf("invalid modifier multiplier: %w", err)
-		}
-
-		modUsages, err := s.expandModifierToIngredientsByCalculations(ctx, om.ModifierID, modMult)
-		if err != nil {
-			return err
-		}
-
-		for _, u := range modUsages {
-			stockID, err := s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
-				ID:           uuid.New(),
-				IngredientID: u.ingredientID,
-				StorageID:    storageID,
-			})
-			if err != nil {
-				return fmt.Errorf("failed to ensure modifier ingredient stock row: %w", err)
-			}
-
-			locked, err := s.repo.Tenant(ctx).GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
-				IngredientID: u.ingredientID,
-				StorageID:    storageID,
-			})
-			if err != nil {
-				return fmt.Errorf("failed to lock modifier ingredient stock row: %w", err)
-			}
-
-			ing, err := s.repo.Tenant(ctx).GetIngredientByID(ctx, u.ingredientID)
-			if err != nil {
-				return fmt.Errorf("failed to get modifier ingredient: %w", err)
-			}
-			price := ing.PricePerUnit
-			if !price.Valid {
-				_ = price.Scan("0")
-			}
-
-			updated, err := s.repo.Tenant(ctx).RemoveFromIngredientStock(ctx, pg.RemoveFromIngredientStockParams{
-				ID:       stockID,
-				Quantity: u.quantity,
-			})
-			if err != nil {
-				return fmt.Errorf("failed to consume modifier ingredient stock: %w", err)
-			}
-
-			if !shouldSkipStockMovement(zero, u.quantity) {
-				if err := s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
-					ID:           uuid.New(),
-					StorageID:    uuid.UUID(storageID.Bytes),
-					IngredientID: u.ingredientID,
-					EventType:    "order_out",
-					QtyIn:        zero,
-					QtyOut:       u.quantity,
-					StockBefore:  locked.Quantity,
-					StockAfter:   updated.Quantity,
-					PricePerUnit: price,
-					SourceType:   &sourceType,
-					SourceID:     &srcID,
-					EffectiveAt:  effectiveAt,
-				}); err != nil {
-					return fmt.Errorf("failed to insert modifier order stock movement: %w", err)
-				}
-			}
-
-			touched[orderTouchedKey{
-				StorageID:    storageID.Bytes,
-				IngredientID: u.ingredientID,
-			}] = struct{}{}
-		}
 	}
 
 	for key := range touched {
