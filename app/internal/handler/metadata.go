@@ -21,6 +21,18 @@ var metadataWhitelist = map[string]string{
 	"transaction_groups": "group_transactions",
 }
 
+// GetMetadata godoc
+// @Summary Get bulk metadata for dropdown options
+// @Description Retrieves {id, name} pairs for multiple entity types in a single request
+// @Tags Metadata
+// @Accept json
+// @Produce json
+// @Param include query string false "Comma-separated entity names (e.g., storages,departments,categories)"
+// @Success 200 {object} map[string][]model.MetadataItem
+// @Failure 400 {object} model.ErrorData "Invalid entity in whitelist"
+// @Failure 500 {object} model.ErrorData "Database error"
+// @Router /metadata [get]
+// @Security ApiKeyAuth
 func (h *Handler) GetMetadata(c echo.Context) error {
 	includeParam := c.QueryParam("include")
 	if includeParam == "" {
