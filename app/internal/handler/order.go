@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"errors"
 	"log"
 	"math"
@@ -1337,18 +1338,20 @@ func (h *Handler) CancelOrder(c echo.Context) error {
 		))
 	}
 
-	// Send notification to kitchen staff using saved tokens
+	// Send notification to kitchen staff asynchronously (non-blocking)
 	if h.fcmClient != nil {
-		// Get all kitchen staff users with role='kitchen'
-		kitchenStaff, err := h.repo.Tenant(c.Request().Context()).GetUsersByRole(c.Request().Context(), "kitchen")
-		if err == nil {
-			for _, staff := range kitchenStaff {
-				if staff.FcmToken != nil && strings.TrimSpace(*staff.FcmToken) != "" {
-					// Send cancellation notification to each kitchen staff
-					_ = h.service.Order().SendNotificationByStatus(c.Request().Context(), h.fcmClient, *staff.FcmToken, order.ID, "cancelled", "")
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			kitchenStaff, err := h.repo.Tenant(ctx).GetUsersByRole(ctx, "kitchen")
+			if err == nil {
+				for _, staff := range kitchenStaff {
+					if staff.FcmToken != nil && strings.TrimSpace(*staff.FcmToken) != "" {
+						_ = h.service.Order().SendNotificationByStatus(ctx, h.fcmClient, *staff.FcmToken, order.ID, "cancelled", "")
+					}
 				}
 			}
-		}
+		}()
 	}
 
 	return c.JSON(http.StatusOK, model.NewSuccessResponse(
@@ -2180,18 +2183,20 @@ func (h *Handler) CancelOrderItem(c echo.Context) error {
 		))
 	}
 
-	// Send notification to kitchen staff using saved tokens
+	// Send notification to kitchen staff asynchronously (non-blocking)
 	if h.fcmClient != nil {
-		// Get all kitchen staff users with role='kitchen'
-		kitchenStaff, err := h.repo.Tenant(c.Request().Context()).GetUsersByRole(c.Request().Context(), "kitchen")
-		if err == nil {
-			for _, staff := range kitchenStaff {
-				if staff.FcmToken != nil && strings.TrimSpace(*staff.FcmToken) != "" {
-					// Send cancellation notification to each kitchen staff
-					_ = h.service.Order().SendNotificationByStatus(c.Request().Context(), h.fcmClient, *staff.FcmToken, item.OrderID, "cancelled", "")
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			kitchenStaff, err := h.repo.Tenant(ctx).GetUsersByRole(ctx, "kitchen")
+			if err == nil {
+				for _, staff := range kitchenStaff {
+					if staff.FcmToken != nil && strings.TrimSpace(*staff.FcmToken) != "" {
+						_ = h.service.Order().SendNotificationByStatus(ctx, h.fcmClient, *staff.FcmToken, item.OrderID, "cancelled", "")
+					}
 				}
 			}
-		}
+		}()
 	}
 
 	return c.JSON(http.StatusOK, model.NewSuccessResponse(

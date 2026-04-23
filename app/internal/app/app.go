@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"runtime/debug"
 	"syscall"
 	"time"
 
@@ -39,6 +40,11 @@ import (
 // @in header
 // @name Authorization
 // @description Type "Bearer" followed by a space and your JWT token
+
+func init() {
+	debug.SetMemoryLimit(600 * 1024 * 1024)
+	debug.SetGCPercent(50)
+}
 
 func Run(cfg *config.Config) {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -170,6 +176,10 @@ func Run(cfg *config.Config) {
 	go func() {
 		addr := fmt.Sprintf(":%d", cfg.Server.Http.Port)
 		l.Infof("starting server on %s", addr)
+
+		e.Server.ReadTimeout = time.Duration(cfg.Server.Http.ReadTimeout) * time.Second
+		e.Server.WriteTimeout = time.Duration(cfg.Server.Http.WriteTimeout) * time.Second
+		e.Server.IdleTimeout = 30 * time.Second
 
 		if err := e.Start(addr); err != nil && err != http.ErrServerClosed {
 			l.Fatalf("app - Run - e.Start: %v", err)

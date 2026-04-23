@@ -135,6 +135,9 @@ func (h *Handler) getGoodsList(c echo.Context, defaultLang string) error {
 		}
 		limit = int32(val)
 	}
+	if limit > 200 {
+		limit = 200
+	}
 
 	offset := int32(0)
 	if o := strings.TrimSpace(c.QueryParam("offset")); o != "" {

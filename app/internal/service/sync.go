@@ -41,11 +41,12 @@ func (s *SyncS) Pull(ctx context.Context, lastCursor int64, limit int32) (model.
 	if lastCursor < 0 {
 		lastCursor = 0
 	}
+	const maxSyncBatchSize = 500
 	if limit <= 0 {
-		limit = 10000
+		limit = 500
 	}
-	if limit > 50000 {
-		limit = 50000
+	if limit > maxSyncBatchSize {
+		limit = maxSyncBatchSize
 	}
 
 	tx, ok := repository.TenantTxFromContext(ctx)
