@@ -60,6 +60,11 @@ func (h *Handler) Register(router *echo.Echo) {
 			payments.POST("/create", h.CreateInvoice, mw.CheckLanguage(), mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
 		}
 
+		metadata := api.Group("/metadata", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
+		{
+			metadata.GET("", h.GetMetadata, mw.CheckLanguage())
+		}
+
 		sync := api.Group("/sync", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
 		{
 			sync.POST("/pull", h.SyncPull, mw.CheckLanguage())
