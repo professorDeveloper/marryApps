@@ -12,7 +12,9 @@ CREATE INDEX IF NOT EXISTS idx_goods_price
     WHERE deleted_at = 0;
 
 -- GIN trigram index for text search (ILIKE '%search%')
-CREATE EXTENSION IF NOT EXISTS pg_trgm;
-CREATE INDEX IF NOT EXISTS idx_goods_name_trgm
-    ON goods USING GIN (name gin_trgm_ops)
+-- Skip trigram index if pg_trgm extension is not available
+-- This index requires: CREATE EXTENSION pg_trgm
+-- For now, create a simple prefix index on name for faster LIKE searches
+CREATE INDEX IF NOT EXISTS idx_goods_name_prefix
+    ON goods(name)
     WHERE deleted_at = 0;
