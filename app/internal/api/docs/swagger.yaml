@@ -2833,6 +2833,13 @@ definitions:
     required:
     - customer_paid_amount
     type: object
+  model.MetadataItem:
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+    type: object
   model.ModifierCalculationResponse:
     properties:
       component_compound_id:
@@ -21817,6 +21824,41 @@ paths:
       summary: Get staff users
       tags:
       - users
+  /metadata:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves {id, name} pairs for multiple entity types in a single
+        request
+      parameters:
+      - description: Comma-separated entity names (e.g., storages,departments,categories)
+        in: query
+        name: include
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/model.MetadataItem'
+              type: array
+            type: object
+        "400":
+          description: Invalid entity in whitelist
+          schema:
+            $ref: '#/definitions/model.ErrorData'
+        "500":
+          description: Database error
+          schema:
+            $ref: '#/definitions/model.ErrorData'
+      security:
+      - ApiKeyAuth: []
+      summary: Get bulk metadata for dropdown options
+      tags:
+      - Metadata
 schemes:
 - http
 securityDefinitions:

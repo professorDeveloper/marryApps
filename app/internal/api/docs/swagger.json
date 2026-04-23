@@ -25393,6 +25393,60 @@
                     }
                 }
             }
+        },
+        "/metadata": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Retrieves {id, name} pairs for multiple entity types in a single request",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Metadata"
+                ],
+                "summary": "Get bulk metadata for dropdown options",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Comma-separated entity names (e.g., storages,departments,categories)",
+                        "name": "include",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/definitions/model.MetadataItem"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid entity in whitelist",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorData"
+                        }
+                    },
+                    "500": {
+                        "description": "Database error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorData"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -29434,6 +29488,17 @@
                     "description": "table_charge: confirmed table fee from GET /orders/:id/table-price (optional; auto-calc if table has price_per_hour and this is not provided)",
                     "type": "string",
                     "example": "50000"
+                }
+            }
+        },
+        "model.MetadataItem": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
                 }
             }
         },
