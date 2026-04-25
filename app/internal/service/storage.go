@@ -73,9 +73,17 @@ func (s *StorageS) GetStorageByID(ctx context.Context, storageID string) (*model
 		return nil, fmt.Errorf("invalid storage ID: %w", err)
 	}
 
-	storage, err := s.repo.Tenant(ctx).GetStorageByID(ctx, id)
+	var storage pg.Storage
+	err = withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		storage, err = q.GetStorageByID(ctx, id)
+		if err != nil {
+			return fmt.Errorf("failed to get storage: %w", err)
+		}
+		return nil
+	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get storage: %w", err)
+		return nil, err
 	}
 
 	return mapStorageToResponse(storage.ID, storage.Name, storage.BranchID, storage.NameI18n, storage.PictureUrl, storage.ColorCode, storage.CreatedAt, storage.UpdatedAt), nil
@@ -89,22 +97,31 @@ func (s *StorageS) GetAllStorages(ctx context.Context, filter model.StorageListF
 		filter.SortOrder = "desc"
 	}
 
-	total, err := s.repo.Tenant(ctx).CountStorages(ctx, filter.Search)
-	if err != nil {
-		log.Printf("CountStorages failed: %v", err)
-		return nil, 0, fmt.Errorf("failed to count storages: %w", err)
-	}
+	var rows []pg.Storage
+	var total int64
+	err := withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		total, err = q.CountStorages(ctx, filter.Search)
+		if err != nil {
+			log.Printf("CountStorages failed: %v", err)
+			return fmt.Errorf("failed to count storages: %w", err)
+		}
 
-	rows, err := s.repo.Tenant(ctx).GetAllStorages(ctx, pg.GetAllStoragesParams{
-		Search:    filter.Search,
-		SortBy:    filter.SortBy,
-		SortOrder: filter.SortOrder,
-		Limit:     limit,
-		Offset:    offset,
+		rows, err = q.GetAllStorages(ctx, pg.GetAllStoragesParams{
+			Search:    filter.Search,
+			SortBy:    filter.SortBy,
+			SortOrder: filter.SortOrder,
+			Limit:     limit,
+			Offset:    offset,
+		})
+		if err != nil {
+			log.Printf("GetAllStorages failed: %v", err)
+			return fmt.Errorf("failed to retrieve storages: %w", err)
+		}
+		return nil
 	})
 	if err != nil {
-		log.Printf("GetAllStorages failed: %v", err)
-		return nil, 0, fmt.Errorf("failed to retrieve storages: %w", err)
+		return nil, 0, err
 	}
 
 	var responses []*model.StorageResponse
@@ -131,18 +148,27 @@ func (s *StorageS) GetStoragesByBranchID(ctx context.Context, branchID string, l
 		return nil, 0, fmt.Errorf("invalid branch ID: %w", err)
 	}
 
-	total, err := s.repo.Tenant(ctx).CountStoragesByBranch(ctx, pgtype.UUID{Bytes: bID, Valid: true})
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to count storages by branch: %w", err)
-	}
+	var storages []pg.Storage
+	var total int64
+	err = withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		total, err = q.CountStoragesByBranch(ctx, pgtype.UUID{Bytes: bID, Valid: true})
+		if err != nil {
+			return fmt.Errorf("failed to count storages by branch: %w", err)
+		}
 
-	storages, err := s.repo.Tenant(ctx).GetStoragesByBranchID(ctx, pg.GetStoragesByBranchIDParams{
-		BranchID: pgtype.UUID{Bytes: bID, Valid: true},
-		Limit:    limit,
-		Offset:   offset,
+		storages, err = q.GetStoragesByBranchID(ctx, pg.GetStoragesByBranchIDParams{
+			BranchID: pgtype.UUID{Bytes: bID, Valid: true},
+			Limit:    limit,
+			Offset:   offset,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to get storages by branch: %w", err)
+		}
+		return nil
 	})
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to get storages by branch: %w", err)
+		return nil, 0, err
 	}
 
 	var responses []model.StorageResponse
@@ -296,12 +322,20 @@ func (s *StorageS) GetStorageByIDWithLang(ctx context.Context, storageID string,
 		return nil, fmt.Errorf("invalid storage ID: %w", err)
 	}
 
-	storage, err := s.repo.Tenant(ctx).GetStorageByIDWithLanguage(ctx, pg.GetStorageByIDWithLanguageParams{
-		ID:      id,
-		Column2: lang,
+	var storage pg.Storage
+	err = withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		storage, err = q.GetStorageByIDWithLanguage(ctx, pg.GetStorageByIDWithLanguageParams{
+			ID:      id,
+			Column2: lang,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to get storage: %w", err)
+		}
+		return nil
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get storage: %w", err)
+		return nil, err
 	}
 
 	return mapStorageToResponse(storage.ID, storage.Name, storage.BranchID, storage.NameI18n, storage.PictureUrl, storage.ColorCode, storage.CreatedAt, storage.UpdatedAt), nil
@@ -309,18 +343,27 @@ func (s *StorageS) GetStorageByIDWithLang(ctx context.Context, storageID string,
 
 // GetAllStoragesWithLang retrieves all storages with language support
 func (s *StorageS) GetAllStoragesWithLang(ctx context.Context, lang string, limit, offset int32) ([]model.StorageResponse, int32, error) {
-	total, err := s.repo.Tenant(ctx).CountStorages(ctx, "")
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to count storages: %w", err)
-	}
+	var storages []pg.Storage
+	var total int64
+	err := withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		total, err = q.CountStorages(ctx, "")
+		if err != nil {
+			return fmt.Errorf("failed to count storages: %w", err)
+		}
 
-	storages, err := s.repo.Tenant(ctx).GetAllStoragesWithLanguage(ctx, pg.GetAllStoragesWithLanguageParams{
-		Column1: lang,
-		Limit:   limit,
-		Offset:  offset,
+		storages, err = q.GetAllStoragesWithLanguage(ctx, pg.GetAllStoragesWithLanguageParams{
+			Column1: lang,
+			Limit:   limit,
+			Offset:  offset,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to get storages: %w", err)
+		}
+		return nil
 	})
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to get storages: %w", err)
+		return nil, 0, err
 	}
 
 	var responses []model.StorageResponse

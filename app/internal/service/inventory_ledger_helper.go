@@ -77,11 +77,19 @@ func (s *InventoryS) applyInventoryMovementPlan(ctx context.Context, inventoryID
 		return nil
 	}
 
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	zero := inventoryZeroNumeric()
 	sourceType := "inventory"
 	srcID := inventoryID
 
-	if err := s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+	if err := q.InsertIngredientStockMovement(txCtx, pg.InsertIngredientStockMovementParams{
 		ID:           uuid.New(),
 		StorageID:    storageID,
 		IngredientID: ingredientID,
@@ -95,22 +103,32 @@ func (s *InventoryS) applyInventoryMovementPlan(ctx context.Context, inventoryID
 		SourceID:     &srcID,
 		EffectiveAt:  effectiveAt,
 	}); err != nil {
+		if ownsTx {
+			tx.Rollback(ctx)
+		}
 		return fmt.Errorf("failed to insert inventory stock movement: %w", err)
 	}
 
-	if err := s.rebalanceInventoryIngredientLedger(ctx, pgtype.UUID{Bytes: storageID, Valid: true}, ingredientID); err != nil {
+	if err := s.rebalanceInventoryIngredientLedger(txCtx, pgtype.UUID{Bytes: storageID, Valid: true}, ingredientID, q); err != nil {
+		if ownsTx {
+			tx.Rollback(ctx)
+		}
 		return fmt.Errorf("failed to rebalance inventory stock ledger: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return nil
 }
 
-func (s *InventoryS) rebalanceInventoryIngredientLedger(ctx context.Context, storageID pgtype.UUID, ingredientID uuid.UUID) error {
+func (s *InventoryS) rebalanceInventoryIngredientLedger(ctx context.Context, storageID pgtype.UUID, ingredientID uuid.UUID, q *pg.Queries) error {
 	if !storageID.Valid {
 		return fmt.Errorf("storage_id is required for inventory ledger rebalance")
 	}
-
-	q := s.repo.Tenant(ctx)
 
 	_, _ = q.EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
 		ID:           uuid.New(),

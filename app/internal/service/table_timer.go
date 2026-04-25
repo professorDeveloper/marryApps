@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -22,6 +23,56 @@ func NewTableTimerS(repo *repository.Repository) *TableTimerS {
 	return &TableTimerS{repo: repo}
 }
 
+// getTenantMutationQueries returns tenant queries within a transaction for mutation operations.
+// If a transaction already exists in context, it reuses it. Otherwise, it creates a new one.
+// Returns: queries, enriched context, transaction, ownsTx (whether we created the tx), error
+func (s *TableTimerS) getTenantMutationQueries(ctx context.Context) (*pg.Queries, context.Context, pgx.Tx, bool, error) {
+	if existingTx, ok := repository.TenantTxFromContext(ctx); ok && existingTx != nil {
+		// Reuse existing transaction - get queries from context or create from tx
+		if q, ok := repository.TenantQueriesFromContext(ctx); ok && q != nil {
+			return q, ctx, existingTx, false, nil
+		}
+		q := pg.New(existingTx)
+		txCtx := repository.WithTenantQueries(ctx, q)
+		return q, txCtx, existingTx, false, nil
+	}
+
+	tx, err := s.repo.PgRepo.TenantPool.Begin(ctx)
+	if err != nil {
+		return nil, nil, nil, false, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+
+	brandID, _ := ctx.Value("brand_id").(string)
+	brandID = strings.TrimSpace(brandID)
+	if brandID == "" {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("brand_id is missing in context")
+	}
+
+	schemaName := fmt.Sprintf("tenant_%s", brandID)
+	if _, err := tx.Exec(ctx, fmt.Sprintf(`SET LOCAL search_path TO "%s", public`, schemaName)); err != nil {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("failed to set tenant search_path: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx, "SET LOCAL app.brand_id = $1", brandID); err != nil {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("failed to set app.brand_id: %w", err)
+	}
+
+	if branchID, _ := ctx.Value("branch_id").(string); strings.TrimSpace(branchID) != "" {
+		if _, err := tx.Exec(ctx, "SET LOCAL app.branch_id = $1", strings.TrimSpace(branchID)); err != nil {
+			tx.Rollback(ctx)
+			return nil, nil, nil, false, fmt.Errorf("failed to set app.branch_id: %w", err)
+		}
+	}
+
+	q := pg.New(tx)
+	txCtx := repository.WithTenantQueries(ctx, q)
+
+	return q, txCtx, tx, true, nil
+}
+
 func parseActorUUID(userID string) (pgtype.UUID, error) {
 	if userID == "" {
 		return pgtype.UUID{}, fmt.Errorf("actor user id is required")
@@ -34,22 +85,30 @@ func parseActorUUID(userID string) (pgtype.UUID, error) {
 }
 
 func (s *TableTimerS) getTimerContext(ctx context.Context, orderID uuid.UUID) (pg.OrderTimerContextRow, error) {
-	row, err := s.repo.Tenant(ctx).GetOrderTimerContext(ctx, orderID)
+	var result pg.OrderTimerContextRow
+	err := withTenantRead(ctx, s.repo, func(tenantCtx context.Context, q *pg.Queries) error {
+		row, err := q.GetOrderTimerContext(tenantCtx, orderID)
+		if err != nil {
+			return err
+		}
+		result = row
+		return nil
+	})
 	if err != nil {
-		return row, err
+		return result, err
 	}
 
-	if row.OrderType != "dine_in" {
-		return row, fmt.Errorf("table timer is only available for dine_in orders")
+	if result.OrderType != "dine_in" {
+		return result, fmt.Errorf("table timer is only available for dine_in orders")
 	}
-	if !row.TableID.Valid {
-		return row, fmt.Errorf("order has no table")
+	if !result.TableID.Valid {
+		return result, fmt.Errorf("order has no table")
 	}
-	if row.TableType != string(model.TableTypeTimeBased) {
-		return row, fmt.Errorf("table timer is only available for time_based tables")
+	if result.TableType != string(model.TableTypeTimeBased) {
+		return result, fmt.Errorf("table timer is only available for time_based tables")
 	}
 
-	return row, nil
+	return result, nil
 }
 
 func (s *TableTimerS) ensureTimerMutable(ctx context.Context, orderID uuid.UUID) (pg.OrderTimerContextRow, error) {
@@ -152,16 +211,33 @@ func (s *TableTimerS) StartTableTimerIfNeeded(ctx context.Context, orderID strin
 		return nil, err
 	}
 
-	existing, err := s.repo.Tenant(ctx).GetOpenTableTimeSessionByOrderID(ctx, oID)
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	existing, err := q.GetOpenTableTimeSessionByOrderID(txCtx, oID)
 	if err == nil {
+		if ownsTx {
+			tx.Commit(ctx)
+		}
 		return toTableTimerResponse(ctxRow, &existing, time.Now()), nil
 	}
 	if err != pgx.ErrNoRows {
+		if ownsTx {
+			tx.Rollback(ctx)
+		}
 		return nil, fmt.Errorf("failed to get open timer session: %w", err)
 	}
 
-	openByTable, err := s.repo.Tenant(ctx).GetOpenTableTimeSessionByTableID(ctx, uuid.UUID(ctxRow.TableID.Bytes))
+	openByTable, err := q.GetOpenTableTimeSessionByTableID(txCtx, uuid.UUID(ctxRow.TableID.Bytes))
 	if err == nil {
+		if ownsTx {
+			tx.Commit(ctx)
+		}
 		if openByTable.OrderID == oID {
 			return toTableTimerResponse(ctxRow, &openByTable, time.Now()), nil
 		}
@@ -169,12 +245,15 @@ func (s *TableTimerS) StartTableTimerIfNeeded(ctx context.Context, orderID strin
 		return toTableTimerResponse(ctxRow, &openByTable, time.Now()), nil
 	}
 	if err != nil && err != pgx.ErrNoRows {
+		if ownsTx {
+			tx.Rollback(ctx)
+		}
 		return nil, fmt.Errorf("failed to check active table timer by table: %w", err)
 	}
 
 	now := time.Now()
 	activeStartedAt := pgtype.Timestamptz{Time: now, Valid: true}
-	session, err := s.repo.Tenant(ctx).CreateTableTimeSession(ctx, pg.CreateTableTimeSessionParams{
+	session, err := q.CreateTableTimeSession(txCtx, pg.CreateTableTimeSessionParams{
 		ID:                   uuid.New(),
 		OrderID:              oID,
 		TableID:              uuid.UUID(ctxRow.TableID.Bytes),
@@ -186,10 +265,13 @@ func (s *TableTimerS) StartTableTimerIfNeeded(ctx context.Context, orderID strin
 		UpdatedBy:            actorUUID,
 	})
 	if err != nil {
+		if ownsTx {
+			tx.Rollback(ctx)
+		}
 		return nil, fmt.Errorf("failed to create timer session: %w", err)
 	}
 
-	if err := s.repo.Tenant(ctx).CreateTableTimeEvent(ctx, pg.CreateTableTimeEventParams{
+	if err := q.CreateTableTimeEvent(txCtx, pg.CreateTableTimeEventParams{
 		ID:          uuid.New(),
 		SessionID:   session.ID,
 		OrderID:     session.OrderID,
@@ -198,7 +280,16 @@ func (s *TableTimerS) StartTableTimerIfNeeded(ctx context.Context, orderID strin
 		ActorUserID: actorUUID,
 		ActorRole:   &actorRole,
 	}); err != nil {
+		if ownsTx {
+			tx.Rollback(ctx)
+		}
 		return nil, fmt.Errorf("failed to write timer event: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return toTableTimerResponse(ctxRow, &session, now), nil
@@ -215,25 +306,40 @@ func (s *TableTimerS) GetTableTimerState(ctx context.Context, orderID string) (*
 		return nil, err
 	}
 
-	session, err := s.repo.Tenant(ctx).GetOpenTableTimeSessionByOrderID(ctx, oID)
-	if err == nil {
-		return toTableTimerResponse(ctxRow, &session, time.Now()), nil
+	var session *pg.TableTimeSessionRow
+	var sessionErr error
+	err = withTenantRead(ctx, s.repo, func(tenantCtx context.Context, q *pg.Queries) error {
+		s, err := q.GetOpenTableTimeSessionByOrderID(tenantCtx, oID)
+		if err == nil {
+			session = &s
+			return nil
+		}
+		if err != pgx.ErrNoRows {
+			sessionErr = fmt.Errorf("failed to get open timer session: %w", err)
+			return sessionErr
+		}
+
+		// No session found by order, check by table
+		openByTable, err := q.GetOpenTableTimeSessionByTableID(tenantCtx, uuid.UUID(ctxRow.TableID.Bytes))
+		if err == nil {
+			session = &openByTable
+			return nil
+		}
+		if err != pgx.ErrNoRows {
+			sessionErr = fmt.Errorf("failed to check active table timer by table: %w", err)
+			return sessionErr
+		}
+		return nil
+	})
+	if sessionErr != nil {
+		return nil, sessionErr
 	}
-	if err != pgx.ErrNoRows {
-		return nil, fmt.Errorf("failed to get open timer session: %w", err)
+	if err != nil {
+		return nil, err
 	}
 
-	// No session found by order, check by table (similar to StartTableTimerIfNeeded)
-	openByTable, err := s.repo.Tenant(ctx).GetOpenTableTimeSessionByTableID(ctx, uuid.UUID(ctxRow.TableID.Bytes))
-	if err == nil {
-		return toTableTimerResponse(ctxRow, &openByTable, time.Now()), nil
-	}
-	if err != pgx.ErrNoRows {
-		return nil, fmt.Errorf("failed to check active table timer by table: %w", err)
-	}
-
-	// No session exists, return empty state instead of trying to create one
-	return toTableTimerResponse(ctxRow, nil, time.Now()), nil
+	// No session exists, return empty state
+	return toTableTimerResponse(ctxRow, session, time.Now()), nil
 }
 
 func (s *TableTimerS) PauseTableTimer(ctx context.Context, orderID string, actorUserID string, actorRole string) (*model.TableTimerResponse, error) {
@@ -250,30 +356,50 @@ func (s *TableTimerS) PauseTableTimer(ctx context.Context, orderID string, actor
 		return nil, err
 	}
 
-	session, err := s.repo.Tenant(ctx).GetOpenTableTimeSessionByOrderIDForUpdate(ctx, oID)
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
 	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	session, err := q.GetOpenTableTimeSessionByOrderIDForUpdate(txCtx, oID)
+	if err != nil {
+		if ownsTx {
+			tx.Rollback(ctx)
+		}
 		return nil, fmt.Errorf("failed to lock timer session: %w", err)
 	}
 	if session.State != string(model.TableTimerStateRunning) {
+		if ownsTx {
+			tx.Rollback(ctx)
+		}
 		return nil, fmt.Errorf("timer is not running")
 	}
 	if !session.ActiveStartedAt.Valid {
+		if ownsTx {
+			tx.Rollback(ctx)
+		}
 		return nil, fmt.Errorf("timer has no active_started_at")
 	}
 
 	now := time.Now()
 	total := calcTotalActiveSec(session, now)
 
-	updated, err := s.repo.Tenant(ctx).UpdateTableTimeSessionPause(ctx, pg.UpdateTableTimeSessionPauseParams{
+	updated, err := q.UpdateTableTimeSessionPause(txCtx, pg.UpdateTableTimeSessionPauseParams{
 		ID:                   session.ID,
 		AccumulatedActiveSec: total,
 		UpdatedBy:            actorUUID,
 	})
 	if err != nil {
+		if ownsTx {
+			tx.Rollback(ctx)
+		}
 		return nil, fmt.Errorf("failed to pause timer session: %w", err)
 	}
 
-	if err := s.repo.Tenant(ctx).CreateTableTimeEvent(ctx, pg.CreateTableTimeEventParams{
+	if err := q.CreateTableTimeEvent(txCtx, pg.CreateTableTimeEventParams{
 		ID:          uuid.New(),
 		SessionID:   updated.ID,
 		OrderID:     updated.OrderID,
@@ -282,7 +408,16 @@ func (s *TableTimerS) PauseTableTimer(ctx context.Context, orderID string, actor
 		ActorUserID: actorUUID,
 		ActorRole:   &actorRole,
 	}); err != nil {
+		if ownsTx {
+			tx.Rollback(ctx)
+		}
 		return nil, fmt.Errorf("failed to write timer pause event: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return toTableTimerResponse(ctxRow, &updated, now), nil
@@ -302,25 +437,42 @@ func (s *TableTimerS) ResumeTableTimer(ctx context.Context, orderID string, acto
 		return nil, err
 	}
 
-	session, err := s.repo.Tenant(ctx).GetOpenTableTimeSessionByOrderIDForUpdate(ctx, oID)
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
 	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	session, err := q.GetOpenTableTimeSessionByOrderIDForUpdate(txCtx, oID)
+	if err != nil {
+		if ownsTx {
+			tx.Rollback(ctx)
+		}
 		return nil, fmt.Errorf("failed to lock timer session: %w", err)
 	}
 	if session.State != string(model.TableTimerStatePaused) {
+		if ownsTx {
+			tx.Rollback(ctx)
+		}
 		return nil, fmt.Errorf("timer is not paused")
 	}
 
 	now := time.Now()
-	updated, err := s.repo.Tenant(ctx).UpdateTableTimeSessionResume(ctx, pg.UpdateTableTimeSessionResumeParams{
+	updated, err := q.UpdateTableTimeSessionResume(txCtx, pg.UpdateTableTimeSessionResumeParams{
 		ID:              session.ID,
 		ActiveStartedAt: pgtype.Timestamptz{Time: now, Valid: true},
 		UpdatedBy:       actorUUID,
 	})
 	if err != nil {
+		if ownsTx {
+			tx.Rollback(ctx)
+		}
 		return nil, fmt.Errorf("failed to resume timer session: %w", err)
 	}
 
-	if err := s.repo.Tenant(ctx).CreateTableTimeEvent(ctx, pg.CreateTableTimeEventParams{
+	if err := q.CreateTableTimeEvent(txCtx, pg.CreateTableTimeEventParams{
 		ID:          uuid.New(),
 		SessionID:   updated.ID,
 		OrderID:     updated.OrderID,
@@ -329,7 +481,16 @@ func (s *TableTimerS) ResumeTableTimer(ctx context.Context, orderID string, acto
 		ActorUserID: actorUUID,
 		ActorRole:   &actorRole,
 	}); err != nil {
+		if ownsTx {
+			tx.Rollback(ctx)
+		}
 		return nil, fmt.Errorf("failed to write timer resume event: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return toTableTimerResponse(ctxRow, &updated, now), nil
@@ -349,11 +510,25 @@ func (s *TableTimerS) CloseTableTimer(ctx context.Context, orderID string, actor
 		return nil, err
 	}
 
-	session, err := s.repo.Tenant(ctx).GetOpenTableTimeSessionByOrderIDForUpdate(ctx, oID)
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
 	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	session, err := q.GetOpenTableTimeSessionByOrderIDForUpdate(txCtx, oID)
+	if err != nil {
+		if ownsTx {
+			tx.Rollback(ctx)
+		}
 		return nil, fmt.Errorf("failed to lock timer session: %w", err)
 	}
 	if session.State == string(model.TableTimerStateClosed) {
+		if ownsTx {
+			tx.Commit(ctx)
+		}
 		return toTableTimerResponse(ctxRow, &session, time.Now()), nil
 	}
 
@@ -365,7 +540,7 @@ func (s *TableTimerS) CloseTableTimer(ctx context.Context, orderID string, actor
 		_ = finalAmount.Scan(*amount)
 	}
 
-	updated, err := s.repo.Tenant(ctx).UpdateTableTimeSessionClose(ctx, pg.UpdateTableTimeSessionCloseParams{
+	updated, err := q.UpdateTableTimeSessionClose(txCtx, pg.UpdateTableTimeSessionCloseParams{
 		ID:                   session.ID,
 		AccumulatedActiveSec: total,
 		EndedAt:              pgtype.Timestamptz{Time: now, Valid: true},
@@ -373,10 +548,13 @@ func (s *TableTimerS) CloseTableTimer(ctx context.Context, orderID string, actor
 		UpdatedBy:            actorUUID,
 	})
 	if err != nil {
+		if ownsTx {
+			tx.Rollback(ctx)
+		}
 		return nil, fmt.Errorf("failed to close timer session: %w", err)
 	}
 
-	if err := s.repo.Tenant(ctx).CreateTableTimeEvent(ctx, pg.CreateTableTimeEventParams{
+	if err := q.CreateTableTimeEvent(txCtx, pg.CreateTableTimeEventParams{
 		ID:          uuid.New(),
 		SessionID:   updated.ID,
 		OrderID:     updated.OrderID,
@@ -385,7 +563,16 @@ func (s *TableTimerS) CloseTableTimer(ctx context.Context, orderID string, actor
 		ActorUserID: actorUUID,
 		ActorRole:   &actorRole,
 	}); err != nil {
+		if ownsTx {
+			tx.Rollback(ctx)
+		}
 		return nil, fmt.Errorf("failed to write timer close event: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return toTableTimerResponse(ctxRow, &updated, now), nil
@@ -397,18 +584,42 @@ func (s *TableTimerS) GetTableTimerByTableID(ctx context.Context, tableID string
 		return nil, fmt.Errorf("invalid table id: %w", err)
 	}
 
-	session, err := s.repo.Tenant(ctx).GetOpenTableTimeSessionByTableID(ctx, tID)
-	if err == pgx.ErrNoRows {
+	var session *pg.TableTimeSessionRow
+	var sessionErr error
+	err = withTenantRead(ctx, s.repo, func(tenantCtx context.Context, q *pg.Queries) error {
+		s, err := q.GetOpenTableTimeSessionByTableID(tenantCtx, tID)
+		if err == pgx.ErrNoRows {
+			return nil
+		}
+		if err != nil {
+			sessionErr = fmt.Errorf("failed to get open timer session by table: %w", err)
+			return sessionErr
+		}
+		session = &s
+		return nil
+	})
+	if sessionErr != nil {
+		return nil, sessionErr
+	}
+	if err != nil {
+		return nil, err
+	}
+	if session == nil {
 		return nil, nil
 	}
+
+	var ctxRow pg.OrderTimerContextRow
+	err = withTenantRead(ctx, s.repo, func(tenantCtx context.Context, q *pg.Queries) error {
+		row, err := q.GetOrderTimerContext(tenantCtx, session.OrderID)
+		if err != nil {
+			return fmt.Errorf("failed to get order timer context: %w", err)
+		}
+		ctxRow = row
+		return nil
+	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get open timer session by table: %w", err)
+		return nil, err
 	}
 
-	ctxRow, err := s.repo.Tenant(ctx).GetOrderTimerContext(ctx, session.OrderID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get order timer context: %w", err)
-	}
-
-	return toTableTimerResponse(ctxRow, &session, time.Now()), nil
+	return toTableTimerResponse(ctxRow, session, time.Now()), nil
 }

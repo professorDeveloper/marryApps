@@ -2,12 +2,37 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"strings"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"gitlab.yurtal.tech/company/maryai/back/internal/repository"
+)
+
+// Sentinel errors for tenant resolution
+var (
+	// ErrTenantNotFound indicates the tenant does not exist in the database
+	ErrTenantNotFound = errors.New("tenant not found")
+
+	// ErrTenantInactive indicates the tenant exists but is inactive
+	// NOTE: Currently not implemented in DB schema (brands table lacks is_active column)
+	// This sentinel is reserved for future use when active/inactive status is added
+	ErrTenantInactive = errors.New("tenant is inactive")
+
+	// ErrTenantResolveTimeout indicates the tenant resolution timed out
+	ErrTenantResolveTimeout = errors.New("tenant resolution timed out")
+
+	// ErrTenantResolveCanceled indicates the tenant resolution was canceled
+	ErrTenantResolveCanceled = errors.New("tenant resolution canceled")
+
+	// ErrTenantResolveDB indicates a database error during tenant resolution
+	ErrTenantResolveDB = errors.New("database error during tenant resolution")
+
+	// ErrInvalidInput indicates invalid input parameters
+	ErrInvalidInput = errors.New("invalid input")
 )
 
 // TenantResolver resolves tenant configuration from main DB
@@ -33,7 +58,7 @@ type TenantConfig struct {
 func (tr *TenantResolver) ResolveTenantByBrandID(ctx context.Context, brandID string) (*TenantConfig, error) {
 	brandID = strings.TrimSpace(brandID)
 	if brandID == "" {
-		return nil, fmt.Errorf("invalid brand_id: empty")
+		return nil, fmt.Errorf("%w: brand_id is empty", ErrInvalidInput)
 	}
 
 	var brandUUID uuid.UUID
@@ -47,7 +72,20 @@ func (tr *TenantResolver) ResolveTenantByBrandID(ctx context.Context, brandID st
 	).Scan(&brandUUID, &brandName, &brandIDFromDB)
 	if err != nil {
 		log.Printf("Failed to resolve brand %s: %v", brandID, err)
-		return nil, fmt.Errorf("brand not found or inactive")
+
+		// Classify error types
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, fmt.Errorf("%w: brand_id=%s", ErrTenantNotFound, brandID)
+		}
+		if errors.Is(err, context.Canceled) {
+			return nil, fmt.Errorf("%w: brand_id=%s", ErrTenantResolveCanceled, brandID)
+		}
+		if errors.Is(err, context.DeadlineExceeded) {
+			return nil, fmt.Errorf("%w: brand_id=%s", ErrTenantResolveTimeout, brandID)
+		}
+
+		// Generic DB error - preserve original error for debugging
+		return nil, fmt.Errorf("%w: brand_id=%s, original=%v", ErrTenantResolveDB, brandID, err)
 	}
 
 	return &TenantConfig{
@@ -60,8 +98,14 @@ func (tr *TenantResolver) ResolveTenantByBrandID(ctx context.Context, brandID st
 // ResolveTenantByBrandID resolves tenant configuration from main DB
 // This function:
 // 1. Queries main DB for brand info
-// 2. Validates brand exists and is active
-// 3. Returns tenant configuration for use in middleware
+// 2. Returns tenant configuration for use in middleware
+//
+// Error classification:
+// - ErrTenantNotFound: brand does not exist in database
+// - ErrTenantResolveCanceled: request was canceled
+// - ErrTenantResolveTimeout: request timed out
+// - ErrTenantResolveDB: database error (connection, query, etc.)
+// - ErrInvalidInput: empty brand_id
 //
 // Currently returns minimal config, but prepared for:
 // - Per-tenant DB credentials (future)
@@ -69,14 +113,27 @@ func (tr *TenantResolver) ResolveTenantByBrandID(ctx context.Context, brandID st
 
 func (tr *TenantResolver) ResolveTenantByBrandUUID(ctx context.Context, brandUUID uuid.UUID) (*TenantConfig, error) {
 	if brandUUID == uuid.Nil {
-		return nil, fmt.Errorf("invalid brand_id: nil UUID")
+		return nil, fmt.Errorf("%w: brand_uuid is nil", ErrInvalidInput)
 	}
 
 	// Query main DB for brand info
 	brand, err := tr.repo.Main(ctx).GetBrandByID(ctx, brandUUID)
 	if err != nil {
 		log.Printf("Failed to resolve brand %s: %v", brandUUID.String(), err)
-		return nil, fmt.Errorf("brand not found or inactive")
+
+		// Classify error types
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, fmt.Errorf("%w: brand_uuid=%s", ErrTenantNotFound, brandUUID.String())
+		}
+		if errors.Is(err, context.Canceled) {
+			return nil, fmt.Errorf("%w: brand_uuid=%s", ErrTenantResolveCanceled, brandUUID.String())
+		}
+		if errors.Is(err, context.DeadlineExceeded) {
+			return nil, fmt.Errorf("%w: brand_uuid=%s", ErrTenantResolveTimeout, brandUUID.String())
+		}
+
+		// Generic DB error - preserve original error for debugging
+		return nil, fmt.Errorf("%w: brand_uuid=%s, original=%v", ErrTenantResolveDB, brandUUID.String(), err)
 	}
 
 	return &TenantConfig{

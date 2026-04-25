@@ -56,14 +56,13 @@ func assertOrderStorageMutationAllowed(
 
 func (s *OrderS) rebalanceOrderIngredientLedger(
 	ctx context.Context,
+	q *pg.Queries,
 	storageID pgtype.UUID,
 	ingredientID uuid.UUID,
 ) error {
 	if !storageID.Valid {
 		return fmt.Errorf("storage_id is required for order ledger rebalance")
 	}
-
-	q := s.repo.Tenant(ctx)
 
 	_, _ = q.EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
 		ID:           uuid.New(),
@@ -116,6 +115,7 @@ func (s *OrderS) rebalanceOrderIngredientLedger(
 
 func (s *OrderS) restoreIngredientUsageToStock(
 	ctx context.Context,
+	q *pg.Queries,
 	storageID pgtype.UUID,
 	orderID uuid.UUID,
 	effectiveAt *pgtype.Timestamptz,
@@ -123,7 +123,7 @@ func (s *OrderS) restoreIngredientUsageToStock(
 	ingredientID uuid.UUID,
 	quantity pgtype.Numeric,
 ) error {
-	stockID, err := s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
+	stockID, err := q.EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
 		ID:           uuid.New(),
 		IngredientID: ingredientID,
 		StorageID:    storageID,
@@ -132,7 +132,7 @@ func (s *OrderS) restoreIngredientUsageToStock(
 		return fmt.Errorf("failed to ensure ingredient stock row: %w", err)
 	}
 
-	locked, err := s.repo.Tenant(ctx).GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
+	locked, err := q.GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
 		IngredientID: ingredientID,
 		StorageID:    storageID,
 	})
@@ -140,7 +140,7 @@ func (s *OrderS) restoreIngredientUsageToStock(
 		return fmt.Errorf("failed to lock ingredient stock row: %w", err)
 	}
 
-	ing, err := s.repo.Tenant(ctx).GetIngredientByID(ctx, ingredientID)
+	ing, err := q.GetIngredientByID(ctx, ingredientID)
 	if err != nil {
 		return fmt.Errorf("failed to get ingredient: %w", err)
 	}
@@ -150,7 +150,7 @@ func (s *OrderS) restoreIngredientUsageToStock(
 		_ = price.Scan("0")
 	}
 
-	updated, err := s.repo.Tenant(ctx).AddToIngredientStock(ctx, pg.AddToIngredientStockParams{
+	updated, err := q.AddToIngredientStock(ctx, pg.AddToIngredientStockParams{
 		ID:       stockID,
 		Quantity: quantity,
 	})
@@ -166,7 +166,7 @@ func (s *OrderS) restoreIngredientUsageToStock(
 	sourceType := "order"
 	srcID := orderID
 
-	if err := s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+	if err := q.InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
 		ID:           uuid.New(),
 		StorageID:    uuid.UUID(storageID.Bytes),
 		IngredientID: ingredientID,
@@ -188,10 +188,11 @@ func (s *OrderS) restoreIngredientUsageToStock(
 
 func (s *OrderS) reverseOrderItemStockWithModifiers(
 	ctx context.Context,
+	q *pg.Queries,
 	orderItemID uuid.UUID,
 	eventType string,
 ) error {
-	item, err := s.repo.Tenant(ctx).GetOrderItemByID(ctx, orderItemID)
+	item, err := q.GetOrderItemByID(ctx, orderItemID)
 	if err != nil {
 		return fmt.Errorf("failed to get order item: %w", err)
 	}
@@ -200,7 +201,7 @@ func (s *OrderS) reverseOrderItemStockWithModifiers(
 		return nil
 	}
 
-	order, err := s.repo.Tenant(ctx).GetOrderByID(ctx, item.OrderID)
+	order, err := q.GetOrderByID(ctx, item.OrderID)
 	if err != nil {
 		return fmt.Errorf("failed to get order: %w", err)
 	}
@@ -211,7 +212,7 @@ func (s *OrderS) reverseOrderItemStockWithModifiers(
 		return fmt.Errorf("invalid item quantity: %w", err)
 	}
 
-	usages, err := s.expandGoodToIngredientsByCalculations(ctx, item.GoodID, mult)
+	usages, err := s.expandGoodToIngredientsByCalculations(ctx, q, item.GoodID, mult)
 	if err != nil {
 		return err
 	}
@@ -221,7 +222,7 @@ func (s *OrderS) reverseOrderItemStockWithModifiers(
 	allUsages = append(allUsages, usages...)
 
 	// Collect modifier usages
-	modRows, err := s.repo.Tenant(ctx).ListOrderItemModifiersByOrderID(ctx, item.OrderID)
+	modRows, err := q.ListOrderItemModifiersByOrderID(ctx, item.OrderID)
 	if err != nil {
 		return fmt.Errorf("failed to list order item modifiers: %w", err)
 	}
@@ -238,7 +239,7 @@ func (s *OrderS) reverseOrderItemStockWithModifiers(
 			return fmt.Errorf("invalid modifier multiplier: %w", err)
 		}
 
-		modUsages, err := s.expandModifierToIngredientsByCalculations(ctx, om.ModifierID, modMult)
+		modUsages, err := s.expandModifierToIngredientsByCalculations(ctx, q, om.ModifierID, modMult)
 		if err != nil {
 			return err
 		}
@@ -250,7 +251,7 @@ func (s *OrderS) reverseOrderItemStockWithModifiers(
 		return nil
 	}
 
-	storageID, err := s.repo.Tenant(ctx).GetStorageByGoodID(ctx, item.GoodID)
+	storageID, err := q.GetStorageByGoodID(ctx, item.GoodID)
 	if err != nil {
 		return fmt.Errorf("failed to get storage for good: %w", err)
 	}
@@ -267,7 +268,7 @@ func (s *OrderS) reverseOrderItemStockWithModifiers(
 
 	// Process all usages (base good + modifiers)
 	for _, u := range allUsages {
-		if err := s.restoreIngredientUsageToStock(ctx, storageID, item.OrderID, effectiveAt, eventType, u.ingredientID, u.quantity); err != nil {
+		if err := s.restoreIngredientUsageToStock(ctx, q, storageID, item.OrderID, effectiveAt, eventType, u.ingredientID, u.quantity); err != nil {
 			return err
 		}
 		touched[orderTouchedKey{
@@ -277,7 +278,7 @@ func (s *OrderS) reverseOrderItemStockWithModifiers(
 	}
 
 	for key := range touched {
-		if err := s.rebalanceOrderIngredientLedger(ctx, pgtype.UUID{Bytes: key.StorageID, Valid: true}, key.IngredientID); err != nil {
+		if err := s.rebalanceOrderIngredientLedger(ctx, q, pgtype.UUID{Bytes: key.StorageID, Valid: true}, key.IngredientID); err != nil {
 			return err
 		}
 	}
@@ -287,10 +288,11 @@ func (s *OrderS) reverseOrderItemStockWithModifiers(
 
 func (s *OrderS) reverseOrderItemsStockByOrder(
 	ctx context.Context,
+	q *pg.Queries,
 	orderID uuid.UUID,
 	eventType string,
 ) error {
-	items, err := s.repo.Tenant(ctx).GetOrderItemsByOrderID(ctx, orderID)
+	items, err := q.GetOrderItemsByOrderID(ctx, orderID)
 	if err != nil {
 		return fmt.Errorf("failed to get order items: %w", err)
 	}
@@ -299,7 +301,7 @@ func (s *OrderS) reverseOrderItemsStockByOrder(
 		if item.Status.Valid && string(item.Status.OrderItemsStatus) == "cancelled" {
 			continue
 		}
-		if err := s.reverseOrderItemStockWithModifiers(ctx, item.ID, eventType); err != nil {
+		if err := s.reverseOrderItemStockWithModifiers(ctx, q, item.ID, eventType); err != nil {
 			return err
 		}
 	}

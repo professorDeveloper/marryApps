@@ -178,13 +178,23 @@ func (c *CalculationS) GetModifierCalculationByID(ctx context.Context, calculati
 	if err != nil {
 		return nil, fmt.Errorf("invalid calculation id: %w", err)
 	}
-	row, err := c.repo.Tenant(ctx).GetModifierCalculationByID(ctx, id)
-	if err != nil {
-		if err == pgx.ErrNoRows {
-			return nil, fmt.Errorf("modifier calculation not found")
+
+	var row pg.ModifierCalculation
+	err = withTenantRead(ctx, c.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		row, err = q.GetModifierCalculationByID(ctx, id)
+		if err != nil {
+			if err == pgx.ErrNoRows {
+				return fmt.Errorf("modifier calculation not found")
+			}
+			return fmt.Errorf("failed to get modifier calculation: %w", err)
 		}
-		return nil, fmt.Errorf("failed to get modifier calculation: %w", err)
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
+
 	return toModifierCalculationResponse(row), nil
 }
 
@@ -195,16 +205,24 @@ func (c *CalculationS) GetModifierCalculationsByModifierID(ctx context.Context, 
 		return nil, fmt.Errorf("invalid modifier_id: %w", err)
 	}
 
-	if _, err := c.repo.Tenant(ctx).GetModifierByID(ctx, id); err != nil {
-		if err == pgx.ErrNoRows {
-			return nil, fmt.Errorf("modifier not found")
+	var rows []pg.ModifierCalculation
+	err = withTenantRead(ctx, c.repo, func(ctx context.Context, q *pg.Queries) error {
+		_, err := q.GetModifierByID(ctx, id)
+		if err != nil {
+			if err == pgx.ErrNoRows {
+				return fmt.Errorf("modifier not found")
+			}
+			return fmt.Errorf("failed to fetch modifier: %w", err)
 		}
-		return nil, fmt.Errorf("failed to fetch modifier: %w", err)
-	}
 
-	rows, err := c.repo.Tenant(ctx).GetModifierCalculationsByModifierID(ctx, id)
+		rows, err = q.GetModifierCalculationsByModifierID(ctx, id)
+		if err != nil {
+			return fmt.Errorf("failed to list modifier calculations: %w", err)
+		}
+		return nil
+	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to list modifier calculations: %w", err)
+		return nil, err
 	}
 
 	out := make([]*model.ModifierCalculationResponse, 0, len(rows))
@@ -220,10 +238,24 @@ func (c *CalculationS) GetTotalCostByModifierID(ctx context.Context, modifierID 
 	if err != nil {
 		return "0", fmt.Errorf("invalid modifier_id: %w", err)
 	}
-	raw, err := c.repo.Tenant(ctx).GetTotalCostByModifierID(ctx, id)
+
+	var raw pgtype.Numeric
+	err = withTenantRead(ctx, c.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		result, err := q.GetTotalCostByModifierID(ctx, id)
+		if err != nil {
+			return fmt.Errorf("failed to get total cost: %w", err)
+		}
+		// Type assertion from interface{} to pgtype.Numeric
+		if result != nil {
+			raw = result.(pgtype.Numeric)
+		}
+		return nil
+	})
 	if err != nil {
-		return "0", fmt.Errorf("failed to get total cost: %w", err)
+		return "0", err
 	}
+
 	return anyNumericToStr(raw), nil
 }
 

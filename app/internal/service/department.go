@@ -80,13 +80,21 @@ func (d *DepartmentS) GetDepartmentByID(ctx context.Context, departmentID string
 		return nil, fmt.Errorf("invalid department ID: %w", err)
 	}
 
-	department, err := d.repo.Tenant(ctx).GetDepartmentByID(ctx, id)
-	if err != nil {
-		if err == pgx.ErrNoRows {
-			return nil, fmt.Errorf("department not found")
+	var department pg.Department
+	err = withTenantRead(ctx, d.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		department, err = q.GetDepartmentByID(ctx, id)
+		if err != nil {
+			if err == pgx.ErrNoRows {
+				return fmt.Errorf("department not found")
+			}
+			log.Printf("GetDepartmentByID failed: %v", err)
+			return fmt.Errorf("failed to retrieve department: %w", err)
 		}
-		log.Printf("GetDepartmentByID failed: %v", err)
-		return nil, fmt.Errorf("failed to retrieve department: %w", err)
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
 
 	return mapDepartmentToResponse(department.ID, department.Name, department.NameI18n, department.StorageID, department.ColorCode, department.PictureUrl, department.CreatedAt, department.UpdatedAt), nil
@@ -105,24 +113,33 @@ func (s *DepartmentS) GetAllDepartments(ctx context.Context, filter model.Depart
 		return nil, 0, fmt.Errorf("invalid storage_id: %w", err)
 	}
 
-	total, err := s.repo.Tenant(ctx).CountDepartments(ctx, pg.CountDepartmentsParams{
-		Search:    filter.Search,
-		StorageID: storageUUID,
-	})
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to count departments: %w", err)
-	}
+	var rows []pg.GetAllDepartmentsRow
+	var total int64
+	err = withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		total, err = q.CountDepartments(ctx, pg.CountDepartmentsParams{
+			Search:    filter.Search,
+			StorageID: storageUUID,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to count departments: %w", err)
+		}
 
-	rows, err := s.repo.Tenant(ctx).GetAllDepartments(ctx, pg.GetAllDepartmentsParams{
-		Search:    filter.Search,
-		StorageID: storageUUID,
-		SortBy:    filter.SortBy,
-		SortOrder: filter.SortOrder,
-		Limit:     limit,
-		Offset:    offset,
+		rows, err = q.GetAllDepartments(ctx, pg.GetAllDepartmentsParams{
+			Search:    filter.Search,
+			StorageID: storageUUID,
+			SortBy:    filter.SortBy,
+			SortOrder: filter.SortOrder,
+			Limit:     limit,
+			Offset:    offset,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to get departments: %w", err)
+		}
+		return nil
 	})
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to get departments: %w", err)
+		return nil, 0, err
 	}
 
 	resp := make([]*model.DepartmentResponse, 0, len(rows))
@@ -140,19 +157,28 @@ func (d *DepartmentS) GetDepartmentsByStorageID(ctx context.Context, storageID s
 		return nil, 0, fmt.Errorf("invalid storage ID: %w", err)
 	}
 
-	total, err := d.repo.Tenant(ctx).CountDepartmentsByStorage(ctx, pgtype.UUID{Bytes: id, Valid: true})
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to count departments: %w", err)
-	}
+	var departments []pg.Department
+	var total int64
+	err = withTenantRead(ctx, d.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		total, err = q.CountDepartmentsByStorage(ctx, pgtype.UUID{Bytes: id, Valid: true})
+		if err != nil {
+			return fmt.Errorf("failed to count departments: %w", err)
+		}
 
-	departments, err := d.repo.Tenant(ctx).GetDepartmentsByStorageID(ctx, pg.GetDepartmentsByStorageIDParams{
-		StorageID: pgtype.UUID{Bytes: id, Valid: true},
-		Limit:     limit,
-		Offset:    offset,
+		departments, err = q.GetDepartmentsByStorageID(ctx, pg.GetDepartmentsByStorageIDParams{
+			StorageID: pgtype.UUID{Bytes: id, Valid: true},
+			Limit:     limit,
+			Offset:    offset,
+		})
+		if err != nil {
+			log.Printf("GetDepartmentsByStorageID failed: %v", err)
+			return fmt.Errorf("failed to retrieve departments: %w", err)
+		}
+		return nil
 	})
 	if err != nil {
-		log.Printf("GetDepartmentsByStorageID failed: %v", err)
-		return nil, 0, fmt.Errorf("failed to retrieve departments: %w", err)
+		return nil, 0, err
 	}
 
 	var responses []*model.DepartmentResponse
@@ -307,13 +333,21 @@ func (d *DepartmentS) GetDepartmentByIDWithLang(ctx context.Context, departmentI
 		return nil, fmt.Errorf("invalid department ID: %w", err)
 	}
 
-	department, err := d.repo.Tenant(ctx).GetDepartmentByIDWithLanguage(ctx, pg.GetDepartmentByIDWithLanguageParams{
-		ID:      id,
-		Column2: lang,
+	var department pg.GetDepartmentByIDWithLanguageRow
+	err = withTenantRead(ctx, d.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		department, err = q.GetDepartmentByIDWithLanguage(ctx, pg.GetDepartmentByIDWithLanguageParams{
+			ID:      id,
+			Column2: lang,
+		})
+		if err != nil {
+			log.Printf("GetDepartmentByIDWithLang failed: %v", err)
+			return fmt.Errorf("failed to get department: %w", err)
+		}
+		return nil
 	})
 	if err != nil {
-		log.Printf("GetDepartmentByIDWithLang failed: %v", err)
-		return nil, fmt.Errorf("failed to get department: %w", err)
+		return nil, err
 	}
 
 	return mapDepartmentToResponse(department.ID, department.Name, department.NameI18n, department.StorageID, department.ColorCode, department.PictureUrl, department.CreatedAt, department.UpdatedAt), nil
@@ -321,21 +355,30 @@ func (d *DepartmentS) GetDepartmentByIDWithLang(ctx context.Context, departmentI
 
 // GetAllDepartmentsWithLang retrieves all departments with language support
 func (d *DepartmentS) GetAllDepartmentsWithLang(ctx context.Context, lang string, limit, offset int32) ([]model.DepartmentResponse, int32, error) {
-	total, err := d.repo.Tenant(ctx).CountDepartments(ctx, pg.CountDepartmentsParams{
-		Search:    "",
-		StorageID: pgtype.UUID{},
-	})
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to count departments: %w", err)
-	}
+	var departments []pg.GetAllDepartmentsWithLanguageRow
+	var total int64
+	err := withTenantRead(ctx, d.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		total, err = q.CountDepartments(ctx, pg.CountDepartmentsParams{
+			Search:    "",
+			StorageID: pgtype.UUID{},
+		})
+		if err != nil {
+			return fmt.Errorf("failed to count departments: %w", err)
+		}
 
-	departments, err := d.repo.Tenant(ctx).GetAllDepartmentsWithLanguage(ctx, pg.GetAllDepartmentsWithLanguageParams{
-		Column1: lang,
-		Limit:   limit,
-		Offset:  offset,
+		departments, err = q.GetAllDepartmentsWithLanguage(ctx, pg.GetAllDepartmentsWithLanguageParams{
+			Column1: lang,
+			Limit:   limit,
+			Offset:  offset,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to get departments: %w", err)
+		}
+		return nil
 	})
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to get departments: %w", err)
+		return nil, 0, err
 	}
 
 	responses := make([]model.DepartmentResponse, 0, len(departments))

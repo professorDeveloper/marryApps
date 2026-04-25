@@ -153,9 +153,17 @@ func (s *CafeTableS) GetCafeTableByID(ctx context.Context, tableID string) (*mod
 		return nil, fmt.Errorf("invalid table ID: %w", err)
 	}
 
-	table, err := s.repo.Tenant(ctx).GetCafeTableByID(ctx, id)
+	var table pg.GetCafeTableByIDRow
+	err = withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		table, err = q.GetCafeTableByID(ctx, id)
+		if err != nil {
+			return fmt.Errorf("failed to get cafe table: %w", err)
+		}
+		return nil
+	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get cafe table: %w", err)
+		return nil, err
 	}
 
 	var currentAmount *string
@@ -183,28 +191,37 @@ func (s *CafeTableS) GetAllCafeTables(ctx context.Context, filter model.CafeTabl
 		return nil, 0, fmt.Errorf("invalid hall_id: %w", err)
 	}
 
-	total, err := s.repo.Tenant(ctx).CountCafeTables(ctx, pg.CountCafeTablesParams{
-		Search:    filter.Search,
-		HallID:    hallUUID,
-		Status:    filter.Status,
-		TableType: filter.TableType,
-	})
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to count cafe tables: %w", err)
-	}
+	var rows []pg.GetAllCafeTablesRow
+	var total int64
+	err = withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		total, err = q.CountCafeTables(ctx, pg.CountCafeTablesParams{
+			Search:    filter.Search,
+			HallID:    hallUUID,
+			Status:    filter.Status,
+			TableType: filter.TableType,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to count cafe tables: %w", err)
+		}
 
-	rows, err := s.repo.Tenant(ctx).GetAllCafeTables(ctx, pg.GetAllCafeTablesParams{
-		Search:    filter.Search,
-		HallID:    hallUUID,
-		Status:    filter.Status,
-		TableType: filter.TableType,
-		SortBy:    filter.SortBy,
-		SortOrder: filter.SortOrder,
-		Limit:     limit,
-		Offset:    offset,
+		rows, err = q.GetAllCafeTables(ctx, pg.GetAllCafeTablesParams{
+			Search:    filter.Search,
+			HallID:    hallUUID,
+			Status:    filter.Status,
+			TableType: filter.TableType,
+			SortBy:    filter.SortBy,
+			SortOrder: filter.SortOrder,
+			Limit:     limit,
+			Offset:    offset,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to retrieve cafe tables: %w", err)
+		}
+		return nil
 	})
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to retrieve cafe tables: %w", err)
+		return nil, 0, err
 	}
 
 	resp := make([]*model.CafeTableResponse, 0, len(rows))
@@ -221,14 +238,23 @@ func (s *CafeTableS) GetCafeTablesByHallID(ctx context.Context, hallID string, l
 		return nil, 0, fmt.Errorf("invalid hall ID: %w", err)
 	}
 
-	total, err := s.repo.Tenant(ctx).CountCafeTablesByHall(ctx, hID)
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to count cafe tables by hall: %w", err)
-	}
+	var tables []pg.GetCafeTablesByHallIDRow
+	var total int64
+	err = withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		total, err = q.CountCafeTablesByHall(ctx, hID)
+		if err != nil {
+			return fmt.Errorf("failed to count cafe tables by hall: %w", err)
+		}
 
-	tables, err := s.repo.Tenant(ctx).GetCafeTablesByHallID(ctx, hID)
+		tables, err = q.GetCafeTablesByHallID(ctx, hID)
+		if err != nil {
+			return fmt.Errorf("failed to get cafe tables by hall: %w", err)
+		}
+		return nil
+	})
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to get cafe tables by hall: %w", err)
+		return nil, 0, err
 	}
 
 	start := offset
@@ -259,18 +285,27 @@ func (s *CafeTableS) GetCafeTablesByStatus(ctx context.Context, status string, l
 		return nil, 0, fmt.Errorf("invalid status: must be free or busy")
 	}
 
-	total, err := s.repo.Tenant(ctx).CountCafeTablesByStatus(ctx, status)
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to count cafe tables by status: %w", err)
-	}
+	var tables []pg.GetCafeTablesByStatusRow
+	var total int64
+	err := withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		total, err = q.CountCafeTablesByStatus(ctx, status)
+		if err != nil {
+			return fmt.Errorf("failed to count cafe tables by status: %w", err)
+		}
 
-	tables, err := s.repo.Tenant(ctx).GetCafeTablesByStatus(ctx, pg.GetCafeTablesByStatusParams{
-		Status: status,
-		Limit:  limit,
-		Offset: offset,
+		tables, err = q.GetCafeTablesByStatus(ctx, pg.GetCafeTablesByStatusParams{
+			Status: status,
+			Limit:  limit,
+			Offset: offset,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to get cafe tables by status: %w", err)
+		}
+		return nil
 	})
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to get cafe tables by status: %w", err)
+		return nil, 0, err
 	}
 
 	var responses []model.CafeTableResponse
@@ -293,12 +328,20 @@ func (s *CafeTableS) GetCafeTablesByHallAndStatus(ctx context.Context, hallID, s
 		return nil, fmt.Errorf("invalid status: must be free or busy")
 	}
 
-	tables, err := s.repo.Tenant(ctx).GetCafeTablesByHallAndStatus(ctx, pg.GetCafeTablesByHallAndStatusParams{
-		HallID: hID,
-		Status: status,
+	var tables []pg.GetCafeTablesByHallAndStatusRow
+	err = withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		tables, err = q.GetCafeTablesByHallAndStatus(ctx, pg.GetCafeTablesByHallAndStatusParams{
+			HallID: hID,
+			Status: status,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to get cafe tables: %w", err)
+		}
+		return nil
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get cafe tables: %w", err)
+		return nil, err
 	}
 
 	var responses []model.CafeTableResponse
@@ -316,9 +359,17 @@ func (s *CafeTableS) GetAvailableTablesByHall(ctx context.Context, hallID string
 		return nil, fmt.Errorf("invalid hall ID: %w", err)
 	}
 
-	tables, err := s.repo.Tenant(ctx).GetAvailableTablesByHall(ctx, hID)
+	var tables []pg.GetAvailableTablesByHallRow
+	err = withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		tables, err = q.GetAvailableTablesByHall(ctx, hID)
+		if err != nil {
+			return fmt.Errorf("failed to get available tables: %w", err)
+		}
+		return nil
+	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get available tables: %w", err)
+		return nil, err
 	}
 
 	var responses []model.CafeTableResponse
@@ -335,13 +386,21 @@ func (s *CafeTableS) GetAvailableTablesByCapacity(ctx context.Context, capacity,
 		return nil, fmt.Errorf("capacity must be greater than 0")
 	}
 
-	tables, err := s.repo.Tenant(ctx).GetAvailableTablesByCapacity(ctx, pg.GetAvailableTablesByCapacityParams{
-		Capacity: capacity,
-		Limit:    limit,
-		Offset:   offset,
+	var tables []pg.GetAvailableTablesByCapacityRow
+	err := withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		tables, err = q.GetAvailableTablesByCapacity(ctx, pg.GetAvailableTablesByCapacityParams{
+			Capacity: capacity,
+			Limit:    limit,
+			Offset:   offset,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to get available tables: %w", err)
+		}
+		return nil
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get available tables: %w", err)
+		return nil, err
 	}
 
 	var responses []model.CafeTableResponse
@@ -359,12 +418,20 @@ func (s *CafeTableS) GetAvailableTablesByHallAndCapacity(ctx context.Context, ha
 		return nil, fmt.Errorf("invalid hall ID: %w", err)
 	}
 
-	tables, err := s.repo.Tenant(ctx).GetAvailableTablesByHallAndCapacity(ctx, pg.GetAvailableTablesByHallAndCapacityParams{
-		HallID:   hID,
-		Capacity: capacity,
+	var tables []pg.GetAvailableTablesByHallAndCapacityRow
+	err = withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		tables, err = q.GetAvailableTablesByHallAndCapacity(ctx, pg.GetAvailableTablesByHallAndCapacityParams{
+			HallID:   hID,
+			Capacity: capacity,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to get available tables: %w", err)
+		}
+		return nil
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get available tables: %w", err)
+		return nil, err
 	}
 
 	var responses []model.CafeTableResponse
@@ -618,9 +685,17 @@ func (s *CafeTableS) RestoreCafeTable(ctx context.Context, tableID string) error
 
 // GetTableOccupancyStats returns occupancy statistics for all tables
 func (s *CafeTableS) GetTableOccupancyStats(ctx context.Context) (*model.TableOccupancyStats, error) {
-	stats, err := s.repo.Tenant(ctx).GetTableOccupancyStats(ctx)
+	var stats pg.GetTableOccupancyStatsRow
+	err := withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		stats, err = q.GetTableOccupancyStats(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to get occupancy stats: %w", err)
+		}
+		return nil
+	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get occupancy stats: %w", err)
+		return nil, err
 	}
 
 	return &model.TableOccupancyStats{

@@ -48,9 +48,17 @@ func (s *SupplierS) GetSupplierByID(ctx context.Context, id string) (*model.Supp
 		return nil, fmt.Errorf("invalid supplier id: %w", err)
 	}
 
-	supplier, err := s.repo.Tenant(ctx).GetSupplierByID(ctx, supplierID)
+	var supplier pg.Supplier
+	err = withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		supplier, err = q.GetSupplierByID(ctx, supplierID)
+		if err != nil {
+			return fmt.Errorf("failed to get supplier: %w", err)
+		}
+		return nil
+	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get supplier: %w", err)
+		return nil, err
 	}
 
 	return toSupplierResponse(supplier), nil
@@ -64,22 +72,31 @@ func (s *SupplierS) GetAllSuppliers(ctx context.Context, filter model.SupplierLi
 		filter.SortOrder = "desc"
 	}
 
-	total, err := s.repo.Tenant(ctx).CountSuppliers(ctx, filter.Search)
-	if err != nil {
-		log.Printf("CountSuppliers failed: %v", err)
-		return nil, 0, fmt.Errorf("failed to count suppliers: %w", err)
-	}
+	var rows []pg.GetAllSuppliersRow
+	var total int64
+	err := withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		total, err = q.CountSuppliers(ctx, filter.Search)
+		if err != nil {
+			log.Printf("CountSuppliers failed: %v", err)
+			return fmt.Errorf("failed to count suppliers: %w", err)
+		}
 
-	rows, err := s.repo.Tenant(ctx).GetAllSuppliers(ctx, pg.GetAllSuppliersParams{
-		Search:    filter.Search,
-		SortBy:    filter.SortBy,
-		SortOrder: filter.SortOrder,
-		Limit:     limit,
-		Offset:    offset,
+		rows, err = q.GetAllSuppliers(ctx, pg.GetAllSuppliersParams{
+			Search:    filter.Search,
+			SortBy:    filter.SortBy,
+			SortOrder: filter.SortOrder,
+			Limit:     limit,
+			Offset:    offset,
+		})
+		if err != nil {
+			log.Printf("GetAllSuppliers failed: %v", err)
+			return fmt.Errorf("failed to retrieve suppliers: %w", err)
+		}
+		return nil
 	})
 	if err != nil {
-		log.Printf("GetAllSuppliers failed: %v", err)
-		return nil, 0, fmt.Errorf("failed to retrieve suppliers: %w", err)
+		return nil, 0, err
 	}
 
 	var responses []*model.SupplierResponse

@@ -22,6 +22,46 @@ func NewModifierS(repo *repository.Repository) *ModifierS {
 	return &ModifierS{repo: repo}
 }
 
+// withTenantRead executes a read-only function within a tenant-scoped transaction.
+// The transaction is always rolled back (read-only).
+// This helper is for tenant-safe read operations.
+func (s *ModifierS) withTenantRead(ctx context.Context, fn func(context.Context, *pg.Queries) error) error {
+	brandID, _ := ctx.Value("brand_id").(string)
+	brandID = strings.TrimSpace(brandID)
+	if brandID == "" {
+		return fmt.Errorf("brand_id is missing in context")
+	}
+
+	schemaName := fmt.Sprintf("tenant_%s", brandID)
+
+	tx, err := s.repo.PgRepo.TenantPool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	if _, err := tx.Exec(ctx, fmt.Sprintf(`SET LOCAL search_path TO "%s", public`, schemaName)); err != nil {
+		return fmt.Errorf("failed to set tenant search_path: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx, "SET LOCAL app.brand_id = $1", brandID); err != nil {
+		return fmt.Errorf("failed to set app.brand_id: %w", err)
+	}
+
+	if branchID, _ := ctx.Value("branch_id").(string); strings.TrimSpace(branchID) != "" {
+		if _, err := tx.Exec(ctx, "SET LOCAL app.branch_id = $1", strings.TrimSpace(branchID)); err != nil {
+			return fmt.Errorf("failed to set app.branch_id: %w", err)
+		}
+	}
+
+	q := pg.New(tx)
+	if err := fn(ctx, q); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func mapModifierToResponse(row pg.Modifier) *model.ModifierResponse {
 	return &model.ModifierResponse{
 		ID:          row.ID.String(),
@@ -96,13 +136,21 @@ func (s *ModifierS) GetModifierByID(ctx context.Context, modifierID string) (*mo
 		return nil, fmt.Errorf("invalid modifier ID: %w", err)
 	}
 
-	row, err := s.repo.Tenant(ctx).GetModifierByID(ctx, id)
-	if err != nil {
-		if err == pgx.ErrNoRows {
-			return nil, fmt.Errorf("modifier not found")
+	var row pg.Modifier
+	err = s.withTenantRead(ctx, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		row, err = q.GetModifierByID(ctx, id)
+		if err != nil {
+			if err == pgx.ErrNoRows {
+				return fmt.Errorf("modifier not found")
+			}
+			log.Printf("GetModifierByID failed: %v", err)
+			return fmt.Errorf("failed to retrieve modifier: %w", err)
 		}
-		log.Printf("GetModifierByID failed: %v", err)
-		return nil, fmt.Errorf("failed to retrieve modifier: %w", err)
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
 
 	return mapModifierToResponse(row), nil
@@ -111,20 +159,29 @@ func (s *ModifierS) GetModifierByID(ctx context.Context, modifierID string) (*mo
 func (s *ModifierS) GetModifiers(ctx context.Context, query string, limit, offset int32) ([]*model.ModifierResponse, int64, error) {
 	q := strings.TrimSpace(query)
 
-	rows, err := s.repo.Tenant(ctx).GetModifiers(ctx, pg.GetModifiersParams{
-		Column1: q,
-		Limit:   limit,
-		Offset:  offset,
+	var rows []pg.Modifier
+	var total int64
+	err := s.withTenantRead(ctx, func(ctx context.Context, queries *pg.Queries) error {
+		var err error
+		rows, err = queries.GetModifiers(ctx, pg.GetModifiersParams{
+			Column1: q,
+			Limit:   limit,
+			Offset:  offset,
+		})
+		if err != nil {
+			log.Printf("GetModifiers failed: %v", err)
+			return fmt.Errorf("failed to retrieve modifiers: %w", err)
+		}
+
+		total, err = queries.CountModifiersFiltered(ctx, q)
+		if err != nil {
+			log.Printf("CountModifiersFiltered failed: %v", err)
+			return fmt.Errorf("failed to count modifiers: %w", err)
+		}
+		return nil
 	})
 	if err != nil {
-		log.Printf("GetModifiers failed: %v", err)
-		return nil, 0, fmt.Errorf("failed to retrieve modifiers: %w", err)
-	}
-
-	total, err := s.repo.Tenant(ctx).CountModifiersFiltered(ctx, q)
-	if err != nil {
-		log.Printf("CountModifiersFiltered failed: %v", err)
-		return nil, 0, fmt.Errorf("failed to count modifiers: %w", err)
+		return nil, 0, err
 	}
 
 	responses := make([]*model.ModifierResponse, 0, len(rows))

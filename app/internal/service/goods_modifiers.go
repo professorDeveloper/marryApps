@@ -161,19 +161,26 @@ func (s *GoodsModifierS) GetModifiersByGoodID(ctx context.Context, goodID string
 		return nil, fmt.Errorf("invalid good ID: %w", err)
 	}
 
-	_, err = s.repo.Tenant(ctx).GetGoodByID(ctx, goodUUID)
-	if err != nil {
-		if err == pgx.ErrNoRows {
-			return nil, fmt.Errorf("good not found")
+	var rows []pg.GetModifiersByGoodIDRow
+	err = withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
+		_, err := q.GetGoodByID(ctx, goodUUID)
+		if err != nil {
+			if err == pgx.ErrNoRows {
+				return fmt.Errorf("good not found")
+			}
+			log.Printf("GetGoodByID failed: %v", err)
+			return fmt.Errorf("failed to validate good: %w", err)
 		}
-		log.Printf("GetGoodByID failed: %v", err)
-		return nil, fmt.Errorf("failed to validate good: %w", err)
-	}
 
-	rows, err := s.repo.Tenant(ctx).GetModifiersByGoodID(ctx, goodUUID)
+		rows, err = q.GetModifiersByGoodID(ctx, goodUUID)
+		if err != nil {
+			log.Printf("GetModifiersByGoodID failed: %v", err)
+			return fmt.Errorf("failed to retrieve good modifiers: %w", err)
+		}
+		return nil
+	})
 	if err != nil {
-		log.Printf("GetModifiersByGoodID failed: %v", err)
-		return nil, fmt.Errorf("failed to retrieve good modifiers: %w", err)
+		return nil, err
 	}
 
 	resp := make([]*model.GoodModifierResponse, 0, len(rows))

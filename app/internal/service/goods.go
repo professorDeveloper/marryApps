@@ -881,6 +881,11 @@ func numericToStringGoods(n pgtype.Numeric) string {
 
 	// Apply exponent to format the number
 	str := n.Int.String()
+	isNegative := strings.HasPrefix(str, "-")
+	if isNegative {
+		str = str[1:] // Remove sign temporarily
+	}
+
 	if n.Exp < 0 {
 		// Need to add decimal point
 		exp := -int(n.Exp)
@@ -896,6 +901,14 @@ func numericToStringGoods(n pgtype.Numeric) string {
 		str = str + strings.Repeat("0", int(n.Exp))
 	}
 
+	// Add sign back if negative
+	if isNegative {
+		str = "-" + str
+	}
+
+	if str == "" || str == "-0" {
+		return "0"
+	}
 	return str
 }
 

@@ -69,13 +69,21 @@ func (h *HallS) GetHallByID(ctx context.Context, hallID string) (*model.HallResp
 		return nil, fmt.Errorf("invalid hall ID: %w", err)
 	}
 
-	hall, err := h.repo.Tenant(ctx).GetHallByID(ctx, id)
-	if err != nil {
-		if err == pgx.ErrNoRows {
-			return nil, fmt.Errorf("hall not found")
+	var hall pg.Hall
+	err = withTenantRead(ctx, h.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		hall, err = q.GetHallByID(ctx, id)
+		if err != nil {
+			if err == pgx.ErrNoRows {
+				return fmt.Errorf("hall not found")
+			}
+			log.Printf("GetHallByID failed: %v", err)
+			return fmt.Errorf("failed to retrieve hall: %w", err)
 		}
-		log.Printf("GetHallByID failed: %v", err)
-		return nil, fmt.Errorf("failed to retrieve hall: %w", err)
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
 
 	return toHallResponse(hall), nil
@@ -89,22 +97,31 @@ func (h *HallS) GetAllHalls(ctx context.Context, filter model.HallListFilter, li
 		filter.SortOrder = "desc"
 	}
 
-	total, err := h.repo.Tenant(ctx).CountHalls(ctx, filter.Search)
-	if err != nil {
-		log.Printf("CountHalls failed: %v", err)
-		return nil, 0, fmt.Errorf("failed to count halls: %w", err)
-	}
+	var halls []pg.Hall
+	var total int64
+	err := withTenantRead(ctx, h.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		total, err = q.CountHalls(ctx, filter.Search)
+		if err != nil {
+			log.Printf("CountHalls failed: %v", err)
+			return fmt.Errorf("failed to count halls: %w", err)
+		}
 
-	halls, err := h.repo.Tenant(ctx).GetAllHalls(ctx, pg.GetAllHallsParams{
-		Search:    filter.Search,
-		SortBy:    filter.SortBy,
-		SortOrder: filter.SortOrder,
-		Limit:     limit,
-		Offset:    offset,
+		halls, err = q.GetAllHalls(ctx, pg.GetAllHallsParams{
+			Search:    filter.Search,
+			SortBy:    filter.SortBy,
+			SortOrder: filter.SortOrder,
+			Limit:     limit,
+			Offset:    offset,
+		})
+		if err != nil {
+			log.Printf("GetAllHalls failed: %v", err)
+			return fmt.Errorf("failed to retrieve halls: %w", err)
+		}
+		return nil
 	})
 	if err != nil {
-		log.Printf("GetAllHalls failed: %v", err)
-		return nil, 0, fmt.Errorf("failed to retrieve halls: %w", err)
+		return nil, 0, err
 	}
 
 	var responses []*model.HallResponse
@@ -121,20 +138,29 @@ func (h *HallS) GetHallsByBranchID(ctx context.Context, branchID string, limit, 
 		return nil, 0, fmt.Errorf("invalid branch ID: %w", err)
 	}
 
-	total, err := h.repo.Tenant(ctx).CountHallsByBranch(ctx, id)
-	if err != nil {
-		log.Printf("CountHallsByBranch failed: %v", err)
-		return nil, 0, fmt.Errorf("failed to count halls: %w", err)
-	}
+	var halls []pg.Hall
+	var total int64
+	err = withTenantRead(ctx, h.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		total, err = q.CountHallsByBranch(ctx, id)
+		if err != nil {
+			log.Printf("CountHallsByBranch failed: %v", err)
+			return fmt.Errorf("failed to count halls: %w", err)
+		}
 
-	halls, err := h.repo.Tenant(ctx).GetHallsByBranchID(ctx, pg.GetHallsByBranchIDParams{
-		BranchID: id,
-		Limit:    limit,
-		Offset:   offset,
+		halls, err = q.GetHallsByBranchID(ctx, pg.GetHallsByBranchIDParams{
+			BranchID: id,
+			Limit:    limit,
+			Offset:   offset,
+		})
+		if err != nil {
+			log.Printf("GetHallsByBranchID failed: %v", err)
+			return fmt.Errorf("failed to retrieve halls: %w", err)
+		}
+		return nil
 	})
 	if err != nil {
-		log.Printf("GetHallsByBranchID failed: %v", err)
-		return nil, 0, fmt.Errorf("failed to retrieve halls: %w", err)
+		return nil, 0, err
 	}
 
 	var responses []*model.HallResponse
@@ -152,23 +178,32 @@ func (h *HallS) GetAllHallsWithLang(ctx context.Context, lang string, filter mod
 		filter.SortOrder = "desc"
 	}
 
-	total, err := h.repo.Tenant(ctx).CountHalls(ctx, filter.Search)
-	if err != nil {
-		log.Printf("CountHalls failed: %v", err)
-		return nil, 0, fmt.Errorf("failed to count halls: %w", err)
-	}
+	var halls []pg.Hall
+	var total int64
+	err := withTenantRead(ctx, h.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		total, err = q.CountHalls(ctx, filter.Search)
+		if err != nil {
+			log.Printf("CountHalls failed: %v", err)
+			return fmt.Errorf("failed to count halls: %w", err)
+		}
 
-	halls, err := h.repo.Tenant(ctx).GetAllHallsWithLanguage(ctx, pg.GetAllHallsWithLanguageParams{
-		Lang:      lang,
-		Search:    filter.Search,
-		SortBy:    filter.SortBy,
-		SortOrder: filter.SortOrder,
-		Limit:     limit,
-		Offset:    offset,
+		halls, err = q.GetAllHallsWithLanguage(ctx, pg.GetAllHallsWithLanguageParams{
+			Lang:      lang,
+			Search:    filter.Search,
+			SortBy:    filter.SortBy,
+			SortOrder: filter.SortOrder,
+			Limit:     limit,
+			Offset:    offset,
+		})
+		if err != nil {
+			log.Printf("GetAllHallsWithLang failed: %v", err)
+			return fmt.Errorf("failed to retrieve halls: %w", err)
+		}
+		return nil
 	})
 	if err != nil {
-		log.Printf("GetAllHallsWithLang failed: %v", err)
-		return nil, 0, fmt.Errorf("failed to retrieve halls: %w", err)
+		return nil, 0, err
 	}
 
 	var responses []*model.HallResponse
@@ -185,21 +220,30 @@ func (h *HallS) GetHallsByBranchIDWithLang(ctx context.Context, branchID string,
 		return nil, 0, fmt.Errorf("invalid branch ID: %w", err)
 	}
 
-	total, err := h.repo.Tenant(ctx).CountHallsByBranch(ctx, id)
-	if err != nil {
-		log.Printf("CountHallsByBranch failed: %v", err)
-		return nil, 0, fmt.Errorf("failed to count halls: %w", err)
-	}
+	var halls []pg.Hall
+	var total int64
+	err = withTenantRead(ctx, h.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		total, err = q.CountHallsByBranch(ctx, id)
+		if err != nil {
+			log.Printf("CountHallsByBranch failed: %v", err)
+			return fmt.Errorf("failed to count halls: %w", err)
+		}
 
-	halls, err := h.repo.Tenant(ctx).GetHallsByBranchIDWithLanguage(ctx, pg.GetHallsByBranchIDWithLanguageParams{
-		BranchID: id,
-		Column2:  lang,
-		Limit:    limit,
-		Offset:   offset,
+		halls, err = q.GetHallsByBranchIDWithLanguage(ctx, pg.GetHallsByBranchIDWithLanguageParams{
+			BranchID: id,
+			Column2:  lang,
+			Limit:    limit,
+			Offset:   offset,
+		})
+		if err != nil {
+			log.Printf("GetHallsByBranchIDWithLang failed: %v", err)
+			return fmt.Errorf("failed to retrieve halls: %w", err)
+		}
+		return nil
 	})
 	if err != nil {
-		log.Printf("GetHallsByBranchIDWithLang failed: %v", err)
-		return nil, 0, fmt.Errorf("failed to retrieve halls: %w", err)
+		return nil, 0, err
 	}
 
 	var responses []*model.HallResponse
