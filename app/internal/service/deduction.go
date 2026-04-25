@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/big"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -21,6 +22,45 @@ type DeductionS struct {
 
 func NewDeductionS(repo *repository.Repository) *DeductionS {
 	return &DeductionS{repo: repo}
+}
+
+func (s *DeductionS) getTenantMutationQueries(ctx context.Context) (*pg.Queries, context.Context, pgx.Tx, bool, error) {
+	if existingTx, ok := repository.TenantTxFromContext(ctx); ok && existingTx != nil {
+		// Reuse existing transaction - get queries from context or create from tx
+		if q, ok := repository.TenantQueriesFromContext(ctx); ok && q != nil {
+			return q, ctx, existingTx, false, nil
+		}
+		q := pg.New(existingTx)
+		txCtx := repository.WithTenantQueries(ctx, q)
+		return q, txCtx, existingTx, false, nil
+	}
+
+	tx, err := s.repo.PgRepo.TenantPool.Begin(ctx)
+	if err != nil {
+		return nil, nil, nil, false, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+
+	brandID, _ := ctx.Value("brand_id").(string)
+	brandID = strings.TrimSpace(brandID)
+	if brandID == "" {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("brand_id is missing in context")
+	}
+
+	schemaName := fmt.Sprintf("tenant_%s", brandID)
+	if _, err := tx.Exec(ctx, fmt.Sprintf(`SET LOCAL search_path TO "%s", public`, schemaName)); err != nil {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("failed to set tenant search_path: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx, "SET LOCAL app.brand_id = $1", brandID); err != nil {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("failed to set app.brand_id: %w", err)
+	}
+
+	q := pg.New(tx)
+	txCtx := repository.WithTenantQueries(ctx, q)
+	return q, txCtx, tx, true, nil
 }
 
 type deductionTouchedKey struct {
@@ -46,27 +86,27 @@ func deductionFreezeDate(d pgtype.Date, entityName string) (time.Time, error) {
 	return d.Time, nil
 }
 
-func assertCanMutateDeductionCurrent(ctx context.Context, repo *repository.Repository, d pg.Deduction, entityName string) error {
+func assertCanMutateDeductionCurrent(ctx context.Context, q *pg.Queries, d pg.Deduction, entityName string) error {
 	effectiveAt, err := deductionFreezeDate(d.Date, entityName)
 	if err != nil {
 		return err
 	}
-	return assertCanMutateAfterInventory(ctx, repo, d.StorageID, effectiveAt, entityName)
+	return assertCanMutateAfterInventory(ctx, q, d.StorageID, effectiveAt, entityName)
 }
 
-func assertCanMutateDeductionTarget(ctx context.Context, repo *repository.Repository, storageID uuid.UUID, date pgtype.Date, entityName string) error {
+func assertCanMutateDeductionTarget(ctx context.Context, q *pg.Queries, storageID uuid.UUID, date pgtype.Date, entityName string) error {
 	effectiveAt, err := deductionFreezeDate(date, entityName)
 	if err != nil {
 		return err
 	}
-	return assertCanMutateAfterInventory(ctx, repo, storageID, effectiveAt, entityName)
+	return assertCanMutateAfterInventory(ctx, q, storageID, effectiveAt, entityName)
 }
 
-func assertCanMutateDeductionChange(ctx context.Context, repo *repository.Repository, current pg.Deduction, targetStorage uuid.UUID, targetDate pgtype.Date, entityName string) error {
-	if err := assertCanMutateDeductionCurrent(ctx, repo, current, entityName); err != nil {
+func assertCanMutateDeductionChange(ctx context.Context, q *pg.Queries, current pg.Deduction, targetStorage uuid.UUID, targetDate pgtype.Date, entityName string) error {
+	if err := assertCanMutateDeductionCurrent(ctx, q, current, entityName); err != nil {
 		return err
 	}
-	if err := assertCanMutateDeductionTarget(ctx, repo, targetStorage, targetDate, entityName); err != nil {
+	if err := assertCanMutateDeductionTarget(ctx, q, targetStorage, targetDate, entityName); err != nil {
 		return err
 	}
 	return nil
@@ -74,63 +114,11 @@ func assertCanMutateDeductionChange(ctx context.Context, repo *repository.Reposi
 
 func (s *DeductionS) rebalanceDeductionIngredientLedger(
 	ctx context.Context,
+	q *pg.Queries,
 	storageID pgtype.UUID,
 	ingredientID uuid.UUID,
 ) error {
-	if !storageID.Valid {
-		return fmt.Errorf("storage_id is required for deduction ledger rebalance")
-	}
-
-	q := s.repo.Tenant(ctx)
-
-	_, _ = q.EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
-		ID:           uuid.New(),
-		IngredientID: ingredientID,
-		StorageID:    storageID,
-	})
-
-	rows, err := q.ListIngredientStockMovementsForRebalance(ctx, storageID.Bytes, ingredientID)
-	if err != nil {
-		return fmt.Errorf("failed to list deduction stock movements for rebalance: %w", err)
-	}
-
-	running := inventoryZeroNumeric()
-
-	for _, row := range rows {
-		before := running
-
-		after, err := applyMovementDelta(before, row.QtyIn, row.QtyOut, 6)
-		if err != nil {
-			return fmt.Errorf("failed to calculate deduction balance for movement %s: %w", row.ID, err)
-		}
-
-		if err := q.UpdateIngredientStockMovementBalances(ctx, pg.UpdateIngredientStockMovementBalancesParams{
-			ID:          row.ID,
-			StockBefore: before,
-			StockAfter:  after,
-		}); err != nil {
-			return fmt.Errorf("failed to update deduction balances for movement %s: %w", row.ID, err)
-		}
-
-		running = after
-	}
-
-	stockRow, err := q.GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
-		IngredientID: ingredientID,
-		StorageID:    storageID,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to lock ingredient stock for deduction final sync: %w", err)
-	}
-
-	if _, err := q.UpdateIngredientStock(ctx, pg.UpdateIngredientStockParams{
-		ID:       stockRow.ID,
-		Quantity: running,
-	}); err != nil {
-		return fmt.Errorf("failed to sync ingredient_stock quantity after deduction rebalance: %w", err)
-	}
-
-	return nil
+	return rebalanceIngredientStockLedger(ctx, q, storageID, ingredientID, "deduction")
 }
 
 type ingredientUsage struct {
@@ -341,14 +329,14 @@ func (s *DeductionS) RestoreDeductionActGroup(ctx context.Context, id string) (*
 	}, nil
 }
 
-func (s *DeductionS) expandCompoundToIngredients(ctx context.Context, compoundID uuid.UUID, multiplier pgtype.Numeric, visited map[uuid.UUID]bool) ([]ingredientUsage, error) {
+func (s *DeductionS) expandCompoundToIngredients(ctx context.Context, q *pg.Queries, compoundID uuid.UUID, multiplier pgtype.Numeric, visited map[uuid.UUID]bool) ([]ingredientUsage, error) {
 	if visited[compoundID] {
 		return nil, fmt.Errorf("compound cycle detected")
 	}
 	visited[compoundID] = true
 	defer func() { visited[compoundID] = false }()
 
-	calcs, err := s.repo.Tenant(ctx).GetCalculationsByCompoundID(ctx, pgtype.UUID{Bytes: compoundID, Valid: true})
+	calcs, err := q.GetCalculationsByCompoundID(ctx, pgtype.UUID{Bytes: compoundID, Valid: true})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get compound calculations: %w", err)
 	}
@@ -361,7 +349,7 @@ func (s *DeductionS) expandCompoundToIngredients(ctx context.Context, compoundID
 			if err != nil {
 				return nil, err
 			}
-			sub, err := s.expandCompoundToIngredients(ctx, child, childMultiplier, visited)
+			sub, err := s.expandCompoundToIngredients(ctx, q, child, childMultiplier, visited)
 			if err != nil {
 				return nil, err
 			}
@@ -380,8 +368,8 @@ func (s *DeductionS) expandCompoundToIngredients(ctx context.Context, compoundID
 	return out, nil
 }
 
-func (s *DeductionS) expandCompoundToDirectCompounds(ctx context.Context, compoundID uuid.UUID, multiplier pgtype.Numeric) ([]compoundUsage, error) {
-	calcs, err := s.repo.Tenant(ctx).GetCalculationsByCompoundID(ctx, pgtype.UUID{Bytes: compoundID, Valid: true})
+func (s *DeductionS) expandCompoundToDirectCompounds(ctx context.Context, q *pg.Queries, compoundID uuid.UUID, multiplier pgtype.Numeric) ([]compoundUsage, error) {
+	calcs, err := q.GetCalculationsByCompoundID(ctx, pgtype.UUID{Bytes: compoundID, Valid: true})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get compound calculations: %w", err)
 	}
@@ -400,8 +388,8 @@ func (s *DeductionS) expandCompoundToDirectCompounds(ctx context.Context, compou
 	return out, nil
 }
 
-func (s *DeductionS) expandGoodToIngredients(ctx context.Context, goodID uuid.UUID, multiplier pgtype.Numeric) ([]ingredientUsage, error) {
-	calcs, err := s.repo.Tenant(ctx).GetCalculationsByGoodID(ctx, pgtype.UUID{Bytes: goodID, Valid: true})
+func (s *DeductionS) expandGoodToIngredients(ctx context.Context, q *pg.Queries, goodID uuid.UUID, multiplier pgtype.Numeric) ([]ingredientUsage, error) {
+	calcs, err := q.GetCalculationsByGoodID(ctx, pgtype.UUID{Bytes: goodID, Valid: true})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get good calculations: %w", err)
 	}
@@ -415,7 +403,7 @@ func (s *DeductionS) expandGoodToIngredients(ctx context.Context, goodID uuid.UU
 			if err != nil {
 				return nil, err
 			}
-			sub, err := s.expandCompoundToIngredients(ctx, child, childMultiplier, visited)
+			sub, err := s.expandCompoundToIngredients(ctx, q, child, childMultiplier, visited)
 			if err != nil {
 				return nil, err
 			}
@@ -434,8 +422,8 @@ func (s *DeductionS) expandGoodToIngredients(ctx context.Context, goodID uuid.UU
 	return out, nil
 }
 
-func (s *DeductionS) expandGoodToDirectCompounds(ctx context.Context, goodID uuid.UUID, multiplier pgtype.Numeric) ([]compoundUsage, error) {
-	calcs, err := s.repo.Tenant(ctx).GetCalculationsByGoodID(ctx, pgtype.UUID{Bytes: goodID, Valid: true})
+func (s *DeductionS) expandGoodToDirectCompounds(ctx context.Context, q *pg.Queries, goodID uuid.UUID, multiplier pgtype.Numeric) ([]compoundUsage, error) {
+	calcs, err := q.GetCalculationsByGoodID(ctx, pgtype.UUID{Bytes: goodID, Valid: true})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get good calculations: %w", err)
 	}
@@ -457,13 +445,13 @@ func (s *DeductionS) expandGoodToDirectCompounds(ctx context.Context, goodID uui
 
 // reverseAllDeductionStock adds back all stock deducted by this deduction (via deduction_item_ingredients).
 // Soft-deletes breakdown records after reversal.
-func (s *DeductionS) reverseAllDeductionStock(ctx context.Context, deductionID uuid.UUID, storageID uuid.UUID, eventType string, deductionDate pgtype.Timestamptz) error {
+func (s *DeductionS) reverseAllDeductionStock(ctx context.Context, q *pg.Queries, deductionID uuid.UUID, storageID uuid.UUID, eventType string, deductionDate pgtype.Timestamptz) error {
 	storagePg := pgtype.UUID{Bytes: storageID, Valid: true}
 	zero := inventoryZeroNumeric()
 	sourceType := "deduction"
 	effectiveAt := deductionEffectiveAt(deductionDate)
 
-	items, err := s.repo.Tenant(ctx).GetDeductionItemsByDeductionID(ctx, deductionID)
+	items, err := q.GetDeductionItemsByDeductionID(ctx, deductionID)
 	if err != nil {
 		return fmt.Errorf("failed to get deduction items for reverse: %w", err)
 	}
@@ -471,7 +459,7 @@ func (s *DeductionS) reverseAllDeductionStock(ctx context.Context, deductionID u
 	touched := make(map[deductionTouchedKey]struct{})
 
 	for _, item := range items {
-		breakdowns, err := s.repo.Tenant(ctx).GetDeductionItemIngredientsByDeductionItemID(ctx, item.ID)
+		breakdowns, err := q.GetDeductionItemIngredientsByDeductionItemID(ctx, item.ID)
 		if err != nil {
 			return fmt.Errorf("failed to get deduction item ingredients for reverse: %w", err)
 		}
@@ -481,7 +469,7 @@ func (s *DeductionS) reverseAllDeductionStock(ctx context.Context, deductionID u
 				continue
 			}
 
-			_, err := s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
+			_, err := q.EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
 				ID:           uuid.New(),
 				IngredientID: b.IngredientID,
 				StorageID:    storagePg,
@@ -490,7 +478,7 @@ func (s *DeductionS) reverseAllDeductionStock(ctx context.Context, deductionID u
 				return fmt.Errorf("failed to ensure stock row during deduction reverse: %w", err)
 			}
 
-			locked, err := s.repo.Tenant(ctx).GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
+			locked, err := q.GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
 				IngredientID: b.IngredientID,
 				StorageID:    storagePg,
 			})
@@ -498,7 +486,7 @@ func (s *DeductionS) reverseAllDeductionStock(ctx context.Context, deductionID u
 				return fmt.Errorf("failed to lock stock row during deduction reverse: %w", err)
 			}
 
-			updated, err := s.repo.Tenant(ctx).AddToIngredientStock(ctx, pg.AddToIngredientStockParams{
+			updated, err := q.AddToIngredientStock(ctx, pg.AddToIngredientStockParams{
 				ID:       locked.ID,
 				Quantity: b.Quantity,
 			})
@@ -506,7 +494,7 @@ func (s *DeductionS) reverseAllDeductionStock(ctx context.Context, deductionID u
 				return fmt.Errorf("failed to restore stock during deduction reverse: %w", err)
 			}
 
-			if err := s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+			if err := q.InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
 				ID:           uuid.New(),
 				StorageID:    storageID,
 				IngredientID: b.IngredientID,
@@ -529,13 +517,13 @@ func (s *DeductionS) reverseAllDeductionStock(ctx context.Context, deductionID u
 			}] = struct{}{}
 		}
 
-		if err := s.repo.Tenant(ctx).DeleteDeductionItemIngredientsByItemID(ctx, item.ID); err != nil {
+		if err := q.DeleteDeductionItemIngredientsByItemID(ctx, item.ID); err != nil {
 			return fmt.Errorf("failed to delete deduction item ingredient breakdowns: %w", err)
 		}
 	}
 
 	for key := range touched {
-		if err := s.rebalanceDeductionIngredientLedger(ctx, pgtype.UUID{Bytes: key.StorageID, Valid: true}, key.IngredientID); err != nil {
+		if err := s.rebalanceDeductionIngredientLedger(ctx, q, pgtype.UUID{Bytes: key.StorageID, Valid: true}, key.IngredientID); err != nil {
 			return fmt.Errorf("failed to rebalance deduction reverse ledger: %w", err)
 		}
 	}
@@ -544,13 +532,13 @@ func (s *DeductionS) reverseAllDeductionStock(ctx context.Context, deductionID u
 }
 
 // reverseDeductionItemStock reverses stock for a single deduction item and soft-deletes its breakdown records.
-func (s *DeductionS) reverseDeductionItemStock(ctx context.Context, deductionID uuid.UUID, itemID uuid.UUID, storageID uuid.UUID, eventType string, deductionDate pgtype.Timestamptz) error {
+func (s *DeductionS) reverseDeductionItemStock(ctx context.Context, q *pg.Queries, deductionID uuid.UUID, itemID uuid.UUID, storageID uuid.UUID, eventType string, deductionDate pgtype.Timestamptz) error {
 	storagePg := pgtype.UUID{Bytes: storageID, Valid: true}
 	zero := inventoryZeroNumeric()
 	sourceType := "deduction"
 	effectiveAt := deductionEffectiveAt(deductionDate)
 
-	breakdowns, err := s.repo.Tenant(ctx).GetDeductionItemIngredientsByDeductionItemID(ctx, itemID)
+	breakdowns, err := q.GetDeductionItemIngredientsByDeductionItemID(ctx, itemID)
 	if err != nil {
 		return fmt.Errorf("failed to get deduction item ingredients for reverse: %w", err)
 	}
@@ -562,7 +550,7 @@ func (s *DeductionS) reverseDeductionItemStock(ctx context.Context, deductionID 
 			continue
 		}
 
-		_, err := s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
+		_, err := q.EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
 			ID:           uuid.New(),
 			IngredientID: b.IngredientID,
 			StorageID:    storagePg,
@@ -571,7 +559,7 @@ func (s *DeductionS) reverseDeductionItemStock(ctx context.Context, deductionID 
 			return fmt.Errorf("failed to ensure stock row during deduction item reverse: %w", err)
 		}
 
-		locked, err := s.repo.Tenant(ctx).GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
+		locked, err := q.GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
 			IngredientID: b.IngredientID,
 			StorageID:    storagePg,
 		})
@@ -579,7 +567,7 @@ func (s *DeductionS) reverseDeductionItemStock(ctx context.Context, deductionID 
 			return fmt.Errorf("failed to lock stock row during deduction item reverse: %w", err)
 		}
 
-		updated, err := s.repo.Tenant(ctx).AddToIngredientStock(ctx, pg.AddToIngredientStockParams{
+		updated, err := q.AddToIngredientStock(ctx, pg.AddToIngredientStockParams{
 			ID:       locked.ID,
 			Quantity: b.Quantity,
 		})
@@ -587,7 +575,7 @@ func (s *DeductionS) reverseDeductionItemStock(ctx context.Context, deductionID 
 			return fmt.Errorf("failed to restore stock during deduction item reverse: %w", err)
 		}
 
-		if err := s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+		if err := q.InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
 			ID:           uuid.New(),
 			StorageID:    storageID,
 			IngredientID: b.IngredientID,
@@ -610,12 +598,12 @@ func (s *DeductionS) reverseDeductionItemStock(ctx context.Context, deductionID 
 		}] = struct{}{}
 	}
 
-	if err := s.repo.Tenant(ctx).DeleteDeductionItemIngredientsByItemID(ctx, itemID); err != nil {
+	if err := q.DeleteDeductionItemIngredientsByItemID(ctx, itemID); err != nil {
 		return fmt.Errorf("failed to delete deduction item ingredient breakdowns: %w", err)
 	}
 
 	for key := range touched {
-		if err := s.rebalanceDeductionIngredientLedger(ctx, pgtype.UUID{Bytes: key.StorageID, Valid: true}, key.IngredientID); err != nil {
+		if err := s.rebalanceDeductionIngredientLedger(ctx, q, pgtype.UUID{Bytes: key.StorageID, Valid: true}, key.IngredientID); err != nil {
 			return fmt.Errorf("failed to rebalance deduction item reverse ledger: %w", err)
 		}
 	}
@@ -624,7 +612,7 @@ func (s *DeductionS) reverseDeductionItemStock(ctx context.Context, deductionID 
 }
 
 // applyDeductionItemStock expands one deduction item to ingredients, deducts stock, creates breakdowns.
-func (s *DeductionS) applyDeductionItemStock(ctx context.Context, deductionID uuid.UUID, storagePg pgtype.UUID, item pg.DeductionItem, deductionDate pgtype.Timestamptz) ([]model.DeductionItemIngredientResponse, []string, error) {
+func (s *DeductionS) applyDeductionItemStock(ctx context.Context, q *pg.Queries, deductionID uuid.UUID, storagePg pgtype.UUID, item pg.DeductionItem, deductionDate pgtype.Timestamptz) ([]model.DeductionItemIngredientResponse, []string, error) {
 	zero := inventoryZeroNumeric()
 	sourceType := "deduction"
 	effectiveAt := deductionEffectiveAt(deductionDate)
@@ -635,9 +623,9 @@ func (s *DeductionS) applyDeductionItemStock(ctx context.Context, deductionID uu
 	case item.IngredientID.Valid:
 		usages = []ingredientUsage{{ingredientID: item.IngredientID.Bytes, quantity: item.Quantity}}
 	case item.GoodID.Valid:
-		usages, err = s.expandGoodToIngredients(ctx, item.GoodID.Bytes, item.Quantity)
+		usages, err = s.expandGoodToIngredients(ctx, q, item.GoodID.Bytes, item.Quantity)
 	case item.CompoundID.Valid:
-		usages, err = s.expandCompoundToIngredients(ctx, item.CompoundID.Bytes, item.Quantity, map[uuid.UUID]bool{})
+		usages, err = s.expandCompoundToIngredients(ctx, q, item.CompoundID.Bytes, item.Quantity, map[uuid.UUID]bool{})
 	default:
 		err = fmt.Errorf("deduction item must reference ingredient or good or compound")
 	}
@@ -652,7 +640,7 @@ func (s *DeductionS) applyDeductionItemStock(ctx context.Context, deductionID uu
 	for _, u := range usages {
 		requestedQty := u.quantity
 
-		_, err := s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
+		_, err := q.EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
 			ID:           uuid.New(),
 			IngredientID: u.ingredientID,
 			StorageID:    storagePg,
@@ -661,7 +649,7 @@ func (s *DeductionS) applyDeductionItemStock(ctx context.Context, deductionID uu
 			return nil, nil, fmt.Errorf("failed to ensure ingredient stock row: %w", err)
 		}
 
-		stock, err := s.repo.Tenant(ctx).GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
+		stock, err := q.GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
 			IngredientID: u.ingredientID,
 			StorageID:    storagePg,
 		})
@@ -669,7 +657,7 @@ func (s *DeductionS) applyDeductionItemStock(ctx context.Context, deductionID uu
 			return nil, nil, fmt.Errorf("failed to lock ingredient stock: %w", err)
 		}
 
-		ingredient, err := s.repo.Tenant(ctx).GetIngredientByID(ctx, u.ingredientID)
+		ingredient, err := q.GetIngredientByID(ctx, u.ingredientID)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to fetch ingredient: %w", err)
 		}
@@ -679,7 +667,7 @@ func (s *DeductionS) applyDeductionItemStock(ctx context.Context, deductionID uu
 
 		stockBefore := stock.Quantity
 
-		updated, err := s.repo.Tenant(ctx).RemoveFromIngredientStock(ctx, pg.RemoveFromIngredientStockParams{
+		updated, err := q.RemoveFromIngredientStock(ctx, pg.RemoveFromIngredientStockParams{
 			ID:       stock.ID,
 			Quantity: requestedQty,
 		})
@@ -689,7 +677,7 @@ func (s *DeductionS) applyDeductionItemStock(ctx context.Context, deductionID uu
 
 		price := ingredient.PricePerUnit
 
-		breakdown, err := s.repo.Tenant(ctx).CreateDeductionItemIngredient(ctx, pg.CreateDeductionItemIngredientParams{
+		breakdown, err := q.CreateDeductionItemIngredient(ctx, pg.CreateDeductionItemIngredientParams{
 			ID:              uuid.New(),
 			DeductionItemID: item.ID,
 			IngredientID:    u.ingredientID,
@@ -703,7 +691,7 @@ func (s *DeductionS) applyDeductionItemStock(ctx context.Context, deductionID uu
 		}
 
 		if !shouldSkipStockMovement(zero, requestedQty) {
-			if err := s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+			if err := q.InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
 				ID:           uuid.New(),
 				StorageID:    uuid.UUID(storagePg.Bytes),
 				IngredientID: u.ingredientID,
@@ -741,7 +729,7 @@ func (s *DeductionS) applyDeductionItemStock(ctx context.Context, deductionID uu
 	}
 
 	for key := range touched {
-		if err := s.rebalanceDeductionIngredientLedger(ctx, pgtype.UUID{Bytes: key.StorageID, Valid: true}, key.IngredientID); err != nil {
+		if err := s.rebalanceDeductionIngredientLedger(ctx, q, pgtype.UUID{Bytes: key.StorageID, Valid: true}, key.IngredientID); err != nil {
 			return nil, nil, fmt.Errorf("failed to rebalance deduction ledger: %w", err)
 		}
 	}
@@ -770,7 +758,7 @@ func (s *DeductionS) CreateDeduction(ctx context.Context, req *model.CreateDeduc
 		return nil, fmt.Errorf("invalid storage_id: %w", err)
 	}
 	storagePg := pgtype.UUID{Bytes: storageUUID, Valid: true}
-	if err := assertCanMutateDeductionTarget(ctx, s.repo, storageUUID, pgtype.Date{Time: date, Valid: true}, "deduction"); err != nil {
+	if err := assertCanMutateDeductionTarget(ctx, s.repo.Tenant(ctx), storageUUID, pgtype.Date{Time: date, Valid: true}, "deduction"); err != nil {
 		return nil, err
 	}
 
@@ -797,8 +785,16 @@ func (s *DeductionS) CreateDeduction(ctx context.Context, req *model.CreateDeduc
 		status = *req.Status
 	}
 
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	deductionID := uuid.New()
-	deduction, err := s.repo.Tenant(ctx).CreateDeduction(ctx, pg.CreateDeductionParams{
+	deduction, err := q.CreateDeduction(txCtx, pg.CreateDeductionParams{
 		ID:              deductionID,
 		Date:            pgtype.Date{Time: date, Valid: true},
 		ActGroupID:      actGroupPg,
@@ -860,7 +856,7 @@ func (s *DeductionS) CreateDeduction(ctx context.Context, req *model.CreateDeduc
 			compID = pgtype.UUID{Bytes: u, Valid: true}
 		}
 
-		row, err := s.repo.Tenant(ctx).CreateDeductionItem(ctx, pg.CreateDeductionItemParams{
+		row, err := q.CreateDeductionItem(txCtx, pg.CreateDeductionItemParams{
 			ID:           uuid.New(),
 			DeductionID:  deductionID,
 			IngredientID: ingID,
@@ -874,7 +870,7 @@ func (s *DeductionS) CreateDeduction(ctx context.Context, req *model.CreateDeduc
 
 		// Only apply stock when active
 		if status == "active" {
-			ingBreakdowns, itemWarnings, err := s.applyDeductionItemStock(ctx, deductionID, storagePg, row, deductionDate)
+			ingBreakdowns, itemWarnings, err := s.applyDeductionItemStock(txCtx, q, deductionID, storagePg, row, deductionDate)
 			if err != nil {
 				return nil, err
 			}
@@ -883,7 +879,13 @@ func (s *DeductionS) CreateDeduction(ctx context.Context, req *model.CreateDeduc
 		}
 	}
 
-	_, _ = s.repo.Tenant(ctx).UpdateDeductionBalanceFromItems(ctx, deductionID)
+	_, _ = q.UpdateDeductionBalanceFromItems(txCtx, deductionID)
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
 
 	resp, err := s.GetDeductionByID(ctx, deductionID.String())
 	if err != nil {
@@ -952,7 +954,7 @@ func (s *DeductionS) GetDeductionByID(ctx context.Context, id string) (*model.De
 
 		compBreakdowns := make([]model.DeductionItemCompoundResponse, 0)
 		if it.CompoundID.Valid {
-			comps, err := s.expandCompoundToDirectCompounds(ctx, it.CompoundID.Bytes, it.Quantity)
+			comps, err := s.expandCompoundToDirectCompounds(ctx, s.repo.Tenant(ctx), it.CompoundID.Bytes, it.Quantity)
 			if err != nil {
 				return nil, err
 			}
@@ -964,7 +966,7 @@ func (s *DeductionS) GetDeductionByID(ctx context.Context, id string) (*model.De
 			}
 		}
 		if it.GoodID.Valid {
-			comps, err := s.expandGoodToDirectCompounds(ctx, it.GoodID.Bytes, it.Quantity)
+			comps, err := s.expandGoodToDirectCompounds(ctx, s.repo.Tenant(ctx), it.GoodID.Bytes, it.Quantity)
 			if err != nil {
 				return nil, err
 			}
@@ -1155,7 +1157,15 @@ func (s *DeductionS) UpdateDeduction(ctx context.Context, id string, req *model.
 		return nil, fmt.Errorf("invalid id: %w", err)
 	}
 
-	current, err := s.repo.Tenant(ctx).GetDeductionByID(ctx, deductionID)
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	current, err := q.GetDeductionByID(txCtx, deductionID)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, nil
@@ -1195,7 +1205,7 @@ func (s *DeductionS) UpdateDeduction(ctx context.Context, id string, req *model.
 			return nil, fmt.Errorf("invalid storage_id: %w", err)
 		}
 		if u != storageVal {
-			items, err := s.repo.Tenant(ctx).GetDeductionItemsByDeductionID(ctx, deductionID)
+			items, err := q.GetDeductionItemsByDeductionID(txCtx, deductionID)
 			if err != nil {
 				return nil, fmt.Errorf("failed to check deduction items: %w", err)
 			}
@@ -1224,7 +1234,7 @@ func (s *DeductionS) UpdateDeduction(ctx context.Context, id string, req *model.
 		}
 	}
 
-	if err := assertCanMutateDeductionChange(ctx, s.repo, current, storageVal, dateVal, "deduction"); err != nil {
+	if err := assertCanMutateDeductionChange(txCtx, q, current, storageVal, dateVal, "deduction"); err != nil {
 		return nil, err
 	}
 	statusVal := current.Status
@@ -1249,14 +1259,14 @@ func (s *DeductionS) UpdateDeduction(ctx context.Context, id string, req *model.
 		if current.Date.Valid {
 			deductionDate = pgtype.Timestamptz{Time: current.Date.Time.In(time.UTC), Valid: true}
 		}
-		if err := s.reverseAllDeductionStock(ctx, deductionID, current.StorageID, "deduction_updated_in", deductionDate); err != nil {
+		if err := s.reverseAllDeductionStock(txCtx, q, deductionID, current.StorageID, "deduction_updated_in", deductionDate); err != nil {
 			return nil, fmt.Errorf("failed to reverse stock: %w", err)
 		}
 	}
 
 	// If new state should affect stock, apply using NEW date/storage.
 	if newActive && (current.Status == "draft" || dateChanged) {
-		items, err := s.repo.Tenant(ctx).GetDeductionItemsByDeductionID(ctx, deductionID)
+		items, err := q.GetDeductionItemsByDeductionID(txCtx, deductionID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get deduction items: %w", err)
 		}
@@ -1268,13 +1278,13 @@ func (s *DeductionS) UpdateDeduction(ctx context.Context, id string, req *model.
 
 		sPg := pgtype.UUID{Bytes: storageVal, Valid: true}
 		for _, item := range items {
-			if _, _, err := s.applyDeductionItemStock(ctx, deductionID, sPg, item, newDeductionDate); err != nil {
+			if _, _, err := s.applyDeductionItemStock(txCtx, q, deductionID, sPg, item, newDeductionDate); err != nil {
 				return nil, fmt.Errorf("failed to apply stock: %w", err)
 			}
 		}
 	}
 
-	_, err = s.repo.Tenant(ctx).UpdateDeduction(ctx, pg.UpdateDeductionParams{
+	_, err = q.UpdateDeduction(txCtx, pg.UpdateDeductionParams{
 		ID:              deductionID,
 		Date:            dateVal,
 		ActGroupID:      actGroupVal,
@@ -1287,7 +1297,14 @@ func (s *DeductionS) UpdateDeduction(ctx context.Context, id string, req *model.
 		return nil, fmt.Errorf("failed to update deduction: %w", err)
 	}
 
-	_, _ = s.repo.Tenant(ctx).UpdateDeductionBalanceFromItems(ctx, deductionID)
+	_, _ = q.UpdateDeductionBalanceFromItems(txCtx, deductionID)
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return s.GetDeductionByID(ctx, id)
 }
 
@@ -1297,14 +1314,22 @@ func (s *DeductionS) DeleteDeduction(ctx context.Context, id string) error {
 		return fmt.Errorf("invalid id: %w", err)
 	}
 
-	deduction, err := s.repo.Tenant(ctx).GetDeductionByID(ctx, deductionID)
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	deduction, err := q.GetDeductionByID(txCtx, deductionID)
 	if err != nil {
 		return fmt.Errorf("deduction not found: %w", err)
 	}
 	if deduction.DeletedAt > 0 {
 		return fmt.Errorf("deduction already deleted")
 	}
-	if err := assertCanMutateDeductionCurrent(ctx, s.repo, deduction, "deduction"); err != nil {
+	if err := assertCanMutateDeductionCurrent(txCtx, q, deduction, "deduction"); err != nil {
 		return err
 	}
 
@@ -1313,14 +1338,21 @@ func (s *DeductionS) DeleteDeduction(ctx context.Context, id string) error {
 		if deduction.Date.Valid {
 			deductionDate = pgtype.Timestamptz{Time: deduction.Date.Time.In(time.UTC), Valid: true}
 		}
-		if err := s.reverseAllDeductionStock(ctx, deductionID, deduction.StorageID, "deduction_deleted_in", deductionDate); err != nil {
+		if err := s.reverseAllDeductionStock(txCtx, q, deductionID, deduction.StorageID, "deduction_deleted_in", deductionDate); err != nil {
 			return fmt.Errorf("failed to reverse stock: %w", err)
 		}
 	}
 
-	if err := s.repo.Tenant(ctx).DeleteDeduction(ctx, deductionID); err != nil {
+	if err := q.DeleteDeduction(txCtx, deductionID); err != nil {
 		return fmt.Errorf("failed to delete deduction: %w", err)
 	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return nil
 }
 
@@ -1344,7 +1376,15 @@ func (s *DeductionS) UpsertDeductionItems(ctx context.Context, id string, req *m
 		return nil, fmt.Errorf("invalid id: %w", err)
 	}
 
-	deduction, err := s.repo.Tenant(ctx).GetDeductionByID(ctx, deductionID)
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	deduction, err := q.GetDeductionByID(txCtx, deductionID)
 	if err != nil {
 		return nil, fmt.Errorf("deduction not found: %w", err)
 	}
@@ -1385,7 +1425,7 @@ func (s *DeductionS) UpsertDeductionItems(ctx context.Context, id string, req *m
 		}
 		finalDate = pgtype.Date{Time: dt, Valid: true}
 	}
-	if err := assertCanMutateDeductionChange(ctx, s.repo, deduction, storageID, finalDate, "deduction"); err != nil {
+	if err := assertCanMutateDeductionChange(txCtx, q, deduction, storageID, finalDate, "deduction"); err != nil {
 		return nil, err
 	}
 
@@ -1395,7 +1435,7 @@ func (s *DeductionS) UpsertDeductionItems(ctx context.Context, id string, req *m
 		if finalDate.Valid {
 			deductionDate = pgtype.Timestamptz{Time: finalDate.Time.In(time.UTC), Valid: true}
 		}
-		if err := s.reverseAllDeductionStock(ctx, deductionID, deduction.StorageID, "deduction_updated_in", deductionDate); err != nil {
+		if err := s.reverseAllDeductionStock(txCtx, q, deductionID, deduction.StorageID, "deduction_updated_in", deductionDate); err != nil {
 			return nil, fmt.Errorf("failed to reverse stock: %w", err)
 		}
 	}
@@ -1438,7 +1478,7 @@ func (s *DeductionS) UpsertDeductionItems(ctx context.Context, id string, req *m
 				finalDescI18n = pgtype.UUID{Bytes: u, Valid: true}
 			}
 		}
-		if _, err := s.repo.Tenant(ctx).UpdateDeduction(ctx, pg.UpdateDeductionParams{
+		if _, err := q.UpdateDeduction(txCtx, pg.UpdateDeductionParams{
 			ID:              deductionID,
 			Date:            finalDate,
 			ActGroupID:      finalActGroup,
@@ -1452,8 +1492,8 @@ func (s *DeductionS) UpsertDeductionItems(ctx context.Context, id string, req *m
 	}
 
 	// Step 2: Soft-delete all existing items and their ingredient breakdowns
-	_ = s.repo.Tenant(ctx).DeleteDeductionItemIngredientsByDeductionID(ctx, deductionID)
-	_ = s.repo.Tenant(ctx).DeleteDeductionItemsByDeductionID(ctx, deductionID)
+	_ = q.DeleteDeductionItemIngredientsByDeductionID(txCtx, deductionID)
+	_ = q.DeleteDeductionItemsByDeductionID(txCtx, deductionID)
 
 	// Step 3: Create new items
 	deductionDate := pgtype.Timestamptz{}
@@ -1504,7 +1544,7 @@ func (s *DeductionS) UpsertDeductionItems(ctx context.Context, id string, req *m
 			compID = pgtype.UUID{Bytes: u, Valid: true}
 		}
 
-		row, err := s.repo.Tenant(ctx).CreateDeductionItem(ctx, pg.CreateDeductionItemParams{
+		row, err := q.CreateDeductionItem(txCtx, pg.CreateDeductionItemParams{
 			ID:           uuid.New(),
 			DeductionID:  deductionID,
 			IngredientID: ingID,
@@ -1518,7 +1558,7 @@ func (s *DeductionS) UpsertDeductionItems(ctx context.Context, id string, req *m
 
 		// Step 4: Apply stock if new status is active
 		if newStatus == "active" {
-			_, itemWarnings, err := s.applyDeductionItemStock(ctx, deductionID, storagePg, row, deductionDate)
+			_, itemWarnings, err := s.applyDeductionItemStock(txCtx, q, deductionID, storagePg, row, deductionDate)
 			if err != nil {
 				return nil, err
 			}
@@ -1527,7 +1567,13 @@ func (s *DeductionS) UpsertDeductionItems(ctx context.Context, id string, req *m
 	}
 
 	// Step 5: Recalculate balance
-	_, _ = s.repo.Tenant(ctx).UpdateDeductionBalanceFromItems(ctx, deductionID)
+	_, _ = q.UpdateDeductionBalanceFromItems(txCtx, deductionID)
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
 
 	resp, err := s.GetDeductionByID(ctx, id)
 	if err != nil {
@@ -1544,6 +1590,8 @@ func (s *DeductionS) PreviewDeductionCost(ctx context.Context, req *model.Create
 	if len(req.Items) == 0 {
 		return "0", nil
 	}
+
+	q := s.repo.Tenant(ctx)
 
 	var total *big.Rat = big.NewRat(0, 1)
 	for _, it := range req.Items {
@@ -1566,13 +1614,13 @@ func (s *DeductionS) PreviewDeductionCost(ctx context.Context, req *model.Create
 			if err != nil {
 				return "", fmt.Errorf("invalid good_id: %w", err)
 			}
-			usages, err = s.expandGoodToIngredients(ctx, u, qtyNum)
+			usages, err = s.expandGoodToIngredients(ctx, q, u, qtyNum)
 		case it.CompoundID != nil && *it.CompoundID != "":
 			u, err := uuid.Parse(*it.CompoundID)
 			if err != nil {
 				return "", fmt.Errorf("invalid compound_id: %w", err)
 			}
-			usages, err = s.expandCompoundToIngredients(ctx, u, qtyNum, map[uuid.UUID]bool{})
+			usages, err = s.expandCompoundToIngredients(ctx, q, u, qtyNum, map[uuid.UUID]bool{})
 		default:
 			return "", fmt.Errorf("each item must have ingredient_id or good_id or compound_id")
 		}
@@ -1581,7 +1629,7 @@ func (s *DeductionS) PreviewDeductionCost(ctx context.Context, req *model.Create
 		}
 
 		for _, u := range usages {
-			ing, err := s.repo.Tenant(ctx).GetIngredientByID(ctx, u.ingredientID)
+			ing, err := q.GetIngredientByID(ctx, u.ingredientID)
 			if err != nil {
 				if err == pgx.ErrNoRows {
 					return "", fmt.Errorf("ingredient not found")
@@ -1619,15 +1667,23 @@ func (s *DeductionS) DeleteDeductionItem(ctx context.Context, deductionID, itemI
 		return nil, fmt.Errorf("invalid item id: %w", err)
 	}
 
-	deduction, err := s.repo.Tenant(ctx).GetDeductionByID(ctx, dedID)
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	deduction, err := q.GetDeductionByID(txCtx, dedID)
 	if err != nil {
 		return nil, fmt.Errorf("deduction not found: %w", err)
 	}
-	if err := assertCanMutateDeductionCurrent(ctx, s.repo, deduction, "deduction item"); err != nil {
+	if err := assertCanMutateDeductionCurrent(txCtx, q, deduction, "deduction item"); err != nil {
 		return nil, err
 	}
 
-	item, err := s.repo.Tenant(ctx).GetDeductionItemByID(ctx, itemUUID)
+	item, err := q.GetDeductionItemByID(txCtx, itemUUID)
 	if err != nil {
 		return nil, fmt.Errorf("deduction item not found: %w", err)
 	}
@@ -1641,20 +1697,26 @@ func (s *DeductionS) DeleteDeductionItem(ctx context.Context, deductionID, itemI
 		if deduction.Date.Valid {
 			deductionDate = pgtype.Timestamptz{Time: deduction.Date.Time.In(time.UTC), Valid: true}
 		}
-		if err := s.reverseDeductionItemStock(ctx, dedID, itemUUID, deduction.StorageID, "deduction_item_deleted_in", deductionDate); err != nil {
+		if err := s.reverseDeductionItemStock(txCtx, q, dedID, itemUUID, deduction.StorageID, "deduction_item_deleted_in", deductionDate); err != nil {
 			return nil, fmt.Errorf("failed to reverse item stock: %w", err)
 		}
 	}
 
 	// Soft-delete ingredient breakdowns then the item itself
-	_ = s.repo.Tenant(ctx).DeleteDeductionItemIngredientsByItemID(ctx, itemUUID)
-	if err := s.repo.Tenant(ctx).DeleteDeductionItemByID(ctx, itemUUID); err != nil {
+	_ = q.DeleteDeductionItemIngredientsByItemID(txCtx, itemUUID)
+	if err := q.DeleteDeductionItemByID(txCtx, itemUUID); err != nil {
 		return nil, fmt.Errorf("failed to delete deduction item: %w", err)
 	}
 
 	// Recalculate balance
-	if _, err := s.repo.Tenant(ctx).UpdateDeductionBalanceFromItems(ctx, dedID); err != nil {
+	if _, err := q.UpdateDeductionBalanceFromItems(txCtx, dedID); err != nil {
 		return nil, fmt.Errorf("failed to update balance: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return s.GetDeductionByID(ctx, deductionID)

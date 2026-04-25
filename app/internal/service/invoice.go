@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"gitlab.yurtal.tech/company/maryai/back/internal/model"
 	"gitlab.yurtal.tech/company/maryai/back/internal/repository"
@@ -68,7 +69,7 @@ func (s *InvoiceS) CreateInvoice(ctx context.Context, req *model.CreateInvoiceRe
 		}
 		date = pgtype.Timestamp{Time: parsed, Valid: true}
 	}
-	if err := assertCanMutateInvoiceTarget(ctx, s.repo, storageID, date, "invoice"); err != nil {
+	if err := assertCanMutateInvoiceTarget(ctx, s.repo.Tenant(ctx), storageID, date, "invoice"); err != nil {
 		return nil, err
 	}
 
@@ -112,64 +113,76 @@ func (s *InvoiceS) GetAllInvoices(ctx context.Context, filter model.InvoiceFilte
 		filter.SortOrder = "desc"
 	}
 
-	params := pg.GetFilteredInvoicesParams{
-		Limit:        limit,
-		Offset:       offset,
-		StorageID:    filter.StorageID,
-		SupplierID:   filter.SupplierID,
-		Status:       filter.Status,
-		IngredientID: filter.IngredientID,
-		Search:       filter.Search,
-		SortBy:       filter.SortBy,
-		SortOrder:    filter.SortOrder,
-	}
+	var responses []*model.InvoiceResponse
+	var total int64
 
-	if filter.DateFrom != nil && *filter.DateFrom != "" {
-		t, err := time.Parse("2006-01-02", *filter.DateFrom)
-		if err != nil {
-			t, err = time.Parse(time.RFC3339, *filter.DateFrom)
-			if err != nil {
-				return nil, 0, fmt.Errorf("invalid date_from: %w", err)
-			}
+	err := withTenantRead(ctx, s.repo, func(tenantCtx context.Context, q *pg.Queries) error {
+		params := pg.GetFilteredInvoicesParams{
+			Limit:        limit,
+			Offset:       offset,
+			StorageID:    filter.StorageID,
+			SupplierID:   filter.SupplierID,
+			Status:       filter.Status,
+			IngredientID: filter.IngredientID,
+			Search:       filter.Search,
+			SortBy:       filter.SortBy,
+			SortOrder:    filter.SortOrder,
 		}
-		params.DateFrom = pgtype.Timestamp{Time: t, Valid: true}
-	}
 
-	if filter.DateTo != nil && *filter.DateTo != "" {
-		t, err := time.Parse("2006-01-02", *filter.DateTo)
-		if err != nil {
-			t, err = time.Parse(time.RFC3339, *filter.DateTo)
+		if filter.DateFrom != nil && *filter.DateFrom != "" {
+			t, err := time.Parse("2006-01-02", *filter.DateFrom)
 			if err != nil {
-				return nil, 0, fmt.Errorf("invalid date_to: %w", err)
+				t, err = time.Parse(time.RFC3339, *filter.DateFrom)
+				if err != nil {
+					return fmt.Errorf("invalid date_from: %w", err)
+				}
 			}
+			params.DateFrom = pgtype.Timestamp{Time: t, Valid: true}
 		}
-		t = t.Add(24*time.Hour - time.Second)
-		params.DateTo = pgtype.Timestamp{Time: t, Valid: true}
-	}
 
-	countParams := pg.CountFilteredInvoicesParams{
-		DateFrom:     params.DateFrom,
-		DateTo:       params.DateTo,
-		StorageID:    params.StorageID,
-		SupplierID:   params.SupplierID,
-		Status:       params.Status,
-		IngredientID: params.IngredientID,
-		Search:       params.Search,
-	}
+		if filter.DateTo != nil && *filter.DateTo != "" {
+			t, err := time.Parse("2006-01-02", *filter.DateTo)
+			if err != nil {
+				t, err = time.Parse(time.RFC3339, *filter.DateTo)
+				if err != nil {
+					return fmt.Errorf("invalid date_to: %w", err)
+				}
+			}
+			t = t.Add(24*time.Hour - time.Second)
+			params.DateTo = pgtype.Timestamp{Time: t, Valid: true}
+		}
 
-	total, err := s.repo.Tenant(ctx).CountFilteredInvoices(ctx, countParams)
+		countParams := pg.CountFilteredInvoicesParams{
+			DateFrom:     params.DateFrom,
+			DateTo:       params.DateTo,
+			StorageID:    params.StorageID,
+			SupplierID:   params.SupplierID,
+			Status:       params.Status,
+			IngredientID: params.IngredientID,
+			Search:       params.Search,
+		}
+
+		var err error
+		total, err = q.CountFilteredInvoices(tenantCtx, countParams)
+		if err != nil {
+			return fmt.Errorf("failed to count invoices: %w", err)
+		}
+
+		invoices, err := q.GetFilteredInvoices(tenantCtx, params)
+		if err != nil {
+			return fmt.Errorf("failed to get invoices: %w", err)
+		}
+
+		responses = make([]*model.InvoiceResponse, 0, len(invoices))
+		for _, invoice := range invoices {
+			responses = append(responses, toInvoiceResponse(invoice))
+		}
+
+		return nil
+	})
+
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to count invoices: %w", err)
-	}
-
-	invoices, err := s.repo.Tenant(ctx).GetFilteredInvoices(ctx, params)
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to get invoices: %w", err)
-	}
-
-	responses := make([]*model.InvoiceResponse, 0, len(invoices))
-	for _, invoice := range invoices {
-		responses = append(responses, toInvoiceResponse(invoice))
+		return nil, 0, err
 	}
 
 	return responses, total, nil
@@ -182,7 +195,15 @@ func (s *InvoiceS) UpdateInvoice(ctx context.Context, id string, req *model.Upda
 		return nil, fmt.Errorf("invalid invoice id: %w", err)
 	}
 
-	currentInvoice, err := s.repo.Tenant(ctx).GetInvoiceByID(ctx, invoiceID)
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	currentInvoice, err := q.GetInvoiceByID(txCtx, invoiceID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get invoice: %w", err)
 	}
@@ -271,7 +292,7 @@ func (s *InvoiceS) UpdateInvoice(ctx context.Context, id string, req *model.Upda
 	// Historical lock check:
 	// 1) current invoice position must be mutable
 	// 2) target storage/date must also be mutable
-	if err := assertCanMutateInvoiceChange(ctx, s.repo, currentInvoice, effectiveStorage, effectiveDate, "invoice"); err != nil {
+	if err := assertCanMutateInvoiceChange(txCtx, q, currentInvoice, effectiveStorage, effectiveDate, "invoice"); err != nil {
 		return nil, err
 	}
 
@@ -284,7 +305,7 @@ func (s *InvoiceS) UpdateInvoice(ctx context.Context, id string, req *model.Upda
 		Date:        date,
 	}
 
-	invoice, err := s.repo.Tenant(ctx).UpdateInvoice(ctx, params)
+	invoice, err := q.UpdateInvoice(txCtx, params)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update invoice: %w", err)
 	}
@@ -304,7 +325,7 @@ func (s *InvoiceS) UpdateInvoice(ctx context.Context, id string, req *model.Upda
 
 	// Handle status transition stock effects
 	if oldStatus != newStatus {
-		details, err := s.repo.Tenant(ctx).GetInvoiceDetailsByInvoiceID(ctx, pg.GetInvoiceDetailsByInvoiceIDParams{
+		details, err := q.GetInvoiceDetailsByInvoiceID(txCtx, pg.GetInvoiceDetailsByInvoiceIDParams{
 			InvoiceID: invoiceID,
 			Limit:     10000,
 			Offset:    0,
@@ -320,7 +341,8 @@ func (s *InvoiceS) UpdateInvoice(ctx context.Context, id string, req *model.Upda
 
 			for _, d := range details {
 				if err := s.applyInvoiceStockMovement(
-					ctx,
+					txCtx,
+					q,
 					currentInvoice.StorageID,
 					d.IngredientID,
 					zeroNumeric(),
@@ -341,15 +363,20 @@ func (s *InvoiceS) UpdateInvoice(ctx context.Context, id string, req *model.Upda
 			}
 
 			for _, d := range details {
-				_, _ = s.repo.Tenant(ctx).UpdateIngredientPriceAndQuantity(ctx, pg.UpdateIngredientPriceAndQuantityParams{
+				if _, err := q.UpdateIngredientPriceAndQuantity(txCtx, pg.UpdateIngredientPriceAndQuantityParams{
 					ID:           d.IngredientID,
 					PricePerUnit: d.PricePerUnit,
-				})
-				triggerPriceRecalculation(ctx, s.repo, d.IngredientID)
-				_ = s.repo.Tenant(ctx).EnsureIngredientVisibilityForCurrentBranch(ctx, d.IngredientID)
+				}); err != nil {
+					return nil, fmt.Errorf("failed to update ingredient price_per_unit: %w", err)
+				}
+				triggerPriceRecalculation(txCtx, s.repo, d.IngredientID)
+				if err := q.EnsureIngredientVisibilityForCurrentBranch(txCtx, d.IngredientID); err != nil {
+					return nil, fmt.Errorf("failed to ensure ingredient visibility: %w", err)
+				}
 
 				if err := s.applyInvoiceStockMovement(
-					ctx,
+					txCtx,
+					q,
 					effectiveStorage,
 					d.IngredientID,
 					d.Quantity,
@@ -369,7 +396,7 @@ func (s *InvoiceS) UpdateInvoice(ctx context.Context, id string, req *model.Upda
 	// move stock out of old storage and into new storage
 	if storageID.Valid && currentInvoice.StorageID.Valid && storageID.Bytes != currentInvoice.StorageID.Bytes {
 		if oldAppliesStock && newAppliesStock {
-			details, err := s.repo.Tenant(ctx).GetInvoiceDetailsByInvoiceID(ctx, pg.GetInvoiceDetailsByInvoiceIDParams{
+			details, err := q.GetInvoiceDetailsByInvoiceID(txCtx, pg.GetInvoiceDetailsByInvoiceIDParams{
 				InvoiceID: invoiceID,
 				Limit:     10000,
 				Offset:    0,
@@ -380,7 +407,8 @@ func (s *InvoiceS) UpdateInvoice(ctx context.Context, id string, req *model.Upda
 
 			for _, d := range details {
 				if err := s.applyInvoiceStockMovement(
-					ctx,
+					txCtx,
+					q,
 					currentInvoice.StorageID,
 					d.IngredientID,
 					zeroNumeric(),
@@ -394,7 +422,8 @@ func (s *InvoiceS) UpdateInvoice(ctx context.Context, id string, req *model.Upda
 				}
 
 				if err := s.applyInvoiceStockMovement(
-					ctx,
+					txCtx,
+					q,
 					storageID,
 					d.IngredientID,
 					d.Quantity,
@@ -421,7 +450,7 @@ func (s *InvoiceS) UpdateInvoice(ctx context.Context, id string, req *model.Upda
 		!currentInvoice.Date.Time.Equal(effectiveDate.Time)
 
 	if oldAppliesStock && newAppliesStock && sameStorage && dateChanged {
-		details, err := s.repo.Tenant(ctx).GetInvoiceDetailsByInvoiceID(ctx, pg.GetInvoiceDetailsByInvoiceIDParams{
+		details, err := q.GetInvoiceDetailsByInvoiceID(txCtx, pg.GetInvoiceDetailsByInvoiceIDParams{
 			InvoiceID: invoiceID,
 			Limit:     10000,
 			Offset:    0,
@@ -432,7 +461,8 @@ func (s *InvoiceS) UpdateInvoice(ctx context.Context, id string, req *model.Upda
 
 		for _, d := range details {
 			if err := s.applyInvoiceStockMovement(
-				ctx,
+				txCtx,
+				q,
 				currentInvoice.StorageID,
 				d.IngredientID,
 				zeroNumeric(),
@@ -446,7 +476,8 @@ func (s *InvoiceS) UpdateInvoice(ctx context.Context, id string, req *model.Upda
 			}
 
 			if err := s.applyInvoiceStockMovement(
-				ctx,
+				txCtx,
+				q,
 				currentInvoice.StorageID,
 				d.IngredientID,
 				d.Quantity,
@@ -458,6 +489,12 @@ func (s *InvoiceS) UpdateInvoice(ctx context.Context, id string, req *model.Upda
 			); err != nil {
 				return nil, err
 			}
+		}
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
 		}
 	}
 
@@ -478,11 +515,19 @@ func (s *InvoiceS) DeleteInvoice(ctx context.Context, id string) error {
 		return fmt.Errorf("invalid invoice id: %w", err)
 	}
 
-	inv, err := s.repo.Tenant(ctx).GetInvoiceByID(ctx, invoiceID)
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	inv, err := q.GetInvoiceByID(txCtx, invoiceID)
 	if err != nil {
 		return fmt.Errorf("failed to get invoice: %w", err)
 	}
-	if err := assertCanMutateInvoiceCurrent(ctx, s.repo, inv, "invoice"); err != nil {
+	if err := assertCanMutateInvoiceCurrent(txCtx, q, inv, "invoice"); err != nil {
 		return err
 	}
 
@@ -494,7 +539,7 @@ func (s *InvoiceS) DeleteInvoice(ctx context.Context, id string) error {
 		return fmt.Errorf("invoice storage_id is required to reverse stock")
 	}
 
-	details, err := s.repo.Tenant(ctx).GetInvoiceDetailsByInvoiceID(ctx, pg.GetInvoiceDetailsByInvoiceIDParams{
+	details, err := q.GetInvoiceDetailsByInvoiceID(txCtx, pg.GetInvoiceDetailsByInvoiceIDParams{
 		InvoiceID: invoiceID,
 		Limit:     10000,
 		Offset:    0,
@@ -505,7 +550,8 @@ func (s *InvoiceS) DeleteInvoice(ctx context.Context, id string) error {
 
 	for _, d := range details {
 		if err := s.applyInvoiceStockMovement(
-			ctx,
+			txCtx,
+			q,
 			inv.StorageID,
 			d.IngredientID,
 			zeroNumeric(),
@@ -519,8 +565,14 @@ func (s *InvoiceS) DeleteInvoice(ctx context.Context, id string) error {
 		}
 	}
 
-	if _, err := s.repo.Tenant(ctx).MarkInvoiceDeleted(ctx, invoiceID); err != nil {
+	if _, err := q.MarkInvoiceDeleted(txCtx, invoiceID); err != nil {
 		return fmt.Errorf("failed to mark invoice as deleted: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return nil
@@ -583,7 +635,7 @@ func (s *InvoiceS) CancelInvoice(ctx context.Context, id string) (*model.Invoice
 	if err != nil {
 		return nil, fmt.Errorf("failed to get invoice: %w", err)
 	}
-	if err := assertCanMutateInvoiceCurrent(ctx, s.repo, inv, "invoice"); err != nil {
+	if err := assertCanMutateInvoiceCurrent(ctx, s.repo.Tenant(ctx), inv, "invoice"); err != nil {
 		return nil, err
 	}
 
@@ -659,11 +711,19 @@ func (s *InvoiceS) CreateInvoiceDetail(ctx context.Context, invoiceID string, re
 		return nil, fmt.Errorf("invalid invoice id: %w", err)
 	}
 
-	invoice, err := s.repo.Tenant(ctx).GetInvoiceByID(ctx, invoiceUUID)
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	invoice, err := q.GetInvoiceByID(txCtx, invoiceUUID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get invoice: %w", err)
 	}
-	if err := assertCanMutateInvoiceCurrent(ctx, s.repo, invoice, "invoice detail"); err != nil {
+	if err := assertCanMutateInvoiceCurrent(txCtx, q, invoice, "invoice detail"); err != nil {
 		return nil, err
 	}
 
@@ -692,7 +752,7 @@ func (s *InvoiceS) CreateInvoiceDetail(ctx context.Context, invoiceID string, re
 		return nil, fmt.Errorf("invalid quantity: %w", err)
 	}
 
-	detail, err := s.repo.Tenant(ctx).CreateInvoiceDetail(ctx, pg.CreateInvoiceDetailParams{
+	detail, err := q.CreateInvoiceDetail(txCtx, pg.CreateInvoiceDetailParams{
 		ID:           id,
 		InvoiceID:    invoiceUUID,
 		IngredientID: ingredientUUID,
@@ -705,21 +765,22 @@ func (s *InvoiceS) CreateInvoiceDetail(ctx context.Context, invoiceID string, re
 	}
 
 	if appliesStock {
-		if _, err := s.repo.Tenant(ctx).UpdateIngredientPriceAndQuantity(ctx, pg.UpdateIngredientPriceAndQuantityParams{
+		if _, err := q.UpdateIngredientPriceAndQuantity(txCtx, pg.UpdateIngredientPriceAndQuantityParams{
 			ID:           ingredientUUID,
 			PricePerUnit: pricePerUnit,
 		}); err != nil {
 			return nil, fmt.Errorf("failed to update ingredient price_per_unit: %w", err)
 		}
 
-		triggerPriceRecalculation(ctx, s.repo, ingredientUUID)
+		triggerPriceRecalculation(txCtx, s.repo, ingredientUUID)
 
-		if err := s.repo.Tenant(ctx).EnsureIngredientVisibilityForCurrentBranch(ctx, ingredientUUID); err != nil {
+		if err := q.EnsureIngredientVisibilityForCurrentBranch(txCtx, ingredientUUID); err != nil {
 			return nil, fmt.Errorf("failed to ensure ingredient visibility: %w", err)
 		}
 
 		if err := s.applyInvoiceStockMovement(
-			ctx,
+			txCtx,
+			q,
 			invoice.StorageID,
 			ingredientUUID,
 			qty,
@@ -733,6 +794,12 @@ func (s *InvoiceS) CreateInvoiceDetail(ctx context.Context, invoiceID string, re
 		}
 	}
 
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return toInvoiceDetailResponse(detail), nil
 }
 
@@ -743,11 +810,19 @@ func (s *InvoiceS) CreateInvoiceDetailsBatch(ctx context.Context, invoiceID stri
 		return nil, fmt.Errorf("invalid invoice id: %w", err)
 	}
 
-	invoice, err := s.repo.Tenant(ctx).GetInvoiceByID(ctx, invoiceUUID)
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	invoice, err := q.GetInvoiceByID(txCtx, invoiceUUID)
 	if err != nil {
 		return nil, fmt.Errorf("invoice not found: %w", err)
 	}
-	if err := assertCanMutateInvoiceCurrent(ctx, s.repo, invoice, "invoice details"); err != nil {
+	if err := assertCanMutateInvoiceCurrent(txCtx, q, invoice, "invoice details"); err != nil {
 		return nil, err
 	}
 
@@ -775,7 +850,7 @@ func (s *InvoiceS) CreateInvoiceDetailsBatch(ctx context.Context, invoiceID stri
 			continue
 		}
 
-		ingredient, err := s.repo.Tenant(ctx).GetIngredientByID(ctx, ingredientUUID)
+		ingredient, err := q.GetIngredientByID(txCtx, ingredientUUID)
 		if err != nil {
 			response.Failed++
 			response.Errors = append(response.Errors, fmt.Sprintf("item %d: ingredient not found: %v", i+1, err))
@@ -808,7 +883,7 @@ func (s *InvoiceS) CreateInvoiceDetailsBatch(ctx context.Context, invoiceID stri
 			continue
 		}
 
-		invoiceDetail, err := s.repo.Tenant(ctx).CreateInvoiceDetail(ctx, pg.CreateInvoiceDetailParams{
+		invoiceDetail, err := q.CreateInvoiceDetail(txCtx, pg.CreateInvoiceDetailParams{
 			ID:           uuid.New(),
 			InvoiceID:    invoiceUUID,
 			IngredientID: ingredientUUID,
@@ -823,21 +898,22 @@ func (s *InvoiceS) CreateInvoiceDetailsBatch(ctx context.Context, invoiceID stri
 		}
 
 		if batchAppliesStock {
-			if _, err := s.repo.Tenant(ctx).UpdateIngredientPriceAndQuantity(ctx, pg.UpdateIngredientPriceAndQuantityParams{
+			if _, err := q.UpdateIngredientPriceAndQuantity(txCtx, pg.UpdateIngredientPriceAndQuantityParams{
 				ID:           ingredientUUID,
 				PricePerUnit: pricePerUnit,
 			}); err != nil {
 				return nil, fmt.Errorf("item %d: failed to update ingredient price_per_unit: %w", i+1, err)
 			}
 
-			triggerPriceRecalculation(ctx, s.repo, ingredientUUID)
+			triggerPriceRecalculation(txCtx, s.repo, ingredientUUID)
 
-			if err := s.repo.Tenant(ctx).EnsureIngredientVisibilityForCurrentBranch(ctx, ingredientUUID); err != nil {
+			if err := q.EnsureIngredientVisibilityForCurrentBranch(txCtx, ingredientUUID); err != nil {
 				return nil, fmt.Errorf("item %d: failed to ensure ingredient visibility: %w", i+1, err)
 			}
 
 			if err := s.applyInvoiceStockMovement(
-				ctx,
+				txCtx,
+				q,
 				invoice.StorageID,
 				ingredientUUID,
 				qty,
@@ -853,6 +929,12 @@ func (s *InvoiceS) CreateInvoiceDetailsBatch(ctx context.Context, invoiceID stri
 
 		response.Success++
 		response.Details = append(response.Details, *toInvoiceDetailResponse(invoiceDetail))
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return response, nil
@@ -1000,17 +1082,25 @@ func (s *InvoiceS) UpdateInvoiceDetail(ctx context.Context, id string, req *mode
 		quantity.Valid = false
 	}
 
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	// Build the update parameters - we need to get current values for fields we're not updating
-	currentDetail, err := s.repo.Tenant(ctx).GetInvoiceDetailByID(ctx, detailID)
+	currentDetail, err := q.GetInvoiceDetailByID(txCtx, detailID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get current invoice detail: %w", err)
 	}
 
-	inv, err := s.repo.Tenant(ctx).GetInvoiceByID(ctx, currentDetail.InvoiceID)
+	inv, err := q.GetInvoiceByID(txCtx, currentDetail.InvoiceID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get invoice: %w", err)
 	}
-	if err := assertCanMutateInvoiceCurrent(ctx, s.repo, inv, "invoice detail"); err != nil {
+	if err := assertCanMutateInvoiceCurrent(txCtx, q, inv, "invoice detail"); err != nil {
 		return nil, err
 	}
 
@@ -1048,26 +1138,28 @@ func (s *InvoiceS) UpdateInvoiceDetail(ctx context.Context, id string, req *mode
 		PricePerUnit: updatePricePerUnit,
 	}
 
-	detail, err := s.repo.Tenant(ctx).UpdateInvoiceDetail(ctx, params)
+	detail, err := q.UpdateInvoiceDetail(txCtx, params)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update invoice detail: %w", err)
 	}
 
 	if appliesStock && updatePricePerUnit.Valid {
-		_, _ = s.repo.Tenant(ctx).UpdateIngredientPriceAndQuantity(ctx, pg.UpdateIngredientPriceAndQuantityParams{
+		if _, err := q.UpdateIngredientPriceAndQuantity(txCtx, pg.UpdateIngredientPriceAndQuantityParams{
 			ID:           updateIngredientID,
 			PricePerUnit: updatePricePerUnit,
-		})
-		triggerPriceRecalculation(ctx, s.repo, updateIngredientID)
+		}); err != nil {
+			return nil, fmt.Errorf("failed to update ingredient price_per_unit: %w", err)
+		}
+		triggerPriceRecalculation(txCtx, s.repo, updateIngredientID)
 	}
 
 	if appliesStock {
 		sourceID := currentDetail.InvoiceID
 		if currentDetail.IngredientID != updateIngredientID {
-			if err := s.applyInvoiceStockMovement(ctx, inv.StorageID, currentDetail.IngredientID, zeroNumeric(), currentDetail.Quantity, "invoice_update_out", currentDetail.PricePerUnit, sourceID, inv.Date); err != nil {
+			if err := s.applyInvoiceStockMovement(txCtx, q, inv.StorageID, currentDetail.IngredientID, zeroNumeric(), currentDetail.Quantity, "invoice_update_out", currentDetail.PricePerUnit, sourceID, inv.Date); err != nil {
 				return nil, err
 			}
-			if err := s.applyInvoiceStockMovement(ctx, inv.StorageID, updateIngredientID, updateQuantity, zeroNumeric(), "invoice_update_in", updatePricePerUnit, sourceID, inv.Date); err != nil {
+			if err := s.applyInvoiceStockMovement(txCtx, q, inv.StorageID, updateIngredientID, updateQuantity, zeroNumeric(), "invoice_update_in", updatePricePerUnit, sourceID, inv.Date); err != nil {
 				return nil, err
 			}
 		} else {
@@ -1080,7 +1172,7 @@ func (s *InvoiceS) UpdateInvoiceDetail(ctx context.Context, id string, req *mode
 				if err != nil {
 					return nil, err
 				}
-				if err := s.applyInvoiceStockMovement(ctx, inv.StorageID, updateIngredientID, diff, zeroNumeric(), "invoice_update_in", updatePricePerUnit, sourceID, inv.Date); err != nil {
+				if err := s.applyInvoiceStockMovement(txCtx, q, inv.StorageID, updateIngredientID, diff, zeroNumeric(), "invoice_update_in", updatePricePerUnit, sourceID, inv.Date); err != nil {
 					return nil, err
 				}
 			} else if cmp < 0 {
@@ -1088,16 +1180,22 @@ func (s *InvoiceS) UpdateInvoiceDetail(ctx context.Context, id string, req *mode
 				if err != nil {
 					return nil, err
 				}
-				if err := s.applyInvoiceStockMovement(ctx, inv.StorageID, updateIngredientID, zeroNumeric(), diff, "invoice_update_out", currentDetail.PricePerUnit, sourceID, inv.Date); err != nil {
+				if err := s.applyInvoiceStockMovement(txCtx, q, inv.StorageID, updateIngredientID, zeroNumeric(), diff, "invoice_update_out", currentDetail.PricePerUnit, sourceID, inv.Date); err != nil {
 					return nil, err
 				}
 			} else {
 				if numericToString(updatePricePerUnit) != numericToString(currentDetail.PricePerUnit) {
-					if err := s.applyInvoiceStockMovement(ctx, inv.StorageID, updateIngredientID, zeroNumeric(), zeroNumeric(), "invoice_price_update", updatePricePerUnit, sourceID, inv.Date); err != nil {
+					if err := s.applyInvoiceStockMovement(txCtx, q, inv.StorageID, updateIngredientID, zeroNumeric(), zeroNumeric(), "invoice_price_update", updatePricePerUnit, sourceID, inv.Date); err != nil {
 						return nil, err
 					}
 				}
 			}
+		}
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
 		}
 	}
 
@@ -1111,15 +1209,23 @@ func (s *InvoiceS) UpdateInvoiceDetailQuantity(ctx context.Context, id string, q
 		return nil, fmt.Errorf("invalid detail id: %w", err)
 	}
 
-	currentDetail, err := s.repo.Tenant(ctx).GetInvoiceDetailByID(ctx, detailID)
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	currentDetail, err := q.GetInvoiceDetailByID(txCtx, detailID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get current invoice detail: %w", err)
 	}
-	inv, err := s.repo.Tenant(ctx).GetInvoiceByID(ctx, currentDetail.InvoiceID)
+	inv, err := q.GetInvoiceByID(txCtx, currentDetail.InvoiceID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get invoice: %w", err)
 	}
-	if err := assertCanMutateInvoiceCurrent(ctx, s.repo, inv, "invoice detail quantity"); err != nil {
+	if err := assertCanMutateInvoiceCurrent(txCtx, q, inv, "invoice detail quantity"); err != nil {
 		return nil, err
 	}
 	appliesStock := invoiceAppliesStock(inv)
@@ -1132,7 +1238,7 @@ func (s *InvoiceS) UpdateInvoiceDetailQuantity(ctx context.Context, id string, q
 		return nil, fmt.Errorf("invalid quantity: %w", err)
 	}
 
-	detail, err := s.repo.Tenant(ctx).UpdateInvoiceDetailQuantity(ctx, pg.UpdateInvoiceDetailQuantityParams{
+	detail, err := q.UpdateInvoiceDetailQuantity(txCtx, pg.UpdateInvoiceDetailQuantityParams{
 		ID:       detailID,
 		Quantity: qty,
 	})
@@ -1150,7 +1256,7 @@ func (s *InvoiceS) UpdateInvoiceDetailQuantity(ctx context.Context, id string, q
 			if err != nil {
 				return nil, err
 			}
-			if err := s.applyInvoiceStockMovement(ctx, inv.StorageID, currentDetail.IngredientID, diff, zeroNumeric(), "invoice_update_in", currentDetail.PricePerUnit, currentDetail.InvoiceID, inv.Date); err != nil {
+			if err := s.applyInvoiceStockMovement(txCtx, q, inv.StorageID, currentDetail.IngredientID, diff, zeroNumeric(), "invoice_update_in", currentDetail.PricePerUnit, currentDetail.InvoiceID, inv.Date); err != nil {
 				return nil, err
 			}
 		} else if cmp < 0 {
@@ -1158,9 +1264,15 @@ func (s *InvoiceS) UpdateInvoiceDetailQuantity(ctx context.Context, id string, q
 			if err != nil {
 				return nil, err
 			}
-			if err := s.applyInvoiceStockMovement(ctx, inv.StorageID, currentDetail.IngredientID, zeroNumeric(), diff, "invoice_update_out", currentDetail.PricePerUnit, currentDetail.InvoiceID, inv.Date); err != nil {
+			if err := s.applyInvoiceStockMovement(txCtx, q, inv.StorageID, currentDetail.IngredientID, zeroNumeric(), diff, "invoice_update_out", currentDetail.PricePerUnit, currentDetail.InvoiceID, inv.Date); err != nil {
 				return nil, err
 			}
+		}
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
 		}
 	}
 
@@ -1174,15 +1286,23 @@ func (s *InvoiceS) DeleteInvoiceDetail(ctx context.Context, id string) error {
 		return fmt.Errorf("invalid detail id: %w", err)
 	}
 
-	currentDetail, err := s.repo.Tenant(ctx).GetInvoiceDetailByID(ctx, detailID)
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	currentDetail, err := q.GetInvoiceDetailByID(txCtx, detailID)
 	if err != nil {
 		return fmt.Errorf("failed to get invoice detail: %w", err)
 	}
-	inv, err := s.repo.Tenant(ctx).GetInvoiceByID(ctx, currentDetail.InvoiceID)
+	inv, err := q.GetInvoiceByID(txCtx, currentDetail.InvoiceID)
 	if err != nil {
 		return fmt.Errorf("failed to get invoice: %w", err)
 	}
-	if err := assertCanMutateInvoiceCurrent(ctx, s.repo, inv, "invoice detail"); err != nil {
+	if err := assertCanMutateInvoiceCurrent(txCtx, q, inv, "invoice detail"); err != nil {
 		return err
 	}
 	appliesStock := invoiceAppliesStock(inv)
@@ -1190,13 +1310,19 @@ func (s *InvoiceS) DeleteInvoiceDetail(ctx context.Context, id string) error {
 		return fmt.Errorf("invoice storage_id is required to update stock")
 	}
 
-	if err := s.repo.Tenant(ctx).DeleteInvoiceDetail(ctx, detailID); err != nil {
+	if err := q.DeleteInvoiceDetail(txCtx, detailID); err != nil {
 		return fmt.Errorf("failed to delete invoice detail: %w", err)
 	}
 
 	if appliesStock {
-		if err := s.applyInvoiceStockMovement(ctx, inv.StorageID, currentDetail.IngredientID, zeroNumeric(), currentDetail.Quantity, "invoice_delete_out", currentDetail.PricePerUnit, currentDetail.InvoiceID, inv.Date); err != nil {
+		if err := s.applyInvoiceStockMovement(txCtx, q, inv.StorageID, currentDetail.IngredientID, zeroNumeric(), currentDetail.Quantity, "invoice_delete_out", currentDetail.PricePerUnit, currentDetail.InvoiceID, inv.Date); err != nil {
 			return err
+		}
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("failed to commit transaction: %w", err)
 		}
 	}
 
@@ -1210,15 +1336,23 @@ func (s *InvoiceS) RestoreInvoiceDetail(ctx context.Context, id string) error {
 		return fmt.Errorf("invalid detail id: %w", err)
 	}
 
-	if err := s.repo.Tenant(ctx).RestoreInvoiceDetail(ctx, detailID); err != nil {
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	if err := q.RestoreInvoiceDetail(txCtx, detailID); err != nil {
 		return fmt.Errorf("failed to restore invoice detail: %w", err)
 	}
 
-	detail, err := s.repo.Tenant(ctx).GetInvoiceDetailByID(ctx, detailID)
+	detail, err := q.GetInvoiceDetailByID(txCtx, detailID)
 	if err != nil {
 		return fmt.Errorf("failed to get restored invoice detail: %w", err)
 	}
-	inv, err := s.repo.Tenant(ctx).GetInvoiceByID(ctx, detail.InvoiceID)
+	inv, err := q.GetInvoiceByID(txCtx, detail.InvoiceID)
 	if err != nil {
 		return fmt.Errorf("failed to get invoice: %w", err)
 	}
@@ -1227,15 +1361,21 @@ func (s *InvoiceS) RestoreInvoiceDetail(ctx context.Context, id string) error {
 		return fmt.Errorf("invoice storage_id is required to update stock")
 	}
 	if appliesStock {
-		if err := s.applyInvoiceStockMovement(ctx, inv.StorageID, detail.IngredientID, detail.Quantity, zeroNumeric(), "invoice_restore_in", detail.PricePerUnit, detail.InvoiceID, inv.Date); err != nil {
+		if err := s.applyInvoiceStockMovement(txCtx, q, inv.StorageID, detail.IngredientID, detail.Quantity, zeroNumeric(), "invoice_restore_in", detail.PricePerUnit, detail.InvoiceID, inv.Date); err != nil {
 			return err
+		}
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("failed to commit transaction: %w", err)
 		}
 	}
 
 	return nil
 }
 
-func (s *InvoiceS) applyInvoiceStockMovement(ctx context.Context, storageID pgtype.UUID, ingredientID uuid.UUID, qtyIn, qtyOut pgtype.Numeric, eventType string, pricePerUnit pgtype.Numeric, invoiceID uuid.UUID, invoiceDate pgtype.Timestamp) error {
+func (s *InvoiceS) applyInvoiceStockMovement(ctx context.Context, q *pg.Queries, storageID pgtype.UUID, ingredientID uuid.UUID, qtyIn, qtyOut pgtype.Numeric, eventType string, pricePerUnit pgtype.Numeric, invoiceID uuid.UUID, invoiceDate pgtype.Timestamp) error {
 	if !storageID.Valid {
 		return fmt.Errorf("invoice storage_id is required to update stock")
 	}
@@ -1243,13 +1383,16 @@ func (s *InvoiceS) applyInvoiceStockMovement(ctx context.Context, storageID pgty
 		return fmt.Errorf("invalid movement: both qty_in and qty_out set")
 	}
 
-	_, _ = s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
+	_, err := q.EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
 		ID:           uuid.New(),
 		IngredientID: ingredientID,
 		StorageID:    storageID,
 	})
+	if err != nil {
+		return fmt.Errorf("failed to ensure ingredient stock: %w", err)
+	}
 
-	locked, err := s.repo.Tenant(ctx).GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
+	locked, err := q.GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
 		IngredientID: ingredientID,
 		StorageID:    storageID,
 	})
@@ -1260,7 +1403,7 @@ func (s *InvoiceS) applyInvoiceStockMovement(ctx context.Context, storageID pgty
 	stockAfter := stockBefore
 
 	if numericToString(qtyIn) != "0" {
-		updated, err := s.repo.Tenant(ctx).UpsertAddIngredientStockByStorage(ctx, pg.UpsertAddIngredientStockByStorageParams{
+		updated, err := q.UpsertAddIngredientStockByStorage(ctx, pg.UpsertAddIngredientStockByStorageParams{
 			ID:           uuid.New(),
 			IngredientID: ingredientID,
 			StorageID:    storageID,
@@ -1271,7 +1414,7 @@ func (s *InvoiceS) applyInvoiceStockMovement(ctx context.Context, storageID pgty
 		}
 		stockAfter = updated.Quantity
 	} else if numericToString(qtyOut) != "0" {
-		updated, err := s.repo.Tenant(ctx).RemoveFromIngredientStock(ctx, pg.RemoveFromIngredientStockParams{
+		updated, err := q.RemoveFromIngredientStock(ctx, pg.RemoveFromIngredientStockParams{
 			ID:       locked.ID,
 			Quantity: qtyOut,
 		})
@@ -1299,7 +1442,7 @@ func (s *InvoiceS) applyInvoiceStockMovement(ctx context.Context, storageID pgty
 		return nil
 	}
 
-	if err := s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+	if err := q.InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
 		ID:           uuid.New(),
 		StorageID:    uuid.UUID(storageID.Bytes),
 		IngredientID: ingredientID,
@@ -1316,121 +1459,15 @@ func (s *InvoiceS) applyInvoiceStockMovement(ctx context.Context, storageID pgty
 		return fmt.Errorf("failed to insert stock movement: %w", err)
 	}
 
-	if err := s.rebalanceIngredientStockLedger(ctx, storageID, ingredientID); err != nil {
+	if err := s.rebalanceIngredientStockLedger(ctx, q, storageID, ingredientID); err != nil {
 		return fmt.Errorf("failed to rebalance stock ledger after invoice movement: %w", err)
 	}
 
 	return nil
 }
 
-func ratFromNumeric(n pgtype.Numeric) (*big.Rat, error) {
-	s := numericToString(n)
-	r := new(big.Rat)
-	if _, ok := r.SetString(s); !ok {
-		return nil, fmt.Errorf("invalid numeric: %s", s)
-	}
-	return r, nil
-}
-
-func numericFromRat(r *big.Rat, scale int) (pgtype.Numeric, error) {
-	n := pgtype.Numeric{}
-	if err := n.Scan(r.FloatString(scale)); err != nil {
-		return pgtype.Numeric{}, err
-	}
-	return n, nil
-}
-
-func addNumericSafe(a, b pgtype.Numeric, scale int) (pgtype.Numeric, error) {
-	ra, err := ratFromNumeric(a)
-	if err != nil {
-		return pgtype.Numeric{}, err
-	}
-	rb, err := ratFromNumeric(b)
-	if err != nil {
-		return pgtype.Numeric{}, err
-	}
-
-	out := new(big.Rat).Add(ra, rb)
-	return numericFromRat(out, scale)
-}
-
-func subNumeric(a, b pgtype.Numeric, scale int) (pgtype.Numeric, error) {
-	ra, err := ratFromNumeric(a)
-	if err != nil {
-		return pgtype.Numeric{}, err
-	}
-	rb, err := ratFromNumeric(b)
-	if err != nil {
-		return pgtype.Numeric{}, err
-	}
-
-	out := new(big.Rat).Sub(ra, rb)
-	return numericFromRat(out, scale)
-}
-
-func applyMovementDelta(balance, qtyIn, qtyOut pgtype.Numeric, scale int) (pgtype.Numeric, error) {
-	withIn, err := addNumericSafe(balance, qtyIn, scale)
-	if err != nil {
-		return pgtype.Numeric{}, err
-	}
-	return subNumeric(withIn, qtyOut, scale)
-}
-
-func (s *InvoiceS) rebalanceIngredientStockLedger(ctx context.Context, storageID pgtype.UUID, ingredientID uuid.UUID) error {
-	if !storageID.Valid {
-		return fmt.Errorf("storage_id is required for ledger rebalance")
-	}
-
-	q := s.repo.Tenant(ctx)
-
-	_, _ = q.EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
-		ID:           uuid.New(),
-		IngredientID: ingredientID,
-		StorageID:    storageID,
-	})
-
-	rows, err := q.ListIngredientStockMovementsForRebalance(ctx, storageID.Bytes, ingredientID)
-	if err != nil {
-		return fmt.Errorf("failed to list stock movements for rebalance: %w", err)
-	}
-
-	running := zeroNumeric()
-
-	for _, row := range rows {
-		before := running
-
-		after, err := applyMovementDelta(before, row.QtyIn, row.QtyOut, 6)
-		if err != nil {
-			return fmt.Errorf("failed to calculate movement balance for movement %s: %w", row.ID, err)
-		}
-
-		if err := q.UpdateIngredientStockMovementBalances(ctx, pg.UpdateIngredientStockMovementBalancesParams{
-			ID:          row.ID,
-			StockBefore: before,
-			StockAfter:  after,
-		}); err != nil {
-			return fmt.Errorf("failed to update movement balances for movement %s: %w", row.ID, err)
-		}
-
-		running = after
-	}
-
-	stockRow, err := q.GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
-		IngredientID: ingredientID,
-		StorageID:    storageID,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to lock ingredient stock for final sync: %w", err)
-	}
-
-	if _, err := q.UpdateIngredientStock(ctx, pg.UpdateIngredientStockParams{
-		ID:       stockRow.ID,
-		Quantity: running,
-	}); err != nil {
-		return fmt.Errorf("failed to sync ingredient_stock quantity after rebalance: %w", err)
-	}
-
-	return nil
+func (s *InvoiceS) rebalanceIngredientStockLedger(ctx context.Context, q *pg.Queries, storageID pgtype.UUID, ingredientID uuid.UUID) error {
+	return rebalanceIngredientStockLedger(ctx, q, storageID, ingredientID, "invoice")
 }
 
 func cmpNumeric(a, b pgtype.Numeric) (int, error) {
@@ -1523,7 +1560,15 @@ func (s *InvoiceS) UpsertInvoiceDetails(ctx context.Context, invoiceID string, r
 		return nil, fmt.Errorf("invalid invoice id: %w", err)
 	}
 
-	invoice, err := s.repo.Tenant(ctx).GetInvoiceByID(ctx, invoiceUUID)
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	invoice, err := q.GetInvoiceByID(txCtx, invoiceUUID)
 	if err != nil {
 		return nil, fmt.Errorf("invoice not found: %w", err)
 	}
@@ -1567,7 +1612,7 @@ func (s *InvoiceS) UpsertInvoiceDetails(ctx context.Context, invoiceID string, r
 		}
 		effectiveDate = pgtype.Timestamp{Time: parsed, Valid: true}
 	}
-	if err := assertCanMutateInvoiceChange(ctx, s.repo, invoice, effectiveStorage, effectiveDate, "invoice"); err != nil {
+	if err := assertCanMutateInvoiceChange(txCtx, q, invoice, effectiveStorage, effectiveDate, "invoice"); err != nil {
 		return nil, err
 	}
 
@@ -1578,7 +1623,7 @@ func (s *InvoiceS) UpsertInvoiceDetails(ctx context.Context, invoiceID string, r
 		return nil, fmt.Errorf("invoice storage_id is required to apply stock")
 	}
 
-	existing, err := s.repo.Tenant(ctx).GetInvoiceDetailsByInvoiceID(ctx, pg.GetInvoiceDetailsByInvoiceIDParams{
+	existing, err := q.GetInvoiceDetailsByInvoiceID(txCtx, pg.GetInvoiceDetailsByInvoiceIDParams{
 		InvoiceID: invoiceUUID,
 		Limit:     10000,
 		Offset:    0,
@@ -1590,7 +1635,8 @@ func (s *InvoiceS) UpsertInvoiceDetails(ctx context.Context, invoiceID string, r
 	if oldAppliesStock {
 		for _, d := range existing {
 			if err := s.applyInvoiceStockMovement(
-				ctx,
+				txCtx,
+				q,
 				invoice.StorageID,
 				d.IngredientID,
 				zeroNumeric(),
@@ -1644,7 +1690,7 @@ func (s *InvoiceS) UpsertInvoiceDetails(ctx context.Context, invoiceID string, r
 			supplierID = sid
 		}
 
-		if _, err := s.repo.Tenant(ctx).UpdateInvoice(ctx, pg.UpdateInvoiceParams{
+		if _, err := q.UpdateInvoice(txCtx, pg.UpdateInvoiceParams{
 			ID:          invoiceUUID,
 			SupplierID:  supplierID,
 			StorageID:   storageID,
@@ -1656,7 +1702,7 @@ func (s *InvoiceS) UpsertInvoiceDetails(ctx context.Context, invoiceID string, r
 		}
 	}
 
-	if err := s.repo.Tenant(ctx).DeleteInvoiceDetailsByInvoiceID(ctx, invoiceUUID); err != nil {
+	if err := q.DeleteInvoiceDetailsByInvoiceID(txCtx, invoiceUUID); err != nil {
 		return nil, fmt.Errorf("failed to delete existing invoice details: %w", err)
 	}
 
@@ -1685,7 +1731,7 @@ func (s *InvoiceS) UpsertInvoiceDetails(ctx context.Context, invoiceID string, r
 			return nil, fmt.Errorf("item %d: invalid price_per_unit: %w", i+1, err)
 		}
 
-		detail, err := s.repo.Tenant(ctx).CreateInvoiceDetail(ctx, pg.CreateInvoiceDetailParams{
+		detail, err := q.CreateInvoiceDetail(txCtx, pg.CreateInvoiceDetailParams{
 			ID:           uuid.New(),
 			InvoiceID:    invoiceUUID,
 			IngredientID: ingredientUUID,
@@ -1698,21 +1744,22 @@ func (s *InvoiceS) UpsertInvoiceDetails(ctx context.Context, invoiceID string, r
 		}
 
 		if newAppliesStock {
-			if _, err := s.repo.Tenant(ctx).UpdateIngredientPriceAndQuantity(ctx, pg.UpdateIngredientPriceAndQuantityParams{
+			if _, err := q.UpdateIngredientPriceAndQuantity(txCtx, pg.UpdateIngredientPriceAndQuantityParams{
 				ID:           ingredientUUID,
 				PricePerUnit: pricePerUnit,
 			}); err != nil {
 				return nil, fmt.Errorf("item %d: failed to update ingredient price_per_unit: %w", i+1, err)
 			}
 
-			triggerPriceRecalculation(ctx, s.repo, ingredientUUID)
+			triggerPriceRecalculation(txCtx, s.repo, ingredientUUID)
 
-			if err := s.repo.Tenant(ctx).EnsureIngredientVisibilityForCurrentBranch(ctx, ingredientUUID); err != nil {
+			if err := q.EnsureIngredientVisibilityForCurrentBranch(txCtx, ingredientUUID); err != nil {
 				return nil, fmt.Errorf("item %d: failed to ensure ingredient visibility: %w", i+1, err)
 			}
 
 			if err := s.applyInvoiceStockMovement(
-				ctx,
+				txCtx,
+				q,
 				effectiveStorage,
 				ingredientUUID,
 				qty,
@@ -1727,6 +1774,12 @@ func (s *InvoiceS) UpsertInvoiceDetails(ctx context.Context, invoiceID string, r
 		}
 
 		response.Details = append(response.Details, *toInvoiceDetailResponse(detail))
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	response.Success = len(response.Details)
@@ -1744,7 +1797,7 @@ func (s *InvoiceS) DeleteInvoiceDetailsByInvoiceID(ctx context.Context, invoiceI
 		return fmt.Errorf("failed to get invoice: %w", err)
 	}
 
-	if err := assertCanMutateInvoiceCurrent(ctx, s.repo, inv, "invoice details"); err != nil {
+	if err := assertCanMutateInvoiceCurrent(ctx, s.repo.Tenant(ctx), inv, "invoice details"); err != nil {
 		return err
 	}
 
@@ -1806,7 +1859,7 @@ func invoiceFreezeDate(ts pgtype.Timestamp, entityName string) (time.Time, error
 	return ts.Time, nil
 }
 
-func assertCanMutateInvoiceCurrent(ctx context.Context, repo *repository.Repository, inv pg.Invoice, entityName string) error {
+func assertCanMutateInvoiceCurrent(ctx context.Context, q *pg.Queries, inv pg.Invoice, entityName string) error {
 	if !inv.StorageID.Valid {
 		return nil
 	}
@@ -1816,10 +1869,10 @@ func assertCanMutateInvoiceCurrent(ctx context.Context, repo *repository.Reposit
 		return err
 	}
 
-	return assertCanMutateAfterInventory(ctx, repo, inv.StorageID.Bytes, effectiveAt, entityName)
+	return assertCanMutateAfterInventory(ctx, q, uuid.UUID(inv.StorageID.Bytes), effectiveAt, entityName)
 }
 
-func assertCanMutateInvoiceTarget(ctx context.Context, repo *repository.Repository, storageID pgtype.UUID, invoiceDate pgtype.Timestamp, entityName string) error {
+func assertCanMutateInvoiceTarget(ctx context.Context, q *pg.Queries, storageID pgtype.UUID, invoiceDate pgtype.Timestamp, entityName string) error {
 	if !storageID.Valid {
 		return nil
 	}
@@ -1829,15 +1882,15 @@ func assertCanMutateInvoiceTarget(ctx context.Context, repo *repository.Reposito
 		return err
 	}
 
-	return assertCanMutateAfterInventory(ctx, repo, storageID.Bytes, effectiveAt, entityName)
+	return assertCanMutateAfterInventory(ctx, q, uuid.UUID(storageID.Bytes), effectiveAt, entityName)
 }
 
-func assertCanMutateInvoiceChange(ctx context.Context, repo *repository.Repository, current pg.Invoice, targetStorage pgtype.UUID, targetDate pgtype.Timestamp, entityName string) error {
-	if err := assertCanMutateInvoiceCurrent(ctx, repo, current, entityName); err != nil {
+func assertCanMutateInvoiceChange(ctx context.Context, q *pg.Queries, current pg.Invoice, targetStorage pgtype.UUID, targetDate pgtype.Timestamp, entityName string) error {
+	if err := assertCanMutateInvoiceCurrent(ctx, q, current, entityName); err != nil {
 		return err
 	}
 
-	if err := assertCanMutateInvoiceTarget(ctx, repo, targetStorage, targetDate, entityName); err != nil {
+	if err := assertCanMutateInvoiceTarget(ctx, q, targetStorage, targetDate, entityName); err != nil {
 		return err
 	}
 
@@ -1993,51 +2046,6 @@ func toMeasurementTypeString(mt pg.NullMeasurementType) *string {
 	return nil
 }
 
-func numericToString(n pgtype.Numeric) string {
-	if !n.Valid {
-		return "0"
-	}
-	// Convert to Decimal string representation
-	if n.NaN {
-		return "NaN"
-	}
-	if n.InfinityModifier > 0 {
-		return "Infinity"
-	}
-	if n.InfinityModifier < 0 {
-		return "-Infinity"
-	}
-
-	// If Int is nil, return 0
-	if n.Int == nil {
-		return "0"
-	}
-
-	// Apply exponent to format the number
-	str := n.Int.String()
-	if n.Exp < 0 {
-		// Need to add decimal point
-		exp := -int(n.Exp)
-		if exp >= len(str) {
-			// Add leading zeros and decimal
-			str = "0." + strings.Repeat("0", exp-len(str)) + str
-		} else {
-			// Insert decimal point
-			str = str[:len(str)-exp] + "." + str[len(str)-exp:]
-		}
-	} else if n.Exp > 0 {
-		// Add trailing zeros
-		str = str + strings.Repeat("0", int(n.Exp))
-	}
-	if strings.Contains(str, ".") {
-		str = strings.TrimRight(strings.TrimRight(str, "0"), ".")
-	}
-	if str == "" || str == "-0" {
-		return "0"
-	}
-	return str
-}
-
 func derefNumeric(n *pgtype.Numeric) pgtype.Numeric {
 	if n == nil {
 		return pgtype.Numeric{}
@@ -2059,38 +2067,88 @@ func (s *InvoiceS) CreateInvoiceWithDetails(ctx context.Context, req *model.Crea
 		return nil, fmt.Errorf("at least one invoice detail is required")
 	}
 
-	invoiceResp, err := s.CreateInvoice(ctx, &req.Invoice)
+	// Start a single transaction for both invoice and details
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	// Inline invoice creation logic to ensure atomicity
+	invoiceID := uuid.New()
+
+	// Parse supplier ID
+	supplierID, err := uuid.Parse(req.Invoice.SupplierID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid supplier id: %w", err)
+	}
+
+	// Parse storage ID (optional)
+	storageID := pgtype.UUID{Valid: false}
+	if req.Invoice.StorageID != nil && *req.Invoice.StorageID != "" {
+		sid, err := uuid.Parse(*req.Invoice.StorageID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid storage_id: %w", err)
+		}
+		storageID = pgtype.UUID{Bytes: sid, Valid: true}
+	}
+
+	// Parse total amount
+	totalAmount := pgtype.Numeric{}
+	if err := totalAmount.Scan(req.Invoice.TotalAmount); err != nil {
+		return nil, fmt.Errorf("invalid total amount: %w", err)
+	}
+
+	// Parse status
+	status := pg.NullInvoiceStatus{}
+	if req.Invoice.Status != "" {
+		status.InvoiceStatus = pg.InvoiceStatus(req.Invoice.Status)
+		status.Valid = true
+	}
+
+	date := pgtype.Timestamp{Time: time.Now(), Valid: true}
+	if req.Invoice.Date != nil && *req.Invoice.Date != "" {
+		parsed, err := time.Parse(time.RFC3339, *req.Invoice.Date)
+		if err != nil {
+			parsed, err = time.Parse(time.RFC3339Nano, *req.Invoice.Date)
+			if err != nil {
+				return nil, fmt.Errorf("invalid date: %w", err)
+			}
+		}
+		date = pgtype.Timestamp{Time: parsed, Valid: true}
+	}
+	if err := assertCanMutateInvoiceTarget(txCtx, q, storageID, date, "invoice"); err != nil {
+		return nil, err
+	}
+
+	invoiceParams := pg.CreateInvoiceParams{
+		ID:          invoiceID,
+		SupplierID:  supplierID,
+		StorageID:   storageID,
+		TotalAmount: totalAmount,
+		Status:      status,
+		Date:        date,
+	}
+
+	invoice, err := q.CreateInvoice(txCtx, invoiceParams)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create invoice: %w", err)
 	}
 
-	invoiceID, err := uuid.Parse(invoiceResp.ID)
-	if err != nil {
-		return nil, fmt.Errorf("invalid invoice id in response: %w", err)
-	}
-
-	// Get the full invoice for effective_at timestamp
-	invoice, err := s.repo.Tenant(ctx).GetInvoiceByID(ctx, invoiceID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve invoice for details: %w", err)
-	}
-
-	withDetailsAppliesStock := invoiceResp.Status == model.InvoiceStatusReceived
+	withDetailsAppliesStock := status.Valid && status.InvoiceStatus == pg.InvoiceStatusReceived
 
 	var storagePg pgtype.UUID
 	if withDetailsAppliesStock {
-		if invoiceResp.StorageID == nil || *invoiceResp.StorageID == "" {
+		if !storageID.Valid {
 			return nil, fmt.Errorf("invoice storage_id is required to update stock")
 		}
-		storageUUID, err := uuid.Parse(*invoiceResp.StorageID)
-		if err != nil {
-			return nil, fmt.Errorf("invalid invoice storage_id: %w", err)
-		}
-		storagePg = pgtype.UUID{Bytes: storageUUID, Valid: true}
+		storagePg = storageID
 	}
 
 	response := &model.CreateInvoiceWithDetailsResponse{
-		Invoice: *invoiceResp,
+		Invoice: *toInvoiceResponse(invoice),
 		Details: make([]model.InvoiceDetailResponse, 0, len(req.Details)),
 		Summary: model.InvoiceDetailsBatchSummary{
 			TotalDetails: len(req.Details),
@@ -2107,7 +2165,7 @@ func (s *InvoiceS) CreateInvoiceWithDetails(ctx context.Context, req *model.Crea
 			return nil, fmt.Errorf("item %d: invalid ingredient id: %w", i+1, err)
 		}
 
-		ingredient, err := s.repo.Tenant(ctx).GetIngredientByID(ctx, ingredientUUID)
+		ingredient, err := q.GetIngredientByID(txCtx, ingredientUUID)
 		if err != nil {
 			return nil, fmt.Errorf("item %d: ingredient not found: %w", i+1, err)
 		}
@@ -2130,7 +2188,7 @@ func (s *InvoiceS) CreateInvoiceWithDetails(ctx context.Context, req *model.Crea
 			return nil, fmt.Errorf("item %d: invalid quantity: %w", i+1, err)
 		}
 
-		invoiceDetail, err := s.repo.Tenant(ctx).CreateInvoiceDetail(ctx, pg.CreateInvoiceDetailParams{
+		invoiceDetail, err := q.CreateInvoiceDetail(txCtx, pg.CreateInvoiceDetailParams{
 			ID:           uuid.New(),
 			InvoiceID:    invoiceID,
 			IngredientID: ingredientUUID,
@@ -2143,21 +2201,22 @@ func (s *InvoiceS) CreateInvoiceWithDetails(ctx context.Context, req *model.Crea
 		}
 
 		if withDetailsAppliesStock {
-			if _, err := s.repo.Tenant(ctx).UpdateIngredientPriceAndQuantity(ctx, pg.UpdateIngredientPriceAndQuantityParams{
+			if _, err := q.UpdateIngredientPriceAndQuantity(txCtx, pg.UpdateIngredientPriceAndQuantityParams{
 				ID:           ingredientUUID,
 				PricePerUnit: pricePerUnit,
 			}); err != nil {
 				return nil, fmt.Errorf("item %d: failed to update ingredient price_per_unit: %w", i+1, err)
 			}
 
-			triggerPriceRecalculation(ctx, s.repo, ingredientUUID)
+			triggerPriceRecalculation(txCtx, s.repo, ingredientUUID)
 
-			if err := s.repo.Tenant(ctx).EnsureIngredientVisibilityForCurrentBranch(ctx, ingredientUUID); err != nil {
+			if err := q.EnsureIngredientVisibilityForCurrentBranch(txCtx, ingredientUUID); err != nil {
 				return nil, fmt.Errorf("item %d: failed to ensure ingredient visibility: %w", i+1, err)
 			}
 
 			if err := s.applyInvoiceStockMovement(
-				ctx,
+				txCtx,
+				q,
 				storagePg,
 				ingredientUUID,
 				qty,
@@ -2180,6 +2239,59 @@ func (s *InvoiceS) CreateInvoiceWithDetails(ctx context.Context, req *model.Crea
 		}
 	}
 
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	response.Summary.TotalAmount = totalAmountStr
 	return response, nil
+}
+
+func (s *InvoiceS) getTenantMutationQueries(ctx context.Context) (*pg.Queries, context.Context, pgx.Tx, bool, error) {
+	if existingTx, ok := repository.TenantTxFromContext(ctx); ok && existingTx != nil {
+		// Reuse existing transaction - get queries from context or create from tx
+		if q, ok := repository.TenantQueriesFromContext(ctx); ok && q != nil {
+			return q, ctx, existingTx, false, nil
+		}
+		q := pg.New(existingTx)
+		txCtx := repository.WithTenantQueries(ctx, q)
+		return q, txCtx, existingTx, false, nil
+	}
+
+	tx, err := s.repo.PgRepo.TenantPool.Begin(ctx)
+	if err != nil {
+		return nil, nil, nil, false, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+
+	brandID, _ := ctx.Value("brand_id").(string)
+	brandID = strings.TrimSpace(brandID)
+	if brandID == "" {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("brand_id is missing in context")
+	}
+
+	schemaName := fmt.Sprintf("tenant_%s", brandID)
+	if _, err := tx.Exec(ctx, fmt.Sprintf(`SET LOCAL search_path TO "%s", public`, schemaName)); err != nil {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("failed to set tenant search_path: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx, "SET LOCAL app.brand_id = $1", brandID); err != nil {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("failed to set app.brand_id: %w", err)
+	}
+
+	if branchID, _ := ctx.Value("branch_id").(string); strings.TrimSpace(branchID) != "" {
+		if _, err := tx.Exec(ctx, "SET LOCAL app.branch_id = $1", strings.TrimSpace(branchID)); err != nil {
+			tx.Rollback(ctx)
+			return nil, nil, nil, false, fmt.Errorf("failed to set app.branch_id: %w", err)
+		}
+	}
+
+	q := pg.New(tx)
+	txCtx := repository.WithTenantQueries(ctx, q)
+
+	return q, txCtx, tx, true, nil
 }

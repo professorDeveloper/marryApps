@@ -58,7 +58,7 @@ func shipmentFreezeDate(ts pgtype.Timestamp, entityName string) (time.Time, erro
 	return ts.Time, nil
 }
 
-func assertCanMutateShipmentCurrent(ctx context.Context, repo *repository.Repository, sh pg.Shipment, entityName string) error {
+func assertCanMutateShipmentCurrent(ctx context.Context, q *pg.Queries, sh pg.Shipment, entityName string) error {
 	if !sh.StorageID.Valid {
 		return nil
 	}
@@ -68,10 +68,10 @@ func assertCanMutateShipmentCurrent(ctx context.Context, repo *repository.Reposi
 		return err
 	}
 
-	return assertCanMutateAfterInventory(ctx, repo, sh.StorageID.Bytes, effectiveAt, entityName)
+	return assertCanMutateAfterInventory(ctx, q, sh.StorageID.Bytes, effectiveAt, entityName)
 }
 
-func assertCanMutateShipmentTarget(ctx context.Context, repo *repository.Repository, storageID pgtype.UUID, shipmentDate pgtype.Timestamp, entityName string) error {
+func assertCanMutateShipmentTarget(ctx context.Context, q *pg.Queries, storageID pgtype.UUID, shipmentDate pgtype.Timestamp, entityName string) error {
 	if !storageID.Valid {
 		return nil
 	}
@@ -81,15 +81,15 @@ func assertCanMutateShipmentTarget(ctx context.Context, repo *repository.Reposit
 		return err
 	}
 
-	return assertCanMutateAfterInventory(ctx, repo, storageID.Bytes, effectiveAt, entityName)
+	return assertCanMutateAfterInventory(ctx, q, storageID.Bytes, effectiveAt, entityName)
 }
 
-func assertCanMutateShipmentChange(ctx context.Context, repo *repository.Repository, current pg.Shipment, targetStorage pgtype.UUID, targetDate pgtype.Timestamp, entityName string) error {
-	if err := assertCanMutateShipmentCurrent(ctx, repo, current, entityName); err != nil {
+func assertCanMutateShipmentChange(ctx context.Context, q *pg.Queries, current pg.Shipment, targetStorage pgtype.UUID, targetDate pgtype.Timestamp, entityName string) error {
+	if err := assertCanMutateShipmentCurrent(ctx, q, current, entityName); err != nil {
 		return err
 	}
 
-	if err := assertCanMutateShipmentTarget(ctx, repo, targetStorage, targetDate, entityName); err != nil {
+	if err := assertCanMutateShipmentTarget(ctx, q, targetStorage, targetDate, entityName); err != nil {
 		return err
 	}
 
@@ -101,60 +101,8 @@ func (s *ShipmentS) rebalanceShipmentIngredientLedger(
 	storageID pgtype.UUID,
 	ingredientID uuid.UUID,
 ) error {
-	if !storageID.Valid {
-		return fmt.Errorf("storage_id is required for shipment ledger rebalance")
-	}
-
 	q := s.repo.Tenant(ctx)
-
-	_, _ = q.EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
-		ID:           uuid.New(),
-		IngredientID: ingredientID,
-		StorageID:    storageID,
-	})
-
-	rows, err := q.ListIngredientStockMovementsForRebalance(ctx, storageID.Bytes, ingredientID)
-	if err != nil {
-		return fmt.Errorf("failed to list shipment stock movements for rebalance: %w", err)
-	}
-
-	running := inventoryZeroNumeric()
-
-	for _, row := range rows {
-		before := running
-
-		after, err := applyMovementDelta(before, row.QtyIn, row.QtyOut, 6)
-		if err != nil {
-			return fmt.Errorf("failed to calculate shipment balance for movement %s: %w", row.ID, err)
-		}
-
-		if err := q.UpdateIngredientStockMovementBalances(ctx, pg.UpdateIngredientStockMovementBalancesParams{
-			ID:          row.ID,
-			StockBefore: before,
-			StockAfter:  after,
-		}); err != nil {
-			return fmt.Errorf("failed to update shipment balances for movement %s: %w", row.ID, err)
-		}
-
-		running = after
-	}
-
-	stockRow, err := q.GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
-		IngredientID: ingredientID,
-		StorageID:    storageID,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to lock ingredient stock for shipment final sync: %w", err)
-	}
-
-	if _, err := q.UpdateIngredientStock(ctx, pg.UpdateIngredientStockParams{
-		ID:       stockRow.ID,
-		Quantity: running,
-	}); err != nil {
-		return fmt.Errorf("failed to sync ingredient_stock quantity after shipment rebalance: %w", err)
-	}
-
-	return nil
+	return rebalanceIngredientStockLedger(ctx, q, storageID, ingredientID, "shipment")
 }
 
 func (s *ShipmentS) CreateShipment(ctx context.Context, req *model.CreateShipmentRequest) (*model.ShipmentResponse, error) {
@@ -187,7 +135,7 @@ func (s *ShipmentS) CreateShipment(ctx context.Context, req *model.CreateShipmen
 		}
 	}
 
-	if err := assertCanMutateShipmentTarget(ctx, s.repo, params.StorageID, params.Date, "shipment"); err != nil {
+	if err := assertCanMutateShipmentTarget(ctx, s.repo.Tenant(ctx), params.StorageID, params.Date, "shipment"); err != nil {
 		return nil, err
 	}
 
@@ -420,7 +368,7 @@ func (s *ShipmentS) UpdateShipment(ctx context.Context, id string, req *model.Up
 	}
 
 	// Historical lock check for both current and target state.
-	if err := assertCanMutateShipmentChange(ctx, s.repo, current, effectiveStorage, effectiveDate, "shipment"); err != nil {
+	if err := assertCanMutateShipmentChange(ctx, s.repo.Tenant(ctx), current, effectiveStorage, effectiveDate, "shipment"); err != nil {
 		return nil, err
 	}
 
@@ -588,7 +536,7 @@ func (s *ShipmentS) DeleteShipment(ctx context.Context, id string) error {
 	if err != nil {
 		return fmt.Errorf("shipment not found: %w", err)
 	}
-	if err := assertCanMutateShipmentCurrent(ctx, s.repo, shipment, "shipment"); err != nil {
+	if err := assertCanMutateShipmentCurrent(ctx, s.repo.Tenant(ctx), shipment, "shipment"); err != nil {
 		return err
 	}
 
@@ -617,7 +565,7 @@ func (s *ShipmentS) UpsertShipmentItems(ctx context.Context, shipmentID string, 
 		return nil, fmt.Errorf("shipment not found: %w", err)
 	}
 
-	if err := assertCanMutateShipmentCurrent(ctx, s.repo, shipment, "shipment items"); err != nil {
+	if err := assertCanMutateShipmentCurrent(ctx, s.repo.Tenant(ctx), shipment, "shipment items"); err != nil {
 		return nil, err
 	}
 
@@ -831,7 +779,7 @@ func (s *ShipmentS) DeleteShipmentItem(ctx context.Context, itemID string) error
 		return fmt.Errorf("failed to get shipment: %w", err)
 	}
 
-	if err := assertCanMutateShipmentCurrent(ctx, s.repo, shipment, "shipment item"); err != nil {
+	if err := assertCanMutateShipmentCurrent(ctx, s.repo.Tenant(ctx), shipment, "shipment item"); err != nil {
 		return err
 	}
 

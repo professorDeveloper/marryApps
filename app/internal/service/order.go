@@ -194,10 +194,14 @@ func (s *OrderS) CreateOrder(ctx context.Context, req model.CreateOrderRequest) 
 		orderUUID = parsedID
 
 		// Check if order already exists - use read path here
-		err = withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
-			_, err := q.GetOrderByID(ctx, orderUUID)
-			return err
-		})
+		q, txCtx, tx, ownsTx, err := s.getTenantReadQueries(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+		}
+		if ownsTx {
+			defer tx.Rollback(ctx)
+		}
+		_, err = q.GetOrderByID(txCtx, orderUUID)
 		if err == nil {
 			return s.GetOrderByID(ctx, orderUUID.String())
 		}
@@ -217,10 +221,14 @@ func (s *OrderS) CreateOrder(ctx context.Context, req model.CreateOrderRequest) 
 		}
 		tableUUID = id
 		// Table validation - use read path
-		err = withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
-			_, err := q.GetCafeTableByID(ctx, tableUUID)
-			return err
-		})
+		q, txCtx, tx, ownsTx, err := s.getTenantReadQueries(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+		}
+		if ownsTx {
+			defer tx.Rollback(ctx)
+		}
+		_, err = q.GetCafeTableByID(txCtx, tableUUID)
 		if err != nil {
 			if err == pgx.ErrNoRows {
 				return nil, fmt.Errorf("cafe table not found")
@@ -315,10 +323,14 @@ func (s *OrderS) CreateOrder(ctx context.Context, req model.CreateOrderRequest) 
 
 			if lockedTable.Status == string(model.TableStatusBusy) {
 				// Check active order - use read path
-				err = withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
-					_, err := q.GetActiveOpenOrderByTableID(ctx, tableUUID)
-					return err
-				})
+				readQ, readCtx, readTx, ownsReadTx, readErr := s.getTenantReadQueries(ctx)
+				if readErr != nil {
+					return nil, fmt.Errorf("failed to get tenant queries: %w", readErr)
+				}
+				if ownsReadTx {
+					defer readTx.Rollback(ctx)
+				}
+				_, err = readQ.GetActiveOpenOrderByTableID(readCtx, tableUUID)
 				if err == nil {
 					return nil, fmt.Errorf("table already has an active order")
 				}
@@ -339,11 +351,14 @@ func (s *OrderS) CreateOrder(ctx context.Context, req model.CreateOrderRequest) 
 		}
 
 		// Check active order - use read path
-		var checkErr error
-		checkErr = withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
-			_, err := q.GetActiveOpenOrderByTableID(ctx, tableUUID)
-			return err
-		})
+		readQ, readCtx, readTx, ownsReadTx, checkErr := s.getTenantReadQueries(ctx)
+		if checkErr != nil {
+			return nil, fmt.Errorf("failed to get tenant queries: %w", checkErr)
+		}
+		if ownsReadTx {
+			defer readTx.Rollback(ctx)
+		}
+		_, checkErr = readQ.GetActiveOpenOrderByTableID(readCtx, tableUUID)
 		if checkErr == nil {
 			return nil, fmt.Errorf("table already has an active order")
 		}
@@ -536,60 +551,61 @@ func (s *OrderS) GetOrderByID(ctx context.Context, orderID string) (*model.Order
 	}
 
 	var resp *model.OrderResponse
-	err = withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
-		order, err := q.GetOrderByID(ctx, id)
-		if err != nil {
-			return fmt.Errorf("failed to get order: %w", err)
-		}
-
-		resp = toOrderResponse(order)
-		if resp == nil {
-			return nil
-		}
-
-		items, err := q.GetOrderItemsByOrderID(ctx, id)
-		if err != nil {
-			return fmt.Errorf("failed to get order items: %w", err)
-		}
-
-		resp.Items = make([]model.OrderItemResponse, 0, len(items))
-		for _, item := range items {
-			if itemResp := toOrderItemResponse(item); itemResp != nil {
-				resp.Items = append(resp.Items, *itemResp)
-			}
-		}
-
-		modRows, err := q.ListOrderItemModifiersByOrderID(ctx, id)
-		if err != nil {
-			return fmt.Errorf("failed to list order item modifiers: %w", err)
-		}
-		byItem := make(map[string][]model.OrderItemModifierResponse)
-		for _, m := range modRows {
-			oid := m.OrderItemID.String()
-			byItem[oid] = append(byItem[oid], model.OrderItemModifierResponse{
-				ID:         m.ID.String(),
-				ModifierID: m.ModifierID.String(),
-				Units:      m.Units,
-			})
-		}
-		for i := range resp.Items {
-			if mods, ok := byItem[resp.Items[i].ID]; ok {
-				resp.Items[i].Modifiers = mods
-			}
-		}
-
-		if err := s.attachOrderBillSummary(ctx, q, id, resp); err != nil {
-			return fmt.Errorf("failed to attach order bill summary: %w", err)
-		}
-
-		if err := s.attachTableAmountPreview(ctx, q, id, resp); err != nil {
-			return fmt.Errorf("failed to attach table amount preview: %w", err)
-		}
-
-		return nil
-	})
+	q, txCtx, tx, ownsTx, err := s.getTenantReadQueries(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	order, err := q.GetOrderByID(txCtx, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get order: %w", err)
+	}
+
+	resp = toOrderResponse(order)
+	if resp == nil {
+		return nil, nil
+	}
+
+	items, err := q.GetOrderItemsByOrderID(txCtx, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get order items: %w", err)
+	}
+
+	resp.Items = make([]model.OrderItemResponse, 0, len(items))
+	for _, item := range items {
+		if itemResp := toOrderItemResponse(item); itemResp != nil {
+			resp.Items = append(resp.Items, *itemResp)
+		}
+	}
+
+	modRows, err := q.ListOrderItemModifiersByOrderID(txCtx, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list order item modifiers: %w", err)
+	}
+	byItem := make(map[string][]model.OrderItemModifierResponse)
+	for _, m := range modRows {
+		oid := m.OrderItemID.String()
+		byItem[oid] = append(byItem[oid], model.OrderItemModifierResponse{
+			ID:         m.ID.String(),
+			ModifierID: m.ModifierID.String(),
+			Units:      m.Units,
+		})
+	}
+	for i := range resp.Items {
+		if mods, ok := byItem[resp.Items[i].ID]; ok {
+			resp.Items[i].Modifiers = mods
+		}
+	}
+
+	if err := s.attachOrderBillSummary(txCtx, q, id, resp); err != nil {
+		return nil, fmt.Errorf("failed to attach order bill summary: %w", err)
+	}
+
+	if err := s.attachTableAmountPreview(txCtx, q, id, resp); err != nil {
+		return nil, fmt.Errorf("failed to attach table amount preview: %w", err)
 	}
 
 	return resp, nil
@@ -776,24 +792,25 @@ func (s *OrderS) GetAllOrders(ctx context.Context, req model.GetOrdersRequest) (
 		params.PeriodEnd = pgtype.Timestamptz{Time: end.UTC(), Valid: true}
 	}
 
-	// Read part: use withTenantRead for count and list queries
+	// Read part: use getTenantReadQueries for count and list queries
 	var total int64
 	var orders []pg.GetAllOrdersRow
-	err = withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
-		var err error
-		total, err = q.CountFilteredOrders(ctx, params)
-		if err != nil {
-			return fmt.Errorf("failed to count orders: %w", err)
-		}
-
-		orders, err = q.GetAllOrders(ctx, params)
-		if err != nil {
-			return fmt.Errorf("failed to get orders: %w", err)
-		}
-		return nil
-	})
+	q, txCtx, tx, ownsTx, err := s.getTenantReadQueries(ctx)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	total, err = q.CountFilteredOrders(txCtx, params)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to count orders: %w", err)
+	}
+
+	orders, err = q.GetAllOrders(txCtx, params)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get orders: %w", err)
 	}
 
 	responses := make([]model.OrderResponse, 0, len(orders))
@@ -838,20 +855,21 @@ func (s *OrderS) GetOrdersByStatus(ctx context.Context, status string, limit, of
 
 	var total int64
 	var orders []pg.GetOrdersByStatusRow
-	err := withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
-		var err error
-		total, err = q.CountOrdersByStatus(ctx, st)
-		if err != nil {
-			return fmt.Errorf("failed to count orders by status: %w", err)
-		}
-		orders, err = q.GetOrdersByStatus(ctx, pg.GetOrdersByStatusParams{Status: st, Limit: limit, Offset: offset})
-		if err != nil {
-			return fmt.Errorf("failed to get orders by status: %w", err)
-		}
-		return nil
-	})
+	q, txCtx, tx, ownsTx, err := s.getTenantReadQueries(ctx)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	total, err = q.CountOrdersByStatus(txCtx, st)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to count orders by status: %w", err)
+	}
+	orders, err = q.GetOrdersByStatus(txCtx, pg.GetOrdersByStatusParams{Status: st, Limit: limit, Offset: offset})
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get orders by status: %w", err)
 	}
 
 	responses := make([]model.OrderResponse, 0, len(orders))
@@ -871,21 +889,22 @@ func (s *OrderS) GetOrdersByWaiterID(ctx context.Context, waiterID string, limit
 
 	var total int64
 	var orders []pg.GetOrdersByWaiterIDRow
-	err = withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
-		var err error
-		total, err = q.CountOrdersByWaiterID(ctx, waiterIDPg)
-		if err != nil {
-			return fmt.Errorf("failed to count orders by waiter: %w", err)
-		}
-
-		orders, err = q.GetOrdersByWaiterID(ctx, pg.GetOrdersByWaiterIDParams{WaiterID: waiterIDPg, Limit: limit, Offset: offset})
-		if err != nil {
-			return fmt.Errorf("failed to get orders by waiter: %w", err)
-		}
-		return nil
-	})
+	q, txCtx, tx, ownsTx, err := s.getTenantReadQueries(ctx)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	total, err = q.CountOrdersByWaiterID(txCtx, waiterIDPg)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to count orders by waiter: %w", err)
+	}
+
+	orders, err = q.GetOrdersByWaiterID(txCtx, pg.GetOrdersByWaiterIDParams{WaiterID: waiterIDPg, Limit: limit, Offset: offset})
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get orders by waiter: %w", err)
 	}
 
 	responses := make([]model.OrderResponse, 0, len(orders))
@@ -902,16 +921,17 @@ func (s *OrderS) GetOrdersByTableID(ctx context.Context, tableID string) ([]mode
 	}
 
 	var orders []pg.GetOrdersByTableIDRow
-	err = withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
-		var err error
-		orders, err = q.GetOrdersByTableID(ctx, pgtype.UUID{Bytes: id, Valid: true})
-		if err != nil {
-			return fmt.Errorf("failed to get orders by table: %w", err)
-		}
-		return nil
-	})
+	q, txCtx, tx, ownsTx, err := s.getTenantReadQueries(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	orders, err = q.GetOrdersByTableID(txCtx, pgtype.UUID{Bytes: id, Valid: true})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get orders by table: %w", err)
 	}
 
 	var responses []model.OrderResponse
@@ -928,11 +948,15 @@ func (s *OrderS) UpdateOrder(ctx context.Context, orderID string, req model.Upda
 	}
 
 	var existing pg.GetOrderByIDRow
-	err = withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
-		var err error
-		existing, err = q.GetOrderByID(ctx, id)
-		return err
-	})
+	q, txCtx, tx, ownsTx, err := s.getTenantReadQueries(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	existing, err = q.GetOrderByID(txCtx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get order: %w", err)
 	}
@@ -988,7 +1012,7 @@ func (s *OrderS) UpdateOrder(ctx context.Context, orderID string, req model.Upda
 		finalStatus = existing.Status
 	}
 
-	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	q, txCtx, tx, ownsTx, err = s.getTenantMutationQueries(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
 	}
@@ -1047,11 +1071,15 @@ func (s *OrderS) UpdateOrderStatus(ctx context.Context, orderID string, status s
 
 	// Read existing order - use read path
 	var existing pg.GetOrderByIDRow
-	err = withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
-		var err error
-		existing, err = q.GetOrderByID(ctx, id)
-		return err
-	})
+	q, txCtx, tx, ownsTx, err := s.getTenantReadQueries(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	existing, err = q.GetOrderByID(txCtx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get order: %w", err)
 	}
@@ -1067,7 +1095,7 @@ func (s *OrderS) UpdateOrderStatus(ctx context.Context, orderID string, status s
 	}
 
 	// Update order status - use write helper
-	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	q, txCtx, tx, ownsTx, err = s.getTenantMutationQueries(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
 	}
@@ -1216,40 +1244,40 @@ func (s *OrderS) MarkOrderPaid(ctx context.Context, orderID string, cashierID st
 	}
 
 	if orderBeforePay.TableID.Valid {
-		withSavepoint(txCtx, "sp_set_table_free", func() error {
-			_, err := q.SetTableFree(txCtx, orderBeforePay.TableID.Bytes)
-			return err
-		})
+		// SetTableFree is best-effort - log error but don't fail payment
+		if _, freeErr := q.SetTableFree(txCtx, orderBeforePay.TableID.Bytes); freeErr != nil {
+			log.Printf("MarkOrderPaid: failed to set table free for order %s: %v", orderID, freeErr)
+		}
 	}
 
-	withSavepoint(txCtx, "sp_create_tx", func() error {
-		bill, billErr := q.GetBillDetails(txCtx, oID)
-		if billErr != nil {
-			return billErr
+	// CreateTransaction is critical for payment accounting - must succeed
+	bill, billErr := q.GetBillDetails(txCtx, oID)
+	if billErr != nil {
+		return nil, fmt.Errorf("failed to get bill details for transaction: %w", billErr)
+	}
+	descStr := fmt.Sprintf("Bill payment #%d", bill.BillNo)
+	txParams := pg.CreateTransactionParams{
+		ID:                 uuid.New(),
+		Type:               pg.TransactionTypeBillPayment,
+		Amount:             bill.GrandTotal,
+		Description:        &descStr,
+		Date:               time.Now(),
+		UserID:             pgtype.UUID{Bytes: cID, Valid: true},
+		CustomerPaidAmount: derefNumeric(bill.CustomerPaidAmount),
+		ChangeAmount:       derefNumeric(bill.ChangeAmount),
+	}
+	if cashRegisterID != nil && *cashRegisterID != "" {
+		if crID, parseErr := uuid.Parse(*cashRegisterID); parseErr == nil {
+			txParams.CashRegisterID = pgtype.UUID{Bytes: crID, Valid: true}
 		}
-		descStr := fmt.Sprintf("Bill payment #%d", bill.BillNo)
-		txParams := pg.CreateTransactionParams{
-			ID:                 uuid.New(),
-			Type:               pg.TransactionTypeBillPayment,
-			Amount:             bill.GrandTotal,
-			Description:        &descStr,
-			Date:               time.Now(),
-			UserID:             pgtype.UUID{Bytes: cID, Valid: true},
-			CustomerPaidAmount: derefNumeric(bill.CustomerPaidAmount),
-			ChangeAmount:       derefNumeric(bill.ChangeAmount),
-		}
-		if cashRegisterID != nil && *cashRegisterID != "" {
-			if crID, parseErr := uuid.Parse(*cashRegisterID); parseErr == nil {
-				txParams.CashRegisterID = pgtype.UUID{Bytes: crID, Valid: true}
-			}
-		}
-		txParams.PayType = pg.NullPaymentType{
-			PaymentType: pg.PaymentType(pt),
-			Valid:       true,
-		}
-		_, err := q.CreateTransaction(txCtx, txParams)
-		return err
-	})
+	}
+	txParams.PayType = pg.NullPaymentType{
+		PaymentType: pg.PaymentType(pt),
+		Valid:       true,
+	}
+	if _, txErr := q.CreateTransaction(txCtx, txParams); txErr != nil {
+		return nil, fmt.Errorf("failed to create payment transaction: %w", txErr)
+	}
 
 	order, err := q.GetOrderByID(txCtx, oID)
 	if err != nil {
@@ -1404,17 +1432,17 @@ func (s *OrderS) DeleteOrder(ctx context.Context, orderID string) error {
 		if err := s.reverseOrderItemsStockByOrder(txCtx, q, id, "order_deleted_in"); err != nil {
 			return fmt.Errorf("failed to restore order stock before delete: %w", err)
 		}
-		if orderBefore.TableID.Valid {
-			defer func() {
-				if _, freeErr := q.SetTableFree(txCtx, orderBefore.TableID.Bytes); freeErr != nil {
-					log.Printf("DeleteOrder: failed to set table free for order %s: %v", orderID, freeErr)
-				}
-			}()
-		}
 	}
 
 	if err := q.DeleteOrder(txCtx, id); err != nil {
 		return fmt.Errorf("failed to delete order: %w", err)
+	}
+
+	// SetTableFree must be atomic with delete - fail if table free fails
+	if err == nil && orderBefore.TableID.Valid {
+		if _, freeErr := q.SetTableFree(txCtx, orderBefore.TableID.Bytes); freeErr != nil {
+			return fmt.Errorf("failed to set table free for order %s: %w", orderID, freeErr)
+		}
 	}
 
 	if ownsTx {
@@ -1580,11 +1608,15 @@ func (s *OrderS) MarkOrderCooking(ctx context.Context, orderID string) (*model.O
 	}
 	// Takeaway orders must be paid before kitchen can start
 	var existing pg.GetOrderByIDRow
-	err = withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
-		var err error
-		existing, err = q.GetOrderByID(ctx, id)
-		return err
-	})
+	readQ, readCtx, readTx, ownsReadTx, err := s.getTenantReadQueries(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsReadTx {
+		defer readTx.Rollback(ctx)
+	}
+
+	existing, err = readQ.GetOrderByID(readCtx, id)
 	if err != nil {
 		return nil, fmt.Errorf("order not found: %w", err)
 	}
@@ -1683,11 +1715,15 @@ func (s *OrderS) ActivateOrder(ctx context.Context, orderID string) (*model.Orde
 	}
 
 	var existing pg.GetOrderByIDRow
-	err = withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
-		var err error
-		existing, err = q.GetOrderByID(ctx, id)
-		return err
-	})
+	readQ, readCtx, readTx, ownsReadTx, err := s.getTenantReadQueries(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsReadTx {
+		defer readTx.Rollback(ctx)
+	}
+
+	existing, err = readQ.GetOrderByID(readCtx, id)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, ErrOrderNotFound
@@ -1844,97 +1880,99 @@ func (s *OrderS) GetBills(ctx context.Context, req model.GetBillsRequest) (*mode
 	}
 
 	var resp *model.BillListResponse
-	err := withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
-		total, err := q.CountBills(ctx, params)
-		if err != nil {
-			return fmt.Errorf("failed to count bills: %w", err)
-		}
-
-		totalsRow, err := q.GetBillsTotals(ctx, params)
-		if err != nil {
-			return fmt.Errorf("failed to get bills totals: %w", err)
-		}
-
-		rows, err := q.GetBills(ctx, params)
-		if err != nil {
-			return fmt.Errorf("failed to get bills: %w", err)
-		}
-
-		items := make([]model.BillListItem, 0, len(rows))
-		for _, r := range rows {
-			var openedAt *time.Time
-			if r.BillOpenedAt.Valid {
-				t := r.BillOpenedAt.Time
-				openedAt = &t
-			}
-			var closedAt *time.Time
-			if r.BillClosedAt.Valid {
-				t := r.BillClosedAt.Time
-				closedAt = &t
-			}
-			var waiterIDStr *string
-			if r.WaiterID.Valid {
-				s := r.WaiterID.String()
-				waiterIDStr = &s
-			}
-			var cashierIDStr *string
-			if r.CashierID.Valid {
-				s := r.CashierID.String()
-				cashierIDStr = &s
-			}
-			var cashRegIDStr *string
-			if r.CashRegisterID.Valid {
-				s := r.CashRegisterID.String()
-				cashRegIDStr = &s
-			}
-			billStatus := r.BillStatus
-			if r.DeletedAt > 0 {
-				billStatus = "deleted"
-			}
-			items = append(items, model.BillListItem{
-				ID:              r.ID.String(),
-				BillNo:          r.BillNo,
-				BillStatus:      billStatus,
-				OpenedAt:        openedAt,
-				ClosedAt:        closedAt,
-				WaiterID:        waiterIDStr,
-				WaiterName:      r.WaiterName,
-				CashierID:       cashierIDStr,
-				CashRegisterID:  cashRegIDStr,
-				TableNumber:     r.TableNumber,
-				HallName:        r.HallName,
-				GuestCount:      r.GuestCount,
-				FoodCost:        numericToString(r.FoodCost),
-				FoodTotal:       numericToString(r.FoodTotal),
-				ServicePercent:  numericToString(r.ServicePercent),
-				ServiceAmount:   numericToString(r.ServiceAmount),
-				DiscountPercent: numericToString(r.DiscountPercent),
-				DiscountAmount:  numericToString(r.DiscountAmount),
-				GrandTotal:      numericToString(r.GrandTotal),
-				PaymentType:     r.PaymentType,
-				Quantity:        r.TotalQty,
-			})
-		}
-
-		resp = &model.BillListResponse{
-			Total:  total,
-			Limit:  limit,
-			Offset: req.Offset,
-			Items:  items,
-			Totals: model.BillsTotals{
-				TotalFoodCost:       numericToString(totalsRow.TotalFoodCost),
-				TotalGuestCount:     totalsRow.TotalGuestCount,
-				TotalGrandTotal:     numericToString(totalsRow.TotalGrandTotal),
-				TotalServiceAmount:  numericToString(totalsRow.TotalServiceAmount),
-				AvgServicePercent:   numericToString(totalsRow.AvgServicePercent),
-				TotalDiscountAmount: numericToString(totalsRow.TotalDiscountAmount),
-				AvgDiscountPercent:  numericToString(totalsRow.AvgDiscountPercent),
-			},
-		}
-		return nil
-	})
+	q, txCtx, tx, ownsTx, err := s.getTenantReadQueries(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	total, err := q.CountBills(txCtx, params)
+	if err != nil {
+		return nil, fmt.Errorf("failed to count bills: %w", err)
+	}
+
+	totalsRow, err := q.GetBillsTotals(txCtx, params)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get bills totals: %w", err)
+	}
+
+	rows, err := q.GetBills(txCtx, params)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get bills: %w", err)
+	}
+
+	items := make([]model.BillListItem, 0, len(rows))
+	for _, r := range rows {
+		var openedAt *time.Time
+		if r.BillOpenedAt.Valid {
+			t := r.BillOpenedAt.Time
+			openedAt = &t
+		}
+		var closedAt *time.Time
+		if r.BillClosedAt.Valid {
+			t := r.BillClosedAt.Time
+			closedAt = &t
+		}
+		var waiterIDStr *string
+		if r.WaiterID.Valid {
+			s := r.WaiterID.String()
+			waiterIDStr = &s
+		}
+		var cashierIDStr *string
+		if r.CashierID.Valid {
+			s := r.CashierID.String()
+			cashierIDStr = &s
+		}
+		var cashRegIDStr *string
+		if r.CashRegisterID.Valid {
+			s := r.CashRegisterID.String()
+			cashRegIDStr = &s
+		}
+		billStatus := r.BillStatus
+		if r.DeletedAt > 0 {
+			billStatus = "deleted"
+		}
+		items = append(items, model.BillListItem{
+			ID:              r.ID.String(),
+			BillNo:          r.BillNo,
+			BillStatus:      billStatus,
+			OpenedAt:        openedAt,
+			ClosedAt:        closedAt,
+			WaiterID:        waiterIDStr,
+			WaiterName:      r.WaiterName,
+			CashierID:       cashierIDStr,
+			CashRegisterID:  cashRegIDStr,
+			TableNumber:     r.TableNumber,
+			HallName:        r.HallName,
+			GuestCount:      r.GuestCount,
+			FoodCost:        numericToString(r.FoodCost),
+			FoodTotal:       numericToString(r.FoodTotal),
+			ServicePercent:  numericToString(r.ServicePercent),
+			ServiceAmount:   numericToString(r.ServiceAmount),
+			DiscountPercent: numericToString(r.DiscountPercent),
+			DiscountAmount:  numericToString(r.DiscountAmount),
+			GrandTotal:      numericToString(r.GrandTotal),
+			PaymentType:     r.PaymentType,
+			Quantity:        r.TotalQty,
+		})
+	}
+
+	resp = &model.BillListResponse{
+		Total:  total,
+		Limit:  limit,
+		Offset: req.Offset,
+		Items:  items,
+		Totals: model.BillsTotals{
+			TotalFoodCost:       numericToString(totalsRow.TotalFoodCost),
+			TotalGuestCount:     totalsRow.TotalGuestCount,
+			TotalGrandTotal:     numericToString(totalsRow.TotalGrandTotal),
+			TotalServiceAmount:  numericToString(totalsRow.TotalServiceAmount),
+			AvgServicePercent:   numericToString(totalsRow.AvgServicePercent),
+			TotalDiscountAmount: numericToString(totalsRow.TotalDiscountAmount),
+			AvgDiscountPercent:  numericToString(totalsRow.AvgDiscountPercent),
+		},
 	}
 
 	return resp, nil
@@ -1947,109 +1985,110 @@ func (s *OrderS) GetBillDetails(ctx context.Context, billID string) (*model.Bill
 	}
 
 	var resp *model.BillDetails
-	err = withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
-		h, err := q.GetBillDetails(ctx, id)
-		if err != nil {
-			return fmt.Errorf("failed to get bill details: %w", err)
-		}
-
-		items, err := q.GetBillItems(ctx, id)
-		if err != nil {
-			return fmt.Errorf("failed to get bill items: %w", err)
-		}
-
-		var openedAt *time.Time
-		if h.BillOpenedAt.Valid {
-			t := h.BillOpenedAt.Time
-			openedAt = &t
-		}
-		var closedAt *time.Time
-		if h.BillClosedAt.Valid {
-			t := h.BillClosedAt.Time
-			closedAt = &t
-		}
-		var paidAt *time.Time
-		if h.PaidAt.Valid {
-			t := h.PaidAt.Time
-			paidAt = &t
-		}
-
-		var tableIDStr *string
-		if h.TableID.Valid {
-			s := h.TableID.String()
-			tableIDStr = &s
-		}
-		var waiterIDStr *string
-		if h.WaiterID.Valid {
-			s := h.WaiterID.String()
-			waiterIDStr = &s
-		}
-		var cashierIDStr *string
-		if h.CashierID.Valid {
-			s := h.CashierID.String()
-			cashierIDStr = &s
-		}
-		var cashRegIDStr *string
-		if h.CashRegisterID.Valid {
-			s := h.CashRegisterID.String()
-			cashRegIDStr = &s
-		}
-
-		outItems := make([]model.BillItem, 0, len(items))
-		for _, it := range items {
-			outItems = append(outItems, model.BillItem{
-				ID:       it.ID.String(),
-				GoodID:   it.GoodID.String(),
-				GoodName: it.GoodName,
-				Quantity: it.Quantity,
-				Price:    numericToString(it.Price),
-				Status:   it.Status,
-				Comment:  it.Comment,
-			})
-		}
-
-		resp = &model.BillDetails{
-			ID:                 h.ID.String(),
-			BillNo:             h.BillNo,
-			BillStatus:         h.BillStatus,
-			OpenedAt:           openedAt,
-			ClosedAt:           closedAt,
-			PaidAt:             paidAt,
-			PaymentType:        h.PaymentType,
-			TableID:            tableIDStr,
-			TableNumber:        h.TableNumber,
-			HallName:           h.HallName,
-			WaiterID:           waiterIDStr,
-			WaiterName:         h.WaiterName,
-			CashierID:          cashierIDStr,
-			CashierName:        h.CashierName,
-			CashRegisterID:     cashRegIDStr,
-			GuestCount:         h.GuestCount,
-			FoodCost:           numericToString(h.FoodCost),
-			FoodTotal:          numericToString(h.FoodTotal),
-			ServicePercent:     numericToString(h.ServicePercent),
-			ServiceAmount:      numericToString(h.ServiceAmount),
-			DiscountPercent:    numericToString(h.DiscountPercent),
-			DiscountAmount:     numericToString(h.DiscountAmount),
-			DiscountComment:    h.DiscountComment,
-			GrandTotal:         numericToString(h.GrandTotal),
-			TableCharge:        numericToString(h.TableCharge),
-			CustomerPaidAmount: numericPtrToStringPtr(h.CustomerPaidAmount),
-			CashAmount:         numericPtrToStringPtr(h.CashAmount),
-			CardAmount:         numericPtrToStringPtr(h.CardAmount),
-			ChangeAmount:       numericPtrToStringPtr(h.ChangeAmount),
-			Comment:            h.Comment,
-			Items:              outItems,
-		}
-
-		if err := s.attachBillTimeBasedDetails(ctx, q, id, resp); err != nil {
-			return fmt.Errorf("failed to attach bill time-based details: %w", err)
-		}
-
-		return nil
-	})
+	q, txCtx, tx, ownsTx, err := s.getTenantReadQueries(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	h, err := q.GetBillDetails(txCtx, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get bill details: %w", err)
+	}
+
+	items, err := q.GetBillItems(txCtx, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get bill items: %w", err)
+	}
+
+	var openedAt *time.Time
+	if h.BillOpenedAt.Valid {
+		t := h.BillOpenedAt.Time
+		openedAt = &t
+	}
+	var closedAt *time.Time
+	if h.BillClosedAt.Valid {
+		t := h.BillClosedAt.Time
+		closedAt = &t
+	}
+	var paidAt *time.Time
+	if h.PaidAt.Valid {
+		t := h.PaidAt.Time
+		paidAt = &t
+	}
+
+	var tableIDStr *string
+	if h.TableID.Valid {
+		s := h.TableID.String()
+		tableIDStr = &s
+	}
+	var waiterIDStr *string
+	if h.WaiterID.Valid {
+		s := h.WaiterID.String()
+		waiterIDStr = &s
+	}
+	var cashierIDStr *string
+	if h.CashierID.Valid {
+		s := h.CashierID.String()
+		cashierIDStr = &s
+	}
+	var cashRegIDStr *string
+	if h.CashRegisterID.Valid {
+		s := h.CashRegisterID.String()
+		cashRegIDStr = &s
+	}
+
+	outItems := make([]model.BillItem, 0, len(items))
+	for _, it := range items {
+		outItems = append(outItems, model.BillItem{
+			ID:       it.ID.String(),
+			GoodID:   it.GoodID.String(),
+			GoodName: it.GoodName,
+			Quantity: it.Quantity,
+			Price:    numericToString(it.Price),
+			Status:   it.Status,
+			Comment:  it.Comment,
+		})
+	}
+
+	resp = &model.BillDetails{
+		ID:                 h.ID.String(),
+		BillNo:             h.BillNo,
+		BillStatus:         h.BillStatus,
+		OpenedAt:           openedAt,
+		ClosedAt:           closedAt,
+		PaidAt:             paidAt,
+		PaymentType:        h.PaymentType,
+		TableID:            tableIDStr,
+		TableNumber:        h.TableNumber,
+		HallName:           h.HallName,
+		WaiterID:           waiterIDStr,
+		WaiterName:         h.WaiterName,
+		CashierID:          cashierIDStr,
+		CashierName:        h.CashierName,
+		CashRegisterID:     cashRegIDStr,
+		GuestCount:         h.GuestCount,
+		FoodCost:           numericToString(h.FoodCost),
+		FoodTotal:          numericToString(h.FoodTotal),
+		ServicePercent:     numericToString(h.ServicePercent),
+		ServiceAmount:      numericToString(h.ServiceAmount),
+		DiscountPercent:    numericToString(h.DiscountPercent),
+		DiscountAmount:     numericToString(h.DiscountAmount),
+		DiscountComment:    h.DiscountComment,
+		GrandTotal:         numericToString(h.GrandTotal),
+		TableCharge:        numericToString(h.TableCharge),
+		CustomerPaidAmount: numericPtrToStringPtr(h.CustomerPaidAmount),
+		CashAmount:         numericPtrToStringPtr(h.CashAmount),
+		CardAmount:         numericPtrToStringPtr(h.CardAmount),
+		ChangeAmount:       numericPtrToStringPtr(h.ChangeAmount),
+		Comment:            h.Comment,
+		Items:              outItems,
+	}
+
+	if err := s.attachBillTimeBasedDetails(txCtx, q, id, resp); err != nil {
+		return nil, fmt.Errorf("failed to attach bill time-based details: %w", err)
 	}
 
 	return resp, nil
@@ -2466,7 +2505,7 @@ func (s *OrderS) consumeItemStockWithModifiers(ctx context.Context, q *pg.Querie
 		return fmt.Errorf("no active storage configured for good %s", goodID)
 	}
 
-	if err := assertOrderStorageMutationAllowed(ctx, s.repo, order, storageID.Bytes, "order item"); err != nil {
+	if err := assertOrderStorageMutationAllowed(ctx, q, order, storageID.Bytes, "order item"); err != nil {
 		return err
 	}
 
@@ -2815,49 +2854,51 @@ func (s *OrderS) GetOrderItemByID(ctx context.Context, itemID string) (*model.Or
 	}
 
 	var resp *model.OrderItemDetailResponse
-	err = withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
-		item, err := q.GetOrderItemByID(ctx, id)
-		if err != nil {
-			return fmt.Errorf("failed to get order item: %w", err)
-		}
-
-		good, err := q.GetGoodByID(ctx, item.GoodID)
-		if err != nil {
-			return fmt.Errorf("failed to get good: %w", err)
-		}
-
-		resp = toOrderItemDetailResponse(item, good)
-		return nil
-	})
+	q, txCtx, tx, ownsTx, err := s.getTenantReadQueries(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
 	}
 
+	item, err := q.GetOrderItemByID(txCtx, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get order item: %w", err)
+	}
+
+	good, err := q.GetGoodByID(txCtx, item.GoodID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get good: %w", err)
+	}
+
+	resp = toOrderItemDetailResponse(item, good)
 	return resp, nil
 }
 
 func (s *OrderS) GetAllOrderItems(ctx context.Context, limit, offset int32) ([]model.OrderItemResponse, int64, error) {
 	var total int64
 	var responses []model.OrderItemResponse
-	err := withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
-		var err error
-		total, err = q.CountOrderItems(ctx)
-		if err != nil {
-			return fmt.Errorf("failed to count order items: %w", err)
-		}
-		items, err := q.GetAllOrderItems(ctx, pg.GetAllOrderItemsParams{Limit: limit, Offset: offset})
-		if err != nil {
-			return fmt.Errorf("failed to get order items: %w", err)
-		}
-
-		responses = make([]model.OrderItemResponse, 0, len(items))
-		for _, it := range items {
-			responses = append(responses, *toOrderItemResponse(it))
-		}
-		return nil
-	})
+	q, txCtx, tx, ownsTx, err := s.getTenantReadQueries(ctx)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	total, err = q.CountOrderItems(txCtx)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to count order items: %w", err)
+	}
+	items, err := q.GetAllOrderItems(txCtx, pg.GetAllOrderItemsParams{Limit: limit, Offset: offset})
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get order items: %w", err)
+	}
+
+	responses = make([]model.OrderItemResponse, 0, len(items))
+	for _, it := range items {
+		responses = append(responses, *toOrderItemResponse(it))
 	}
 
 	return responses, total, nil
@@ -2878,33 +2919,34 @@ func (s *OrderS) GetOrderItemsByOrderID(
 	}
 
 	var responses []model.OrderItemWithGoodResponse
-	err = withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
-		items, err := q.GetOrderItemsByOrderID(ctx, id)
-		if err != nil {
-			return fmt.Errorf("failed to get order items: %w", err)
-		}
-
-		responses = make([]model.OrderItemWithGoodResponse, 0, len(items))
-
-		for _, it := range items {
-			good, err := q.GetGoodByIDWithLanguage(ctx, pg.GetGoodByIDWithLanguageParams{
-				ID:      it.GoodID,
-				Column2: lang,
-			})
-			if err != nil {
-				return fmt.Errorf("failed to get good for item %s: %w", it.ID.String(), err)
-			}
-
-			resp := toOrderItemWithGoodResponse(it, good)
-			if resp != nil {
-				responses = append(responses, *resp)
-			}
-		}
-
-		return nil
-	})
+	q, txCtx, tx, ownsTx, err := s.getTenantReadQueries(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	items, err := q.GetOrderItemsByOrderID(txCtx, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get order items: %w", err)
+	}
+
+	responses = make([]model.OrderItemWithGoodResponse, 0, len(items))
+
+	for _, it := range items {
+		good, err := q.GetGoodByIDWithLanguage(txCtx, pg.GetGoodByIDWithLanguageParams{
+			ID:      it.GoodID,
+			Column2: lang,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to get good for item %s: %w", it.ID.String(), err)
+		}
+
+		resp := toOrderItemWithGoodResponse(it, good)
+		if resp != nil {
+			responses = append(responses, *resp)
+		}
 	}
 
 	return responses, nil
@@ -2915,25 +2957,26 @@ func (s *OrderS) GetOrderItemsByStatus(ctx context.Context, status string, limit
 
 	var total int64
 	var responses []model.OrderItemResponse
-	err := withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
-		var err error
-		total, err = q.CountOrderItemsByStatus(ctx, st)
-		if err != nil {
-			return fmt.Errorf("failed to count order items by status: %w", err)
-		}
-		items, err := q.GetOrderItemsByStatus(ctx, pg.GetOrderItemsByStatusParams{Status: st, Limit: limit, Offset: offset})
-		if err != nil {
-			return fmt.Errorf("failed to get order items by status: %w", err)
-		}
-
-		responses = make([]model.OrderItemResponse, 0, len(items))
-		for _, it := range items {
-			responses = append(responses, *toOrderItemResponse(it))
-		}
-		return nil
-	})
+	q, txCtx, tx, ownsTx, err := s.getTenantReadQueries(ctx)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	total, err = q.CountOrderItemsByStatus(txCtx, st)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to count order items by status: %w", err)
+	}
+	items, err := q.GetOrderItemsByStatus(txCtx, pg.GetOrderItemsByStatusParams{Status: st, Limit: limit, Offset: offset})
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get order items by status: %w", err)
+	}
+
+	responses = make([]model.OrderItemResponse, 0, len(items))
+	for _, it := range items {
+		responses = append(responses, *toOrderItemResponse(it))
 	}
 
 	return responses, total, nil
@@ -3109,6 +3152,56 @@ func (s *OrderS) getTenantMutationQueries(ctx context.Context) (*pg.Queries, con
 	tx, err := s.repo.PgRepo.TenantPool.Begin(ctx)
 	if err != nil {
 		return nil, nil, nil, false, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+
+	brandID, _ := ctx.Value("brand_id").(string)
+	brandID = strings.TrimSpace(brandID)
+	if brandID == "" {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("brand_id is missing in context")
+	}
+
+	schemaName := fmt.Sprintf("tenant_%s", brandID)
+	if _, err := tx.Exec(ctx, fmt.Sprintf(`SET LOCAL search_path TO "%s", public`, schemaName)); err != nil {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("failed to set tenant search_path: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx, "SET LOCAL app.brand_id = $1", brandID); err != nil {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("failed to set app.brand_id: %w", err)
+	}
+
+	if branchID, _ := ctx.Value("branch_id").(string); strings.TrimSpace(branchID) != "" {
+		if _, err := tx.Exec(ctx, "SET LOCAL app.branch_id = $1", strings.TrimSpace(branchID)); err != nil {
+			tx.Rollback(ctx)
+			return nil, nil, nil, false, fmt.Errorf("failed to set app.branch_id: %w", err)
+		}
+	}
+
+	q := pg.New(tx)
+	txCtx := repository.WithTenantTx(ctx, tx)
+	txCtx = repository.WithTenantQueries(txCtx, q)
+
+	return q, txCtx, tx, true, nil
+}
+
+func (s *OrderS) getTenantReadQueries(ctx context.Context) (*pg.Queries, context.Context, pgx.Tx, bool, error) {
+	if existingTx, ok := repository.TenantTxFromContext(ctx); ok && existingTx != nil {
+		// Reuse existing transaction - get queries from context or create from tx
+		if q, ok := repository.TenantQueriesFromContext(ctx); ok && q != nil {
+			return q, ctx, existingTx, false, nil
+		}
+		q := pg.New(existingTx)
+		txCtx := repository.WithTenantQueries(ctx, q)
+		return q, txCtx, existingTx, false, nil
+	}
+
+	// For read-only operations without an existing transaction, begin a read-only transaction
+	// This ensures the connection is not released before queries complete
+	tx, err := s.repo.PgRepo.TenantPool.BeginTx(ctx, pgx.TxOptions{AccessMode: pgx.ReadOnly})
+	if err != nil {
+		return nil, nil, nil, false, fmt.Errorf("failed to begin read-only transaction: %w", err)
 	}
 
 	brandID, _ := ctx.Value("brand_id").(string)
@@ -3359,20 +3452,22 @@ func (s *OrderS) GetKitchenQueue(ctx context.Context) ([]KitchenQueueItem, error
 	_ = s.activateDueReservedOrders(ctx)
 
 	var items []KitchenQueueItem
-	err := withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
-		rows, err := q.GetKitchenQueue(ctx)
-		if err != nil {
-			return fmt.Errorf("failed to get kitchen queue: %w", err)
-		}
-
-		items = make([]KitchenQueueItem, 0, len(rows))
-		for _, r := range rows {
-			items = append(items, *toKitchenQueueItem(r))
-		}
-		return nil
-	})
+	q, txCtx, tx, ownsTx, err := s.getTenantReadQueries(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	rows, err := q.GetKitchenQueue(txCtx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get kitchen queue: %w", err)
+	}
+
+	items = make([]KitchenQueueItem, 0, len(rows))
+	for _, r := range rows {
+		items = append(items, *toKitchenQueueItem(r))
 	}
 
 	return items, nil
@@ -4123,21 +4218,22 @@ func (s *OrderS) GetMyOrders(ctx context.Context, waiterID string, req model.Get
 	}
 	var total int64
 	var rows []pg.GetMyWaiterOrdersRow
-	err = withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
-		var err error
-		total, err = q.CountMyWaiterOrders(ctx, params)
-		if err != nil {
-			return fmt.Errorf("failed to count my orders: %w", err)
-		}
-
-		rows, err = q.GetMyWaiterOrders(ctx, params)
-		if err != nil {
-			return fmt.Errorf("failed to get my orders: %w", err)
-		}
-		return nil
-	})
+	q, txCtx, tx, ownsTx, err := s.getTenantReadQueries(ctx)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	total, err = q.CountMyWaiterOrders(txCtx, params)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to count my orders: %w", err)
+	}
+
+	rows, err = q.GetMyWaiterOrders(txCtx, params)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get my orders: %w", err)
 	}
 
 	resp := make([]model.WaiterOrderListItem, 0, len(rows))

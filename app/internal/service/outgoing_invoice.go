@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -33,6 +34,45 @@ type OutgoingInvoiceS struct {
 
 func NewOutgoingInvoiceS(repo *repository.Repository) *OutgoingInvoiceS {
 	return &OutgoingInvoiceS{repo: repo}
+}
+
+func (s *OutgoingInvoiceS) getTenantMutationQueries(ctx context.Context) (*pg.Queries, context.Context, pgx.Tx, bool, error) {
+	if existingTx, ok := repository.TenantTxFromContext(ctx); ok && existingTx != nil {
+		// Reuse existing transaction - get queries from context or create from tx
+		if q, ok := repository.TenantQueriesFromContext(ctx); ok && q != nil {
+			return q, ctx, existingTx, false, nil
+		}
+		q := pg.New(existingTx)
+		txCtx := repository.WithTenantQueries(ctx, q)
+		return q, txCtx, existingTx, false, nil
+	}
+
+	tx, err := s.repo.PgRepo.TenantPool.Begin(ctx)
+	if err != nil {
+		return nil, nil, nil, false, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+
+	brandID, _ := ctx.Value("brand_id").(string)
+	brandID = strings.TrimSpace(brandID)
+	if brandID == "" {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("brand_id is missing in context")
+	}
+
+	schemaName := fmt.Sprintf("tenant_%s", brandID)
+	if _, err := tx.Exec(ctx, fmt.Sprintf(`SET LOCAL search_path TO "%s", public`, schemaName)); err != nil {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("failed to set tenant search_path: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx, "SET LOCAL app.brand_id = $1", brandID); err != nil {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("failed to set app.brand_id: %w", err)
+	}
+
+	q := pg.New(tx)
+	txCtx := repository.WithTenantQueries(ctx, q)
+	return q, txCtx, tx, true, nil
 }
 
 func (s *OutgoingInvoiceS) CreateOutgoingInvoice(ctx context.Context, req *model.CreateOutgoingInvoiceRequest) (*model.OutgoingInvoiceResponse, error) {
@@ -72,7 +112,7 @@ func (s *OutgoingInvoiceS) CreateOutgoingInvoice(ctx context.Context, req *model
 
 	params.Description = req.Description
 
-	if err := assertCanMutateOutgoingInvoiceTarget(ctx, s.repo, params.StorageID, params.Date, "outgoing invoice"); err != nil {
+	if err := assertCanMutateOutgoingInvoiceTarget(ctx, s.repo.Tenant(ctx), params.StorageID, params.Date, "outgoing invoice"); err != nil {
 		return nil, err
 	}
 
@@ -221,7 +261,15 @@ func (s *OutgoingInvoiceS) UpdateOutgoingInvoice(ctx context.Context, id string,
 		return nil, fmt.Errorf("invalid invoice id: %w", err)
 	}
 
-	current, err := s.repo.Tenant(ctx).GetOutgoingInvoiceByID(ctx, invoiceID)
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	current, err := q.GetOutgoingInvoiceByID(txCtx, invoiceID)
 	if err != nil {
 		return nil, fmt.Errorf("outgoing invoice not found: %w", err)
 	}
@@ -251,7 +299,7 @@ func (s *OutgoingInvoiceS) UpdateOutgoingInvoice(ctx context.Context, id string,
 		effectiveStorage = pgtype.UUID{Bytes: id2, Valid: true}
 	}
 
-	if err := assertCanMutateOutgoingInvoiceChange(ctx, s.repo, current, effectiveStorage, effectiveDate, "outgoing invoice"); err != nil {
+	if err := assertCanMutateOutgoingInvoiceChange(txCtx, q, current, effectiveStorage, effectiveDate, "outgoing invoice"); err != nil {
 		return nil, err
 	}
 
@@ -271,7 +319,7 @@ func (s *OutgoingInvoiceS) UpdateOutgoingInvoice(ctx context.Context, id string,
 		if err != nil {
 			return nil, fmt.Errorf("invalid group_id: %w", err)
 		}
-		if _, err := s.repo.Tenant(ctx).GetGroupTransactionByID(ctx, id2); err != nil {
+		if _, err := q.GetGroupTransactionByID(txCtx, id2); err != nil {
 			if err == pgx.ErrNoRows {
 				return nil, fmt.Errorf("group_id not found")
 			}
@@ -281,7 +329,7 @@ func (s *OutgoingInvoiceS) UpdateOutgoingInvoice(ctx context.Context, id string,
 	}
 	params.Description = req.Description
 
-	row, err := s.repo.Tenant(ctx).UpdateOutgoingInvoice(ctx, params)
+	row, err := q.UpdateOutgoingInvoice(txCtx, params)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update outgoing invoice: %w", err)
 	}
@@ -294,19 +342,25 @@ func (s *OutgoingInvoiceS) UpdateOutgoingInvoice(ctx context.Context, id string,
 		!current.Date.Time.Equal(row.Date.Time)
 
 	if current.Status == pg.OutgoingInvoiceStatusActive && (!sameStorage || dateChanged) {
-		items, err := s.repo.Tenant(ctx).GetOutgoingInvoiceItemsByInvoiceID(ctx, invoiceID)
+		items, err := q.GetOutgoingInvoiceItemsByInvoiceID(txCtx, invoiceID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get outgoing invoice items: %w", err)
 		}
 
 		if len(items) > 0 {
-			if err := s.reverseOutgoingInvoiceActiveStock(ctx, current, items, "outgoing_invoice_update_revert_in"); err != nil {
+			if err := s.reverseOutgoingInvoiceActiveStock(txCtx, q, current, items, "outgoing_invoice_update_revert_in"); err != nil {
 				return nil, err
 			}
 
-			if err := s.applyOutgoingInvoiceActiveStock(ctx, row, items, "outgoing_invoice_update_out", true); err != nil {
+			if err := s.applyOutgoingInvoiceActiveStock(txCtx, q, row, items, "outgoing_invoice_update_out", true); err != nil {
 				return nil, err
 			}
+		}
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
 		}
 	}
 
@@ -319,7 +373,15 @@ func (s *OutgoingInvoiceS) ConfirmOutgoingInvoice(ctx context.Context, id string
 		return nil, fmt.Errorf("invalid invoice id: %w", err)
 	}
 
-	invoice, err := s.repo.Tenant(ctx).GetOutgoingInvoiceByID(ctx, invoiceID)
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	invoice, err := q.GetOutgoingInvoiceByID(txCtx, invoiceID)
 	if err != nil {
 		return nil, fmt.Errorf("outgoing invoice not found: %w", err)
 	}
@@ -330,7 +392,7 @@ func (s *OutgoingInvoiceS) ConfirmOutgoingInvoice(ctx context.Context, id string
 		return nil, fmt.Errorf("invoice must have a storage selected before confirming")
 	}
 
-	items, err := s.repo.Tenant(ctx).GetOutgoingInvoiceItemsByInvoiceID(ctx, invoiceID)
+	items, err := q.GetOutgoingInvoiceItemsByInvoiceID(txCtx, invoiceID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get invoice items: %w", err)
 	}
@@ -338,17 +400,24 @@ func (s *OutgoingInvoiceS) ConfirmOutgoingInvoice(ctx context.Context, id string
 		return nil, fmt.Errorf("invoice has no items")
 	}
 
-	if err := assertCanMutateOutgoingInvoiceCurrent(ctx, s.repo, invoice, "outgoing invoice"); err != nil {
+	if err := assertCanMutateOutgoingInvoiceCurrent(txCtx, q, invoice, "outgoing invoice"); err != nil {
 		return nil, err
 	}
-	if err := s.applyOutgoingInvoiceActiveStock(ctx, invoice, items, "outgoing_invoice_out", true); err != nil {
+	if err := s.applyOutgoingInvoiceActiveStock(txCtx, q, invoice, items, "outgoing_invoice_out", true); err != nil {
 		return nil, err
 	}
 
-	confirmed, err := s.repo.Tenant(ctx).ConfirmOutgoingInvoice(ctx, invoiceID)
+	confirmed, err := q.ConfirmOutgoingInvoice(txCtx, invoiceID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to confirm invoice: %w", err)
 	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return outgoingInvoiceToResponse(confirmed), nil
 }
 
@@ -358,7 +427,15 @@ func (s *OutgoingInvoiceS) CancelOutgoingInvoice(ctx context.Context, id string)
 		return nil, fmt.Errorf("invalid invoice id: %w", err)
 	}
 
-	invoice, err := s.repo.Tenant(ctx).GetOutgoingInvoiceByID(ctx, invoiceID)
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	invoice, err := q.GetOutgoingInvoiceByID(txCtx, invoiceID)
 	if err != nil {
 		return nil, fmt.Errorf("outgoing invoice not found: %w", err)
 	}
@@ -367,25 +444,31 @@ func (s *OutgoingInvoiceS) CancelOutgoingInvoice(ctx context.Context, id string)
 		return nil, fmt.Errorf("outgoing invoice is already cancelled")
 	}
 
-	if err := assertCanMutateOutgoingInvoiceCurrent(ctx, s.repo, invoice, "outgoing invoice"); err != nil {
+	if err := assertCanMutateOutgoingInvoiceCurrent(txCtx, q, invoice, "outgoing invoice"); err != nil {
 		return nil, err
 	}
 
 	if invoice.Status == pg.OutgoingInvoiceStatusActive {
-		items, err := s.repo.Tenant(ctx).GetOutgoingInvoiceItemsByInvoiceID(ctx, invoiceID)
+		items, err := q.GetOutgoingInvoiceItemsByInvoiceID(txCtx, invoiceID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get items for stock reversal: %w", err)
 		}
 		if len(items) > 0 {
-			if err := s.reverseOutgoingInvoiceActiveStock(ctx, invoice, items, "outgoing_invoice_cancelled_in"); err != nil {
+			if err := s.reverseOutgoingInvoiceActiveStock(txCtx, q, invoice, items, "outgoing_invoice_cancelled_in"); err != nil {
 				return nil, fmt.Errorf("failed to reverse stock: %w", err)
 			}
 		}
 	}
 
-	row, err := s.repo.Tenant(ctx).CancelOutgoingInvoice(ctx, invoiceID)
+	row, err := q.CancelOutgoingInvoice(txCtx, invoiceID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to cancel outgoing invoice: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return outgoingInvoiceToResponse(row), nil
@@ -397,29 +480,47 @@ func (s *OutgoingInvoiceS) DeleteOutgoingInvoice(ctx context.Context, id string)
 		return fmt.Errorf("invalid invoice id: %w", err)
 	}
 
-	invoice, err := s.repo.Tenant(ctx).GetOutgoingInvoiceByID(ctx, invoiceID)
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	invoice, err := q.GetOutgoingInvoiceByID(txCtx, invoiceID)
 	if err != nil {
 		return fmt.Errorf("failed to get outgoing invoice: %w", err)
 	}
 
-	if err := assertCanMutateOutgoingInvoiceCurrent(ctx, s.repo, invoice, "outgoing invoice"); err != nil {
+	if err := assertCanMutateOutgoingInvoiceCurrent(txCtx, q, invoice, "outgoing invoice"); err != nil {
 		return err
 	}
 
 	if invoice.Status == "active" && invoice.StorageID.Valid {
-		items, err := s.repo.Tenant(ctx).GetOutgoingInvoiceItemsByInvoiceID(ctx, invoiceID)
+		items, err := q.GetOutgoingInvoiceItemsByInvoiceID(txCtx, invoiceID)
 		if err != nil {
 			return fmt.Errorf("failed to get outgoing invoice items: %w", err)
 		}
 
 		if len(items) > 0 {
-			if err := s.reverseOutgoingInvoiceActiveStock(ctx, invoice, items, "outgoing_invoice_deleted_in"); err != nil {
+			if err := s.reverseOutgoingInvoiceActiveStock(txCtx, q, invoice, items, "outgoing_invoice_deleted_in"); err != nil {
 				return fmt.Errorf("failed to reverse stock for active invoice: %w", err)
 			}
 		}
 	}
 
-	return s.repo.Tenant(ctx).DeleteOutgoingInvoice(ctx, invoiceID)
+	if err := q.DeleteOutgoingInvoice(txCtx, invoiceID); err != nil {
+		return fmt.Errorf("failed to delete outgoing invoice: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
+	return nil
 }
 
 func (s *OutgoingInvoiceS) UpsertOutgoingInvoiceItems(ctx context.Context, invoiceID string, req *model.UpsertOutgoingInvoiceItemsRequest) ([]model.OutgoingInvoiceItemResponse, error) {
@@ -433,7 +534,7 @@ func (s *OutgoingInvoiceS) UpsertOutgoingInvoiceItems(ctx context.Context, invoi
 		return nil, fmt.Errorf("outgoing invoice not found: %w", err)
 	}
 
-	if err := assertCanMutateOutgoingInvoiceCurrent(ctx, s.repo, invoice, "outgoing invoice items"); err != nil {
+	if err := assertCanMutateOutgoingInvoiceCurrent(ctx, s.repo.Tenant(ctx), invoice, "outgoing invoice items"); err != nil {
 		return nil, err
 	}
 
@@ -534,7 +635,7 @@ func (s *OutgoingInvoiceS) DeleteOutgoingInvoiceItem(ctx context.Context, itemID
 		return fmt.Errorf("outgoing invoice not found: %w", err)
 	}
 
-	if err := assertCanMutateOutgoingInvoiceCurrent(ctx, s.repo, invoice, "outgoing invoice item"); err != nil {
+	if err := assertCanMutateOutgoingInvoiceCurrent(ctx, s.repo.Tenant(ctx), invoice, "outgoing invoice item"); err != nil {
 		return err
 	}
 
@@ -618,7 +719,7 @@ func outgoingInvoiceFreezeDate(ts pgtype.Timestamp, entityName string) (time.Tim
 	return ts.Time, nil
 }
 
-func assertCanMutateOutgoingInvoiceCurrent(ctx context.Context, repo *repository.Repository, inv pg.OutgoingInvoice, entityName string) error {
+func assertCanMutateOutgoingInvoiceCurrent(ctx context.Context, q *pg.Queries, inv pg.OutgoingInvoice, entityName string) error {
 	if !inv.StorageID.Valid {
 		return nil
 	}
@@ -626,10 +727,10 @@ func assertCanMutateOutgoingInvoiceCurrent(ctx context.Context, repo *repository
 	if err != nil {
 		return err
 	}
-	return assertCanMutateAfterInventory(ctx, repo, uuid.UUID(inv.StorageID.Bytes), effectiveAt, entityName)
+	return assertCanMutateAfterInventory(ctx, q, uuid.UUID(inv.StorageID.Bytes), effectiveAt, entityName)
 }
 
-func assertCanMutateOutgoingInvoiceTarget(ctx context.Context, repo *repository.Repository, storageID pgtype.UUID, invoiceDate pgtype.Timestamp, entityName string) error {
+func assertCanMutateOutgoingInvoiceTarget(ctx context.Context, q *pg.Queries, storageID pgtype.UUID, invoiceDate pgtype.Timestamp, entityName string) error {
 	if !storageID.Valid {
 		return nil
 	}
@@ -637,14 +738,14 @@ func assertCanMutateOutgoingInvoiceTarget(ctx context.Context, repo *repository.
 	if err != nil {
 		return err
 	}
-	return assertCanMutateAfterInventory(ctx, repo, uuid.UUID(storageID.Bytes), effectiveAt, entityName)
+	return assertCanMutateAfterInventory(ctx, q, uuid.UUID(storageID.Bytes), effectiveAt, entityName)
 }
 
-func assertCanMutateOutgoingInvoiceChange(ctx context.Context, repo *repository.Repository, current pg.OutgoingInvoice, targetStorage pgtype.UUID, targetDate pgtype.Timestamp, entityName string) error {
-	if err := assertCanMutateOutgoingInvoiceCurrent(ctx, repo, current, entityName); err != nil {
+func assertCanMutateOutgoingInvoiceChange(ctx context.Context, q *pg.Queries, current pg.OutgoingInvoice, targetStorage pgtype.UUID, targetDate pgtype.Timestamp, entityName string) error {
+	if err := assertCanMutateOutgoingInvoiceCurrent(ctx, q, current, entityName); err != nil {
 		return err
 	}
-	if err := assertCanMutateOutgoingInvoiceTarget(ctx, repo, targetStorage, targetDate, entityName); err != nil {
+	if err := assertCanMutateOutgoingInvoiceTarget(ctx, q, targetStorage, targetDate, entityName); err != nil {
 		return err
 	}
 	return nil

@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 
-	"gitlab.yurtal.tech/company/maryai/back/internal/repository"
 	pg "gitlab.yurtal.tech/company/maryai/back/internal/repository/pg/tenantsdb"
 )
 
@@ -42,7 +42,7 @@ func orderMutationEffectiveAt(order pg.GetOrderByIDRow) *pgtype.Timestamptz {
 
 func assertOrderStorageMutationAllowed(
 	ctx context.Context,
-	repo *repository.Repository,
+	q *pg.Queries,
 	order pg.GetOrderByIDRow,
 	storageID uuid.UUID,
 	entityName string,
@@ -51,7 +51,28 @@ func assertOrderStorageMutationAllowed(
 	if effectiveAt == nil || !effectiveAt.Valid {
 		return nil
 	}
-	return assertCanMutateAfterInventory(ctx, repo, storageID, effectiveAt.Time, entityName)
+
+	// Check inventory freeze constraint using the passed queries instead of repo.Tenant(ctx)
+	// This ensures tenant safety and transaction consistency
+	lockTimestamp, err := q.GetLastActiveInventoryByStorage(ctx, storageID)
+	if err != nil {
+		// If no inventory exists, allow mutation
+		if err == pgx.ErrNoRows {
+			return nil
+		}
+		return fmt.Errorf("failed to get last active inventory for storage %s: %w", storageID.String(), err)
+	}
+
+	if lockTimestamp.CountedAt.IsZero() {
+		return nil
+	}
+
+	// Compare timestamps directly without normalization
+	if !effectiveAt.Time.After(lockTimestamp.CountedAt) {
+		return fmt.Errorf("%s is locked by active inventory counted at %s", entityName, lockTimestamp.CountedAt.Format(time.RFC3339))
+	}
+
+	return nil
 }
 
 func (s *OrderS) rebalanceOrderIngredientLedger(
@@ -60,57 +81,7 @@ func (s *OrderS) rebalanceOrderIngredientLedger(
 	storageID pgtype.UUID,
 	ingredientID uuid.UUID,
 ) error {
-	if !storageID.Valid {
-		return fmt.Errorf("storage_id is required for order ledger rebalance")
-	}
-
-	_, _ = q.EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
-		ID:           uuid.New(),
-		IngredientID: ingredientID,
-		StorageID:    storageID,
-	})
-
-	rows, err := q.ListIngredientStockMovementsForRebalance(ctx, storageID.Bytes, ingredientID)
-	if err != nil {
-		return fmt.Errorf("failed to list order stock movements for rebalance: %w", err)
-	}
-
-	running := inventoryZeroNumeric()
-
-	for _, row := range rows {
-		before := running
-		after, err := applyMovementDelta(before, row.QtyIn, row.QtyOut, 6)
-		if err != nil {
-			return fmt.Errorf("failed to calculate order movement balance for movement %s: %w", row.ID, err)
-		}
-
-		if err := q.UpdateIngredientStockMovementBalances(ctx, pg.UpdateIngredientStockMovementBalancesParams{
-			ID:          row.ID,
-			StockBefore: before,
-			StockAfter:  after,
-		}); err != nil {
-			return fmt.Errorf("failed to update order movement balances for movement %s: %w", row.ID, err)
-		}
-
-		running = after
-	}
-
-	stockRow, err := q.GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
-		IngredientID: ingredientID,
-		StorageID:    storageID,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to lock ingredient stock for order final sync: %w", err)
-	}
-
-	if _, err := q.UpdateIngredientStock(ctx, pg.UpdateIngredientStockParams{
-		ID:       stockRow.ID,
-		Quantity: running,
-	}); err != nil {
-		return fmt.Errorf("failed to sync ingredient_stock quantity after order rebalance: %w", err)
-	}
-
-	return nil
+	return rebalanceIngredientStockLedger(ctx, q, storageID, ingredientID, "order")
 }
 
 func (s *OrderS) restoreIngredientUsageToStock(
@@ -259,7 +230,7 @@ func (s *OrderS) reverseOrderItemStockWithModifiers(
 		return fmt.Errorf("no active storage configured for good %s", item.GoodID)
 	}
 
-	if err := assertOrderStorageMutationAllowed(ctx, s.repo, order, storageID.Bytes, "order item"); err != nil {
+	if err := assertOrderStorageMutationAllowed(ctx, q, order, storageID.Bytes, "order item"); err != nil {
 		return err
 	}
 

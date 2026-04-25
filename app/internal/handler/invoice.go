@@ -166,7 +166,11 @@ func (h *Handler) GetAllInvoices(c echo.Context) error {
 
 	resp, total, err := h.service.Invoice().GetAllInvoices(c.Request().Context(), filter, limit, offset)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+			"internal error",
+			err.Error(),
+			http.StatusInternalServerError,
+		))
 	}
 
 	if maps, expanded, err := h.expandListResponse(c, resp, "invoices"); expanded {
