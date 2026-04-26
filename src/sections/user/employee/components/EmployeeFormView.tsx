@@ -50,7 +50,6 @@ export const EmployeeFormView = React.memo(function EmployeeFormView({ isNew = f
         role: '',
         is_active: true,
         pincode: '',
-        terminal: '',
         cash_register_id: '',
     });
 
@@ -71,7 +70,6 @@ export const EmployeeFormView = React.memo(function EmployeeFormView({ isNew = f
                         ? existingUser.is_active
                         : existingUser.status === 'active',
                 pincode: existingUser.pincode || '',
-                terminal: existingUser.terminal || '',
                 cash_register_id: existingUser.cash_register_id || '',
             });
         }
@@ -119,7 +117,6 @@ export const EmployeeFormView = React.memo(function EmployeeFormView({ isNew = f
                     role: (formData.role || 'user') as UserRole,
                     is_active: formData.is_active,
                     phone_number: formData.phone_number,
-                    terminal: formData.terminal,
                     cash_register_id: formData.cash_register_id,
                     brand_id: localStorage.getItem('brand_id') || 'default_brand',
                     branch_id: ownBranchId,

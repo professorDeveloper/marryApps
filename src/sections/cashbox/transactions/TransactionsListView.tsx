@@ -20,49 +20,43 @@ import { TransactionsDataTable } from './components/TransactionsDataTable';
 
 const getTodayUtcBoundary = (endOfDay = false): string => {
   const now = dayjs();
-  const date = new Date(
-    Date.UTC(
-      now.year(),
-      now.month(),
-      now.date(),
-      endOfDay ? 23 : 0,
-      endOfDay ? 59 : 0,
-      endOfDay ? 59 : 0
-    )
-  );
+  const year = now.year();
+  const month = String(now.month() + 1).padStart(2, '0');
+  const day = String(now.date()).padStart(2, '0');
 
-  return date.toISOString().replace('.000Z', 'Z');
+  if (endOfDay) {
+    const date = now.add(1, 'day');
+    return `${date.year()}-${String(date.month() + 1).padStart(2, '0')}-${String(date.date()).padStart(2, '0')}`;
+  }
+
+  return `${year}-${month}-${day}`;
 };
 
 const getTomorrowUtcBoundary = (endOfDay = false): string => {
   const now = dayjs().add(1, 'day');
-  const date = new Date(
-    Date.UTC(
-      now.year(),
-      now.month(),
-      now.date(),
-      endOfDay ? 23 : 0,
-      endOfDay ? 59 : 0,
-      endOfDay ? 59 : 0
-    )
-  );
+  const year = now.year();
+  const month = String(now.month() + 1).padStart(2, '0');
+  const day = String(now.date()).padStart(2, '0');
 
-  return date.toISOString().replace('.000Z', 'Z');
+  if (endOfDay) {
+    const date = now.add(1, 'day');
+    return `${date.year()}-${String(date.month() + 1).padStart(2, '0')}-${String(date.date()).padStart(2, '0')}`;
+  }
+
+  return `${year}-${month}-${day}`;
 };
 
 const toUtcDayBoundary = (value: dayjs.Dayjs, endOfDay = false): string => {
-  const date = new Date(
-    Date.UTC(
-      value.year(),
-      value.month(),
-      value.date(),
-      endOfDay ? 23 : 0,
-      endOfDay ? 59 : 0,
-      endOfDay ? 59 : 0
-    )
-  );
+  const year = value.year();
+  const month = String(value.month() + 1).padStart(2, '0');
+  const day = String(value.date()).padStart(2, '0');
 
-  return date.toISOString().replace('.000Z', 'Z');
+  if (endOfDay) {
+    const date = value.add(1, 'day');
+    return `${date.year()}-${String(date.month() + 1).padStart(2, '0')}-${String(date.date()).padStart(2, '0')}`;
+  }
+
+  return `${year}-${month}-${day}`;
 };
 
 const toPickerDate = (value?: string): dayjs.Dayjs | null => (value ? dayjs(value.slice(0, 10)) : null);

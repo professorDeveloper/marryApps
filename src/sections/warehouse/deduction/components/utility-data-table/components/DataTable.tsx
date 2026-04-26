@@ -362,6 +362,13 @@ export function DataTable<T>({
     setFilterKey(null);
   }, []);
 
+  // Cleanup filter popover on unmount to prevent DOM errors
+  useEffect(() => {
+    return () => {
+      closeFilter();
+    };
+  }, [closeFilter]);
+
   const setTextFilter = useCallback((key: string, value: string) => {
     updateFilters({ ...filters, [key]: { type: 'text', value } });
   }, [filters, updateFilters]);

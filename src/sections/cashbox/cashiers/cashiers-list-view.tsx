@@ -19,7 +19,6 @@ import { Iconify } from 'src/components/iconify';
 import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
 import { CashierDeleteDialog } from './components/CashierDeleteDialog';
 import { CASHIERS_TABLE_PERSIST_KEY, INITIAL_CASHIER_FILTERS } from './constants';
-import { toUtcDayBoundary, toPickerDate } from '../utils/date-utils';
 
 export function CashiersListView() {
     const { t } = useTranslation('menu');
@@ -30,62 +29,10 @@ export function CashiersListView() {
     const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
     const [filters, setFilters] = useState(INITIAL_CASHIER_FILTERS);
     const [draftFilters, setDraftFilters] = useState(INITIAL_CASHIER_FILTERS);
-    const [startDate, setStartDate] = useState<dayjs.Dayjs | null>(null);
-    const [endDate, setEndDate] = useState<dayjs.Dayjs | null>(null);
-    const [activeRange, setActiveRange] = useState<'day' | 'week' | 'month' | 'year'>('day');
 
-    // Set default date range on component mount
-    useEffect(() => {
-        const today = dayjs();
-        setStartDate(today.startOf('day'));
-        setEndDate(today.endOf('day'));
-    }, []);
-
-    // Apply date range changes
-    useEffect(() => {
-        setDraftFilters((prev) => ({
-            ...prev,
-            start_date: startDate ? toUtcDayBoundary(startDate) : '',
-            end_date: endDate ? toUtcDayBoundary(endDate, true) : '',
-        }));
-    }, [startDate, endDate]);
-
-    // Apply range changes
-    const applyRange = useCallback((range: 'day' | 'week' | 'month' | 'year') => {
-        const today = dayjs();
-        let nextStart = today.startOf('day');
-        let nextEnd = today.endOf('day');
-
-        switch (range) {
-            case 'day':
-                nextStart = today.startOf('day');
-                nextEnd = today.endOf('day');
-                break;
-            case 'week':
-                nextStart = today.startOf('week');
-                nextEnd = today.endOf('day');
-                break;
-            case 'month':
-                nextStart = today.startOf('month');
-                nextEnd = today.endOf('day');
-                break;
-            case 'year':
-                nextStart = today.startOf('year');
-                nextEnd = today.endOf('day');
-                break;
-        }
-
-        setActiveRange(range);
-        setStartDate(nextStart);
-        setEndDate(nextEnd);
-    }, []);
 
     const handleResetFilters = useCallback(() => {
         setDraftFilters(INITIAL_CASHIER_FILTERS);
-        const today = dayjs();
-        setStartDate(today.startOf('day'));
-        setEndDate(today.endOf('day'));
-        setActiveRange('day');
     }, []);
 
     // Update filters when draft filters change
@@ -96,7 +43,7 @@ export function CashiersListView() {
         }));
     }, [draftFilters]);
 
-    // Filter cashiers based on search and date range
+    // Filter cashiers based on search
     const filteredCashiers = useMemo(() => {
         let filtered = cashiers;
 
@@ -106,16 +53,6 @@ export function CashiersListView() {
             filtered = filtered.filter(cashier =>
                 cashier.name.toLowerCase().includes(searchLower)
             );
-        }
-
-        // Date range filter
-        if (filters.start_date || filters.end_date) {
-            filtered = filtered.filter(cashier => {
-                const cashierDate = new Date(cashier.created_at);
-                const startDate = filters.start_date ? new Date(filters.start_date) : new Date('1970-01-01');
-                const endDate = filters.end_date ? new Date(filters.end_date) : new Date('9999-12-31');
-                return cashierDate >= startDate && cashierDate <= endDate;
-            });
         }
 
         return filtered;
@@ -206,8 +143,6 @@ export function CashiersListView() {
         [t, router]
     );
 
-    const startDateValue = useMemo(() => toPickerDate(draftFilters.start_date), [draftFilters.start_date]);
-    const endDateValue = useMemo(() => toPickerDate(draftFilters.end_date), [draftFilters.end_date]);
 
     return (
         <>
@@ -240,26 +175,6 @@ export function CashiersListView() {
                         },
                     }}
                     onReset={handleResetFilters}
-                    showPeriodPicker
-                    periodPickerProps={{
-                        startDate: startDate ? startDate.toDate() : null,
-                        endDate: endDate ? endDate.toDate() : null,
-                        onStartDateChange: (date: Date | null) => {
-                            setStartDate(date ? dayjs(date) : null);
-                            setActiveRange('day');
-                        },
-                        onEndDateChange: (date: Date | null) => {
-                            setEndDate(date ? dayjs(date) : null);
-                            setActiveRange('day');
-                        }
-                    }}
-                    showPeriodButtons
-                    periodButtonProps={{
-                        activePeriod: activeRange,
-                        onPeriodChange: (period: 'day' | 'week' | 'month' | 'year') => {
-                            applyRange(period);
-                        }
-                    }}
                     headerActions={
                         <Button
                             variant="contained"

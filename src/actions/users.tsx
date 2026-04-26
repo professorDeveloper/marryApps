@@ -224,9 +224,9 @@ export function useCreateUser() {
                     || localStorage.getItem('selectedBranchId')
                     || localStorage.getItem('branch_id')
                     || '',
-                fullName: formData.full_name || formData.fullName || '',
+                full_name: formData.full_name || formData.fullName || '',
                 username: formData.username,
-                phoneNumber: formData.phone_number || formData.phoneNumber || '',
+                phone_number: formData.phone_number || formData.phoneNumber || '',
                 role: formData.role,
                 is_active: formData.is_active,
             };

@@ -5,18 +5,17 @@ import dayjs from 'dayjs';
  * Used for API requests that require day-range filtering
  */
 export const toUtcDayBoundary = (value: dayjs.Dayjs, endOfDay = false): string => {
-    const date = new Date(
-        Date.UTC(
-            value.year(),
-            value.month(),
-            value.date(),
-            endOfDay ? 23 : 0,
-            endOfDay ? 59 : 0,
-            endOfDay ? 59 : 0
-        )
-    );
+    const year = value.year();
+    const month = String(value.month() + 1).padStart(2, '0');
+    const day = String(value.date()).padStart(2, '0');
 
-    return date.toISOString().replace('.000Z', 'Z');
+    // For endOfDay, add one day to include the full end date
+    if (endOfDay) {
+        const date = value.add(1, 'day');
+        return `${date.year()}-${String(date.month() + 1).padStart(2, '0')}-${String(date.date()).padStart(2, '0')}`;
+    }
+
+    return `${year}-${month}-${day}`;
 };
 
 /**

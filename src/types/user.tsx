@@ -34,7 +34,6 @@ export interface IUserFormData {
     phone_number?: string;
     phoneNumber?: string;
     pincode?: string;
-    terminal?: string;
     brand_id?: string;
     branch_id?: string;
     cash_register_id?: string;
@@ -45,10 +44,10 @@ export interface IUserRegisterData {
     brand_id: string;
     branch_id: string;
     cash_register_id?: string;
-    fullName: string;
+    full_name: string;
     username: string;
     password?: string;
-    phoneNumber: string;
+    phone_number: string;
     pincode?: string;
     role: UserRole;
     is_active?: boolean;

@@ -167,7 +167,6 @@ export function EmployeeEditViewUser({ userId, isNew = false }: EmployeeEditView
                 role: formData.role,
                 phone_number: formData.phone_number,
                 pincode: formData.pincode,
-                terminal: formData.terminal,
                 cash_register_id: formData.role === 'cashier' ? formData.cash_register_id : undefined,
                 // Login qilgan vaqtda saqlangan brand_id ni olamiz
                 brand_id: localStorage.getItem('brand_id') || 'default_brand',

@@ -107,6 +107,5 @@ export type EmployeeFormState = {
     role: UserRole | '';
     is_active: boolean;
     pincode: string;
-    terminal: string;
     cash_register_id: string;
 };
