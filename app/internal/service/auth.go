@@ -154,29 +154,40 @@ func buildTenantLoginResponse(
 	}, nil
 }
 
-func (s *AuthS) verifyPOSPassword(ctx context.Context, tx pgx.Tx, posPassword string) (bool, error) {
-	var hash string
-	err := tx.QueryRow(ctx, `
-		SELECT pos_password_hash
-		FROM pos_auth_settings
-		WHERE id = 1
-	`).Scan(&hash)
+// verifyRolePassword returns true if the supplied password matches the
+// hash_password of any active superadmin/admin/manager user in the current
+// tenant schema. Temporary kiosk/POS unlock gate — replace when the full auth
+// architecture lands.
+func (s *AuthS) verifyRolePassword(ctx context.Context, tx pgx.Tx, password string) (bool, error) {
+	rows, err := tx.Query(ctx, `
+		SELECT hash_password
+		FROM users
+		WHERE role IN ('superadmin', 'admin', 'manager')
+		  AND is_active = true
+		  AND deleted_at = 0
+		  AND hash_password IS NOT NULL
+	`)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return false, nil
-		}
 		return false, err
 	}
+	defer rows.Close()
 
-	if strings.TrimSpace(hash) == "" {
-		return false, nil
+	for rows.Next() {
+		var hash *string
+		if err := rows.Scan(&hash); err != nil {
+			return false, err
+		}
+		if hash == nil || strings.TrimSpace(*hash) == "" {
+			continue
+		}
+		if utils.VerifyPassword(*hash, password) == nil {
+			return true, nil
+		}
 	}
-
-	if err := utils.VerifyPassword(hash, posPassword); err != nil {
-		return false, nil
+	if err := rows.Err(); err != nil {
+		return false, err
 	}
-
-	return true, nil
+	return false, nil
 }
 
 func (s *AuthS) Register(ctx context.Context, req model.RegisterRequest) error {
@@ -488,13 +499,13 @@ func (s *AuthS) Login(ctx context.Context, req model.LoginRequest, jwtCfg *confi
 
 func (s *AuthS) LoginWithPincode(ctx context.Context, req model.PincodeLoginRequest, jwtCfg *config.JwtConfig) (model.LoginResponse, error) {
 	brandIDSlug := strings.TrimSpace(req.BrandID)
-	posPassword := strings.TrimSpace(req.PosPassword)
+	password := strings.TrimSpace(req.Password)
 
 	if brandIDSlug == "" {
 		return model.LoginResponse{}, errors.New("brand_id is required")
 	}
-	if posPassword == "" {
-		return model.LoginResponse{}, errors.New("pos_password is required")
+	if password == "" {
+		return model.LoginResponse{}, errors.New("password is required")
 	}
 	if req.Pincode == nil || strings.TrimSpace(*req.Pincode) == "" {
 		return model.LoginResponse{}, errors.New("pincode is required")
@@ -516,13 +527,13 @@ func (s *AuthS) LoginWithPincode(ctx context.Context, req model.PincodeLoginRequ
 
 	q := s.repo.Tenant(ctx).WithTx(tx)
 
-	ok, err := s.verifyPOSPassword(ctx, tx, posPassword)
+	ok, err := s.verifyRolePassword(ctx, tx, password)
 	if err != nil {
-		log.Printf("LoginWithPincode: verifyPOSPassword failed: %v", err)
+		log.Printf("LoginWithPincode: verifyRolePassword failed: %v", err)
 		return model.LoginResponse{}, err
 	}
 	if !ok {
-		log.Printf("LoginWithPincode: invalid POS password for brand=%s", brandIDSlug)
+		log.Printf("LoginWithPincode: invalid role password for brand=%s", brandIDSlug)
 		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
 	}
 
@@ -1145,93 +1156,3 @@ func (s *AuthS) SearchUsers(ctx context.Context, query string, limit, offset int
 	return responses, nil
 }
 
-func (s *AuthS) UpdatePOSPassword(ctx context.Context, brandID, currentPassword, newPassword string) error {
-	brandID = strings.TrimSpace(brandID)
-	currentPassword = strings.TrimSpace(currentPassword)
-	newPassword = strings.TrimSpace(newPassword)
-
-	if brandID == "" {
-		return errors.New("brand_id is required")
-	}
-	if newPassword == "" {
-		return errors.New("new_password is required")
-	}
-	if len(newPassword) < 4 {
-		return errors.New("new_password must be at least 4 characters")
-	}
-
-	schemaName := fmt.Sprintf("tenant_%s", brandID)
-
-	tx, err := s.repo.PgRepo.TenantPool.Begin(ctx)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback(ctx)
-
-	if _, err := tx.Exec(ctx, fmt.Sprintf(`SET LOCAL search_path TO "%s", public`, schemaName)); err != nil {
-		return errors.New(http.StatusText(http.StatusUnauthorized))
-	}
-
-	q := s.repo.Tenant(ctx).WithTx(tx)
-
-	existing, err := q.GetPOSAuthSettings(ctx)
-	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-		return err
-	}
-
-	// Agar oldin parol bo‘lsa, currentPassword tekshiriladi
-	if err == nil && strings.TrimSpace(existing.PosPasswordHash) != "" {
-		if currentPassword == "" {
-			return errors.New("current_password is required")
-		}
-		if verifyErr := utils.VerifyPassword(existing.PosPasswordHash, currentPassword); verifyErr != nil {
-			return errors.New(http.StatusText(http.StatusUnauthorized))
-		}
-	}
-
-	hashed, err := utils.HashPassword(newPassword)
-	if err != nil {
-		return err
-	}
-
-	if err := q.UpsertPOSAuthSettings(ctx, hashed); err != nil {
-		return err
-	}
-
-	return tx.Commit(ctx)
-}
-
-func (s *AuthS) GetPOSPasswordStatus(ctx context.Context, brandID string) (bool, error) {
-	brandID = strings.TrimSpace(brandID)
-	if brandID == "" {
-		return false, errors.New("brand_id is required")
-	}
-
-	schemaName := fmt.Sprintf("tenant_%s", brandID)
-
-	tx, err := s.repo.PgRepo.TenantPool.Begin(ctx)
-	if err != nil {
-		return false, err
-	}
-	defer tx.Rollback(ctx)
-
-	if _, err := tx.Exec(ctx, fmt.Sprintf(`SET LOCAL search_path TO "%s", public`, schemaName)); err != nil {
-		return false, errors.New(http.StatusText(http.StatusUnauthorized))
-	}
-
-	q := s.repo.Tenant(ctx).WithTx(tx)
-
-	row, err := q.GetPOSAuthSettings(ctx)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return false, nil
-		}
-		return false, err
-	}
-
-	if strings.TrimSpace(row.PosPasswordHash) == "" {
-		return false, nil
-	}
-
-	return true, nil
-}

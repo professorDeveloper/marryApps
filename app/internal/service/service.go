@@ -33,8 +33,6 @@ type AuthI interface {
 	DeleteUser(ctx context.Context, userID string) error
 	RestoreUser(ctx context.Context, userID string) error
 	SearchUsers(ctx context.Context, query string, limit, offset int32) ([]model.UserResponse, error)
-	UpdatePOSPassword(ctx context.Context, brandID, currentPassword, newPassword string) error
-	GetPOSPasswordStatus(ctx context.Context, brandID string) (bool, error)
 }
 
 type MinioI interface {

@@ -25,10 +25,10 @@ type LoginRequest struct {
 }
 
 type PincodeLoginRequest struct {
-	PosPassword string  `json:"pos_password" example:"123456"`
-	Pincode     *string `json:"pincode,omitempty" example:"1234"`
-	BrandID     string  `json:"brand_id" example:"my_restaurant"`
-	FCMToken    *string `json:"fcm_token,omitempty" example:"eP8...firebase...token"`
+	Password string  `json:"password" example:"superSecret123"`
+	Pincode  *string `json:"pincode,omitempty" example:"1234"`
+	BrandID  string  `json:"brand_id" example:"my_restaurant"`
+	FCMToken *string `json:"fcm_token,omitempty" example:"eP8...firebase...token"`
 }
 
 type GlobalLoginRequest struct {
@@ -183,32 +183,6 @@ type UpdateShiftRequest struct {
 	CloseTime   *string `json:"close_time,omitempty" example:"17:00:00"`
 }
 
-type UpdatePOSPasswordRequest struct {
-	CurrentPassword string `json:"currentPassword,omitempty" example:"111111"`
-	NewPassword     string `json:"newPassword" example:"222222"`
-}
-
-type UpdatePOSPasswordResponse struct {
-	Message string `json:"message" example:"updated"`
-}
-
-type UpdatePOSPasswordSwaggerResponse struct {
-	Status  string                    `json:"status" example:"success"`
-	Message string                    `json:"message" example:"POS password muvaffaqiyatli yangilandi"`
-	Data    UpdatePOSPasswordResponse `json:"data"`
-	Code    int                       `json:"code" example:"200"`
-}
-
-type POSPasswordStatusSwaggerResponse struct {
-	Status  string                    `json:"status" example:"success"`
-	Message string                    `json:"message" example:"POS password holati olindi"`
-	Data    POSPasswordStatusResponse `json:"data"`
-	Code    int                       `json:"code" example:"200"`
-}
-
-type POSPasswordStatusResponse struct {
-	IsConfigured bool `json:"isConfigured"`
-}
 
 type UpdatePrinterSettingsRequest struct {
 	CashierPrinterIP string `json:"cashier_printer_ip" example:"192.168.1.100"`
