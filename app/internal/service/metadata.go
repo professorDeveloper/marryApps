@@ -2,9 +2,11 @@ package service
 
 import (
 	"context"
+	"fmt"
 
 	"gitlab.yurtal.tech/company/maryai/back/internal/model"
 	"gitlab.yurtal.tech/company/maryai/back/internal/repository"
+	pg "gitlab.yurtal.tech/company/maryai/back/internal/repository/pg/tenantsdb"
 )
 
 type MetadataI interface {
@@ -22,18 +24,24 @@ func NewMetadataS(repo *repository.Repository) MetadataI {
 func (s *MetadataS) GetMetadata(ctx context.Context, entities []string, whitelist map[string]string) (map[string][]model.MetadataItem, error) {
 	result := make(map[string][]model.MetadataItem)
 
-	for _, entity := range entities {
-		tableName, ok := whitelist[entity]
-		if !ok {
-			continue
-		}
+	err := withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
+		for _, entity := range entities {
+			tableName, ok := whitelist[entity]
+			if !ok {
+				continue
+			}
 
-		items, err := s.repo.Tenant(ctx).GetMetadata(ctx, tableName)
-		if err != nil {
-			return nil, err
-		}
+			items, err := q.GetMetadata(ctx, tableName)
+			if err != nil {
+				return fmt.Errorf("failed to get metadata for %s: %w", entity, err)
+			}
 
-		result[entity] = items
+			result[entity] = items
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
 
 	return result, nil

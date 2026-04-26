@@ -259,12 +259,27 @@ func (o *OrganizationS) RestoreBranch(ctx context.Context, branchID string) erro
 
 // CreateTranslation creates a new translation
 func (o *OrganizationS) CreateTranslation(ctx context.Context, uz, ru, en *string) (*model.TranslationResponse, error) {
-	translation, err := o.repo.Tenant(ctx).CreateTranslation(ctx, pg.CreateTranslationParams{
+	q, txCtx, tx, shouldCommit, err := o.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if shouldCommit {
+		defer tx.Rollback(ctx)
+	}
+
+	translation, err := q.CreateTranslation(txCtx, pg.CreateTranslationParams{
 		ID: uuid.New(), Uz: uz, Ru: ru, En: en,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create translation: %w", err)
 	}
+
+	if shouldCommit {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return toTranslationResponse(translation), nil
 }
 
@@ -274,19 +289,37 @@ func (o *OrganizationS) GetTranslationByID(ctx context.Context, translationID st
 	if err != nil {
 		return nil, fmt.Errorf("invalid translation ID: %w", err)
 	}
-	translation, err := o.repo.Tenant(ctx).GetTranslationByID(ctx, id)
+
+	var translation pg.Translation
+	err = withTenantRead(ctx, o.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		translation, err = q.GetTranslationByID(ctx, id)
+		if err != nil {
+			return fmt.Errorf("failed to get translation: %w", err)
+		}
+		return nil
+	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get translation: %w", err)
+		return nil, err
 	}
 	return toTranslationResponse(translation), nil
 }
 
 // GetAllTranslations retrieves all translations
 func (o *OrganizationS) GetAllTranslations(ctx context.Context, limit, offset int32) ([]model.TranslationResponse, error) {
-	translations, err := o.repo.Tenant(ctx).GetAllTranslations(ctx, pg.GetAllTranslationsParams{Limit: limit, Offset: offset})
+	var translations []pg.Translation
+	err := withTenantRead(ctx, o.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		translations, err = q.GetAllTranslations(ctx, pg.GetAllTranslationsParams{Limit: limit, Offset: offset})
+		if err != nil {
+			return fmt.Errorf("failed to get translations: %w", err)
+		}
+		return nil
+	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get translations: %w", err)
+		return nil, err
 	}
+
 	var responses []model.TranslationResponse
 	for _, t := range translations {
 		responses = append(responses, *toTranslationResponse(t))
@@ -300,7 +333,15 @@ func (o *OrganizationS) UpdateTranslation(ctx context.Context, translationID str
 		return nil, fmt.Errorf("invalid translation ID: %w", err)
 	}
 
-	translation, err := o.repo.Tenant(ctx).UpdateTranslation(ctx, pg.UpdateTranslationParams{
+	q, txCtx, tx, shouldCommit, err := o.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if shouldCommit {
+		defer tx.Rollback(ctx)
+	}
+
+	translation, err := q.UpdateTranslation(txCtx, pg.UpdateTranslationParams{
 		ID: id,
 		Uz: uz,
 		Ru: ru,
@@ -308,6 +349,12 @@ func (o *OrganizationS) UpdateTranslation(ctx context.Context, translationID str
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to update translation: %w", err)
+	}
+
+	if shouldCommit {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return toTranslationResponse(translation), nil
@@ -319,9 +366,25 @@ func (o *OrganizationS) DeleteTranslation(ctx context.Context, translationID str
 	if err != nil {
 		return fmt.Errorf("invalid translation ID: %w", err)
 	}
-	if err := o.repo.Tenant(ctx).DeleteTranslation(ctx, id); err != nil {
+
+	q, txCtx, tx, shouldCommit, err := o.getTenantMutationQueries(ctx)
+	if err != nil {
+		return err
+	}
+	if shouldCommit {
+		defer tx.Rollback(ctx)
+	}
+
+	if err := q.DeleteTranslation(txCtx, id); err != nil {
 		return fmt.Errorf("failed to delete translation: %w", err)
 	}
+
+	if shouldCommit {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return nil
 }
 
@@ -331,9 +394,25 @@ func (o *OrganizationS) RestoreTranslation(ctx context.Context, translationID st
 	if err != nil {
 		return fmt.Errorf("invalid translation ID: %w", err)
 	}
-	if err := o.repo.Tenant(ctx).RestoreTranslation(ctx, id); err != nil {
+
+	q, txCtx, tx, shouldCommit, err := o.getTenantMutationQueries(ctx)
+	if err != nil {
+		return err
+	}
+	if shouldCommit {
+		defer tx.Rollback(ctx)
+	}
+
+	if err := q.RestoreTranslation(txCtx, id); err != nil {
 		return fmt.Errorf("failed to restore translation: %w", err)
 	}
+
+	if shouldCommit {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return nil
 }
 

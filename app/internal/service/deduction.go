@@ -224,9 +224,17 @@ func (s *DeductionS) CreateDeductionActGroup(ctx context.Context, req *model.Cre
 }
 
 func (s *DeductionS) GetAllDeductionActGroups(ctx context.Context, limit, offset int32) ([]*model.DeductionActGroupResponse, error) {
-	rows, err := s.repo.Tenant(ctx).GetAllDeductionActGroups(ctx, pg.GetAllDeductionActGroupsParams{Limit: limit, Offset: offset})
+	var rows []pg.DeductionActGroup
+	err := withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		rows, err = q.GetAllDeductionActGroups(ctx, pg.GetAllDeductionActGroupsParams{Limit: limit, Offset: offset})
+		if err != nil {
+			return fmt.Errorf("failed to get deduction act groups: %w", err)
+		}
+		return nil
+	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get deduction act groups: %w", err)
+		return nil, err
 	}
 
 	resp := make([]*model.DeductionActGroupResponse, 0, len(rows))
@@ -248,12 +256,20 @@ func (s *DeductionS) GetDeductionActGroupByID(ctx context.Context, id string) (*
 		return nil, fmt.Errorf("invalid id: %w", err)
 	}
 
-	row, err := s.repo.Tenant(ctx).GetDeductionActGroupByID(ctx, u)
-	if err != nil {
-		if err == pgx.ErrNoRows {
-			return nil, nil
+	var row pg.DeductionActGroup
+	err = withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		row, err = q.GetDeductionActGroupByID(ctx, u)
+		if err != nil {
+			if err == pgx.ErrNoRows {
+				return nil
+			}
+			return fmt.Errorf("failed to get deduction act group: %w", err)
 		}
-		return nil, fmt.Errorf("failed to get deduction act group: %w", err)
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
 
 	return &model.DeductionActGroupResponse{
@@ -273,12 +289,20 @@ func (s *DeductionS) UpdateDeductionActGroup(ctx context.Context, id string, req
 		return nil, fmt.Errorf("invalid id: %w", err)
 	}
 
-	existing, err := s.repo.Tenant(ctx).GetDeductionActGroupByID(ctx, u)
-	if err != nil {
-		if err == pgx.ErrNoRows {
-			return nil, nil
+	var existing pg.DeductionActGroup
+	err = withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		existing, err = q.GetDeductionActGroupByID(ctx, u)
+		if err != nil {
+			if err == pgx.ErrNoRows {
+				return nil
+			}
+			return fmt.Errorf("failed to get deduction act group: %w", err)
 		}
-		return nil, fmt.Errorf("failed to get deduction act group: %w", err)
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
 
 	name := existing.Name
@@ -286,9 +310,23 @@ func (s *DeductionS) UpdateDeductionActGroup(ctx context.Context, id string, req
 		name = *req.Name
 	}
 
-	row, err := s.repo.Tenant(ctx).UpdateDeductionActGroup(ctx, pg.UpdateDeductionActGroupParams{ID: u, Name: name})
+	q, txCtx, tx, shouldCommit, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if shouldCommit {
+		defer tx.Rollback(ctx)
+	}
+
+	row, err := q.UpdateDeductionActGroup(txCtx, pg.UpdateDeductionActGroupParams{ID: u, Name: name})
 	if err != nil {
 		return nil, fmt.Errorf("failed to update deduction act group: %w", err)
+	}
+
+	if shouldCommit {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return &model.DeductionActGroupResponse{
@@ -304,9 +342,25 @@ func (s *DeductionS) DeleteDeductionActGroup(ctx context.Context, id string) err
 	if err != nil {
 		return fmt.Errorf("invalid id: %w", err)
 	}
-	if err := s.repo.Tenant(ctx).DeleteDeductionActGroup(ctx, u); err != nil {
+
+	q, txCtx, tx, shouldCommit, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return err
+	}
+	if shouldCommit {
+		defer tx.Rollback(ctx)
+	}
+
+	if err := q.DeleteDeductionActGroup(txCtx, u); err != nil {
 		return fmt.Errorf("failed to delete deduction act group: %w", err)
 	}
+
+	if shouldCommit {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return nil
 }
 
@@ -316,9 +370,23 @@ func (s *DeductionS) RestoreDeductionActGroup(ctx context.Context, id string) (*
 		return nil, fmt.Errorf("invalid id: %w", err)
 	}
 
-	row, err := s.repo.Tenant(ctx).RestoreDeductionActGroup(ctx, u)
+	q, txCtx, tx, shouldCommit, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if shouldCommit {
+		defer tx.Rollback(ctx)
+	}
+
+	row, err := q.RestoreDeductionActGroup(txCtx, u)
 	if err != nil {
 		return nil, fmt.Errorf("failed to restore deduction act group: %w", err)
+	}
+
+	if shouldCommit {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return &model.DeductionActGroupResponse{
@@ -1053,18 +1121,27 @@ func (s *DeductionS) GetAllDeductions(ctx context.Context, filter model.Deductio
 		DateFrom: dateFrom, DateTo: dateTo, Status: statusStr,
 		StorageID: storageUUID, ActGroupID: actGroupUUID, IngredientID: ingredientUUID,
 	}
-	total, err := s.repo.Tenant(ctx).CountDeductionsFiltered(ctx, countParams)
-	if err != nil {
-		return nil, fmt.Errorf("failed to count deductions: %w", err)
-	}
+	var total int64
+	var rows []pg.Deduction
+	err := withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		total, err = q.CountDeductionsFiltered(ctx, countParams)
+		if err != nil {
+			return fmt.Errorf("failed to count deductions: %w", err)
+		}
 
-	rows, err := s.repo.Tenant(ctx).GetDeductionsFiltered(ctx, pg.GetDeductionsFilteredParams{
-		DateFrom: dateFrom, DateTo: dateTo, Status: statusStr,
-		StorageID: storageUUID, ActGroupID: actGroupUUID, IngredientID: ingredientUUID,
-		Limit: limit, Offset: offset,
+		rows, err = q.GetDeductionsFiltered(ctx, pg.GetDeductionsFilteredParams{
+			DateFrom: dateFrom, DateTo: dateTo, Status: statusStr,
+			StorageID: storageUUID, ActGroupID: actGroupUUID, IngredientID: ingredientUUID,
+			Limit: limit, Offset: offset,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to get deductions: %w", err)
+		}
+		return nil
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get deductions: %w", err)
+		return nil, err
 	}
 
 	data := make([]*model.DeductionResponse, 0, len(rows))
