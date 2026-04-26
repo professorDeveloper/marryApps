@@ -44,12 +44,13 @@ type LoginResponse struct {
 }
 
 type RegisterRequest struct {
-	FullName       string  `json:"fullName" example:"Javohir Khasanov"`
-	PhoneNumber    string  `json:"phoneNumber" example:"+998957749110"`
+	FullName       string  `json:"full_name" example:"Javohir Khasanov"`
+	PhoneNumber    string  `json:"phone_number" example:"+998957749110"`
 	Username       string  `json:"username" example:"admin"`
 	Password       string  `json:"password,omitempty" example:"Password:Javohir"`
 	Pincode        string  `json:"pincode,omitempty" example:"1234"`
 	Role           string  `json:"role" example:"user"`
+	IsActive       *bool   `json:"is_active,omitempty"`
 	BrandID        *string `json:"brand_id,omitempty" example:"my_restaurant"`
 	BranchID       *string `json:"branch_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
 	CashRegisterID *string `json:"cash_register_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
@@ -99,12 +100,15 @@ type UserResponse struct {
 }
 
 type UpdateUserRequest struct {
-	FullName    *string `json:"full_name"`
-	Username    *string `json:"username"`
-	Email       *string `json:"email"`
-	PhoneNumber *string `json:"phone_number"`
-	Pincode     *string `json:"pincode"`
-	IsActive    *bool   `json:"is_active,omitempty"`
+	FullName       *string `json:"full_name"`
+	Username       *string `json:"username"`
+	Email          *string `json:"email"`
+	PhoneNumber    *string `json:"phone_number"`
+	Pincode        *string `json:"pincode"`
+	IsActive       *bool   `json:"is_active,omitempty"`
+	Role           *string `json:"role,omitempty"`
+	BranchID       *string `json:"branch_id,omitempty"`
+	CashRegisterID *string `json:"cash_register_id,omitempty"`
 }
 
 type UpdatePasswordRequest struct {

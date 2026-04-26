@@ -1067,14 +1067,55 @@ func (s *AuthS) UpdateUser(ctx context.Context, req model.UpdateUserRequest, use
 		}
 	}
 
-	if req.FullName != nil && *req.FullName != "" {
-		params.FullName = req.FullName
+	if req.FullName != nil && strings.TrimSpace(*req.FullName) != "" {
+		v := strings.TrimSpace(*req.FullName)
+		params.FullName = &v
+	}
+	if req.Username != nil && strings.TrimSpace(*req.Username) != "" {
+		v := strings.TrimSpace(*req.Username)
+		params.Username = &v
 	}
 	if req.Email != nil && *req.Email != "" {
 		params.Email = req.Email
 	}
 	if req.PhoneNumber != nil && *req.PhoneNumber != "" {
 		params.PhoneNumber = req.PhoneNumber
+	}
+	if req.IsActive != nil {
+		params.IsActive = req.IsActive
+	}
+	if req.Role != nil {
+		role := strings.TrimSpace(strings.ToLower(*req.Role))
+		if role != "" {
+			validRoles := map[string]struct{}{
+				"admin": {}, "user": {}, "cashier": {}, "superadmin": {},
+				"kitchen": {}, "waiter": {}, "manager": {},
+			}
+			if _, ok := validRoles[role]; !ok {
+				return model.UserResponse{}, fmt.Errorf("invalid role: %s", role)
+			}
+			params.Role = role
+		}
+	}
+	if req.BranchID != nil {
+		s := strings.TrimSpace(*req.BranchID)
+		if s != "" {
+			id, err := uuid.Parse(s)
+			if err != nil {
+				return model.UserResponse{}, fmt.Errorf("invalid branch_id: %w", err)
+			}
+			params.BranchID = pgtype.UUID{Bytes: id, Valid: true}
+		}
+	}
+	if req.CashRegisterID != nil {
+		s := strings.TrimSpace(*req.CashRegisterID)
+		if s != "" {
+			id, err := uuid.Parse(s)
+			if err != nil {
+				return model.UserResponse{}, fmt.Errorf("invalid cash_register_id: %w", err)
+			}
+			params.CashRegisterID = pgtype.UUID{Bytes: id, Valid: true}
+		}
 	}
 
 	q, txCtx, tx, shouldCommit, err := s.getTenantMutationQueries(ctx)
