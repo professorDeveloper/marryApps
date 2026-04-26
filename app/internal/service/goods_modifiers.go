@@ -21,6 +21,52 @@ func NewGoodsModifierS(repo *repository.Repository) *GoodsModifierS {
 	return &GoodsModifierS{repo: repo}
 }
 
+func (s *GoodsModifierS) getTenantMutationQueries(ctx context.Context) (*pg.Queries, context.Context, pgx.Tx, bool, error) {
+	if existingTx, ok := repository.TenantTxFromContext(ctx); ok && existingTx != nil {
+		if q, ok := repository.TenantQueriesFromContext(ctx); ok && q != nil {
+			return q, ctx, existingTx, false, nil
+		}
+		q := pg.New(existingTx)
+		txCtx := repository.WithTenantQueries(ctx, q)
+		return q, txCtx, existingTx, false, nil
+	}
+
+	tx, err := s.repo.PgRepo.TenantPool.Begin(ctx)
+	if err != nil {
+		return nil, nil, nil, false, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+
+	brandID, _ := ctx.Value("brand_id").(string)
+	brandID = strings.TrimSpace(brandID)
+	if brandID == "" {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("brand_id is missing in context")
+	}
+
+	schemaName := fmt.Sprintf("tenant_%s", brandID)
+	if _, err := tx.Exec(ctx, fmt.Sprintf(`SET LOCAL search_path TO "%s", public`, schemaName)); err != nil {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("failed to set tenant search_path: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx, "SET LOCAL app.brand_id = $1", brandID); err != nil {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("failed to set app.brand_id: %w", err)
+	}
+
+	if branchID, _ := ctx.Value("branch_id").(string); strings.TrimSpace(branchID) != "" {
+		if _, err := tx.Exec(ctx, "SET LOCAL app.branch_id = $1", strings.TrimSpace(branchID)); err != nil {
+			tx.Rollback(ctx)
+			return nil, nil, nil, false, fmt.Errorf("failed to set app.branch_id: %w", err)
+		}
+	}
+
+	q := pg.New(tx)
+	txCtx := repository.WithTenantQueries(ctx, q)
+
+	return q, txCtx, tx, true, nil
+}
+
 func mapGoodModifierRow(row pg.GetModifiersByGoodIDRow) *model.GoodModifierResponse {
 	return &model.GoodModifierResponse{
 		ID:         row.ID.String(),
@@ -51,6 +97,14 @@ func isActiveRelation(v *int64) bool {
 }
 
 func (s *GoodsModifierS) AttachModifiersToGood(ctx context.Context, goodID string, req model.AttachModifiersToGoodRequest) error {
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	if strings.TrimSpace(goodID) == "" {
 		return fmt.Errorf("good ID is required")
 	}
@@ -64,7 +118,7 @@ func (s *GoodsModifierS) AttachModifiersToGood(ctx context.Context, goodID strin
 		return fmt.Errorf("invalid good ID: %w", err)
 	}
 
-	_, err = s.repo.Tenant(ctx).GetGoodByID(ctx, goodUUID)
+	_, err = q.GetGoodByID(txCtx, goodUUID)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return fmt.Errorf("good not found")
@@ -83,7 +137,7 @@ func (s *GoodsModifierS) AttachModifiersToGood(ctx context.Context, goodID strin
 			return fmt.Errorf("invalid modifier ID: %w", err)
 		}
 
-		modifier, err := s.repo.Tenant(ctx).GetModifierByID(ctx, modifierUUID)
+		modifier, err := q.GetModifierByID(txCtx, modifierUUID)
 		if err != nil {
 			if err == pgx.ErrNoRows {
 				return fmt.Errorf("modifier not found: %s", item.ModifierID)
@@ -106,7 +160,7 @@ func (s *GoodsModifierS) AttachModifiersToGood(ctx context.Context, goodID strin
 			sortOrder = *item.SortOrder
 		}
 
-		existing, err := s.repo.Tenant(ctx).GetGoodModifierByGoodAndModifierID(ctx, pg.GetGoodModifierByGoodAndModifierIDParams{
+		existing, err := q.GetGoodModifierByGoodAndModifierID(txCtx, pg.GetGoodModifierByGoodAndModifierIDParams{
 			GoodID:     goodUUID,
 			ModifierID: modifierUUID,
 		})
@@ -116,7 +170,7 @@ func (s *GoodsModifierS) AttachModifiersToGood(ctx context.Context, goodID strin
 				return fmt.Errorf("modifier already attached to good: %s", item.ModifierID)
 			}
 
-			err = s.repo.Tenant(ctx).RestoreModifierToGood(ctx, pg.RestoreModifierToGoodParams{
+			err = q.RestoreModifierToGood(txCtx, pg.RestoreModifierToGoodParams{
 				GoodID:     goodUUID,
 				ModifierID: modifierUUID,
 				IsRequired: isRequired,
@@ -135,7 +189,7 @@ func (s *GoodsModifierS) AttachModifiersToGood(ctx context.Context, goodID strin
 			return fmt.Errorf("failed to validate good modifier relation: %w", err)
 		}
 
-		_, err = s.repo.Tenant(ctx).AttachModifierToGood(ctx, pg.AttachModifierToGoodParams{
+		_, err = q.AttachModifierToGood(txCtx, pg.AttachModifierToGoodParams{
 			ID:         uuid.New(),
 			GoodID:     goodUUID,
 			ModifierID: modifierUUID,
@@ -145,6 +199,12 @@ func (s *GoodsModifierS) AttachModifiersToGood(ctx context.Context, goodID strin
 		if err != nil {
 			log.Printf("AttachModifierToGood failed: %v", err)
 			return fmt.Errorf("failed to attach modifier to good: %w", err)
+		}
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("failed to commit transaction: %w", err)
 		}
 	}
 
@@ -161,19 +221,26 @@ func (s *GoodsModifierS) GetModifiersByGoodID(ctx context.Context, goodID string
 		return nil, fmt.Errorf("invalid good ID: %w", err)
 	}
 
-	_, err = s.repo.Tenant(ctx).GetGoodByID(ctx, goodUUID)
-	if err != nil {
-		if err == pgx.ErrNoRows {
-			return nil, fmt.Errorf("good not found")
+	var rows []pg.GetModifiersByGoodIDRow
+	err = withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
+		_, err := q.GetGoodByID(ctx, goodUUID)
+		if err != nil {
+			if err == pgx.ErrNoRows {
+				return fmt.Errorf("good not found")
+			}
+			log.Printf("GetGoodByID failed: %v", err)
+			return fmt.Errorf("failed to validate good: %w", err)
 		}
-		log.Printf("GetGoodByID failed: %v", err)
-		return nil, fmt.Errorf("failed to validate good: %w", err)
-	}
 
-	rows, err := s.repo.Tenant(ctx).GetModifiersByGoodID(ctx, goodUUID)
+		rows, err = q.GetModifiersByGoodID(ctx, goodUUID)
+		if err != nil {
+			log.Printf("GetModifiersByGoodID failed: %v", err)
+			return fmt.Errorf("failed to retrieve good modifiers: %w", err)
+		}
+		return nil
+	})
 	if err != nil {
-		log.Printf("GetModifiersByGoodID failed: %v", err)
-		return nil, fmt.Errorf("failed to retrieve good modifiers: %w", err)
+		return nil, err
 	}
 
 	resp := make([]*model.GoodModifierResponse, 0, len(rows))
@@ -185,6 +252,14 @@ func (s *GoodsModifierS) GetModifiersByGoodID(ctx context.Context, goodID string
 }
 
 func (s *GoodsModifierS) DetachModifierFromGood(ctx context.Context, goodID, modifierID string) error {
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	if strings.TrimSpace(goodID) == "" {
 		return fmt.Errorf("good ID is required")
 	}
@@ -202,7 +277,7 @@ func (s *GoodsModifierS) DetachModifierFromGood(ctx context.Context, goodID, mod
 		return fmt.Errorf("invalid modifier ID: %w", err)
 	}
 
-	existing, err := s.repo.Tenant(ctx).GetGoodModifierByGoodAndModifierID(ctx, pg.GetGoodModifierByGoodAndModifierIDParams{
+	existing, err := q.GetGoodModifierByGoodAndModifierID(txCtx, pg.GetGoodModifierByGoodAndModifierIDParams{
 		GoodID:     goodUUID,
 		ModifierID: modifierUUID,
 	})
@@ -218,7 +293,7 @@ func (s *GoodsModifierS) DetachModifierFromGood(ctx context.Context, goodID, mod
 		return fmt.Errorf("modifier is not attached to this good")
 	}
 
-	err = s.repo.Tenant(ctx).DetachModifierFromGood(ctx, pg.DetachModifierFromGoodParams{
+	err = q.DetachModifierFromGood(txCtx, pg.DetachModifierFromGoodParams{
 		GoodID:     goodUUID,
 		ModifierID: modifierUUID,
 	})
@@ -227,10 +302,24 @@ func (s *GoodsModifierS) DetachModifierFromGood(ctx context.Context, goodID, mod
 		return fmt.Errorf("failed to detach modifier from good: %w", err)
 	}
 
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return nil
 }
 
 func (s *GoodsModifierS) ReplaceModifiersForGood(ctx context.Context, goodID string, req model.AttachModifiersToGoodRequest) error {
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	if strings.TrimSpace(goodID) == "" {
 		return fmt.Errorf("good ID is required")
 	}
@@ -240,7 +329,7 @@ func (s *GoodsModifierS) ReplaceModifiersForGood(ctx context.Context, goodID str
 		return fmt.Errorf("invalid good ID: %w", err)
 	}
 
-	_, err = s.repo.Tenant(ctx).GetGoodByID(ctx, goodUUID)
+	_, err = q.GetGoodByID(txCtx, goodUUID)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return fmt.Errorf("good not found")
@@ -249,14 +338,72 @@ func (s *GoodsModifierS) ReplaceModifiersForGood(ctx context.Context, goodID str
 		return fmt.Errorf("failed to validate good: %w", err)
 	}
 
-	if err := s.repo.Tenant(ctx).SoftDeleteAllModifiersByGoodID(ctx, goodUUID); err != nil {
+	if err := q.SoftDeleteAllModifiersByGoodID(txCtx, goodUUID); err != nil {
 		log.Printf("SoftDeleteAllModifiersByGoodID failed: %v", err)
 		return fmt.Errorf("failed to clear existing good modifiers: %w", err)
 	}
 
 	if len(req.Modifiers) == 0 {
+		if ownsTx {
+			if err := tx.Commit(ctx); err != nil {
+				return fmt.Errorf("failed to commit transaction: %w", err)
+			}
+		}
 		return nil
 	}
 
-	return s.AttachModifiersToGood(ctx, goodID, req)
+	// Continue attaching new modifiers in the same transaction
+	for _, item := range req.Modifiers {
+		if strings.TrimSpace(item.ModifierID) == "" {
+			return fmt.Errorf("modifier_id is required")
+		}
+
+		modifierUUID, err := uuid.Parse(strings.TrimSpace(item.ModifierID))
+		if err != nil {
+			return fmt.Errorf("invalid modifier ID: %w", err)
+		}
+
+		modifier, err := q.GetModifierByID(txCtx, modifierUUID)
+		if err != nil {
+			if err == pgx.ErrNoRows {
+				return fmt.Errorf("modifier not found: %s", item.ModifierID)
+			}
+			log.Printf("GetModifierByID failed: %v", err)
+			return fmt.Errorf("failed to validate modifier: %w", err)
+		}
+
+		if !modifier.IsActive {
+			return fmt.Errorf("modifier is inactive: %s", item.ModifierID)
+		}
+
+		isRequired := false
+		if item.IsRequired != nil {
+			isRequired = *item.IsRequired
+		}
+
+		sortOrder := int32(0)
+		if item.SortOrder != nil {
+			sortOrder = *item.SortOrder
+		}
+
+		_, err = q.AttachModifierToGood(txCtx, pg.AttachModifierToGoodParams{
+			ID:         uuid.New(),
+			GoodID:     goodUUID,
+			ModifierID: modifierUUID,
+			IsRequired: isRequired,
+			SortOrder:  sortOrder,
+		})
+		if err != nil {
+			log.Printf("AttachModifierToGood failed: %v", err)
+			return fmt.Errorf("failed to attach modifier to good: %w", err)
+		}
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
+	return nil
 }

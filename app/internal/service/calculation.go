@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -20,6 +21,52 @@ type CalculationS struct {
 
 func NewCalculationS(repo *repository.Repository) *CalculationS {
 	return &CalculationS{repo: repo}
+}
+
+func (c *CalculationS) getTenantMutationQueries(ctx context.Context) (*pg.Queries, context.Context, pgx.Tx, bool, error) {
+	if existingTx, ok := repository.TenantTxFromContext(ctx); ok && existingTx != nil {
+		if q, ok := repository.TenantQueriesFromContext(ctx); ok && q != nil {
+			return q, ctx, existingTx, false, nil
+		}
+		q := pg.New(existingTx)
+		txCtx := repository.WithTenantQueries(ctx, q)
+		return q, txCtx, existingTx, false, nil
+	}
+
+	tx, err := c.repo.PgRepo.TenantPool.Begin(ctx)
+	if err != nil {
+		return nil, nil, nil, false, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+
+	brandID, _ := ctx.Value("brand_id").(string)
+	brandID = strings.TrimSpace(brandID)
+	if brandID == "" {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("brand_id is missing in context")
+	}
+
+	schemaName := fmt.Sprintf("tenant_%s", brandID)
+	if _, err := tx.Exec(ctx, fmt.Sprintf(`SET LOCAL search_path TO "%s", public`, schemaName)); err != nil {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("failed to set tenant search_path: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx, "SET LOCAL app.brand_id = $1", brandID); err != nil {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("failed to set app.brand_id: %w", err)
+	}
+
+	if branchID, _ := ctx.Value("branch_id").(string); strings.TrimSpace(branchID) != "" {
+		if _, err := tx.Exec(ctx, "SET LOCAL app.branch_id = $1", strings.TrimSpace(branchID)); err != nil {
+			tx.Rollback(ctx)
+			return nil, nil, nil, false, fmt.Errorf("failed to set app.branch_id: %w", err)
+		}
+	}
+
+	q := pg.New(tx)
+	txCtx := repository.WithTenantQueries(ctx, q)
+
+	return q, txCtx, tx, true, nil
 }
 
 // Helper to convert string to pgtype.Numeric
@@ -218,6 +265,14 @@ func triggerPriceRecalculation(ctx context.Context, repo *repository.Repository,
 }
 
 func (c *CalculationS) updateCompoundPriceFromCalculations(ctx context.Context, compoundID string) error {
+	q, txCtx, tx, ownsTx, err := c.getTenantMutationQueries(ctx)
+	if err != nil {
+		return err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	// Compound price is treated as total component cost: SUM(calculation.total_cost)
 	totalCostStr, err := c.GetTotalCostByCompoundID(ctx, compoundID)
 	if err != nil {
@@ -234,7 +289,7 @@ func (c *CalculationS) updateCompoundPriceFromCalculations(ctx context.Context, 
 		return fmt.Errorf("invalid compound_id: %w", err)
 	}
 
-	_, err = c.repo.Tenant(ctx).UpdateCompoundPrice(ctx, pg.UpdateCompoundPriceParams{
+	_, err = q.UpdateCompoundPrice(txCtx, pg.UpdateCompoundPriceParams{
 		ID:    compoundUUID,
 		Price: stringToNumeric(fmt.Sprintf("%.2f", totalCostFloat)),
 	})
@@ -244,21 +299,43 @@ func (c *CalculationS) updateCompoundPriceFromCalculations(ctx context.Context, 
 	}
 
 	// Also update the compound's cost_price, profit, profit_margin fields
-	return c.UpdateCompoundCostFields(ctx, compoundID)
+	err = c.UpdateCompoundCostFields(ctx, compoundID)
+	if err != nil {
+		return err
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
+	return nil
 }
 
 // UpdateGoodCostFields recalculates and stores cost_price, profit, profit_margin for a good
 // Should be called after any calculation is created/updated/deleted for a good
 func (c *CalculationS) UpdateGoodCostFields(ctx context.Context, goodID string) error {
+	q, txCtx, tx, ownsTx, err := c.getTenantMutationQueries(ctx)
+	if err != nil {
+		return err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	goodUUID, err := uuid.Parse(goodID)
 	if err != nil {
 		return fmt.Errorf("invalid good_id: %w", err)
 	}
 
 	// Get the good to get its selling price
-	good, err := c.repo.Tenant(ctx).GetGoodByID(ctx, goodUUID)
+	good, err := q.GetGoodByID(txCtx, goodUUID)
 	if err != nil {
 		if err == pgx.ErrNoRows {
+			if ownsTx {
+				tx.Rollback(ctx)
+			}
 			return nil // Good doesn't exist, nothing to update
 		}
 		return fmt.Errorf("failed to fetch good: %w", err)
@@ -281,7 +358,7 @@ func (c *CalculationS) UpdateGoodCostFields(ctx context.Context, goodID string) 
 	}
 
 	// Update the good's cost fields in DB
-	_, err = c.repo.Tenant(ctx).UpdateGoodCostFields(ctx, pg.UpdateGoodCostFieldsParams{
+	_, err = q.UpdateGoodCostFields(txCtx, pg.UpdateGoodCostFieldsParams{
 		ID:           goodUUID,
 		CostPrice:    stringToNumeric(fmt.Sprintf("%.2f", totalCost)),
 		Profit:       stringToNumeric(fmt.Sprintf("%.2f", profit)),
@@ -292,6 +369,12 @@ func (c *CalculationS) UpdateGoodCostFields(ctx context.Context, goodID string) 
 		return fmt.Errorf("failed to update good cost fields: %w", err)
 	}
 
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return nil
 }
 
@@ -299,6 +382,14 @@ func (c *CalculationS) UpdateGoodCostFields(ctx context.Context, goodID string) 
 // For compounds: price = total_cost (auto-calculated), no profit/profit_margin
 // Compounds are intermediate products, not sold directly to customers
 func (c *CalculationS) UpdateCompoundCostFields(ctx context.Context, compoundID string) error {
+	q, txCtx, tx, ownsTx, err := c.getTenantMutationQueries(ctx)
+	if err != nil {
+		return err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	compoundUUID, err := uuid.Parse(compoundID)
 	if err != nil {
 		return fmt.Errorf("invalid compound_id: %w", err)
@@ -314,7 +405,7 @@ func (c *CalculationS) UpdateCompoundCostFields(ctx context.Context, compoundID 
 
 	// For compounds: price = cost_price = total_cost, profit = 0, profit_margin = 0
 	// Compounds are intermediate products, they don't have a separate selling price
-	_, err = c.repo.Tenant(ctx).UpdateCompoundCostFields(ctx, pg.UpdateCompoundCostFieldsParams{
+	_, err = q.UpdateCompoundCostFields(txCtx, pg.UpdateCompoundCostFieldsParams{
 		ID:           compoundUUID,
 		CostPrice:    stringToNumeric(fmt.Sprintf("%.2f", totalCost)),
 		Profit:       stringToNumeric("0"),
@@ -323,6 +414,12 @@ func (c *CalculationS) UpdateCompoundCostFields(ctx context.Context, compoundID 
 	if err != nil {
 		log.Printf("UpdateCompoundCostFields failed: %v", err)
 		return fmt.Errorf("failed to update compound cost fields: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return nil
@@ -343,6 +440,14 @@ func (c *CalculationS) CreateCalculationForCompound(ctx context.Context, compoun
 // CreateCalculationWithCompound adds a compound to a good as a component
 // Uses the compound's price field which is auto-calculated from its ingredients
 func (c *CalculationS) CreateCalculationWithCompound(ctx context.Context, goodID, compoundID, quantity string) (*model.CalculationResponse, error) {
+	q, txCtx, tx, ownsTx, err := c.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	// Parse UUIDs
 	goodUUID, err := uuid.Parse(goodID)
 	if err != nil {
@@ -350,7 +455,7 @@ func (c *CalculationS) CreateCalculationWithCompound(ctx context.Context, goodID
 	}
 
 	// Validate parent good exists (avoid FK violation)
-	if _, err := c.repo.Tenant(ctx).GetGoodByID(ctx, goodUUID); err != nil {
+	if _, err := q.GetGoodByID(txCtx, goodUUID); err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, fmt.Errorf("good not found")
 		}
@@ -369,7 +474,7 @@ func (c *CalculationS) CreateCalculationWithCompound(ctx context.Context, goodID
 	}
 
 	// Fetch compound to get its price (auto-calculated from ingredients)
-	compound, err := c.repo.Tenant(ctx).GetCompoundByID(ctx, compoundUUID)
+	compound, err := q.GetCompoundByID(txCtx, compoundUUID)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, fmt.Errorf("compound not found")
@@ -389,7 +494,7 @@ func (c *CalculationS) CreateCalculationWithCompound(ctx context.Context, goodID
 	totalCostCalc := compoundPriceFloat * quantityFloat
 
 	// Create calculation record linking good to compound
-	calculation, err := c.repo.Tenant(ctx).CreateCalculation(ctx, pg.CreateCalculationParams{
+	calculation, err := q.CreateCalculation(txCtx, pg.CreateCalculationParams{
 		ID:                  uuid.New(),
 		GoodID:              pgtype.UUID{Bytes: goodUUID, Valid: true},
 		CompoundID:          pgtype.UUID{Valid: false},
@@ -410,12 +515,26 @@ func (c *CalculationS) CreateCalculationWithCompound(ctx context.Context, goodID
 		log.Printf("CreateCalculationWithCompound: failed to update good cost fields: %v", err)
 	}
 
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return toCalculationResponseAny(calculation), nil
 }
 
 // CreateCalculationCompoundToCompound adds a compound to another compound as a component
 // Uses the child compound's price field which is auto-calculated from its ingredients
 func (c *CalculationS) CreateCalculationCompoundToCompound(ctx context.Context, parentCompoundID, childCompoundID, quantity string) (*model.CalculationResponse, error) {
+	q, txCtx, tx, ownsTx, err := c.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	// Parse UUIDs
 	parentUUID, err := uuid.Parse(parentCompoundID)
 	if err != nil {
@@ -423,7 +542,7 @@ func (c *CalculationS) CreateCalculationCompoundToCompound(ctx context.Context, 
 	}
 
 	// Validate parent compound exists (avoid FK violation)
-	if _, err := c.repo.Tenant(ctx).GetCompoundByID(ctx, parentUUID); err != nil {
+	if _, err := q.GetCompoundByID(txCtx, parentUUID); err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, fmt.Errorf("parent compound not found")
 		}
@@ -442,7 +561,7 @@ func (c *CalculationS) CreateCalculationCompoundToCompound(ctx context.Context, 
 	}
 
 	// Fetch child compound to get its price (auto-calculated from ingredients)
-	childCompound, err := c.repo.Tenant(ctx).GetCompoundByID(ctx, childUUID)
+	childCompound, err := q.GetCompoundByID(txCtx, childUUID)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, fmt.Errorf("child compound not found")
@@ -460,7 +579,7 @@ func (c *CalculationS) CreateCalculationCompoundToCompound(ctx context.Context, 
 	totalCostCalc := childPriceFloat * quantityFloat
 
 	// Create calculation record linking parent compound to child compound
-	calculation, err := c.repo.Tenant(ctx).CreateCalculation(ctx, pg.CreateCalculationParams{
+	calculation, err := q.CreateCalculation(txCtx, pg.CreateCalculationParams{
 		ID:                  uuid.New(),
 		GoodID:              pgtype.UUID{Valid: false},                   // NULL for compound-to-compound
 		CompoundID:          pgtype.UUID{Bytes: parentUUID, Valid: true}, // Parent compound
@@ -480,6 +599,13 @@ func (c *CalculationS) CreateCalculationCompoundToCompound(ctx context.Context, 
 	if err := c.updateCompoundPriceFromCalculations(ctx, parentCompoundID); err != nil {
 		log.Printf("CreateCalculationCompoundToCompound: failed to update parent compound price: %v", err)
 	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return toCalculationResponseAny(calculation), nil
 }
 
@@ -491,98 +617,113 @@ func (c *CalculationS) PreviewCalculations(ctx context.Context, req *model.Previ
 	var items []model.CalculationPreviewItem
 	var totalCost float64
 
-	for _, calc := range req.IngredientCalculations {
-		ingredientUUID, err := uuid.Parse(calc.IngredientID)
-		if err != nil {
-			return nil, fmt.Errorf("invalid ingredient_id: %w", err)
-		}
-
-		qtyFloat, err := strconv.ParseFloat(calc.Quantity, 64)
-		if err != nil {
-			return nil, fmt.Errorf("invalid quantity: %w", err)
-		}
-
-		ingredient, err := c.repo.Tenant(ctx).GetIngredientByID(ctx, ingredientUUID)
-		if err != nil {
-			if err == pgx.ErrNoRows {
-				return nil, fmt.Errorf("ingredient not found")
-			}
-			return nil, fmt.Errorf("failed to fetch ingredient: %w", err)
-		}
-
-		var priceFloat float64
-		if ingredient.PricePerUnit.Valid {
-			priceStr := numericToStr(ingredient.PricePerUnit)
-			priceFloat, err = strconv.ParseFloat(priceStr, 64)
+	err := withTenantRead(ctx, c.repo, func(ctx context.Context, q *pg.Queries) error {
+		for _, calc := range req.IngredientCalculations {
+			ingredientUUID, err := uuid.Parse(calc.IngredientID)
 			if err != nil {
-				return nil, fmt.Errorf("invalid ingredient price: %w", err)
+				return fmt.Errorf("invalid ingredient_id: %w", err)
 			}
+
+			qtyFloat, err := strconv.ParseFloat(calc.Quantity, 64)
+			if err != nil {
+				return fmt.Errorf("invalid quantity: %w", err)
+			}
+
+			ingredient, err := q.GetIngredientByID(ctx, ingredientUUID)
+			if err != nil {
+				if err == pgx.ErrNoRows {
+					return fmt.Errorf("ingredient not found")
+				}
+				return fmt.Errorf("failed to fetch ingredient: %w", err)
+			}
+
+			var priceFloat float64
+			if ingredient.PricePerUnit.Valid {
+				priceStr := numericToStr(ingredient.PricePerUnit)
+				priceFloat, err = strconv.ParseFloat(priceStr, 64)
+				if err != nil {
+					return fmt.Errorf("invalid ingredient price: %w", err)
+				}
+			}
+
+			lineTotal := qtyFloat * priceFloat
+			totalCost += lineTotal
+
+			measurementUnit := ""
+			if ingredient.Measurement.Valid {
+				measurementUnit = string(ingredient.Measurement.MeasurementType)
+			}
+
+			idStr := calc.IngredientID
+			items = append(items, model.CalculationPreviewItem{
+				Name:                ingredient.Name,
+				IngredientID:        &idStr,
+				ComponentCompoundID: nil,
+				Quantity:            calc.Quantity,
+				MeasurementUnit:     measurementUnit,
+				PricePerUnit:        fmt.Sprintf("%.2f", priceFloat),
+				TotalCost:           fmt.Sprintf("%.2f", lineTotal),
+			})
 		}
 
-		lineTotal := qtyFloat * priceFloat
-		totalCost += lineTotal
+		for _, calc := range req.CompoundCalculations {
+			compoundUUID, err := uuid.Parse(calc.CompoundID)
+			if err != nil {
+				return fmt.Errorf("invalid compound_id: %w", err)
+			}
 
-		measurementUnit := ""
-		if ingredient.Measurement.Valid {
-			measurementUnit = string(ingredient.Measurement.MeasurementType)
+			qtyFloat, err := strconv.ParseFloat(calc.Quantity, 64)
+			if err != nil {
+				return fmt.Errorf("invalid quantity: %w", err)
+			}
+
+			compound, err := q.GetCompoundByID(ctx, compoundUUID)
+			if err != nil {
+				if err == pgx.ErrNoRows {
+					return fmt.Errorf("compound not found")
+				}
+				return fmt.Errorf("failed to fetch compound: %w", err)
+			}
+
+			priceStr := numericToStr(compound.Price)
+			priceFloat, err := strconv.ParseFloat(priceStr, 64)
+			if err != nil {
+				return fmt.Errorf("invalid compound price: %w", err)
+			}
+			lineTotal := qtyFloat * priceFloat
+			totalCost += lineTotal
+
+			idStr := calc.CompoundID
+			items = append(items, model.CalculationPreviewItem{
+				Name:                compound.Name,
+				IngredientID:        nil,
+				ComponentCompoundID: &idStr,
+				Quantity:            calc.Quantity,
+				MeasurementUnit:     "compound",
+				PricePerUnit:        fmt.Sprintf("%.2f", priceFloat),
+				TotalCost:           fmt.Sprintf("%.2f", lineTotal),
+			})
 		}
 
-		idStr := calc.IngredientID
-		items = append(items, model.CalculationPreviewItem{
-			Name:                ingredient.Name,
-			IngredientID:        &idStr,
-			ComponentCompoundID: nil,
-			Quantity:            calc.Quantity,
-			MeasurementUnit:     measurementUnit,
-			PricePerUnit:        fmt.Sprintf("%.2f", priceFloat),
-			TotalCost:           fmt.Sprintf("%.2f", lineTotal),
-		})
+		_ = totalCost
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
 
-	for _, calc := range req.CompoundCalculations {
-		compoundUUID, err := uuid.Parse(calc.CompoundID)
-		if err != nil {
-			return nil, fmt.Errorf("invalid compound_id: %w", err)
-		}
-
-		qtyFloat, err := strconv.ParseFloat(calc.Quantity, 64)
-		if err != nil {
-			return nil, fmt.Errorf("invalid quantity: %w", err)
-		}
-
-		compound, err := c.repo.Tenant(ctx).GetCompoundByID(ctx, compoundUUID)
-		if err != nil {
-			if err == pgx.ErrNoRows {
-				return nil, fmt.Errorf("compound not found")
-			}
-			return nil, fmt.Errorf("failed to fetch compound: %w", err)
-		}
-
-		priceStr := numericToStr(compound.Price)
-		priceFloat, err := strconv.ParseFloat(priceStr, 64)
-		if err != nil {
-			return nil, fmt.Errorf("invalid compound price: %w", err)
-		}
-		lineTotal := qtyFloat * priceFloat
-		totalCost += lineTotal
-
-		idStr := calc.CompoundID
-		items = append(items, model.CalculationPreviewItem{
-			Name:                compound.Name,
-			IngredientID:        nil,
-			ComponentCompoundID: &idStr,
-			Quantity:            calc.Quantity,
-			MeasurementUnit:     "compound",
-			PricePerUnit:        fmt.Sprintf("%.2f", priceFloat),
-			TotalCost:           fmt.Sprintf("%.2f", lineTotal),
-		})
-	}
-
-	_ = totalCost
 	return &model.PreviewCalculationsResponse{Calculations: items}, nil
 }
 
 func (c *CalculationS) createCalculationInternal(ctx context.Context, goodID, compoundID *string, ingredientID, quantity string) (*model.CalculationResponse, error) {
+	q, txCtx, tx, ownsTx, err := c.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	// Validate that at least one of goodID or compoundID is provided
 	if (goodID == nil || *goodID == "") && (compoundID == nil || *compoundID == "") {
 		return nil, fmt.Errorf("either good_id or compound_id must be provided")
@@ -599,7 +740,7 @@ func (c *CalculationS) createCalculationInternal(ctx context.Context, goodID, co
 		goodUUID = &id
 
 		// Validate parent good exists (avoid FK violation)
-		if _, err := c.repo.Tenant(ctx).GetGoodByID(ctx, id); err != nil {
+		if _, err := q.GetGoodByID(txCtx, id); err != nil {
 			if err == pgx.ErrNoRows {
 				return nil, fmt.Errorf("good not found")
 			}
@@ -615,7 +756,7 @@ func (c *CalculationS) createCalculationInternal(ctx context.Context, goodID, co
 		compoundUUID = &id
 
 		// Validate parent compound exists (avoid FK violation)
-		if _, err := c.repo.Tenant(ctx).GetCompoundByID(ctx, id); err != nil {
+		if _, err := q.GetCompoundByID(txCtx, id); err != nil {
 			if err == pgx.ErrNoRows {
 				return nil, fmt.Errorf("compound not found")
 			}
@@ -635,7 +776,7 @@ func (c *CalculationS) createCalculationInternal(ctx context.Context, goodID, co
 	}
 
 	// Fetch ingredient from database
-	ingredient, err := c.repo.Tenant(ctx).GetIngredientByID(ctx, ingredientUUID)
+	ingredient, err := q.GetIngredientByID(txCtx, ingredientUUID)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, fmt.Errorf("ingredient not found")
@@ -665,7 +806,7 @@ func (c *CalculationS) createCalculationInternal(ctx context.Context, goodID, co
 	}
 
 	// Create calculation record
-	calculation, err := c.repo.Tenant(ctx).CreateCalculation(ctx, pg.CreateCalculationParams{
+	calculation, err := q.CreateCalculation(txCtx, pg.CreateCalculationParams{
 		ID:                  uuid.New(),
 		GoodID:              uuidToPgType(goodUUID),
 		CompoundID:          uuidToPgType(compoundUUID),
@@ -695,6 +836,12 @@ func (c *CalculationS) createCalculationInternal(ctx context.Context, goodID, co
 		}
 	}
 
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return toCalculationResponseAny(calculation), nil
 }
 
@@ -705,13 +852,21 @@ func (c *CalculationS) GetCalculationByID(ctx context.Context, calculationID str
 		return nil, fmt.Errorf("invalid calculation ID: %w", err)
 	}
 
-	calculation, err := c.repo.Tenant(ctx).GetCalculationByID(ctx, id)
-	if err != nil {
-		if err == pgx.ErrNoRows {
-			return nil, fmt.Errorf("calculation not found")
+	var calculation pg.Calculation
+	err = withTenantRead(ctx, c.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		calculation, err = q.GetCalculationByID(ctx, id)
+		if err != nil {
+			if err == pgx.ErrNoRows {
+				return fmt.Errorf("calculation not found")
+			}
+			log.Printf("GetCalculationByID failed: %v", err)
+			return fmt.Errorf("failed to retrieve calculation: %w", err)
 		}
-		log.Printf("GetCalculationByID failed: %v", err)
-		return nil, fmt.Errorf("failed to retrieve calculation: %w", err)
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
 
 	return toCalculationResponseAny(calculation), nil
@@ -724,10 +879,18 @@ func (c *CalculationS) GetCalculationsByGoodID(ctx context.Context, goodID strin
 		return nil, fmt.Errorf("invalid good_id: %w", err)
 	}
 
-	calculations, err := c.repo.Tenant(ctx).GetCalculationsByGoodID(ctx, uuidToPgType(&id))
+	var calculations []pg.Calculation
+	err = withTenantRead(ctx, c.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		calculations, err = q.GetCalculationsByGoodID(ctx, uuidToPgType(&id))
+		if err != nil {
+			log.Printf("GetCalculationsByGoodID failed: %v", err)
+			return fmt.Errorf("failed to retrieve calculations: %w", err)
+		}
+		return nil
+	})
 	if err != nil {
-		log.Printf("GetCalculationsByGoodID failed: %v", err)
-		return nil, fmt.Errorf("failed to retrieve calculations: %w", err)
+		return nil, err
 	}
 
 	var responses []*model.CalculationResponse
@@ -744,10 +907,18 @@ func (c *CalculationS) GetCalculationsByCompoundID(ctx context.Context, compound
 		return nil, fmt.Errorf("invalid compound_id: %w", err)
 	}
 
-	calculations, err := c.repo.Tenant(ctx).GetCalculationsByCompoundID(ctx, uuidToPgType(&id))
+	var calculations []pg.Calculation
+	err = withTenantRead(ctx, c.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		calculations, err = q.GetCalculationsByCompoundID(ctx, uuidToPgType(&id))
+		if err != nil {
+			log.Printf("GetCalculationsByCompoundID failed: %v", err)
+			return fmt.Errorf("failed to retrieve calculations: %w", err)
+		}
+		return nil
+	})
 	if err != nil {
-		log.Printf("GetCalculationsByCompoundID failed: %v", err)
-		return nil, fmt.Errorf("failed to retrieve calculations: %w", err)
+		return nil, err
 	}
 
 	var responses []*model.CalculationResponse
@@ -764,10 +935,22 @@ func (c *CalculationS) GetTotalCostByGoodID(ctx context.Context, goodID string) 
 		return "0", fmt.Errorf("invalid good_id: %w", err)
 	}
 
-	result, err := c.repo.Tenant(ctx).GetTotalCostByGoodID(ctx, uuidToPgType(&id))
+	var result pgtype.Numeric
+	err = withTenantRead(ctx, c.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		resultRaw, err := q.GetTotalCostByGoodID(ctx, uuidToPgType(&id))
+		if err != nil {
+			log.Printf("GetTotalCostByGoodID failed: %v", err)
+			return fmt.Errorf("failed to calculate total cost: %w", err)
+		}
+		// Type assertion from interface{} to pgtype.Numeric
+		if resultRaw != nil {
+			result = resultRaw.(pgtype.Numeric)
+		}
+		return nil
+	})
 	if err != nil {
-		log.Printf("GetTotalCostByGoodID failed: %v", err)
-		return "0", fmt.Errorf("failed to calculate total cost: %w", err)
+		return "0", err
 	}
 
 	return anyNumericToStr(result), nil
@@ -780,10 +963,22 @@ func (c *CalculationS) GetTotalCostByCompoundID(ctx context.Context, compoundID 
 		return "0", fmt.Errorf("invalid compound_id: %w", err)
 	}
 
-	result, err := c.repo.Tenant(ctx).GetTotalCostByCompoundID(ctx, uuidToPgType(&id))
+	var result pgtype.Numeric
+	err = withTenantRead(ctx, c.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		resultRaw, err := q.GetTotalCostByCompoundID(ctx, uuidToPgType(&id))
+		if err != nil {
+			log.Printf("GetTotalCostByCompoundID failed: %v", err)
+			return fmt.Errorf("failed to calculate total cost: %w", err)
+		}
+		// Type assertion from interface{} to pgtype.Numeric
+		if resultRaw != nil {
+			result = resultRaw.(pgtype.Numeric)
+		}
+		return nil
+	})
 	if err != nil {
-		log.Printf("GetTotalCostByCompoundID failed: %v", err)
-		return "0", fmt.Errorf("failed to calculate total cost: %w", err)
+		return "0", err
 	}
 
 	return anyNumericToStr(result), nil
@@ -793,6 +988,14 @@ func (c *CalculationS) GetTotalCostByCompoundID(ctx context.Context, compoundID 
 // Also recalculates total_cost automatically: total_cost = quantity × price_per_unit
 // If ingredient or compound is wrong, user should DELETE and CREATE a new one
 func (c *CalculationS) UpdateCalculation(ctx context.Context, calculationID string, quantity *string) (*model.CalculationResponse, error) {
+	q, txCtx, tx, ownsTx, err := c.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	id, err := uuid.Parse(calculationID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid calculation ID: %w", err)
@@ -814,7 +1017,7 @@ func (c *CalculationS) UpdateCalculation(ctx context.Context, calculationID stri
 	}
 
 	// Fetch current calculation to get price_per_unit for recalculation
-	currentCalc, err := c.repo.Tenant(ctx).GetCalculationByID(ctx, id)
+	currentCalc, err := q.GetCalculationByID(txCtx, id)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, fmt.Errorf("calculation not found")
@@ -839,7 +1042,7 @@ func (c *CalculationS) UpdateCalculation(ctx context.Context, calculationID stri
 		TotalCost: stringToNumeric(fmt.Sprintf("%.2f", newTotalCost)),
 	}
 
-	calculation, err := c.repo.Tenant(ctx).UpdateCalculation(ctx, params)
+	calculation, err := q.UpdateCalculation(txCtx, params)
 	if err != nil {
 		log.Printf("UpdateCalculation failed: %v", err)
 		return nil, fmt.Errorf("failed to update calculation: %w", err)
@@ -858,18 +1061,32 @@ func (c *CalculationS) UpdateCalculation(ctx context.Context, calculationID stri
 		}
 	}
 
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return toCalculationResponseAny(calculation), nil
 }
 
 // DeleteCalculation soft deletes a calculation
 func (c *CalculationS) DeleteCalculation(ctx context.Context, calculationID string) error {
+	q, txCtx, tx, ownsTx, err := c.getTenantMutationQueries(ctx)
+	if err != nil {
+		return err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	id, err := uuid.Parse(calculationID)
 	if err != nil {
 		return fmt.Errorf("invalid calculation ID: %w", err)
 	}
 
 	// Fetch before delete so we can update related prices after deletion
-	calc, err := c.repo.Tenant(ctx).GetCalculationByID(ctx, id)
+	calc, err := q.GetCalculationByID(txCtx, id)
 	if err != nil {
 		if err != pgx.ErrNoRows {
 			log.Printf("DeleteCalculation: failed to fetch calculation: %v", err)
@@ -877,7 +1094,7 @@ func (c *CalculationS) DeleteCalculation(ctx context.Context, calculationID stri
 		return fmt.Errorf("failed to fetch calculation: %w", err)
 	}
 
-	if err := c.repo.Tenant(ctx).DeleteCalculation(ctx, id); err != nil {
+	if err := q.DeleteCalculation(txCtx, id); err != nil {
 		log.Printf("DeleteCalculation failed: %v", err)
 		return fmt.Errorf("failed to delete calculation: %w", err)
 	}
@@ -895,17 +1112,31 @@ func (c *CalculationS) DeleteCalculation(ctx context.Context, calculationID stri
 		}
 	}
 
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return nil
 }
 
 // DeleteCalculationsByGoodID deletes all calculations for a good
 func (c *CalculationS) DeleteCalculationsByGoodID(ctx context.Context, goodID string) error {
+	q, txCtx, tx, ownsTx, err := c.getTenantMutationQueries(ctx)
+	if err != nil {
+		return err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	id, err := uuid.Parse(goodID)
 	if err != nil {
 		return fmt.Errorf("invalid good_id: %w", err)
 	}
 
-	if err := c.repo.Tenant(ctx).DeleteCalculationsByGoodID(ctx, uuidToPgType(&id)); err != nil {
+	if err := q.DeleteCalculationsByGoodID(txCtx, uuidToPgType(&id)); err != nil {
 		log.Printf("DeleteCalculationsByGoodID failed: %v", err)
 		return fmt.Errorf("failed to delete calculations: %w", err)
 	}
@@ -915,23 +1146,43 @@ func (c *CalculationS) DeleteCalculationsByGoodID(ctx context.Context, goodID st
 		log.Printf("DeleteCalculationsByGoodID: failed to update good cost fields: %v", err)
 	}
 
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return nil
 }
 
 // DeleteCalculationsByCompoundID deletes all calculations for a compound
 func (c *CalculationS) DeleteCalculationsByCompoundID(ctx context.Context, compoundID string) error {
+	q, txCtx, tx, ownsTx, err := c.getTenantMutationQueries(ctx)
+	if err != nil {
+		return err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	id, err := uuid.Parse(compoundID)
 	if err != nil {
 		return fmt.Errorf("invalid compound_id: %w", err)
 	}
 
-	if err := c.repo.Tenant(ctx).DeleteCalculationsByCompoundID(ctx, uuidToPgType(&id)); err != nil {
+	if err := q.DeleteCalculationsByCompoundID(txCtx, uuidToPgType(&id)); err != nil {
 		log.Printf("DeleteCalculationsByCompoundID failed: %v", err)
 		return fmt.Errorf("failed to delete calculations: %w", err)
 	}
 
 	if err := c.updateCompoundPriceFromCalculations(ctx, compoundID); err != nil {
 		log.Printf("DeleteCalculationsByCompoundID: failed to update compound price: %v", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return nil
@@ -944,17 +1195,25 @@ func (c *CalculationS) GetGoodWithCalculations(ctx context.Context, goodID strin
 		return nil, fmt.Errorf("invalid good_id: %w", err)
 	}
 
-	// Get the good
-	good, err := c.repo.Tenant(ctx).GetGoodByID(ctx, id)
-	if err != nil {
-		if err == pgx.ErrNoRows {
-			return nil, fmt.Errorf("good not found")
+	var good pg.GetGoodByIDRow
+	var calcPtrs []*model.CalculationResponse
+	err = withTenantRead(ctx, c.repo, func(ctx context.Context, q *pg.Queries) error {
+		// Get the good
+		good, err = q.GetGoodByID(ctx, id)
+		if err != nil {
+			if err == pgx.ErrNoRows {
+				return fmt.Errorf("good not found")
+			}
+			log.Printf("GetGoodByID failed: %v", err)
+			return fmt.Errorf("failed to retrieve good: %w", err)
 		}
-		log.Printf("GetGoodByID failed: %v", err)
-		return nil, fmt.Errorf("failed to retrieve good: %w", err)
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
 
-	calcPtrs, err := c.GetCalculationsByGoodID(ctx, goodID)
+	calcPtrs, err = c.GetCalculationsByGoodID(ctx, goodID)
 	if err != nil {
 		log.Printf("GetCalculationsByGoodID failed: %v", err)
 		return nil, fmt.Errorf("failed to retrieve calculations: %w", err)
@@ -1007,14 +1266,21 @@ func (c *CalculationS) GetCompoundWithCalculations(ctx context.Context, compound
 		return nil, fmt.Errorf("invalid compound_id: %w", err)
 	}
 
-	// Get the compound
-	compound, err := c.repo.Tenant(ctx).GetCompoundByID(ctx, id)
-	if err != nil {
-		if err == pgx.ErrNoRows {
-			return nil, fmt.Errorf("compound not found")
+	var compound pg.GetCompoundByIDRow
+	err = withTenantRead(ctx, c.repo, func(ctx context.Context, q *pg.Queries) error {
+		// Get the compound
+		compound, err = q.GetCompoundByID(ctx, id)
+		if err != nil {
+			if err == pgx.ErrNoRows {
+				return fmt.Errorf("compound not found")
+			}
+			log.Printf("GetCompoundByID failed: %v", err)
+			return fmt.Errorf("failed to retrieve compound: %w", err)
 		}
-		log.Printf("GetCompoundByID failed: %v", err)
-		return nil, fmt.Errorf("failed to retrieve compound: %w", err)
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
 
 	calcPtrs, err := c.GetCalculationsByCompoundID(ctx, compoundID)

@@ -8,11 +8,11 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"gitlab.yurtal.tech/company/maryai/back/internal/repository"
+	pg "gitlab.yurtal.tech/company/maryai/back/internal/repository/pg/tenantsdb"
 )
 
-func getLastActiveInventoryLockTimestamp(ctx context.Context, repo *repository.Repository, storageID uuid.UUID) (*time.Time, error) {
-	row, err := repo.Tenant(ctx).GetLastActiveInventoryByStorage(ctx, storageID)
+func getLastActiveInventoryLockTimestamp(ctx context.Context, q *pg.Queries, storageID uuid.UUID) (*time.Time, error) {
+	row, err := q.GetLastActiveInventoryByStorage(ctx, storageID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
@@ -27,8 +27,8 @@ func getLastActiveInventoryLockTimestamp(ctx context.Context, repo *repository.R
 	return &row.CountedAt, nil
 }
 
-func assertCanMutateAfterInventory(ctx context.Context, repo *repository.Repository, storageID uuid.UUID, effectiveAt time.Time, entityName string) error {
-	lockTimestamp, err := getLastActiveInventoryLockTimestamp(ctx, repo, storageID)
+func assertCanMutateAfterInventory(ctx context.Context, q *pg.Queries, storageID uuid.UUID, effectiveAt time.Time, entityName string) error {
+	lockTimestamp, err := getLastActiveInventoryLockTimestamp(ctx, q, storageID)
 	if err != nil {
 		return err
 	}
@@ -44,8 +44,8 @@ func assertCanMutateAfterInventory(ctx context.Context, repo *repository.Reposit
 	return nil
 }
 
-func assertCanMutateInventorySnapshot(ctx context.Context, repo *repository.Repository, storageID uuid.UUID, inventoryID uuid.UUID, countedAt time.Time, entityName string) error {
-	hasNewer, err := repo.Tenant(ctx).HasNewerActiveInventoryByStorage(ctx, storageID, inventoryID, countedAt)
+func assertCanMutateInventorySnapshot(ctx context.Context, q *pg.Queries, storageID uuid.UUID, inventoryID uuid.UUID, countedAt time.Time, entityName string) error {
+	hasNewer, err := q.HasNewerActiveInventoryByStorage(ctx, storageID, inventoryID, countedAt)
 	if err != nil {
 		return fmt.Errorf("failed to check newer active inventory for %s: %w", entityName, err)
 	}

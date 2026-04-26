@@ -35,6 +35,7 @@ func NewOrderS(repo *repository.Repository) *OrderS {
 }
 
 type orderStockTx interface {
+	GetCalculationsByGoodID(ctx context.Context, goodID pgtype.UUID) ([]pg.Calculation, error)
 	GetStorageByGoodID(ctx context.Context, goodID uuid.UUID) (pgtype.UUID, error)
 	EnsureIngredientStockByStorage(ctx context.Context, arg pg.EnsureIngredientStockByStorageParams) (uuid.UUID, error)
 	GetStockByIngredientAndStorageForUpdate(ctx context.Context, arg pg.GetStockByIngredientAndStorageForUpdateParams) (pg.IngredientStock, error)
@@ -83,7 +84,15 @@ func (s *OrderS) AddOrderItems(ctx context.Context, orderID string, req model.Ad
 		return nil, fmt.Errorf("invalid order_id: %w", err)
 	}
 
-	existing, err := s.repo.Tenant(ctx).GetOrderByID(ctx, oID)
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	existing, err := q.GetOrderByID(txCtx, oID)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, fmt.Errorf("order not found")
@@ -109,7 +118,7 @@ func (s *OrderS) AddOrderItems(ctx context.Context, orderID string, req model.Ad
 			return nil, fmt.Errorf("items[%d]: quantity must be greater than 0", i)
 		}
 
-		good, err := s.repo.Tenant(ctx).GetGoodByID(ctx, goodUUID)
+		good, err := q.GetGoodByID(txCtx, goodUUID)
 		if err != nil {
 			if err == pgx.ErrNoRows {
 				return nil, fmt.Errorf("items[%d]: good not found", i)
@@ -117,7 +126,7 @@ func (s *OrderS) AddOrderItems(ctx context.Context, orderID string, req model.Ad
 			return nil, fmt.Errorf("items[%d]: failed to fetch good: %w", i, err)
 		}
 
-		item, err := s.repo.Tenant(ctx).CreateOrderItem(ctx, pg.CreateOrderItemParams{
+		item, err := q.CreateOrderItem(txCtx, pg.CreateOrderItemParams{
 			ID:        uuid.New(),
 			GoodID:    goodUUID,
 			OrderID:   oID,
@@ -134,11 +143,11 @@ func (s *OrderS) AddOrderItems(ctx context.Context, orderID string, req model.Ad
 			return nil, fmt.Errorf("items[%d]: failed to create order item: %w", i, err)
 		}
 
-		if err := s.saveOrderItemModifiers(ctx, item.ID, goodUUID, it.Modifiers); err != nil {
+		if err := s.saveOrderItemModifiers(txCtx, q, item.ID, goodUUID, it.Modifiers); err != nil {
 			return nil, fmt.Errorf("items[%d]: %w", i, err)
 		}
 
-		if err := s.consumeItemStockWithModifiers(ctx, item.ID); err != nil {
+		if err := s.consumeItemStockWithModifiers(txCtx, q, item.ID); err != nil {
 			return nil, fmt.Errorf("items[%d]: failed to deduct stock: %w", i, err)
 		}
 
@@ -147,13 +156,19 @@ func (s *OrderS) AddOrderItems(ctx context.Context, orderID string, req model.Ad
 		}
 	}
 
-	if err := s.repo.Tenant(ctx).RecalculateOrderTotalsFromItems(ctx, oID); err != nil {
+	if err := q.RecalculateOrderTotalsFromItems(txCtx, oID); err != nil {
 		return nil, fmt.Errorf("failed to recalculate order totals: %w", err)
 	}
 
-	order, err := s.repo.Tenant(ctx).GetOrderByID(ctx, oID)
+	order, err := q.GetOrderByID(txCtx, oID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to refetch order: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return &model.AddOrderItemsResponse{
@@ -178,7 +193,15 @@ func (s *OrderS) CreateOrder(ctx context.Context, req model.CreateOrderRequest) 
 
 		orderUUID = parsedID
 
-		_, err = s.repo.Tenant(ctx).GetOrderByID(ctx, orderUUID)
+		// Check if order already exists - use read path here
+		q, txCtx, tx, ownsTx, err := s.getTenantReadQueries(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+		}
+		if ownsTx {
+			defer tx.Rollback(ctx)
+		}
+		_, err = q.GetOrderByID(txCtx, orderUUID)
 		if err == nil {
 			return s.GetOrderByID(ctx, orderUUID.String())
 		}
@@ -197,7 +220,16 @@ func (s *OrderS) CreateOrder(ctx context.Context, req model.CreateOrderRequest) 
 			return nil, fmt.Errorf("invalid table_id: %w", err)
 		}
 		tableUUID = id
-		if _, err := s.repo.Tenant(ctx).GetCafeTableByID(ctx, tableUUID); err != nil {
+		// Table validation - use read path
+		q, txCtx, tx, ownsTx, err := s.getTenantReadQueries(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+		}
+		if ownsTx {
+			defer tx.Rollback(ctx)
+		}
+		_, err = q.GetCafeTableByID(txCtx, tableUUID)
+		if err != nil {
 			if err == pgx.ErrNoRows {
 				return nil, fmt.Errorf("cafe table not found")
 			}
@@ -272,7 +304,16 @@ func (s *OrderS) CreateOrder(ctx context.Context, req model.CreateOrderRequest) 
 
 	if isDineIn {
 		if immediateDineIn {
-			lockedTable, err := s.repo.Tenant(ctx).LockCafeTableByID(ctx, tableUUID)
+			// Table locking - use write helper
+			q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+			if err != nil {
+				return nil, fmt.Errorf("failed to get tenant queries for table lock: %w", err)
+			}
+			if ownsTx {
+				defer tx.Rollback(ctx)
+			}
+
+			lockedTable, err := q.LockCafeTableByID(txCtx, tableUUID)
 			if err != nil {
 				if err == pgx.ErrNoRows {
 					return nil, fmt.Errorf("cafe table not found")
@@ -281,26 +322,48 @@ func (s *OrderS) CreateOrder(ctx context.Context, req model.CreateOrderRequest) 
 			}
 
 			if lockedTable.Status == string(model.TableStatusBusy) {
-				existing, activeErr := s.repo.Tenant(ctx).GetActiveOpenOrderByTableID(ctx, tableUUID)
-				if activeErr == nil {
-					return nil, fmt.Errorf("table already has an active order: %s", existing.ID.String())
+				// Check active order - use read path
+				readQ, readCtx, readTx, ownsReadTx, readErr := s.getTenantReadQueries(ctx)
+				if readErr != nil {
+					return nil, fmt.Errorf("failed to get tenant queries: %w", readErr)
 				}
-				if activeErr != nil && activeErr != pgx.ErrNoRows {
-					return nil, fmt.Errorf("failed to check active order by table: %w", activeErr)
+				if ownsReadTx {
+					defer readTx.Rollback(ctx)
+				}
+				_, err = readQ.GetActiveOpenOrderByTableID(readCtx, tableUUID)
+				if err == nil {
+					return nil, fmt.Errorf("table already has an active order")
+				}
+				if err != nil && err != pgx.ErrNoRows {
+					return nil, fmt.Errorf("failed to check active order by table: %w", err)
 				}
 				log.Printf("CreateOrder: healing stale busy status for table %s", tableUUID)
-				if _, healErr := s.repo.Tenant(ctx).SetTableFree(ctx, tableUUID); healErr != nil {
+				if _, healErr := q.SetTableFree(txCtx, tableUUID); healErr != nil {
 					log.Printf("CreateOrder: failed to heal table status: %v", healErr)
+				}
+			}
+
+			if ownsTx {
+				if err := tx.Commit(ctx); err != nil {
+					return nil, fmt.Errorf("failed to commit table lock: %w", err)
 				}
 			}
 		}
 
-		existing, err := s.repo.Tenant(ctx).GetActiveOpenOrderByTableID(ctx, tableUUID)
-		if err == nil {
-			return nil, fmt.Errorf("table already has an active order: %s", existing.ID.String())
+		// Check active order - use read path
+		readQ, readCtx, readTx, ownsReadTx, checkErr := s.getTenantReadQueries(ctx)
+		if checkErr != nil {
+			return nil, fmt.Errorf("failed to get tenant queries: %w", checkErr)
 		}
-		if err != nil && err != pgx.ErrNoRows {
-			return nil, fmt.Errorf("failed to check active order by table: %w", err)
+		if ownsReadTx {
+			defer readTx.Rollback(ctx)
+		}
+		_, checkErr = readQ.GetActiveOpenOrderByTableID(readCtx, tableUUID)
+		if checkErr == nil {
+			return nil, fmt.Errorf("table already has an active order")
+		}
+		if checkErr != nil && checkErr != pgx.ErrNoRows {
+			return nil, fmt.Errorf("failed to check active order by table: %w", checkErr)
 		}
 	}
 
@@ -314,7 +377,16 @@ func (s *OrderS) CreateOrder(ctx context.Context, req model.CreateOrderRequest) 
 		tableIDPg = pgtype.UUID{Bytes: tableUUID, Valid: true}
 	}
 
-	createdOrder, err := s.repo.Tenant(ctx).CreateOrder(ctx, pg.CreateOrderParams{
+	// Main order creation - use write helper
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	createdOrder, err := q.CreateOrder(txCtx, pg.CreateOrderParams{
 		ID:              orderUUID,
 		TableID:         tableIDPg,
 		WaiterID:        waiterUUID,
@@ -335,19 +407,19 @@ func (s *OrderS) CreateOrder(ctx context.Context, req model.CreateOrderRequest) 
 	orderForResponse := any(createdOrder)
 
 	if immediateDineIn {
-		if _, err := s.repo.Tenant(ctx).SetTableBusy(ctx, tableUUID); err != nil {
+		if _, err := q.SetTableBusy(txCtx, tableUUID); err != nil {
 			return nil, fmt.Errorf("failed to set table busy: %w", err)
 		}
 	}
 
-	billNo, err := s.repo.Tenant(ctx).NextDailyBillNo(ctx)
+	billNo, err := q.NextDailyBillNo(txCtx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate bill number: %w", err)
 	}
 
 	var servicePercent pgtype.Numeric
 	if isDineIn {
-		servicePercent, err = s.repo.Tenant(ctx).GetDefaultServicePercentByTable(ctx, tableUUID)
+		servicePercent, err = q.GetDefaultServicePercentByTable(txCtx, tableUUID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get default service percent: %w", err)
 		}
@@ -355,7 +427,7 @@ func (s *OrderS) CreateOrder(ctx context.Context, req model.CreateOrderRequest) 
 		_ = servicePercent.Scan("0")
 	}
 
-	if err := s.repo.Tenant(ctx).InitOrderBillFields(ctx, createdOrder.ID, billNo, servicePercent); err != nil {
+	if err := q.InitOrderBillFields(txCtx, createdOrder.ID, billNo, servicePercent); err != nil {
 		return nil, fmt.Errorf("failed to init bill fields: %w", err)
 	}
 
@@ -369,12 +441,12 @@ func (s *OrderS) CreateOrder(ctx context.Context, req model.CreateOrderRequest) 
 				return nil, fmt.Errorf("quantity must be greater than 0")
 			}
 
-			good, err := s.repo.Tenant(ctx).GetGoodByID(ctx, goodUUID)
+			good, err := q.GetGoodByID(txCtx, goodUUID)
 			if err != nil {
 				return nil, fmt.Errorf("failed to fetch good: %w", err)
 			}
 
-			createdIt, err := s.repo.Tenant(ctx).CreateOrderItem(ctx, pg.CreateOrderItemParams{
+			createdIt, err := q.CreateOrderItem(txCtx, pg.CreateOrderItemParams{
 				ID:        uuid.New(),
 				GoodID:    goodUUID,
 				OrderID:   createdOrder.ID,
@@ -390,36 +462,34 @@ func (s *OrderS) CreateOrder(ctx context.Context, req model.CreateOrderRequest) 
 			if err != nil {
 				return nil, fmt.Errorf("failed to create order item: %w", err)
 			}
-			if err := s.saveOrderItemModifiers(ctx, createdIt.ID, goodUUID, it.Modifiers); err != nil {
+			if err := s.saveOrderItemModifiers(txCtx, q, createdIt.ID, goodUUID, it.Modifiers); err != nil {
 				return nil, err
 			}
-			if err := s.consumeItemStockWithModifiers(ctx, createdIt.ID); err != nil {
+			if err := s.consumeItemStockWithModifiers(txCtx, q, createdIt.ID); err != nil {
 				return nil, fmt.Errorf("failed to deduct stock for created order item: %w", err)
 			}
 
 		}
 
-		if err := s.repo.Tenant(ctx).RecalculateOrderTotalsFromItems(ctx, createdOrder.ID); err != nil {
+		if err := q.RecalculateOrderTotalsFromItems(txCtx, createdOrder.ID); err != nil {
 			return nil, fmt.Errorf("failed to recalculate order totals: %w", err)
 		}
 
-		refetched, err := s.repo.Tenant(ctx).GetOrderByID(ctx, createdOrder.ID)
+		refetched, err := q.GetOrderByID(txCtx, createdOrder.ID)
 		if err == nil {
 			orderForResponse = refetched
 		}
 	}
 
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	resp := toOrderResponse(orderForResponse)
 	if resp == nil {
-		return nil, nil
-	}
-
-	if err := s.attachOrderBillSummary(ctx, createdOrder.ID, resp); err != nil {
-		return nil, fmt.Errorf("failed to attach order bill summary: %w", err)
-	}
-
-	if err := s.attachTableAmountPreview(ctx, createdOrder.ID, resp); err != nil {
-		return nil, fmt.Errorf("failed to attach table amount preview: %w", err)
+		return nil, errors.New("failed to convert order to response")
 	}
 
 	return resp, nil
@@ -480,17 +550,26 @@ func (s *OrderS) GetOrderByID(ctx context.Context, orderID string) (*model.Order
 		return nil, fmt.Errorf("invalid order id: %w", err)
 	}
 
-	order, err := s.repo.Tenant(ctx).GetOrderByID(ctx, id)
+	var resp *model.OrderResponse
+	q, txCtx, tx, ownsTx, err := s.getTenantReadQueries(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	order, err := q.GetOrderByID(txCtx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get order: %w", err)
 	}
 
-	resp := toOrderResponse(order)
+	resp = toOrderResponse(order)
 	if resp == nil {
 		return nil, nil
 	}
 
-	items, err := s.repo.Tenant(ctx).GetOrderItemsByOrderID(ctx, id)
+	items, err := q.GetOrderItemsByOrderID(txCtx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get order items: %w", err)
 	}
@@ -502,7 +581,7 @@ func (s *OrderS) GetOrderByID(ctx context.Context, orderID string) (*model.Order
 		}
 	}
 
-	modRows, err := s.repo.Tenant(ctx).ListOrderItemModifiersByOrderID(ctx, id)
+	modRows, err := q.ListOrderItemModifiersByOrderID(txCtx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list order item modifiers: %w", err)
 	}
@@ -521,23 +600,23 @@ func (s *OrderS) GetOrderByID(ctx context.Context, orderID string) (*model.Order
 		}
 	}
 
-	if err := s.attachOrderBillSummary(ctx, id, resp); err != nil {
+	if err := s.attachOrderBillSummary(txCtx, q, id, resp); err != nil {
 		return nil, fmt.Errorf("failed to attach order bill summary: %w", err)
 	}
 
-	if err := s.attachTableAmountPreview(ctx, id, resp); err != nil {
+	if err := s.attachTableAmountPreview(txCtx, q, id, resp); err != nil {
 		return nil, fmt.Errorf("failed to attach table amount preview: %w", err)
 	}
 
 	return resp, nil
 }
 
-func (s *OrderS) attachTableAmountPreview(ctx context.Context, orderID uuid.UUID, resp *model.OrderResponse) error {
+func (s *OrderS) attachTableAmountPreview(ctx context.Context, q *pg.Queries, orderID uuid.UUID, resp *model.OrderResponse) error {
 	if resp == nil {
 		return nil
 	}
 
-	ctxRow, err := s.repo.Tenant(ctx).GetOrderTimerContext(ctx, orderID)
+	ctxRow, err := q.GetOrderTimerContext(ctx, orderID)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil
@@ -566,7 +645,7 @@ func (s *OrderS) attachTableAmountPreview(ctx context.Context, orderID uuid.UUID
 	var tableAmount *string
 	var startedAt *time.Time
 
-	session, err := s.repo.Tenant(ctx).GetLatestTableTimeSessionByOrderID(ctx, orderID)
+	session, err := q.GetLatestTableTimeSessionByOrderID(ctx, orderID)
 	switch {
 	case err == nil:
 		timer := toTableTimerResponse(ctxRow, &session, time.Now())
@@ -607,12 +686,12 @@ func (s *OrderS) attachTableAmountPreview(ctx context.Context, orderID uuid.UUID
 	return nil
 }
 
-func (s *OrderS) attachOrderBillSummary(ctx context.Context, orderID uuid.UUID, resp *model.OrderResponse) error {
+func (s *OrderS) attachOrderBillSummary(ctx context.Context, q *pg.Queries, orderID uuid.UUID, resp *model.OrderResponse) error {
 	if resp == nil {
 		return nil
 	}
 
-	bill, err := s.repo.Tenant(ctx).GetBillDetails(ctx, orderID)
+	bill, err := q.GetBillDetails(ctx, orderID)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil
@@ -649,13 +728,9 @@ func formatAmountString(v float64) string {
 }
 
 func (s *OrderS) GetAllOrders(ctx context.Context, req model.GetOrdersRequest) ([]model.OrderResponse, int64, error) {
-	if activated, err := s.repo.Tenant(ctx).ActivateReservedOrders(ctx); err == nil {
-		for _, row := range activated {
-			if row.OrderType == "dine_in" && row.TableID.Valid {
-				_, _ = s.repo.Tenant(ctx).SetTableBusy(ctx, row.TableID.Bytes)
-			}
-		}
-	}
+	// Mixed-flow: activate reserved orders and set tables busy
+	// This mutation is idempotent and should not fail the read operation if it errors.
+	_ = s.activateDueReservedOrders(ctx)
 
 	limit := req.Limit
 	offset := req.Offset
@@ -717,12 +792,23 @@ func (s *OrderS) GetAllOrders(ctx context.Context, req model.GetOrdersRequest) (
 		params.PeriodEnd = pgtype.Timestamptz{Time: end.UTC(), Valid: true}
 	}
 
-	total, err := s.repo.Tenant(ctx).CountFilteredOrders(ctx, params)
+	// Read part: use getTenantReadQueries for count and list queries
+	var total int64
+	var orders []pg.GetAllOrdersRow
+	q, txCtx, tx, ownsTx, err := s.getTenantReadQueries(ctx)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	total, err = q.CountFilteredOrders(txCtx, params)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to count orders: %w", err)
 	}
 
-	orders, err := s.repo.Tenant(ctx).GetAllOrders(ctx, params)
+	orders, err = q.GetAllOrders(txCtx, params)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to get orders: %w", err)
 	}
@@ -766,11 +852,22 @@ func resolveOrderDateRange(req model.GetOrdersRequest) (*time.Time, *time.Time, 
 
 func (s *OrderS) GetOrdersByStatus(ctx context.Context, status string, limit, offset int32) ([]model.OrderResponse, int64, error) {
 	st := pg.NullOrderStatus{OrderStatus: pg.OrderStatus(status), Valid: true}
-	total, err := s.repo.Tenant(ctx).CountOrdersByStatus(ctx, st)
+
+	var total int64
+	var orders []pg.GetOrdersByStatusRow
+	q, txCtx, tx, ownsTx, err := s.getTenantReadQueries(ctx)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	total, err = q.CountOrdersByStatus(txCtx, st)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to count orders by status: %w", err)
 	}
-	orders, err := s.repo.Tenant(ctx).GetOrdersByStatus(ctx, pg.GetOrdersByStatusParams{Status: st, Limit: limit, Offset: offset})
+	orders, err = q.GetOrdersByStatus(txCtx, pg.GetOrdersByStatusParams{Status: st, Limit: limit, Offset: offset})
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to get orders by status: %w", err)
 	}
@@ -789,12 +886,23 @@ func (s *OrderS) GetOrdersByWaiterID(ctx context.Context, waiterID string, limit
 	}
 
 	waiterIDPg := pgtype.UUID{Bytes: id, Valid: true}
-	total, err := s.repo.Tenant(ctx).CountOrdersByWaiterID(ctx, waiterIDPg)
+
+	var total int64
+	var orders []pg.GetOrdersByWaiterIDRow
+	q, txCtx, tx, ownsTx, err := s.getTenantReadQueries(ctx)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	total, err = q.CountOrdersByWaiterID(txCtx, waiterIDPg)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to count orders by waiter: %w", err)
 	}
 
-	orders, err := s.repo.Tenant(ctx).GetOrdersByWaiterID(ctx, pg.GetOrdersByWaiterIDParams{WaiterID: waiterIDPg, Limit: limit, Offset: offset})
+	orders, err = q.GetOrdersByWaiterID(txCtx, pg.GetOrdersByWaiterIDParams{WaiterID: waiterIDPg, Limit: limit, Offset: offset})
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to get orders by waiter: %w", err)
 	}
@@ -812,7 +920,16 @@ func (s *OrderS) GetOrdersByTableID(ctx context.Context, tableID string) ([]mode
 		return nil, fmt.Errorf("invalid table id: %w", err)
 	}
 
-	orders, err := s.repo.Tenant(ctx).GetOrdersByTableID(ctx, pgtype.UUID{Bytes: id, Valid: true})
+	var orders []pg.GetOrdersByTableIDRow
+	q, txCtx, tx, ownsTx, err := s.getTenantReadQueries(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	orders, err = q.GetOrdersByTableID(txCtx, pgtype.UUID{Bytes: id, Valid: true})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get orders by table: %w", err)
 	}
@@ -830,7 +947,16 @@ func (s *OrderS) UpdateOrder(ctx context.Context, orderID string, req model.Upda
 		return nil, fmt.Errorf("invalid order id: %w", err)
 	}
 
-	existing, err := s.repo.Tenant(ctx).GetOrderByID(ctx, id)
+	var existing pg.GetOrderByIDRow
+	q, txCtx, tx, ownsTx, err := s.getTenantReadQueries(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	existing, err = q.GetOrderByID(txCtx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get order: %w", err)
 	}
@@ -886,7 +1012,15 @@ func (s *OrderS) UpdateOrder(ctx context.Context, orderID string, req model.Upda
 		finalStatus = existing.Status
 	}
 
-	updatedOrder, err := s.repo.Tenant(ctx).UpdateOrder(ctx, pg.UpdateOrderParams{
+	q, txCtx, tx, ownsTx, err = s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	updatedOrder, err := q.UpdateOrder(txCtx, pg.UpdateOrderParams{
 		ID:          id,
 		TableID:     finalTableID,
 		WaiterID:    finalWaiterID,
@@ -901,9 +1035,15 @@ func (s *OrderS) UpdateOrder(ctx context.Context, orderID string, req model.Upda
 	}
 	orderForResponse := any(updatedOrder)
 
-	_ = s.repo.Tenant(ctx).RecalculateOrderTotalsFromItems(ctx, updatedOrder.ID)
-	if refetched, err := s.repo.Tenant(ctx).GetOrderByID(ctx, updatedOrder.ID); err == nil {
+	_ = q.RecalculateOrderTotalsFromItems(txCtx, updatedOrder.ID)
+	if refetched, err := q.GetOrderByID(txCtx, updatedOrder.ID); err == nil {
 		orderForResponse = refetched
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	if statusRequestedServed && !statusAlreadyServed {
@@ -929,7 +1069,17 @@ func (s *OrderS) UpdateOrderStatus(ctx context.Context, orderID string, status s
 		return nil, fmt.Errorf("use the cancel order endpoint to cancel an order")
 	}
 
-	existing, err := s.repo.Tenant(ctx).GetOrderByID(ctx, id)
+	// Read existing order - use read path
+	var existing pg.GetOrderByIDRow
+	q, txCtx, tx, ownsTx, err := s.getTenantReadQueries(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	existing, err = q.GetOrderByID(txCtx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get order: %w", err)
 	}
@@ -944,10 +1094,25 @@ func (s *OrderS) UpdateOrderStatus(ctx context.Context, orderID string, status s
 		return nil, fmt.Errorf("cannot change status of a paid order")
 	}
 
+	// Update order status - use write helper
+	q, txCtx, tx, ownsTx, err = s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	st := pg.NullOrderStatus{OrderStatus: pg.OrderStatus(status), Valid: true}
-	order, err := s.repo.Tenant(ctx).UpdateOrderStatus(ctx, pg.UpdateOrderStatusParams{ID: id, Status: st})
+	order, err := q.UpdateOrderStatus(txCtx, pg.UpdateOrderStatusParams{ID: id, Status: st})
 	if err != nil {
 		return nil, fmt.Errorf("failed to update order status: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return toOrderResponse(order), nil
@@ -1033,7 +1198,16 @@ func (s *OrderS) MarkOrderPaid(ctx context.Context, orderID string, cashierID st
 		return nil, fmt.Errorf("invalid payment_type: must be one of cash, card, split")
 	}
 
-	orderBeforePay, err := s.repo.Tenant(ctx).GetOrderByID(ctx, oID)
+	// Get tenant mutation queries for the payment operation
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	orderBeforePay, err := q.GetOrderByID(txCtx, oID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch order: %w", err)
 	}
@@ -1052,7 +1226,7 @@ func (s *OrderS) MarkOrderPaid(ctx context.Context, orderID string, cashierID st
 		}
 	}
 
-	if err := s.repo.Tenant(ctx).PayOrderBill(ctx, pg.PayOrderBillParams{
+	if err := q.PayOrderBill(txCtx, pg.PayOrderBillParams{
 		OrderID:            oID,
 		CashierID:          cID,
 		CashRegisterID:     crUUID,
@@ -1070,45 +1244,52 @@ func (s *OrderS) MarkOrderPaid(ctx context.Context, orderID string, cashierID st
 	}
 
 	if orderBeforePay.TableID.Valid {
-		withSavepoint(ctx, "sp_set_table_free", func() error {
-			_, err := s.repo.Tenant(ctx).SetTableFree(ctx, orderBeforePay.TableID.Bytes)
-			return err
-		})
+		// SetTableFree is best-effort - log error but don't fail payment
+		if _, freeErr := q.SetTableFree(txCtx, orderBeforePay.TableID.Bytes); freeErr != nil {
+			log.Printf("MarkOrderPaid: failed to set table free for order %s: %v", orderID, freeErr)
+		}
 	}
 
-	withSavepoint(ctx, "sp_create_tx", func() error {
-		bill, billErr := s.repo.Tenant(ctx).GetBillDetails(ctx, oID)
-		if billErr != nil {
-			return billErr
+	// CreateTransaction is critical for payment accounting - must succeed
+	bill, billErr := q.GetBillDetails(txCtx, oID)
+	if billErr != nil {
+		return nil, fmt.Errorf("failed to get bill details for transaction: %w", billErr)
+	}
+	descStr := fmt.Sprintf("Bill payment #%d", bill.BillNo)
+	txParams := pg.CreateTransactionParams{
+		ID:                 uuid.New(),
+		Type:               pg.TransactionTypeBillPayment,
+		Amount:             bill.GrandTotal,
+		Description:        &descStr,
+		Date:               time.Now(),
+		UserID:             pgtype.UUID{Bytes: cID, Valid: true},
+		CustomerPaidAmount: derefNumeric(bill.CustomerPaidAmount),
+		ChangeAmount:       derefNumeric(bill.ChangeAmount),
+	}
+	if cashRegisterID != nil && *cashRegisterID != "" {
+		if crID, parseErr := uuid.Parse(*cashRegisterID); parseErr == nil {
+			txParams.CashRegisterID = pgtype.UUID{Bytes: crID, Valid: true}
 		}
-		descStr := fmt.Sprintf("Bill payment #%d", bill.BillNo)
-		txParams := pg.CreateTransactionParams{
-			ID:                 uuid.New(),
-			Type:               pg.TransactionTypeBillPayment,
-			Amount:             bill.GrandTotal,
-			Description:        &descStr,
-			Date:               time.Now(),
-			UserID:             pgtype.UUID{Bytes: cID, Valid: true},
-			CustomerPaidAmount: derefNumeric(bill.CustomerPaidAmount),
-			ChangeAmount:       derefNumeric(bill.ChangeAmount),
-		}
-		if cashRegisterID != nil && *cashRegisterID != "" {
-			if crID, parseErr := uuid.Parse(*cashRegisterID); parseErr == nil {
-				txParams.CashRegisterID = pgtype.UUID{Bytes: crID, Valid: true}
-			}
-		}
-		txParams.PayType = pg.NullPaymentType{
-			PaymentType: pg.PaymentType(pt),
-			Valid:       true,
-		}
-		_, err := s.repo.Tenant(ctx).CreateTransaction(ctx, txParams)
-		return err
-	})
+	}
+	txParams.PayType = pg.NullPaymentType{
+		PaymentType: pg.PaymentType(pt),
+		Valid:       true,
+	}
+	if _, txErr := q.CreateTransaction(txCtx, txParams); txErr != nil {
+		return nil, fmt.Errorf("failed to create payment transaction: %w", txErr)
+	}
 
-	order, err := s.repo.Tenant(ctx).GetOrderByID(ctx, oID)
+	order, err := q.GetOrderByID(txCtx, oID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch order: %w", err)
 	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return toOrderResponse(order), nil
 }
 
@@ -1237,23 +1418,39 @@ func (s *OrderS) DeleteOrder(ctx context.Context, orderID string) error {
 		return fmt.Errorf("invalid order id: %w", err)
 	}
 
-	orderBefore, err := s.repo.Tenant(ctx).GetOrderByID(ctx, id)
+	// Get tenant mutation queries for delete operation
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	orderBefore, err := q.GetOrderByID(txCtx, id)
 	if err == nil {
-		if err := s.reverseOrderItemsStockByOrder(ctx, id, "order_deleted_in"); err != nil {
+		if err := s.reverseOrderItemsStockByOrder(txCtx, q, id, "order_deleted_in"); err != nil {
 			return fmt.Errorf("failed to restore order stock before delete: %w", err)
-		}
-		if orderBefore.TableID.Valid {
-			defer func() {
-				if _, freeErr := s.repo.Tenant(ctx).SetTableFree(ctx, orderBefore.TableID.Bytes); freeErr != nil {
-					log.Printf("DeleteOrder: failed to set table free for order %s: %v", orderID, freeErr)
-				}
-			}()
 		}
 	}
 
-	if err := s.repo.Tenant(ctx).DeleteOrder(ctx, id); err != nil {
+	if err := q.DeleteOrder(txCtx, id); err != nil {
 		return fmt.Errorf("failed to delete order: %w", err)
 	}
+
+	// SetTableFree must be atomic with delete - fail if table free fails
+	if err == nil && orderBefore.TableID.Valid {
+		if _, freeErr := q.SetTableFree(txCtx, orderBefore.TableID.Bytes); freeErr != nil {
+			return fmt.Errorf("failed to set table free for order %s: %w", orderID, freeErr)
+		}
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return nil
 }
 
@@ -1263,8 +1460,22 @@ func (s *OrderS) RestoreOrder(ctx context.Context, orderID string) error {
 		return fmt.Errorf("invalid order id: %w", err)
 	}
 
-	if err := s.repo.Tenant(ctx).RestoreOrder(ctx, id); err != nil {
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	if err := q.RestoreOrder(txCtx, id); err != nil {
 		return fmt.Errorf("failed to restore order: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	// Note: Timer auto-start for restored orders is handled at handler level
@@ -1282,10 +1493,25 @@ func (s *OrderS) AssignWaiterToOrder(ctx context.Context, orderID string, waiter
 		return nil, fmt.Errorf("invalid waiter id: %w", err)
 	}
 
-	order, err := s.repo.Tenant(ctx).AssignWaiterToOrder(ctx, pg.AssignWaiterToOrderParams{ID: oID, WaiterID: pgtype.UUID{Bytes: wID, Valid: true}})
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	order, err := q.AssignWaiterToOrder(txCtx, pg.AssignWaiterToOrderParams{ID: oID, WaiterID: pgtype.UUID{Bytes: wID, Valid: true}})
 	if err != nil {
 		return nil, fmt.Errorf("failed to assign waiter: %w", err)
 	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return toOrderResponse(order), nil
 }
 
@@ -1299,10 +1525,25 @@ func (s *OrderS) AssignCashierToOrder(ctx context.Context, orderID string, cashi
 		return nil, fmt.Errorf("invalid cashier id: %w", err)
 	}
 
-	order, err := s.repo.Tenant(ctx).AssignCashierToOrder(ctx, pg.AssignCashierToOrderParams{ID: oID, CashierID: pgtype.UUID{Bytes: cID, Valid: true}})
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	order, err := q.AssignCashierToOrder(txCtx, pg.AssignCashierToOrderParams{ID: oID, CashierID: pgtype.UUID{Bytes: cID, Valid: true}})
 	if err != nil {
 		return nil, fmt.Errorf("failed to assign cashier: %w", err)
 	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return toOrderResponse(order), nil
 }
 
@@ -1312,28 +1553,48 @@ func (s *OrderS) CancelOrder(ctx context.Context, orderID string) (*model.OrderR
 		return nil, fmt.Errorf("invalid order id: %w", err)
 	}
 
-	orderBefore, err := s.repo.Tenant(ctx).GetOrderByID(ctx, id)
+	// Get tenant mutation queries for cancel operation
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	orderBefore, err := q.GetOrderByID(txCtx, id)
 	if err != nil {
 		return nil, fmt.Errorf("order not found: %w", err)
 	}
 
 	// Idempotent: if already cancelled, return success
 	if orderBefore.Status.Valid && orderBefore.Status.OrderStatus == pg.OrderStatusCancelled {
+		if ownsTx {
+			if err := tx.Commit(ctx); err != nil {
+				return nil, fmt.Errorf("failed to commit transaction: %w", err)
+			}
+		}
 		return toOrderResponse(orderBefore), nil
 	}
 
-	order, err := s.repo.Tenant(ctx).CancelOrder(ctx, id)
+	order, err := q.CancelOrder(txCtx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to cancel order: %w", err)
 	}
 
-	if err := s.reverseOrderItemsStockByOrder(ctx, id, "order_cancelled_in"); err != nil {
+	if err := s.reverseOrderItemsStockByOrder(txCtx, q, id, "order_cancelled_in"); err != nil {
 		return nil, fmt.Errorf("failed to restore order stock before cancel: %w", err)
 	}
 
 	if orderBefore.TableID.Valid {
-		if _, freeErr := s.repo.Tenant(ctx).SetTableFree(ctx, orderBefore.TableID.Bytes); freeErr != nil {
+		if _, freeErr := q.SetTableFree(txCtx, orderBefore.TableID.Bytes); freeErr != nil {
 			log.Printf("CancelOrder: failed to set table free for order %s: %v", orderID, freeErr)
+		}
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
 		}
 	}
 
@@ -1346,7 +1607,16 @@ func (s *OrderS) MarkOrderCooking(ctx context.Context, orderID string) (*model.O
 		return nil, fmt.Errorf("invalid order id: %w", err)
 	}
 	// Takeaway orders must be paid before kitchen can start
-	existing, err := s.repo.Tenant(ctx).GetOrderByID(ctx, id)
+	var existing pg.GetOrderByIDRow
+	readQ, readCtx, readTx, ownsReadTx, err := s.getTenantReadQueries(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsReadTx {
+		defer readTx.Rollback(ctx)
+	}
+
+	existing, err = readQ.GetOrderByID(readCtx, id)
 	if err != nil {
 		return nil, fmt.Errorf("order not found: %w", err)
 	}
@@ -1355,10 +1625,26 @@ func (s *OrderS) MarkOrderCooking(ctx context.Context, orderID string) (*model.O
 			return nil, fmt.Errorf("takeaway orders must be paid before cooking can start")
 		}
 	}
-	order, err := s.repo.Tenant(ctx).MarkOrderCooking(ctx, id)
+
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	order, err := q.MarkOrderCooking(txCtx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to mark order cooking: %w", err)
 	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return toOrderResponse(order), nil
 }
 
@@ -1367,10 +1653,26 @@ func (s *OrderS) MarkOrderReady(ctx context.Context, orderID string) (*model.Ord
 	if err != nil {
 		return nil, fmt.Errorf("invalid order id: %w", err)
 	}
-	order, err := s.repo.Tenant(ctx).MarkOrderReady(ctx, id)
+
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	order, err := q.MarkOrderReady(txCtx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to mark order ready: %w", err)
 	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return toOrderResponse(order), nil
 }
 
@@ -1379,13 +1681,28 @@ func (s *OrderS) MarkOrderServed(ctx context.Context, orderID string) (*model.Or
 	if err != nil {
 		return nil, fmt.Errorf("invalid order id: %w", err)
 	}
-	order, err := s.repo.Tenant(ctx).MarkOrderServed(ctx, id)
+
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	order, err := q.MarkOrderServed(txCtx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to mark order served: %w", err)
 	}
 
-	if err := s.repo.Tenant(ctx).CloseBillOnServed(ctx, id); err != nil {
+	if err := q.CloseBillOnServed(txCtx, id); err != nil {
 		return nil, fmt.Errorf("failed to close bill: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return toOrderResponse(order), nil
@@ -1397,7 +1714,16 @@ func (s *OrderS) ActivateOrder(ctx context.Context, orderID string) (*model.Orde
 		return nil, fmt.Errorf("invalid order id: %w", err)
 	}
 
-	existing, err := s.repo.Tenant(ctx).GetOrderByID(ctx, id)
+	var existing pg.GetOrderByIDRow
+	readQ, readCtx, readTx, ownsReadTx, err := s.getTenantReadQueries(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsReadTx {
+		defer readTx.Rollback(ctx)
+	}
+
+	existing, err = readQ.GetOrderByID(readCtx, id)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, ErrOrderNotFound
@@ -1418,7 +1744,15 @@ func (s *OrderS) ActivateOrder(ctx context.Context, orderID string) (*model.Orde
 		return nil, fmt.Errorf("%w: %s", ErrOrderCannotBeActivated, currentStatus)
 	}
 
-	order, err := s.repo.Tenant(ctx).ActivateOrder(ctx, id)
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	order, err := q.ActivateOrder(txCtx, id)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, fmt.Errorf("%w: %s", ErrOrderCannotBeActivated, currentStatus)
@@ -1426,8 +1760,14 @@ func (s *OrderS) ActivateOrder(ctx context.Context, orderID string) (*model.Orde
 		return nil, fmt.Errorf("failed to activate order: %w", err)
 	}
 
-	if order.OrderType == "dine_in" && order.TableID.Valid {
-		_, _ = s.repo.Tenant(ctx).SetTableBusy(ctx, order.TableID.Bytes)
+	if order.TableID.Valid {
+		_, _ = q.SetTableBusy(txCtx, order.TableID.Bytes)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return toOrderResponse(order), nil
@@ -1442,7 +1782,16 @@ func (s *OrderS) RescheduleOrder(ctx context.Context, orderID string, req model.
 	if err != nil {
 		return nil, fmt.Errorf("invalid scheduled_at format (use RFC3339): %w", err)
 	}
-	order, err := s.repo.Tenant(ctx).RescheduleOrder(ctx, pg.RescheduleOrderParams{
+
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	order, err := q.RescheduleOrder(txCtx, pg.RescheduleOrderParams{
 		ID:                id,
 		ScheduledAt:       pgtype.Timestamptz{Time: scheduledAt, Valid: true},
 		RescheduleComment: req.Comment,
@@ -1450,6 +1799,13 @@ func (s *OrderS) RescheduleOrder(ctx context.Context, orderID string, req model.
 	if err != nil {
 		return nil, fmt.Errorf("failed to reschedule order: %w", err)
 	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return toOrderResponse(order), nil
 }
 
@@ -1523,17 +1879,26 @@ func (s *OrderS) GetBills(ctx context.Context, req model.GetBillsRequest) (*mode
 		Offset:         req.Offset,
 	}
 
-	total, err := s.repo.Tenant(ctx).CountBills(ctx, params)
+	var resp *model.BillListResponse
+	q, txCtx, tx, ownsTx, err := s.getTenantReadQueries(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	total, err := q.CountBills(txCtx, params)
 	if err != nil {
 		return nil, fmt.Errorf("failed to count bills: %w", err)
 	}
 
-	totalsRow, err := s.repo.Tenant(ctx).GetBillsTotals(ctx, params)
+	totalsRow, err := q.GetBillsTotals(txCtx, params)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get bills totals: %w", err)
 	}
 
-	rows, err := s.repo.Tenant(ctx).GetBills(ctx, params)
+	rows, err := q.GetBills(txCtx, params)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get bills: %w", err)
 	}
@@ -1593,7 +1958,8 @@ func (s *OrderS) GetBills(ctx context.Context, req model.GetBillsRequest) (*mode
 			Quantity:        r.TotalQty,
 		})
 	}
-	return &model.BillListResponse{
+
+	resp = &model.BillListResponse{
 		Total:  total,
 		Limit:  limit,
 		Offset: req.Offset,
@@ -1607,7 +1973,9 @@ func (s *OrderS) GetBills(ctx context.Context, req model.GetBillsRequest) (*mode
 			TotalDiscountAmount: numericToString(totalsRow.TotalDiscountAmount),
 			AvgDiscountPercent:  numericToString(totalsRow.AvgDiscountPercent),
 		},
-	}, nil
+	}
+
+	return resp, nil
 }
 
 func (s *OrderS) GetBillDetails(ctx context.Context, billID string) (*model.BillDetails, error) {
@@ -1616,12 +1984,21 @@ func (s *OrderS) GetBillDetails(ctx context.Context, billID string) (*model.Bill
 		return nil, fmt.Errorf("invalid bill id: %w", err)
 	}
 
-	h, err := s.repo.Tenant(ctx).GetBillDetails(ctx, id)
+	var resp *model.BillDetails
+	q, txCtx, tx, ownsTx, err := s.getTenantReadQueries(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	h, err := q.GetBillDetails(txCtx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get bill details: %w", err)
 	}
 
-	items, err := s.repo.Tenant(ctx).GetBillItems(ctx, id)
+	items, err := q.GetBillItems(txCtx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get bill items: %w", err)
 	}
@@ -1676,7 +2053,7 @@ func (s *OrderS) GetBillDetails(ctx context.Context, billID string) (*model.Bill
 		})
 	}
 
-	resp := &model.BillDetails{
+	resp = &model.BillDetails{
 		ID:                 h.ID.String(),
 		BillNo:             h.BillNo,
 		BillStatus:         h.BillStatus,
@@ -1710,7 +2087,7 @@ func (s *OrderS) GetBillDetails(ctx context.Context, billID string) (*model.Bill
 		Items:              outItems,
 	}
 
-	if err := s.attachBillTimeBasedDetails(ctx, id, resp); err != nil {
+	if err := s.attachBillTimeBasedDetails(txCtx, q, id, resp); err != nil {
 		return nil, fmt.Errorf("failed to attach bill time-based details: %w", err)
 	}
 
@@ -1726,25 +2103,17 @@ func toBillPausePeriods(rows []pg.ListTableTimeEventsBySessionIDRow) []model.Bil
 	var openPauseIndex = -1
 
 	for _, row := range rows {
-		switch row.EventType {
-		case "paused":
-			t := row.CreatedAt
+		if row.EventType == "pause" && openPauseIndex == -1 {
 			out = append(out, model.BillPausePeriod{
-				PausedAt:        &t,
-				ResumedAt:       nil,
-				DurationMinutes: 0,
+				PausedAt: &row.CreatedAt,
 			})
 			openPauseIndex = len(out) - 1
+		}
 
-		case "resumed":
-			if openPauseIndex < 0 || openPauseIndex >= len(out) {
-				continue
-			}
-
+		if row.EventType == "resume" && openPauseIndex != -1 {
 			t := row.CreatedAt
 			out[openPauseIndex].ResumedAt = &t
-
-			if out[openPauseIndex].PausedAt != nil && !t.Before(*out[openPauseIndex].PausedAt) {
+			if out[openPauseIndex].PausedAt != nil {
 				out[openPauseIndex].DurationMinutes = int32(t.Sub(*out[openPauseIndex].PausedAt) / time.Minute)
 			}
 
@@ -1755,12 +2124,41 @@ func toBillPausePeriods(rows []pg.ListTableTimeEventsBySessionIDRow) []model.Bil
 	return out
 }
 
-func (s *OrderS) attachBillTimeBasedDetails(ctx context.Context, orderID uuid.UUID, resp *model.BillDetails) error {
+func (s *OrderS) activateDueReservedOrders(ctx context.Context) error {
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get tenant queries for reservation activation: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	activated, err := q.ActivateReservedOrders(txCtx)
+	if err != nil {
+		return fmt.Errorf("failed to activate reserved orders: %w", err)
+	}
+
+	for _, row := range activated {
+		if row.OrderType == "dine_in" && row.TableID.Valid {
+			_, _ = q.SetTableBusy(txCtx, row.TableID.Bytes)
+		}
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("failed to commit reservation activation: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (s *OrderS) attachBillTimeBasedDetails(ctx context.Context, q *pg.Queries, orderID uuid.UUID, resp *model.BillDetails) error {
 	if resp == nil {
 		return nil
 	}
 
-	ctxRow, err := s.repo.Tenant(ctx).GetOrderTimerContext(ctx, orderID)
+	ctxRow, err := q.GetOrderTimerContext(ctx, orderID)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil
@@ -1786,7 +2184,7 @@ func (s *OrderS) attachBillTimeBasedDetails(ctx context.Context, orderID uuid.UU
 		resp.PricePerHour = &v
 	}
 
-	session, err := s.repo.Tenant(ctx).GetLatestTableTimeSessionByOrderID(ctx, orderID)
+	session, err := q.GetLatestTableTimeSessionByOrderID(ctx, orderID)
 	switch {
 	case err == nil:
 		timer := toTableTimerResponse(ctxRow, &session, time.Now())
@@ -1801,7 +2199,7 @@ func (s *OrderS) attachBillTimeBasedDetails(ctx context.Context, orderID uuid.UU
 			resp.TableAmount = timer.CurrentAmount
 		}
 
-		events, err := s.repo.Tenant(ctx).ListTableTimeEventsBySessionID(ctx, session.ID)
+		events, err := q.ListTableTimeEventsBySessionID(ctx, session.ID)
 		if err != nil {
 			return fmt.Errorf("failed to list table timer events: %w", err)
 		}
@@ -1832,7 +2230,12 @@ func (s *OrderS) consumeItemStockTx(
 		return fmt.Errorf("invalid item quantity: %w", err)
 	}
 
-	usages, err := s.expandGoodToIngredientsByCalculations(ctx, goodID, mult)
+	// Type assertion to get *pg.Queries from orderStockTx interface
+	queries, ok := q.(*pg.Queries)
+	if !ok {
+		return fmt.Errorf("orderStockTx does not implement *pg.Queries")
+	}
+	usages, err := s.expandGoodToIngredientsByCalculations(ctx, queries, goodID, mult)
 	if err != nil {
 		log.Printf("❌ ERROR: Failed to expand good %s to ingredients: %v", goodID, err)
 		return err
@@ -1923,14 +2326,14 @@ func (s *OrderS) consumeItemStockTx(
 	return nil
 }
 
-func (s *OrderS) consumeItemStock(ctx context.Context, goodID uuid.UUID, quantity int32, orderID uuid.UUID) error {
+func (s *OrderS) consumeItemStock(ctx context.Context, q *pg.Queries, goodID uuid.UUID, quantity int32, orderID uuid.UUID) error {
 	mult := pgtype.Numeric{}
 	mult.Valid = true
 	if err := mult.Scan(strconv.Itoa(int(quantity))); err != nil {
 		return fmt.Errorf("invalid item quantity: %w", err)
 	}
 
-	usages, err := s.expandGoodToIngredientsByCalculations(ctx, goodID, mult)
+	usages, err := s.expandGoodToIngredientsByCalculations(ctx, q, goodID, mult)
 	if err != nil {
 		return err
 	}
@@ -1940,7 +2343,7 @@ func (s *OrderS) consumeItemStock(ctx context.Context, goodID uuid.UUID, quantit
 		return nil
 	}
 
-	storageID, err := s.repo.Tenant(ctx).GetStorageByGoodID(ctx, goodID)
+	storageID, err := q.GetStorageByGoodID(ctx, goodID)
 	if err != nil {
 		return fmt.Errorf("failed to get storage for good: %w", err)
 	}
@@ -1950,7 +2353,7 @@ func (s *OrderS) consumeItemStock(ctx context.Context, goodID uuid.UUID, quantit
 
 	for _, u := range usages {
 		log.Printf("\n  📦 Processing ingredient: %s", u.ingredientID.String())
-		stockID, err := s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
+		stockID, err := q.EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
 			ID:           uuid.New(),
 			IngredientID: u.ingredientID,
 			StorageID:    storageID,
@@ -1961,7 +2364,7 @@ func (s *OrderS) consumeItemStock(ctx context.Context, goodID uuid.UUID, quantit
 		}
 		log.Printf("  ✓ Stock row ensured: %s", stockID.String())
 
-		locked, err := s.repo.Tenant(ctx).GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
+		locked, err := q.GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
 			IngredientID: u.ingredientID,
 			StorageID:    storageID,
 		})
@@ -1971,7 +2374,7 @@ func (s *OrderS) consumeItemStock(ctx context.Context, goodID uuid.UUID, quantit
 		}
 		log.Printf("  ✓ Stock locked | Before: %v | To Reduce: %v", locked.Quantity, u.quantity)
 
-		ing, err := s.repo.Tenant(ctx).GetIngredientByID(ctx, u.ingredientID)
+		ing, err := q.GetIngredientByID(ctx, u.ingredientID)
 		if err != nil {
 			log.Printf("  ❌ ERROR: Failed to get ingredient: %v", err)
 			return fmt.Errorf("failed to get ingredient: %w", err)
@@ -1981,7 +2384,7 @@ func (s *OrderS) consumeItemStock(ctx context.Context, goodID uuid.UUID, quantit
 			_ = price.Scan("0")
 		}
 
-		updated, err := s.repo.Tenant(ctx).RemoveFromIngredientStock(ctx, pg.RemoveFromIngredientStockParams{
+		updated, err := q.RemoveFromIngredientStock(ctx, pg.RemoveFromIngredientStockParams{
 			ID:       stockID,
 			Quantity: u.quantity,
 		})
@@ -2006,7 +2409,7 @@ func (s *OrderS) consumeItemStock(ctx context.Context, goodID uuid.UUID, quantit
 			continue
 		}
 
-		if err := s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+		if err := q.InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
 			ID:           uuid.New(),
 			StorageID:    uuid.UUID(storageID.Bytes),
 			IngredientID: u.ingredientID,
@@ -2030,13 +2433,13 @@ func (s *OrderS) consumeItemStock(ctx context.Context, goodID uuid.UUID, quantit
 }
 
 // consumeItemStock deducts ingredient stock for the base good and for each selected modifier (tech card).
-func (s *OrderS) consumeItemStockWithModifiers(ctx context.Context, orderItemID uuid.UUID) error {
-	item, err := s.repo.Tenant(ctx).GetOrderItemByID(ctx, orderItemID)
+func (s *OrderS) consumeItemStockWithModifiers(ctx context.Context, q *pg.Queries, orderItemID uuid.UUID) error {
+	item, err := q.GetOrderItemByID(ctx, orderItemID)
 	if err != nil {
 		return fmt.Errorf("failed to get order item: %w", err)
 	}
 
-	order, err := s.repo.Tenant(ctx).GetOrderByID(ctx, item.OrderID)
+	order, err := q.GetOrderByID(ctx, item.OrderID)
 	if err != nil {
 		return fmt.Errorf("failed to get order: %w", err)
 	}
@@ -2051,7 +2454,7 @@ func (s *OrderS) consumeItemStockWithModifiers(ctx context.Context, orderItemID 
 		return fmt.Errorf("invalid item quantity: %w", err)
 	}
 
-	usages, err := s.expandGoodToIngredientsByCalculations(ctx, goodID, mult)
+	usages, err := s.expandGoodToIngredientsByCalculations(ctx, q, goodID, mult)
 	if err != nil {
 		return err
 	}
@@ -2065,7 +2468,7 @@ func (s *OrderS) consumeItemStockWithModifiers(ctx context.Context, orderItemID 
 	allUsages = append(allUsages, usages...)
 
 	// Collect modifier usages
-	modRows, err := s.repo.Tenant(ctx).ListOrderItemModifiersByOrderID(ctx, orderID)
+	modRows, err := q.ListOrderItemModifiersByOrderID(ctx, orderID)
 	if err != nil {
 		return fmt.Errorf("failed to list order item modifiers: %w", err)
 	}
@@ -2082,7 +2485,7 @@ func (s *OrderS) consumeItemStockWithModifiers(ctx context.Context, orderItemID 
 			return fmt.Errorf("invalid modifier multiplier: %w", err)
 		}
 
-		modUsages, err := s.expandModifierToIngredientsByCalculations(ctx, om.ModifierID, modMult)
+		modUsages, err := s.expandModifierToIngredientsByCalculations(ctx, q, om.ModifierID, modMult)
 		if err != nil {
 			return err
 		}
@@ -2094,7 +2497,7 @@ func (s *OrderS) consumeItemStockWithModifiers(ctx context.Context, orderItemID 
 		return nil
 	}
 
-	storageID, err := s.repo.Tenant(ctx).GetStorageByGoodID(ctx, goodID)
+	storageID, err := q.GetStorageByGoodID(ctx, goodID)
 	if err != nil {
 		return fmt.Errorf("failed to get storage for good: %w", err)
 	}
@@ -2102,7 +2505,7 @@ func (s *OrderS) consumeItemStockWithModifiers(ctx context.Context, orderItemID 
 		return fmt.Errorf("no active storage configured for good %s", goodID)
 	}
 
-	if err := assertOrderStorageMutationAllowed(ctx, s.repo, order, storageID.Bytes, "order item"); err != nil {
+	if err := assertOrderStorageMutationAllowed(ctx, q, order, storageID.Bytes, "order item"); err != nil {
 		return err
 	}
 
@@ -2111,7 +2514,7 @@ func (s *OrderS) consumeItemStockWithModifiers(ctx context.Context, orderItemID 
 
 	// Process all usages (base good + modifiers)
 	for _, u := range allUsages {
-		stockID, err := s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
+		stockID, err := q.EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
 			ID:           uuid.New(),
 			IngredientID: u.ingredientID,
 			StorageID:    storageID,
@@ -2120,7 +2523,7 @@ func (s *OrderS) consumeItemStockWithModifiers(ctx context.Context, orderItemID 
 			return fmt.Errorf("failed to ensure ingredient stock row: %w", err)
 		}
 
-		locked, err := s.repo.Tenant(ctx).GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
+		locked, err := q.GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
 			IngredientID: u.ingredientID,
 			StorageID:    storageID,
 		})
@@ -2128,7 +2531,7 @@ func (s *OrderS) consumeItemStockWithModifiers(ctx context.Context, orderItemID 
 			return fmt.Errorf("failed to lock ingredient stock row: %w", err)
 		}
 
-		ing, err := s.repo.Tenant(ctx).GetIngredientByID(ctx, u.ingredientID)
+		ing, err := q.GetIngredientByID(ctx, u.ingredientID)
 		if err != nil {
 			return fmt.Errorf("failed to get ingredient: %w", err)
 		}
@@ -2137,7 +2540,7 @@ func (s *OrderS) consumeItemStockWithModifiers(ctx context.Context, orderItemID 
 			_ = price.Scan("0")
 		}
 
-		updated, err := s.repo.Tenant(ctx).RemoveFromIngredientStock(ctx, pg.RemoveFromIngredientStockParams{
+		updated, err := q.RemoveFromIngredientStock(ctx, pg.RemoveFromIngredientStockParams{
 			ID:       stockID,
 			Quantity: u.quantity,
 		})
@@ -2146,7 +2549,7 @@ func (s *OrderS) consumeItemStockWithModifiers(ctx context.Context, orderItemID 
 		}
 
 		if !shouldSkipStockMovement(zero, u.quantity) {
-			if err := s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+			if err := q.InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
 				ID:           uuid.New(),
 				StorageID:    uuid.UUID(storageID.Bytes),
 				IngredientID: u.ingredientID,
@@ -2171,7 +2574,7 @@ func (s *OrderS) consumeItemStockWithModifiers(ctx context.Context, orderItemID 
 	}
 
 	for key := range touched {
-		if err := s.rebalanceOrderIngredientLedger(ctx, pgtype.UUID{Bytes: key.StorageID, Valid: true}, key.IngredientID); err != nil {
+		if err := s.rebalanceOrderIngredientLedger(ctx, q, pgtype.UUID{Bytes: key.StorageID, Valid: true}, key.IngredientID); err != nil {
 			return err
 		}
 	}
@@ -2179,8 +2582,8 @@ func (s *OrderS) consumeItemStockWithModifiers(ctx context.Context, orderItemID 
 	return nil
 }
 
-func (s *OrderS) expandGoodToIngredientsByCalculations(ctx context.Context, goodID uuid.UUID, multiplier pgtype.Numeric) ([]ingredientUsage, error) {
-	calcs, err := s.repo.Tenant(ctx).GetCalculationsByGoodID(ctx, pgtype.UUID{Bytes: goodID, Valid: true})
+func (s *OrderS) expandGoodToIngredientsByCalculations(ctx context.Context, q *pg.Queries, goodID uuid.UUID, multiplier pgtype.Numeric) ([]ingredientUsage, error) {
+	calcs, err := q.GetCalculationsByGoodID(ctx, pgtype.UUID{Bytes: goodID, Valid: true})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get good calculations: %w", err)
 	}
@@ -2194,7 +2597,7 @@ func (s *OrderS) expandGoodToIngredientsByCalculations(ctx context.Context, good
 			if err != nil {
 				return nil, err
 			}
-			sub, err := s.expandCompoundToIngredientsByCalculations(ctx, child, childMultiplier, visited)
+			sub, err := s.expandCompoundToIngredientsByCalculations(ctx, q, child, childMultiplier, visited)
 			if err != nil {
 				return nil, err
 			}
@@ -2213,14 +2616,14 @@ func (s *OrderS) expandGoodToIngredientsByCalculations(ctx context.Context, good
 	return out, nil
 }
 
-func (s *OrderS) expandCompoundToIngredientsByCalculations(ctx context.Context, compoundID uuid.UUID, multiplier pgtype.Numeric, visited map[uuid.UUID]bool) ([]ingredientUsage, error) {
+func (s *OrderS) expandCompoundToIngredientsByCalculations(ctx context.Context, q *pg.Queries, compoundID uuid.UUID, multiplier pgtype.Numeric, visited map[uuid.UUID]bool) ([]ingredientUsage, error) {
 	if visited[compoundID] {
 		return nil, fmt.Errorf("compound cycle detected")
 	}
 	visited[compoundID] = true
 	defer func() { visited[compoundID] = false }()
 
-	calcs, err := s.repo.Tenant(ctx).GetCalculationsByCompoundID(ctx, pgtype.UUID{Bytes: compoundID, Valid: true})
+	calcs, err := q.GetCalculationsByCompoundID(ctx, pgtype.UUID{Bytes: compoundID, Valid: true})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get compound calculations: %w", err)
 	}
@@ -2233,7 +2636,7 @@ func (s *OrderS) expandCompoundToIngredientsByCalculations(ctx context.Context, 
 			if err != nil {
 				return nil, err
 			}
-			sub, err := s.expandCompoundToIngredientsByCalculations(ctx, child, childMultiplier, visited)
+			sub, err := s.expandCompoundToIngredientsByCalculations(ctx, q, child, childMultiplier, visited)
 			if err != nil {
 				return nil, err
 			}
@@ -2249,11 +2652,12 @@ func (s *OrderS) expandCompoundToIngredientsByCalculations(ctx context.Context, 
 		}
 		out = append(out, ingredientUsage{ingredientID: c.IngredientID.Bytes, quantity: usedQty})
 	}
+
 	return out, nil
 }
 
-func (s *OrderS) expandModifierToIngredientsByCalculations(ctx context.Context, modifierID uuid.UUID, multiplier pgtype.Numeric) ([]ingredientUsage, error) {
-	calcs, err := s.repo.Tenant(ctx).GetModifierCalculationsByModifierID(ctx, modifierID)
+func (s *OrderS) expandModifierToIngredientsByCalculations(ctx context.Context, q *pg.Queries, modifierID uuid.UUID, multiplier pgtype.Numeric) ([]ingredientUsage, error) {
+	calcs, err := q.GetModifierCalculationsByModifierID(ctx, modifierID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get modifier calculations: %w", err)
 	}
@@ -2267,7 +2671,7 @@ func (s *OrderS) expandModifierToIngredientsByCalculations(ctx context.Context, 
 			if err != nil {
 				return nil, err
 			}
-			sub, err := s.expandCompoundToIngredientsByCalculations(ctx, child, childMultiplier, visited)
+			sub, err := s.expandCompoundToIngredientsByCalculations(ctx, q, child, childMultiplier, visited)
 			if err != nil {
 				return nil, err
 			}
@@ -2286,7 +2690,7 @@ func (s *OrderS) expandModifierToIngredientsByCalculations(ctx context.Context, 
 	return out, nil
 }
 
-func (s *OrderS) saveOrderItemModifiers(ctx context.Context, orderItemID, goodID uuid.UUID, inputs []model.OrderItemModifierInput) error {
+func (s *OrderS) saveOrderItemModifiers(ctx context.Context, q *pg.Queries, orderItemID, goodID uuid.UUID, inputs []model.OrderItemModifierInput) error {
 	if len(inputs) == 0 {
 		return nil
 	}
@@ -2305,7 +2709,7 @@ func (s *OrderS) saveOrderItemModifiers(ctx context.Context, orderItemID, goodID
 		if err != nil {
 			return fmt.Errorf("modifiers[%d]: invalid modifier_id: %w", i, err)
 		}
-		if _, err := s.repo.Tenant(ctx).GetActiveGoodModifierByGoodAndModifierID(ctx, pg.GetActiveGoodModifierByGoodAndModifierIDParams{
+		if _, err := q.GetActiveGoodModifierByGoodAndModifierID(ctx, pg.GetActiveGoodModifierByGoodAndModifierIDParams{
 			GoodID:     goodID,
 			ModifierID: modUUID,
 		}); err != nil {
@@ -2314,7 +2718,7 @@ func (s *OrderS) saveOrderItemModifiers(ctx context.Context, orderItemID, goodID
 			}
 			return fmt.Errorf("modifiers[%d]: %w", i, err)
 		}
-		mod, err := s.repo.Tenant(ctx).GetModifierByID(ctx, modUUID)
+		mod, err := q.GetModifierByID(ctx, modUUID)
 		if err != nil {
 			if err == pgx.ErrNoRows {
 				return fmt.Errorf("modifier not found: %s", mid)
@@ -2333,7 +2737,7 @@ func (s *OrderS) saveOrderItemModifiers(ctx context.Context, orderItemID, goodID
 			units = *in.Units
 		}
 
-		if _, err := s.repo.Tenant(ctx).CreateOrderItemModifier(ctx, pg.CreateOrderItemModifierParams{
+		if _, err := q.CreateOrderItemModifier(ctx, pg.CreateOrderItemModifierParams{
 			ID:          uuid.New(),
 			OrderItemID: orderItemID,
 			ModifierID:  modUUID,
@@ -2358,7 +2762,16 @@ func (s *OrderS) CreateOrderItems(ctx context.Context, req model.CreateOrderItem
 		return nil, fmt.Errorf("invalid order_id: %w", err)
 	}
 
-	if _, err := s.repo.Tenant(ctx).GetOrderByID(ctx, oID); err != nil {
+	// Get tenant mutation queries for item creation
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	if _, err := q.GetOrderByID(txCtx, oID); err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, fmt.Errorf("order not found")
 		}
@@ -2380,7 +2793,7 @@ func (s *OrderS) CreateOrderItems(ctx context.Context, req model.CreateOrderItem
 			return nil, fmt.Errorf("items[%d]: invalid good_id: %w", i, err)
 		}
 
-		good, err := s.repo.Tenant(ctx).GetGoodByID(ctx, gID)
+		good, err := q.GetGoodByID(txCtx, gID)
 		if err != nil {
 			return nil, fmt.Errorf("items[%d]: failed to fetch good: %w", i, err)
 		}
@@ -2397,7 +2810,7 @@ func (s *OrderS) CreateOrderItems(ctx context.Context, req model.CreateOrderItem
 			Valid:            true,
 		}
 
-		item, err := s.repo.Tenant(ctx).CreateOrderItem(ctx, pg.CreateOrderItemParams{
+		item, err := q.CreateOrderItem(txCtx, pg.CreateOrderItemParams{
 			ID:        uuid.New(),
 			GoodID:    gID,
 			OrderID:   oID,
@@ -2411,11 +2824,11 @@ func (s *OrderS) CreateOrderItems(ctx context.Context, req model.CreateOrderItem
 			return nil, fmt.Errorf("items[%d]: failed to create order item: %w", i, err)
 		}
 
-		if err := s.saveOrderItemModifiers(ctx, item.ID, gID, entry.Modifiers); err != nil {
+		if err := s.saveOrderItemModifiers(txCtx, q, item.ID, gID, entry.Modifiers); err != nil {
 			return nil, fmt.Errorf("items[%d]: %w", i, err)
 		}
 
-		if err := s.consumeItemStockWithModifiers(ctx, item.ID); err != nil {
+		if err := s.consumeItemStockWithModifiers(txCtx, q, item.ID); err != nil {
 			return nil, fmt.Errorf("items[%d]: failed to deduct stock: %w", i, err)
 		}
 
@@ -2423,7 +2836,13 @@ func (s *OrderS) CreateOrderItems(ctx context.Context, req model.CreateOrderItem
 	}
 
 	// Keep opened bills totals up-to-date after all items are added.
-	_ = s.repo.Tenant(ctx).RecalculateOrderTotalsFromItems(ctx, oID)
+	_ = q.RecalculateOrderTotalsFromItems(txCtx, oID)
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
 
 	return responses, nil
 }
@@ -2434,33 +2853,54 @@ func (s *OrderS) GetOrderItemByID(ctx context.Context, itemID string) (*model.Or
 		return nil, fmt.Errorf("invalid order item id: %w", err)
 	}
 
-	item, err := s.repo.Tenant(ctx).GetOrderItemByID(ctx, id)
+	var resp *model.OrderItemDetailResponse
+	q, txCtx, tx, ownsTx, err := s.getTenantReadQueries(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	item, err := q.GetOrderItemByID(txCtx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get order item: %w", err)
 	}
 
-	good, err := s.repo.Tenant(ctx).GetGoodByID(ctx, item.GoodID)
+	good, err := q.GetGoodByID(txCtx, item.GoodID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get good: %w", err)
 	}
 
-	return toOrderItemDetailResponse(item, good), nil
+	resp = toOrderItemDetailResponse(item, good)
+	return resp, nil
 }
 
 func (s *OrderS) GetAllOrderItems(ctx context.Context, limit, offset int32) ([]model.OrderItemResponse, int64, error) {
-	total, err := s.repo.Tenant(ctx).CountOrderItems(ctx)
+	var total int64
+	var responses []model.OrderItemResponse
+	q, txCtx, tx, ownsTx, err := s.getTenantReadQueries(ctx)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	total, err = q.CountOrderItems(txCtx)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to count order items: %w", err)
 	}
-	items, err := s.repo.Tenant(ctx).GetAllOrderItems(ctx, pg.GetAllOrderItemsParams{Limit: limit, Offset: offset})
+	items, err := q.GetAllOrderItems(txCtx, pg.GetAllOrderItemsParams{Limit: limit, Offset: offset})
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to get order items: %w", err)
 	}
 
-	responses := make([]model.OrderItemResponse, 0, len(items))
+	responses = make([]model.OrderItemResponse, 0, len(items))
 	for _, it := range items {
 		responses = append(responses, *toOrderItemResponse(it))
 	}
+
 	return responses, total, nil
 }
 
@@ -2478,15 +2918,24 @@ func (s *OrderS) GetOrderItemsByOrderID(
 		lang = "uz"
 	}
 
-	items, err := s.repo.Tenant(ctx).GetOrderItemsByOrderID(ctx, id)
+	var responses []model.OrderItemWithGoodResponse
+	q, txCtx, tx, ownsTx, err := s.getTenantReadQueries(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	items, err := q.GetOrderItemsByOrderID(txCtx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get order items: %w", err)
 	}
 
-	responses := make([]model.OrderItemWithGoodResponse, 0, len(items))
+	responses = make([]model.OrderItemWithGoodResponse, 0, len(items))
 
 	for _, it := range items {
-		good, err := s.repo.Tenant(ctx).GetGoodByIDWithLanguage(ctx, pg.GetGoodByIDWithLanguageParams{
+		good, err := q.GetGoodByIDWithLanguage(txCtx, pg.GetGoodByIDWithLanguageParams{
 			ID:      it.GoodID,
 			Column2: lang,
 		})
@@ -2505,19 +2954,31 @@ func (s *OrderS) GetOrderItemsByOrderID(
 
 func (s *OrderS) GetOrderItemsByStatus(ctx context.Context, status string, limit, offset int32) ([]model.OrderItemResponse, int64, error) {
 	st := pg.NullOrderItemsStatus{OrderItemsStatus: pg.OrderItemsStatus(status), Valid: true}
-	total, err := s.repo.Tenant(ctx).CountOrderItemsByStatus(ctx, st)
+
+	var total int64
+	var responses []model.OrderItemResponse
+	q, txCtx, tx, ownsTx, err := s.getTenantReadQueries(ctx)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	total, err = q.CountOrderItemsByStatus(txCtx, st)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to count order items by status: %w", err)
 	}
-	items, err := s.repo.Tenant(ctx).GetOrderItemsByStatus(ctx, pg.GetOrderItemsByStatusParams{Status: st, Limit: limit, Offset: offset})
+	items, err := q.GetOrderItemsByStatus(txCtx, pg.GetOrderItemsByStatusParams{Status: st, Limit: limit, Offset: offset})
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to get order items by status: %w", err)
 	}
 
-	responses := make([]model.OrderItemResponse, 0, len(items))
+	responses = make([]model.OrderItemResponse, 0, len(items))
 	for _, it := range items {
 		responses = append(responses, *toOrderItemResponse(it))
 	}
+
 	return responses, total, nil
 }
 
@@ -2527,7 +2988,16 @@ func (s *OrderS) UpdateOrderItem(ctx context.Context, itemID string, req model.U
 		return nil, fmt.Errorf("invalid order item id: %w", err)
 	}
 
-	existing, err := s.repo.Tenant(ctx).GetOrderItemByID(ctx, id)
+	// Get tenant mutation queries for item update
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	existing, err := q.GetOrderItemByID(txCtx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get order item: %w", err)
 	}
@@ -2574,7 +3044,7 @@ func (s *OrderS) UpdateOrderItem(ctx context.Context, itemID string, req model.U
 		finalComment = req.Comment
 	}
 
-	item, err := s.repo.Tenant(ctx).UpdateOrderItem(ctx, pg.UpdateOrderItemParams{
+	item, err := q.UpdateOrderItem(txCtx, pg.UpdateOrderItemParams{
 		ID:       id,
 		GoodID:   finalGoodID,
 		OrderID:  finalOrderID,
@@ -2587,7 +3057,13 @@ func (s *OrderS) UpdateOrderItem(ctx context.Context, itemID string, req model.U
 		return nil, fmt.Errorf("failed to update order item: %w", err)
 	}
 
-	_ = s.repo.Tenant(ctx).RecalculateOrderTotalsFromItems(ctx, item.OrderID)
+	_ = q.RecalculateOrderTotalsFromItems(txCtx, item.OrderID)
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
 
 	return toOrderItemResponse(item), nil
 }
@@ -2601,16 +3077,25 @@ func (s *OrderS) UpdateOrderItemQuantity(ctx context.Context, itemID string, qua
 		return nil, fmt.Errorf("quantity must be greater than 0")
 	}
 
-	existing, err := s.repo.Tenant(ctx).GetOrderItemByID(ctx, id)
+	// Get tenant mutation queries for stock restore/deduct operation
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	existing, err := q.GetOrderItemByID(txCtx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get existing order item: %w", err)
 	}
 
-	if err := s.reverseOrderItemStockWithModifiers(ctx, existing.ID, "order_item_qty_revert_in"); err != nil {
+	if err := s.reverseOrderItemStockWithModifiers(txCtx, q, existing.ID, "order_item_qty_revert_in"); err != nil {
 		return nil, fmt.Errorf("failed to restore previous stock before quantity update: %w", err)
 	}
 
-	item, err := s.repo.Tenant(ctx).UpdateOrderItemQuantity(ctx, pg.UpdateOrderItemQuantityParams{
+	item, err := q.UpdateOrderItemQuantity(txCtx, pg.UpdateOrderItemQuantityParams{
 		ID:       id,
 		Quantity: quantity,
 	})
@@ -2618,11 +3103,18 @@ func (s *OrderS) UpdateOrderItemQuantity(ctx context.Context, itemID string, qua
 		return nil, fmt.Errorf("failed to update order item quantity: %w", err)
 	}
 
-	if err := s.consumeItemStockWithModifiers(ctx, item.ID); err != nil {
+	if err := s.consumeItemStockWithModifiers(txCtx, q, item.ID); err != nil {
 		return nil, fmt.Errorf("failed to deduct stock for updated quantity: %w", err)
 	}
 
-	_ = s.repo.Tenant(ctx).RecalculateOrderTotalsFromItems(ctx, item.OrderID)
+	_ = q.RecalculateOrderTotalsFromItems(txCtx, item.OrderID)
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return toOrderItemResponse(item), nil
 }
 
@@ -2648,7 +3140,13 @@ func canTransitionOrderItemStatus(from, to string) bool {
 
 func (s *OrderS) getTenantMutationQueries(ctx context.Context) (*pg.Queries, context.Context, pgx.Tx, bool, error) {
 	if existingTx, ok := repository.TenantTxFromContext(ctx); ok && existingTx != nil {
-		return s.repo.Tenant(ctx), ctx, existingTx, false, nil
+		// Reuse existing transaction - get queries from context or create from tx
+		if q, ok := repository.TenantQueriesFromContext(ctx); ok && q != nil {
+			return q, ctx, existingTx, false, nil
+		}
+		q := pg.New(existingTx)
+		txCtx := repository.WithTenantQueries(ctx, q)
+		return q, txCtx, existingTx, false, nil
 	}
 
 	tx, err := s.repo.PgRepo.TenantPool.Begin(ctx)
@@ -2681,7 +3179,57 @@ func (s *OrderS) getTenantMutationQueries(ctx context.Context) (*pg.Queries, con
 		}
 	}
 
-	q := s.repo.Tenant(ctx).WithTx(tx)
+	q := pg.New(tx)
+	txCtx := repository.WithTenantTx(ctx, tx)
+	txCtx = repository.WithTenantQueries(txCtx, q)
+
+	return q, txCtx, tx, true, nil
+}
+
+func (s *OrderS) getTenantReadQueries(ctx context.Context) (*pg.Queries, context.Context, pgx.Tx, bool, error) {
+	if existingTx, ok := repository.TenantTxFromContext(ctx); ok && existingTx != nil {
+		// Reuse existing transaction - get queries from context or create from tx
+		if q, ok := repository.TenantQueriesFromContext(ctx); ok && q != nil {
+			return q, ctx, existingTx, false, nil
+		}
+		q := pg.New(existingTx)
+		txCtx := repository.WithTenantQueries(ctx, q)
+		return q, txCtx, existingTx, false, nil
+	}
+
+	// For read-only operations without an existing transaction, begin a read-only transaction
+	// This ensures the connection is not released before queries complete
+	tx, err := s.repo.PgRepo.TenantPool.BeginTx(ctx, pgx.TxOptions{AccessMode: pgx.ReadOnly})
+	if err != nil {
+		return nil, nil, nil, false, fmt.Errorf("failed to begin read-only transaction: %w", err)
+	}
+
+	brandID, _ := ctx.Value("brand_id").(string)
+	brandID = strings.TrimSpace(brandID)
+	if brandID == "" {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("brand_id is missing in context")
+	}
+
+	schemaName := fmt.Sprintf("tenant_%s", brandID)
+	if _, err := tx.Exec(ctx, fmt.Sprintf(`SET LOCAL search_path TO "%s", public`, schemaName)); err != nil {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("failed to set tenant search_path: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx, "SET LOCAL app.brand_id = $1", brandID); err != nil {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("failed to set app.brand_id: %w", err)
+	}
+
+	if branchID, _ := ctx.Value("branch_id").(string); strings.TrimSpace(branchID) != "" {
+		if _, err := tx.Exec(ctx, "SET LOCAL app.branch_id = $1", strings.TrimSpace(branchID)); err != nil {
+			tx.Rollback(ctx)
+			return nil, nil, nil, false, fmt.Errorf("failed to set app.branch_id: %w", err)
+		}
+	}
+
+	q := pg.New(tx)
 	txCtx := repository.WithTenantTx(ctx, tx)
 	txCtx = repository.WithTenantQueries(txCtx, q)
 
@@ -2763,20 +3311,36 @@ func (s *OrderS) DeleteOrderItem(ctx context.Context, itemID string) error {
 		return fmt.Errorf("invalid order item id: %w", err)
 	}
 
-	existing, err := s.repo.Tenant(ctx).GetOrderItemByID(ctx, id)
+	// Get tenant mutation queries for stock restore and delete operation
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	existing, err := q.GetOrderItemByID(txCtx, id)
 	if err != nil {
 		return fmt.Errorf("failed to get order item: %w", err)
 	}
 
-	if err := s.reverseOrderItemStockWithModifiers(ctx, existing.ID, "order_item_deleted_in"); err != nil {
+	if err := s.reverseOrderItemStockWithModifiers(txCtx, q, existing.ID, "order_item_deleted_in"); err != nil {
 		return fmt.Errorf("failed to restore order item stock before delete: %w", err)
 	}
 
-	if err := s.repo.Tenant(ctx).DeleteOrderItem(ctx, id); err != nil {
+	if err := q.DeleteOrderItem(txCtx, id); err != nil {
 		return fmt.Errorf("failed to delete order item: %w", err)
 	}
 
-	_ = s.repo.Tenant(ctx).RecalculateOrderTotalsFromItems(ctx, existing.OrderID)
+	_ = q.RecalculateOrderTotalsFromItems(txCtx, existing.OrderID)
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return nil
 }
 
@@ -2785,13 +3349,30 @@ func (s *OrderS) RestoreOrderItem(ctx context.Context, itemID string) error {
 	if err != nil {
 		return fmt.Errorf("invalid order item id: %w", err)
 	}
-	if err := s.repo.Tenant(ctx).RestoreOrderItem(ctx, id); err != nil {
+
+	// Get tenant mutation queries for restore operation
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	if err := q.RestoreOrderItem(txCtx, id); err != nil {
 		return fmt.Errorf("failed to restore order item: %w", err)
 	}
 
-	if existing, err := s.repo.Tenant(ctx).GetOrderItemByID(ctx, id); err == nil {
-		_ = s.repo.Tenant(ctx).RecalculateOrderTotalsFromItems(ctx, existing.OrderID)
+	if existing, err := q.GetOrderItemByID(txCtx, id); err == nil {
+		_ = q.RecalculateOrderTotalsFromItems(txCtx, existing.OrderID)
 	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return nil
 }
 
@@ -2801,7 +3382,16 @@ func (s *OrderS) CancelOrderItem(ctx context.Context, itemID string) (*model.Ord
 		return nil, fmt.Errorf("invalid order item id: %w", err)
 	}
 
-	existing, err := s.repo.Tenant(ctx).GetOrderItemByID(ctx, id)
+	// Get tenant mutation queries for stock restore and cancel operation
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	existing, err := q.GetOrderItemByID(txCtx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get order item: %w", err)
 	}
@@ -2809,16 +3399,23 @@ func (s *OrderS) CancelOrderItem(ctx context.Context, itemID string) (*model.Ord
 		return nil, fmt.Errorf("order item is already cancelled")
 	}
 
-	if err := s.reverseOrderItemStockWithModifiers(ctx, existing.ID, "order_item_cancelled_in"); err != nil {
+	if err := s.reverseOrderItemStockWithModifiers(txCtx, q, existing.ID, "order_item_cancelled_in"); err != nil {
 		return nil, fmt.Errorf("failed to restore order item stock before cancel: %w", err)
 	}
 
-	item, err := s.repo.Tenant(ctx).CancelOrderItem(ctx, id)
+	item, err := q.CancelOrderItem(txCtx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to cancel order item: %w", err)
 	}
 
-	_ = s.repo.Tenant(ctx).RecalculateOrderTotalsFromItems(ctx, item.OrderID)
+	_ = q.RecalculateOrderTotalsFromItems(txCtx, item.OrderID)
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return toOrderItemResponse(item), nil
 }
 
@@ -2851,23 +3448,28 @@ type KitchenQueueItem struct {
 
 func (s *OrderS) GetKitchenQueue(ctx context.Context) ([]KitchenQueueItem, error) {
 	// Lazy-activate reservations whose scheduled time has arrived, then mark dine-in tables busy.
-	if activated, err := s.repo.Tenant(ctx).ActivateReservedOrders(ctx); err == nil {
-		for _, row := range activated {
-			if row.OrderType == "dine_in" && row.TableID.Valid {
-				_, _ = s.repo.Tenant(ctx).SetTableBusy(ctx, row.TableID.Bytes)
-			}
-		}
+	// This mutation is idempotent and should not fail the read operation if it errors.
+	_ = s.activateDueReservedOrders(ctx)
+
+	var items []KitchenQueueItem
+	q, txCtx, tx, ownsTx, err := s.getTenantReadQueries(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
 	}
 
-	rows, err := s.repo.Tenant(ctx).GetKitchenQueue(ctx)
+	rows, err := q.GetKitchenQueue(txCtx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get kitchen queue: %w", err)
 	}
 
-	var items []KitchenQueueItem
+	items = make([]KitchenQueueItem, 0, len(rows))
 	for _, r := range rows {
 		items = append(items, *toKitchenQueueItem(r))
 	}
+
 	return items, nil
 }
 
@@ -3614,12 +4216,22 @@ func (s *OrderS) GetMyOrders(ctx context.Context, waiterID string, req model.Get
 			Valid: true,
 		}
 	}
-	total, err := s.repo.Tenant(ctx).CountMyWaiterOrders(ctx, params)
+	var total int64
+	var rows []pg.GetMyWaiterOrdersRow
+	q, txCtx, tx, ownsTx, err := s.getTenantReadQueries(ctx)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	total, err = q.CountMyWaiterOrders(txCtx, params)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to count my orders: %w", err)
 	}
 
-	rows, err := s.repo.Tenant(ctx).GetMyWaiterOrders(ctx, params)
+	rows, err = q.GetMyWaiterOrders(txCtx, params)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to get my orders: %w", err)
 	}

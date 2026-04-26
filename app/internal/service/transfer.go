@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"log"
 	"math/big"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"gitlab.yurtal.tech/company/maryai/back/internal/model"
 	"gitlab.yurtal.tech/company/maryai/back/internal/repository"
@@ -20,6 +22,45 @@ type TransferS struct {
 
 func NewTransferS(repo *repository.Repository) *TransferS {
 	return &TransferS{repo: repo}
+}
+
+func (s *TransferS) getTenantMutationQueries(ctx context.Context) (*pg.Queries, context.Context, pgx.Tx, bool, error) {
+	if existingTx, ok := repository.TenantTxFromContext(ctx); ok && existingTx != nil {
+		// Reuse existing transaction - get queries from context or create from tx
+		if q, ok := repository.TenantQueriesFromContext(ctx); ok && q != nil {
+			return q, ctx, existingTx, false, nil
+		}
+		q := pg.New(existingTx)
+		txCtx := repository.WithTenantQueries(ctx, q)
+		return q, txCtx, existingTx, false, nil
+	}
+
+	tx, err := s.repo.PgRepo.TenantPool.Begin(ctx)
+	if err != nil {
+		return nil, nil, nil, false, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+
+	brandID, _ := ctx.Value("brand_id").(string)
+	brandID = strings.TrimSpace(brandID)
+	if brandID == "" {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("brand_id is missing in context")
+	}
+
+	schemaName := fmt.Sprintf("tenant_%s", brandID)
+	if _, err := tx.Exec(ctx, fmt.Sprintf(`SET LOCAL search_path TO "%s", public`, schemaName)); err != nil {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("failed to set tenant search_path: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx, "SET LOCAL app.brand_id = $1", brandID); err != nil {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("failed to set app.brand_id: %w", err)
+	}
+
+	q := pg.New(tx)
+	txCtx := repository.WithTenantQueries(ctx, q)
+	return q, txCtx, tx, true, nil
 }
 
 type transferTouchedKey struct {
@@ -47,7 +88,7 @@ func transferFreezeDate(ts pgtype.Timestamptz, entityName string) (time.Time, er
 
 func assertCanMutateTransferCurrent(
 	ctx context.Context,
-	repo *repository.Repository,
+	q *pg.Queries,
 	tr pg.Transfer,
 	entityName string,
 ) error {
@@ -56,10 +97,10 @@ func assertCanMutateTransferCurrent(
 		return err
 	}
 
-	if err := assertCanMutateAfterInventory(ctx, repo, tr.FromStorageID, effectiveAt, entityName); err != nil {
+	if err := assertCanMutateAfterInventory(ctx, q, tr.FromStorageID, effectiveAt, entityName); err != nil {
 		return err
 	}
-	if err := assertCanMutateAfterInventory(ctx, repo, tr.ToStorageID, effectiveAt, entityName); err != nil {
+	if err := assertCanMutateAfterInventory(ctx, q, tr.ToStorageID, effectiveAt, entityName); err != nil {
 		return err
 	}
 	return nil
@@ -67,7 +108,7 @@ func assertCanMutateTransferCurrent(
 
 func assertCanMutateTransferTarget(
 	ctx context.Context,
-	repo *repository.Repository,
+	q *pg.Queries,
 	fromStorageID pgtype.UUID,
 	toStorageID pgtype.UUID,
 	transferDate pgtype.Timestamptz,
@@ -79,12 +120,12 @@ func assertCanMutateTransferTarget(
 	}
 
 	if fromStorageID.Valid {
-		if err := assertCanMutateAfterInventory(ctx, repo, fromStorageID.Bytes, effectiveAt, entityName); err != nil {
+		if err := assertCanMutateAfterInventory(ctx, q, fromStorageID.Bytes, effectiveAt, entityName); err != nil {
 			return err
 		}
 	}
 	if toStorageID.Valid {
-		if err := assertCanMutateAfterInventory(ctx, repo, toStorageID.Bytes, effectiveAt, entityName); err != nil {
+		if err := assertCanMutateAfterInventory(ctx, q, toStorageID.Bytes, effectiveAt, entityName); err != nil {
 			return err
 		}
 	}
@@ -94,17 +135,17 @@ func assertCanMutateTransferTarget(
 
 func assertCanMutateTransferChange(
 	ctx context.Context,
-	repo *repository.Repository,
+	q *pg.Queries,
 	current pg.Transfer,
 	targetFromStorageID pgtype.UUID,
 	targetToStorageID pgtype.UUID,
 	targetDate pgtype.Timestamptz,
 	entityName string,
 ) error {
-	if err := assertCanMutateTransferCurrent(ctx, repo, current, entityName); err != nil {
+	if err := assertCanMutateTransferCurrent(ctx, q, current, entityName); err != nil {
 		return err
 	}
-	if err := assertCanMutateTransferTarget(ctx, repo, targetFromStorageID, targetToStorageID, targetDate, entityName); err != nil {
+	if err := assertCanMutateTransferTarget(ctx, q, targetFromStorageID, targetToStorageID, targetDate, entityName); err != nil {
 		return err
 	}
 	return nil
@@ -116,58 +157,7 @@ func (s *TransferS) rebalanceTransferIngredientLedger(
 	storageID pgtype.UUID,
 	ingredientID uuid.UUID,
 ) error {
-	if !storageID.Valid {
-		return fmt.Errorf("storage_id is required for transfer ledger rebalance")
-	}
-
-	_, _ = q.EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
-		ID:           uuid.New(),
-		IngredientID: ingredientID,
-		StorageID:    storageID,
-	})
-
-	rows, err := q.ListIngredientStockMovementsForRebalance(ctx, storageID.Bytes, ingredientID)
-	if err != nil {
-		return fmt.Errorf("failed to list transfer stock movements for rebalance: %w", err)
-	}
-
-	running := inventoryZeroNumeric()
-
-	for _, row := range rows {
-		before := running
-
-		after, err := applyMovementDelta(before, row.QtyIn, row.QtyOut, 6)
-		if err != nil {
-			return fmt.Errorf("failed to calculate transfer balance for movement %s: %w", row.ID, err)
-		}
-
-		if err := q.UpdateIngredientStockMovementBalances(ctx, pg.UpdateIngredientStockMovementBalancesParams{
-			ID:          row.ID,
-			StockBefore: before,
-			StockAfter:  after,
-		}); err != nil {
-			return fmt.Errorf("failed to update transfer balances for movement %s: %w", row.ID, err)
-		}
-
-		running = after
-	}
-
-	stockRow, err := q.GetStockByIngredientAndStorageExplicit(ctx, pg.GetStockByIngredientAndStorageExplicitParams{
-		IngredientID: ingredientID,
-		StorageID:    storageID,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to get ingredient stock for transfer final sync: %w", err)
-	}
-
-	if _, err := q.UpdateIngredientStockExplicit(ctx, pg.UpdateIngredientStockExplicitParams{
-		ID:       stockRow.ID,
-		Quantity: running,
-	}); err != nil {
-		return fmt.Errorf("failed to sync ingredient_stock quantity after transfer rebalance: %w", err)
-	}
-
-	return nil
+	return rebalanceIngredientStockLedger(ctx, q, storageID, ingredientID, "transfer")
 }
 
 // resolveTransferStatus resolves the requested status string to a pg.TransferStatus.
@@ -235,7 +225,7 @@ func (s *TransferS) CreateTransferBatch(ctx context.Context, req model.CreateTra
 	transferDate := pgtype.Timestamptz{Time: time.Now(), Valid: true}
 	if err := assertCanMutateTransferTarget(
 		ctx,
-		s.repo,
+		s.repo.Tenant(ctx),
 		pgtype.UUID{Bytes: fromStorageID, Valid: true},
 		pgtype.UUID{Bytes: toStorageID, Valid: true},
 		transferDate,
@@ -244,9 +234,15 @@ func (s *TransferS) CreateTransferBatch(ctx context.Context, req model.CreateTra
 		return nil, err
 	}
 
-	q := s.repo.Tenant(ctx)
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
 
-	transfer, err := q.CreateTransfer(ctx, pg.CreateTransferParams{
+	transfer, err := q.CreateTransfer(txCtx, pg.CreateTransferParams{
 		ID:            uuid.New(),
 		FromBranchID:  fromBranchID,
 		ToBranchID:    toBranchID,
@@ -263,18 +259,24 @@ func (s *TransferS) CreateTransferBatch(ctx context.Context, req model.CreateTra
 	}
 
 	applyStock := status == pg.TransferStatusActive
-	items, err := s.processTransferItems(ctx, q, transfer.ID, fromStorageID, toStorageID, fromBranchID, toBranchID, req.Items, applyStock, transfer.Date)
+	items, err := s.processTransferItems(txCtx, q, transfer.ID, fromStorageID, toStorageID, fromBranchID, toBranchID, req.Items, applyStock, transfer.Date)
 	if err != nil {
 		return nil, err
 	}
 
 	if applyStock {
-		if err := q.RecalculateTransferTotal(ctx, transfer.ID); err != nil {
+		if err := q.RecalculateTransferTotal(txCtx, transfer.ID); err != nil {
 			log.Printf("failed to recalculate transfer total: %v", err)
 		}
-		transfer, err = q.GetTransferByID(ctx, transfer.ID)
+		transfer, err = q.GetTransferByID(txCtx, transfer.ID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to fetch transfer: %w", err)
+		}
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
 		}
 	}
 
@@ -330,7 +332,7 @@ func (s *TransferS) CreateTransfer(ctx context.Context, req model.CreateTransfer
 	transferDate := pgtype.Timestamptz{Time: time.Now(), Valid: true}
 	if err := assertCanMutateTransferTarget(
 		ctx,
-		s.repo,
+		s.repo.Tenant(ctx),
 		pgtype.UUID{Bytes: fromStorageID, Valid: true},
 		pgtype.UUID{Bytes: toStorageID, Valid: true},
 		transferDate,
@@ -339,7 +341,15 @@ func (s *TransferS) CreateTransfer(ctx context.Context, req model.CreateTransfer
 		return nil, err
 	}
 
-	transfer, err := s.repo.Tenant(ctx).CreateTransfer(ctx, pg.CreateTransferParams{
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	transfer, err := q.CreateTransfer(txCtx, pg.CreateTransferParams{
 		ID:            uuid.New(),
 		FromBranchID:  fromBranchID,
 		ToBranchID:    toBranchID,
@@ -353,6 +363,12 @@ func (s *TransferS) CreateTransfer(ctx context.Context, req model.CreateTransfer
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create transfer: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return toTransferResponse(transfer), nil
@@ -372,9 +388,15 @@ func (s *TransferS) AddTransferItems(ctx context.Context, req model.CreateTransf
 		return nil, fmt.Errorf("invalid transfer_id: %w", err)
 	}
 
-	q := s.repo.Tenant(ctx)
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
 
-	transfer, err := q.GetTransferByID(ctx, transferID)
+	transfer, err := q.GetTransferByID(txCtx, transferID)
 	if err != nil {
 		return nil, fmt.Errorf("transfer not found: %w", err)
 	}
@@ -382,19 +404,25 @@ func (s *TransferS) AddTransferItems(ctx context.Context, req model.CreateTransf
 		return nil, fmt.Errorf("cannot add items to a deleted transfer")
 	}
 
-	if err := assertCanMutateTransferCurrent(ctx, s.repo, transfer, "transfer items"); err != nil {
+	if err := assertCanMutateTransferCurrent(txCtx, q, transfer, "transfer items"); err != nil {
 		return nil, err
 	}
 
 	applyStock := transfer.Status == pg.TransferStatusActive
-	_, err = s.processTransferItems(ctx, q, transfer.ID, transfer.FromStorageID, transfer.ToStorageID, transfer.FromBranchID, transfer.ToBranchID, req.Items, applyStock, transfer.Date)
+	_, err = s.processTransferItems(txCtx, q, transfer.ID, transfer.FromStorageID, transfer.ToStorageID, transfer.FromBranchID, transfer.ToBranchID, req.Items, applyStock, transfer.Date)
 	if err != nil {
 		return nil, err
 	}
 
 	if applyStock {
-		if err := q.RecalculateTransferTotal(ctx, transfer.ID); err != nil {
+		if err := q.RecalculateTransferTotal(txCtx, transfer.ID); err != nil {
 			log.Printf("failed to recalculate transfer total: %v", err)
+		}
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
 		}
 	}
 
@@ -556,33 +584,45 @@ func (s *TransferS) DeleteTransfer(ctx context.Context, transferID string) error
 		return fmt.Errorf("invalid transfer_id: %w", err)
 	}
 
-	q := s.repo.Tenant(ctx)
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
 
-	transfer, err := q.GetTransferByID(ctx, id)
+	transfer, err := q.GetTransferByID(txCtx, id)
 	if err != nil {
 		return fmt.Errorf("transfer not found: %w", err)
 	}
 
-	if err := assertCanMutateTransferCurrent(ctx, s.repo, transfer, "transfer"); err != nil {
+	if err := assertCanMutateTransferCurrent(txCtx, q, transfer, "transfer"); err != nil {
 		return err
 	}
 
 	if transfer.Status == pg.TransferStatusActive {
-		items, err := q.GetTransferItemsByTransferID(ctx, id)
+		items, err := q.GetTransferItemsByTransferID(txCtx, id)
 		if err != nil {
 			return fmt.Errorf("failed to fetch items: %w", err)
 		}
-		if err := s.reverseTransferItemsStock(ctx, q, transfer.ID, items, transfer.FromStorageID, transfer.ToStorageID, transfer.Date); err != nil {
+		if err := s.reverseTransferItemsStock(txCtx, q, transfer.ID, items, transfer.FromStorageID, transfer.ToStorageID, transfer.Date); err != nil {
 			return fmt.Errorf("failed to reverse transfer stock before delete: %w", err)
 		}
 	}
 
-	if err := q.DeleteTransferItemsByTransferID(ctx, id); err != nil {
+	if err := q.DeleteTransferItemsByTransferID(txCtx, id); err != nil {
 		return fmt.Errorf("failed to delete items: %w", err)
 	}
 
-	if err := q.DeleteTransfer(ctx, id); err != nil {
+	if err := q.DeleteTransfer(txCtx, id); err != nil {
 		return fmt.Errorf("failed to delete transfer: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return nil
@@ -595,33 +635,45 @@ func (s *TransferS) DeleteTransferItem(ctx context.Context, itemID string) error
 		return fmt.Errorf("invalid item_id: %w", err)
 	}
 
-	q := s.repo.Tenant(ctx)
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
 
-	item, err := q.GetTransferItemByID(ctx, id)
+	item, err := q.GetTransferItemByID(txCtx, id)
 	if err != nil {
 		return fmt.Errorf("transfer item not found: %w", err)
 	}
 
-	transfer, err := q.GetTransferByID(ctx, item.TransferID)
+	transfer, err := q.GetTransferByID(txCtx, item.TransferID)
 	if err != nil {
 		return fmt.Errorf("transfer not found: %w", err)
 	}
 
-	if err := assertCanMutateTransferCurrent(ctx, s.repo, transfer, "transfer item"); err != nil {
+	if err := assertCanMutateTransferCurrent(txCtx, q, transfer, "transfer item"); err != nil {
 		return err
 	}
 
 	if transfer.Status == pg.TransferStatusActive {
-		if err := s.reverseTransferItemsStock(ctx, q, transfer.ID, []pg.TransferItem{item}, transfer.FromStorageID, transfer.ToStorageID, transfer.Date); err != nil {
+		if err := s.reverseTransferItemsStock(txCtx, q, transfer.ID, []pg.TransferItem{item}, transfer.FromStorageID, transfer.ToStorageID, transfer.Date); err != nil {
 			return fmt.Errorf("failed to reverse transfer item stock before delete: %w", err)
 		}
 	}
 
-	if err := q.DeleteTransferItem(ctx, id); err != nil {
+	if err := q.DeleteTransferItem(txCtx, id); err != nil {
 		return fmt.Errorf("failed to delete item: %w", err)
 	}
 
-	_ = q.RecalculateTransferTotal(ctx, item.TransferID)
+	_ = q.RecalculateTransferTotal(txCtx, item.TransferID)
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
 
 	return nil
 }
@@ -637,9 +689,15 @@ func (s *TransferS) UpsertTransferItems(ctx context.Context, transferID string, 
 		return nil, fmt.Errorf("at least one item is required")
 	}
 
-	q := s.repo.Tenant(ctx)
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
 
-	current, err := q.GetTransferByID(ctx, id)
+	current, err := q.GetTransferByID(txCtx, id)
 	if err != nil {
 		return nil, fmt.Errorf("transfer not found: %w", err)
 	}
@@ -694,7 +752,7 @@ func (s *TransferS) UpsertTransferItems(ctx context.Context, transferID string, 
 
 	if err := assertCanMutateTransferChange(
 		ctx,
-		s.repo,
+		s.repo.Tenant(ctx),
 		current,
 		pgtype.UUID{Bytes: newFromStorageID, Valid: true},
 		pgtype.UUID{Bytes: newToStorageID, Valid: true},
@@ -707,14 +765,14 @@ func (s *TransferS) UpsertTransferItems(ctx context.Context, transferID string, 
 	// IMPORTANT:
 	// reverse OLD active state BEFORE updating header/date/storage
 	if oldStatus == pg.TransferStatusActive {
-		existing, err := q.GetTransferItemsByTransferID(ctx, id)
+		existing, err := q.GetTransferItemsByTransferID(txCtx, id)
 		if err != nil {
 			return nil, fmt.Errorf("failed to fetch existing items: %w", err)
 		}
 
 		if len(existing) > 0 {
 			if err := s.reverseTransferItemsStock(
-				ctx,
+				txCtx,
 				q,
 				current.ID,
 				existing,
@@ -756,18 +814,18 @@ func (s *TransferS) UpsertTransferItems(ctx context.Context, transferID string, 
 		updateParams.Description = req.Description
 	}
 
-	updated, err := q.UpdateTransfer(ctx, updateParams)
+	updated, err := q.UpdateTransfer(txCtx, updateParams)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update transfer: %w", err)
 	}
 
-	if err := q.DeleteTransferItemsByTransferID(ctx, id); err != nil {
+	if err := q.DeleteTransferItemsByTransferID(txCtx, id); err != nil {
 		return nil, fmt.Errorf("failed to delete existing items: %w", err)
 	}
 
 	applyStock := newStatus == pg.TransferStatusActive
 	if _, err := s.processTransferItems(
-		ctx,
+		txCtx,
 		q,
 		id,
 		newFromStorageID,
@@ -781,7 +839,13 @@ func (s *TransferS) UpsertTransferItems(ctx context.Context, transferID string, 
 		return nil, err
 	}
 
-	_ = q.RecalculateTransferTotal(ctx, id)
+	_ = q.RecalculateTransferTotal(txCtx, id)
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
 
 	return s.GetTransferByID(ctx, transferID)
 }

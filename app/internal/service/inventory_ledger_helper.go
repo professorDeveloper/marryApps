@@ -17,12 +17,6 @@ type inventoryMovementPlan struct {
 	HasMovement bool
 }
 
-func inventoryZeroNumeric() pgtype.Numeric {
-	n := pgtype.Numeric{}
-	_ = n.Scan("0")
-	return n
-}
-
 func inventoryEffectiveAt(countedAt pgtype.Timestamptz) *pgtype.Timestamptz {
 	if !countedAt.Valid {
 		return nil
@@ -72,7 +66,11 @@ func buildInventoryTransitionPlan(fromQty, toQty pgtype.Numeric) (inventoryMovem
 	}
 }
 
-func (s *InventoryS) applyInventoryMovementPlan(ctx context.Context, inventoryID uuid.UUID, storageID uuid.UUID, ingredientID uuid.UUID, plan inventoryMovementPlan, effectiveAt *pgtype.Timestamptz) error {
+// applyInventoryMovementPlan inserts a stock movement and rebalances the ledger.
+// This function expects to be called within an existing transaction context.
+// It accepts the tenant queries and transaction context from the caller to ensure
+// atomicity with the parent operation.
+func (s *InventoryS) applyInventoryMovementPlan(txCtx context.Context, q *pg.Queries, inventoryID uuid.UUID, storageID uuid.UUID, ingredientID uuid.UUID, plan inventoryMovementPlan, effectiveAt *pgtype.Timestamptz) error {
 	if !plan.HasMovement || shouldSkipStockMovement(plan.QtyIn, plan.QtyOut) {
 		return nil
 	}
@@ -81,7 +79,7 @@ func (s *InventoryS) applyInventoryMovementPlan(ctx context.Context, inventoryID
 	sourceType := "inventory"
 	srcID := inventoryID
 
-	if err := s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+	if err := q.InsertIngredientStockMovement(txCtx, pg.InsertIngredientStockMovementParams{
 		ID:           uuid.New(),
 		StorageID:    storageID,
 		IngredientID: ingredientID,
@@ -98,66 +96,13 @@ func (s *InventoryS) applyInventoryMovementPlan(ctx context.Context, inventoryID
 		return fmt.Errorf("failed to insert inventory stock movement: %w", err)
 	}
 
-	if err := s.rebalanceInventoryIngredientLedger(ctx, pgtype.UUID{Bytes: storageID, Valid: true}, ingredientID); err != nil {
+	if err := s.rebalanceInventoryIngredientLedger(txCtx, pgtype.UUID{Bytes: storageID, Valid: true}, ingredientID, q); err != nil {
 		return fmt.Errorf("failed to rebalance inventory stock ledger: %w", err)
 	}
 
 	return nil
 }
 
-func (s *InventoryS) rebalanceInventoryIngredientLedger(ctx context.Context, storageID pgtype.UUID, ingredientID uuid.UUID) error {
-	if !storageID.Valid {
-		return fmt.Errorf("storage_id is required for inventory ledger rebalance")
-	}
-
-	q := s.repo.Tenant(ctx)
-
-	_, _ = q.EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
-		ID:           uuid.New(),
-		IngredientID: ingredientID,
-		StorageID:    storageID,
-	})
-
-	rows, err := q.ListIngredientStockMovementsForRebalance(ctx, storageID.Bytes, ingredientID)
-	if err != nil {
-		return fmt.Errorf("failed to list stock movements for rebalance: %w", err)
-	}
-
-	running := inventoryZeroNumeric()
-
-	for _, row := range rows {
-		before := running
-
-		after, err := applyMovementDelta(before, row.QtyIn, row.QtyOut, 6)
-		if err != nil {
-			return fmt.Errorf("failed to calculate inventory movement balance for movement %s: %w", row.ID, err)
-		}
-
-		if err := q.UpdateIngredientStockMovementBalances(ctx, pg.UpdateIngredientStockMovementBalancesParams{
-			ID:          row.ID,
-			StockBefore: before,
-			StockAfter:  after,
-		}); err != nil {
-			return fmt.Errorf("failed to update inventory movement balances for movement %s: %w", row.ID, err)
-		}
-
-		running = after
-	}
-
-	stockRow, err := q.GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
-		IngredientID: ingredientID,
-		StorageID:    storageID,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to lock ingredient stock for final sync: %w", err)
-	}
-
-	if _, err := q.UpdateIngredientStock(ctx, pg.UpdateIngredientStockParams{
-		ID:       stockRow.ID,
-		Quantity: running,
-	}); err != nil {
-		return fmt.Errorf("failed to sync ingredient_stock quantity after inventory rebalance: %w", err)
-	}
-
-	return nil
+func (s *InventoryS) rebalanceInventoryIngredientLedger(ctx context.Context, storageID pgtype.UUID, ingredientID uuid.UUID, q *pg.Queries) error {
+	return rebalanceIngredientStockLedger(ctx, q, storageID, ingredientID, "inventory")
 }

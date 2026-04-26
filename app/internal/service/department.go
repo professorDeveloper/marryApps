@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -34,7 +35,61 @@ func NewDepartmentS(repo *repository.Repository) *DepartmentS {
 	return &DepartmentS{repo: repo}
 }
 
+func (d *DepartmentS) getTenantMutationQueries(ctx context.Context) (*pg.Queries, context.Context, pgx.Tx, bool, error) {
+	if existingTx, ok := repository.TenantTxFromContext(ctx); ok && existingTx != nil {
+		if q, ok := repository.TenantQueriesFromContext(ctx); ok && q != nil {
+			return q, ctx, existingTx, false, nil
+		}
+		q := pg.New(existingTx)
+		txCtx := repository.WithTenantQueries(ctx, q)
+		return q, txCtx, existingTx, false, nil
+	}
+
+	tx, err := d.repo.PgRepo.TenantPool.Begin(ctx)
+	if err != nil {
+		return nil, nil, nil, false, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+
+	brandID, _ := ctx.Value("brand_id").(string)
+	brandID = strings.TrimSpace(brandID)
+	if brandID == "" {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("brand_id is missing in context")
+	}
+
+	schemaName := fmt.Sprintf("tenant_%s", brandID)
+	if _, err := tx.Exec(ctx, fmt.Sprintf(`SET LOCAL search_path TO "%s", public`, schemaName)); err != nil {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("failed to set tenant search_path: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx, "SET LOCAL app.brand_id = $1", brandID); err != nil {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("failed to set app.brand_id: %w", err)
+	}
+
+	if branchID, _ := ctx.Value("branch_id").(string); strings.TrimSpace(branchID) != "" {
+		if _, err := tx.Exec(ctx, "SET LOCAL app.branch_id = $1", strings.TrimSpace(branchID)); err != nil {
+			tx.Rollback(ctx)
+			return nil, nil, nil, false, fmt.Errorf("failed to set app.branch_id: %w", err)
+		}
+	}
+
+	q := pg.New(tx)
+	txCtx := repository.WithTenantQueries(ctx, q)
+
+	return q, txCtx, tx, true, nil
+}
+
 func (d *DepartmentS) CreateDepartment(ctx context.Context, name string, nameI18n, colorCode, pictureUrl *string, storageID *string) (*model.DepartmentResponse, error) {
+	q, txCtx, tx, ownsTx, err := d.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	if name == "" {
 		return nil, fmt.Errorf("department name is required")
 	}
@@ -57,7 +112,7 @@ func (d *DepartmentS) CreateDepartment(ctx context.Context, name string, nameI18
 		storageUUID = pgtype.UUID{Bytes: id, Valid: true}
 	}
 
-	department, err := d.repo.Tenant(ctx).CreateDepartment(ctx, pg.CreateDepartmentParams{
+	department, err := q.CreateDepartment(txCtx, pg.CreateDepartmentParams{
 		ID:         uuid.New(),
 		Name:       name,
 		NameI18n:   nameI18nUUID,
@@ -70,6 +125,12 @@ func (d *DepartmentS) CreateDepartment(ctx context.Context, name string, nameI18
 		return nil, fmt.Errorf("failed to create department: %w", err)
 	}
 
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return mapDepartmentToResponse(department.ID, department.Name, department.NameI18n, department.StorageID, department.ColorCode, department.PictureUrl, department.CreatedAt, department.UpdatedAt), nil
 }
 
@@ -80,13 +141,21 @@ func (d *DepartmentS) GetDepartmentByID(ctx context.Context, departmentID string
 		return nil, fmt.Errorf("invalid department ID: %w", err)
 	}
 
-	department, err := d.repo.Tenant(ctx).GetDepartmentByID(ctx, id)
-	if err != nil {
-		if err == pgx.ErrNoRows {
-			return nil, fmt.Errorf("department not found")
+	var department pg.Department
+	err = withTenantRead(ctx, d.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		department, err = q.GetDepartmentByID(ctx, id)
+		if err != nil {
+			if err == pgx.ErrNoRows {
+				return fmt.Errorf("department not found")
+			}
+			log.Printf("GetDepartmentByID failed: %v", err)
+			return fmt.Errorf("failed to retrieve department: %w", err)
 		}
-		log.Printf("GetDepartmentByID failed: %v", err)
-		return nil, fmt.Errorf("failed to retrieve department: %w", err)
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
 
 	return mapDepartmentToResponse(department.ID, department.Name, department.NameI18n, department.StorageID, department.ColorCode, department.PictureUrl, department.CreatedAt, department.UpdatedAt), nil
@@ -105,24 +174,33 @@ func (s *DepartmentS) GetAllDepartments(ctx context.Context, filter model.Depart
 		return nil, 0, fmt.Errorf("invalid storage_id: %w", err)
 	}
 
-	total, err := s.repo.Tenant(ctx).CountDepartments(ctx, pg.CountDepartmentsParams{
-		Search:    filter.Search,
-		StorageID: storageUUID,
-	})
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to count departments: %w", err)
-	}
+	var rows []pg.GetAllDepartmentsRow
+	var total int64
+	err = withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		total, err = q.CountDepartments(ctx, pg.CountDepartmentsParams{
+			Search:    filter.Search,
+			StorageID: storageUUID,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to count departments: %w", err)
+		}
 
-	rows, err := s.repo.Tenant(ctx).GetAllDepartments(ctx, pg.GetAllDepartmentsParams{
-		Search:    filter.Search,
-		StorageID: storageUUID,
-		SortBy:    filter.SortBy,
-		SortOrder: filter.SortOrder,
-		Limit:     limit,
-		Offset:    offset,
+		rows, err = q.GetAllDepartments(ctx, pg.GetAllDepartmentsParams{
+			Search:    filter.Search,
+			StorageID: storageUUID,
+			SortBy:    filter.SortBy,
+			SortOrder: filter.SortOrder,
+			Limit:     limit,
+			Offset:    offset,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to get departments: %w", err)
+		}
+		return nil
 	})
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to get departments: %w", err)
+		return nil, 0, err
 	}
 
 	resp := make([]*model.DepartmentResponse, 0, len(rows))
@@ -140,19 +218,28 @@ func (d *DepartmentS) GetDepartmentsByStorageID(ctx context.Context, storageID s
 		return nil, 0, fmt.Errorf("invalid storage ID: %w", err)
 	}
 
-	total, err := d.repo.Tenant(ctx).CountDepartmentsByStorage(ctx, pgtype.UUID{Bytes: id, Valid: true})
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to count departments: %w", err)
-	}
+	var departments []pg.Department
+	var total int64
+	err = withTenantRead(ctx, d.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		total, err = q.CountDepartmentsByStorage(ctx, pgtype.UUID{Bytes: id, Valid: true})
+		if err != nil {
+			return fmt.Errorf("failed to count departments: %w", err)
+		}
 
-	departments, err := d.repo.Tenant(ctx).GetDepartmentsByStorageID(ctx, pg.GetDepartmentsByStorageIDParams{
-		StorageID: pgtype.UUID{Bytes: id, Valid: true},
-		Limit:     limit,
-		Offset:    offset,
+		departments, err = q.GetDepartmentsByStorageID(ctx, pg.GetDepartmentsByStorageIDParams{
+			StorageID: pgtype.UUID{Bytes: id, Valid: true},
+			Limit:     limit,
+			Offset:    offset,
+		})
+		if err != nil {
+			log.Printf("GetDepartmentsByStorageID failed: %v", err)
+			return fmt.Errorf("failed to retrieve departments: %w", err)
+		}
+		return nil
 	})
 	if err != nil {
-		log.Printf("GetDepartmentsByStorageID failed: %v", err)
-		return nil, 0, fmt.Errorf("failed to retrieve departments: %w", err)
+		return nil, 0, err
 	}
 
 	var responses []*model.DepartmentResponse
@@ -164,13 +251,21 @@ func (d *DepartmentS) GetDepartmentsByStorageID(ctx context.Context, storageID s
 
 // UpdateDepartment updates a department
 func (d *DepartmentS) UpdateDepartment(ctx context.Context, departmentID string, name *string, nameI18n *string, colorCode *string, pictureUrl *string, storageID *string, uz *string, ru *string, en *string) (*model.DepartmentResponse, error) {
+	q, txCtx, tx, ownsTx, err := d.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	id, err := uuid.Parse(departmentID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid department ID: %w", err)
 	}
 
 	// Get existing department
-	existing, err := d.repo.Tenant(ctx).GetDepartmentByID(ctx, id)
+	existing, err := q.GetDepartmentByID(txCtx, id)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, fmt.Errorf("department not found")
@@ -211,7 +306,7 @@ func (d *DepartmentS) UpdateDepartment(ctx context.Context, departmentID string,
 		finalStorageID = pgtype.UUID{Bytes: storageUUID, Valid: true}
 	}
 
-	department, err := d.repo.Tenant(ctx).UpdateDepartment(ctx, pg.UpdateDepartmentParams{
+	department, err := q.UpdateDepartment(txCtx, pg.UpdateDepartmentParams{
 		ID:         id,
 		Name:       finalName,
 		NameI18n:   finalNameI18n,
@@ -228,7 +323,7 @@ func (d *DepartmentS) UpdateDepartment(ctx context.Context, departmentID string,
 	var finalUz, finalRu, finalEn *string
 	if uz != nil || ru != nil || en != nil {
 		if department.NameI18n.Valid {
-			tr, trErr := d.repo.Tenant(ctx).UpdateTranslation(ctx, pg.UpdateTranslationParams{
+			tr, trErr := q.UpdateTranslation(txCtx, pg.UpdateTranslationParams{
 				ID: department.NameI18n.Bytes,
 				Uz: uz,
 				Ru: ru,
@@ -240,7 +335,7 @@ func (d *DepartmentS) UpdateDepartment(ctx context.Context, departmentID string,
 			finalUz, finalRu, finalEn = tr.Uz, tr.Ru, tr.En
 		} else {
 			translationID := uuid.New()
-			tr, trErr := d.repo.Tenant(ctx).CreateTranslation(ctx, pg.CreateTranslationParams{
+			tr, trErr := q.CreateTranslation(txCtx, pg.CreateTranslationParams{
 				ID: translationID,
 				Uz: uz,
 				Ru: ru,
@@ -250,7 +345,7 @@ func (d *DepartmentS) UpdateDepartment(ctx context.Context, departmentID string,
 				return nil, fmt.Errorf("failed to create translation: %w", trErr)
 			}
 			finalUz, finalRu, finalEn = tr.Uz, tr.Ru, tr.En
-			department, err = d.repo.Tenant(ctx).UpdateDepartment(ctx, pg.UpdateDepartmentParams{
+			department, err = q.UpdateDepartment(txCtx, pg.UpdateDepartmentParams{
 				ID:         id,
 				Name:       department.Name,
 				NameI18n:   pgtype.UUID{Bytes: translationID, Valid: true},
@@ -264,6 +359,12 @@ func (d *DepartmentS) UpdateDepartment(ctx context.Context, departmentID string,
 		}
 	}
 
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	resp := mapDepartmentToResponse(department.ID, department.Name, department.NameI18n, department.StorageID, department.ColorCode, department.PictureUrl, department.CreatedAt, department.UpdatedAt)
 	resp.Uz = finalUz
 	resp.Ru = finalRu
@@ -273,28 +374,57 @@ func (d *DepartmentS) UpdateDepartment(ctx context.Context, departmentID string,
 
 // DeleteDepartment soft deletes a department
 func (d *DepartmentS) DeleteDepartment(ctx context.Context, departmentID string) error {
+	q, txCtx, tx, ownsTx, err := d.getTenantMutationQueries(ctx)
+	if err != nil {
+		return err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	id, err := uuid.Parse(departmentID)
 	if err != nil {
 		return fmt.Errorf("invalid department ID: %w", err)
 	}
 
-	if err := d.repo.Tenant(ctx).DeleteDepartment(ctx, id); err != nil {
+	if err := q.DeleteDepartment(txCtx, id); err != nil {
 		log.Printf("DeleteDepartment failed: %v", err)
 		return fmt.Errorf("failed to delete department: %w", err)
 	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return nil
 }
 
 // RestoreDepartment restores a soft-deleted department
 func (d *DepartmentS) RestoreDepartment(ctx context.Context, departmentID string) (*model.DepartmentResponse, error) {
+	q, txCtx, tx, ownsTx, err := d.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	id, err := uuid.Parse(departmentID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid department ID: %w", err)
 	}
 
-	if err := d.repo.Tenant(ctx).RestoreDepartment(ctx, id); err != nil {
+	if err := q.RestoreDepartment(txCtx, id); err != nil {
 		log.Printf("RestoreDepartment failed: %v", err)
 		return nil, fmt.Errorf("failed to restore department: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return d.GetDepartmentByID(ctx, departmentID)
@@ -307,13 +437,21 @@ func (d *DepartmentS) GetDepartmentByIDWithLang(ctx context.Context, departmentI
 		return nil, fmt.Errorf("invalid department ID: %w", err)
 	}
 
-	department, err := d.repo.Tenant(ctx).GetDepartmentByIDWithLanguage(ctx, pg.GetDepartmentByIDWithLanguageParams{
-		ID:      id,
-		Column2: lang,
+	var department pg.GetDepartmentByIDWithLanguageRow
+	err = withTenantRead(ctx, d.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		department, err = q.GetDepartmentByIDWithLanguage(ctx, pg.GetDepartmentByIDWithLanguageParams{
+			ID:      id,
+			Column2: lang,
+		})
+		if err != nil {
+			log.Printf("GetDepartmentByIDWithLang failed: %v", err)
+			return fmt.Errorf("failed to get department: %w", err)
+		}
+		return nil
 	})
 	if err != nil {
-		log.Printf("GetDepartmentByIDWithLang failed: %v", err)
-		return nil, fmt.Errorf("failed to get department: %w", err)
+		return nil, err
 	}
 
 	return mapDepartmentToResponse(department.ID, department.Name, department.NameI18n, department.StorageID, department.ColorCode, department.PictureUrl, department.CreatedAt, department.UpdatedAt), nil
@@ -321,21 +459,30 @@ func (d *DepartmentS) GetDepartmentByIDWithLang(ctx context.Context, departmentI
 
 // GetAllDepartmentsWithLang retrieves all departments with language support
 func (d *DepartmentS) GetAllDepartmentsWithLang(ctx context.Context, lang string, limit, offset int32) ([]model.DepartmentResponse, int32, error) {
-	total, err := d.repo.Tenant(ctx).CountDepartments(ctx, pg.CountDepartmentsParams{
-		Search:    "",
-		StorageID: pgtype.UUID{},
-	})
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to count departments: %w", err)
-	}
+	var departments []pg.GetAllDepartmentsWithLanguageRow
+	var total int64
+	err := withTenantRead(ctx, d.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		total, err = q.CountDepartments(ctx, pg.CountDepartmentsParams{
+			Search:    "",
+			StorageID: pgtype.UUID{},
+		})
+		if err != nil {
+			return fmt.Errorf("failed to count departments: %w", err)
+		}
 
-	departments, err := d.repo.Tenant(ctx).GetAllDepartmentsWithLanguage(ctx, pg.GetAllDepartmentsWithLanguageParams{
-		Column1: lang,
-		Limit:   limit,
-		Offset:  offset,
+		departments, err = q.GetAllDepartmentsWithLanguage(ctx, pg.GetAllDepartmentsWithLanguageParams{
+			Column1: lang,
+			Limit:   limit,
+			Offset:  offset,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to get departments: %w", err)
+		}
+		return nil
 	})
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to get departments: %w", err)
+		return nil, 0, err
 	}
 
 	responses := make([]model.DepartmentResponse, 0, len(departments))

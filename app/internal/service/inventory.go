@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -14,12 +15,119 @@ import (
 	pg "gitlab.yurtal.tech/company/maryai/back/internal/repository/pg/tenantsdb"
 )
 
+// Inventory delete errors
+var (
+	ErrInventoryNotFound          = errors.New("inventory not found")
+	ErrInventoryAlreadyDeleted    = errors.New("inventory is already deleted")
+	ErrInventoryDeleteOnlyLatest  = errors.New("only the latest inventory can be deleted")
+	ErrInventoryLatestCheckFailed = errors.New("failed to check latest inventory")
+	ErrInventoryDeleteFailed      = errors.New("failed to delete inventory")
+)
+
 type InventoryS struct {
 	repo *repository.Repository
 }
 
 func NewInventoryS(repo *repository.Repository) *InventoryS {
 	return &InventoryS{repo: repo}
+}
+
+// getTenantMutationQueries returns tenant queries within a transaction for mutation operations.
+// If a transaction already exists in context, it reuses it. Otherwise, it creates a new one.
+// Returns: queries, enriched context, transaction, ownsTx (whether we created the tx), error
+func (s *InventoryS) getTenantMutationQueries(ctx context.Context) (*pg.Queries, context.Context, pgx.Tx, bool, error) {
+	if existingTx, ok := repository.TenantTxFromContext(ctx); ok && existingTx != nil {
+		// Reuse existing transaction - get queries from context or create from tx
+		if q, ok := repository.TenantQueriesFromContext(ctx); ok && q != nil {
+			return q, ctx, existingTx, false, nil
+		}
+		q := pg.New(existingTx)
+		txCtx := repository.WithTenantQueries(ctx, q)
+		return q, txCtx, existingTx, false, nil
+	}
+
+	tx, err := s.repo.PgRepo.TenantPool.Begin(ctx)
+	if err != nil {
+		return nil, nil, nil, false, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+
+	brandID, _ := ctx.Value("brand_id").(string)
+	brandID = strings.TrimSpace(brandID)
+	if brandID == "" {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("brand_id is missing in context")
+	}
+
+	schemaName := fmt.Sprintf("tenant_%s", brandID)
+	if _, err := tx.Exec(ctx, fmt.Sprintf(`SET LOCAL search_path TO "%s", public`, schemaName)); err != nil {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("failed to set tenant search_path: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx, "SET LOCAL app.brand_id = $1", brandID); err != nil {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("failed to set app.brand_id: %w", err)
+	}
+
+	if branchID, _ := ctx.Value("branch_id").(string); strings.TrimSpace(branchID) != "" {
+		if _, err := tx.Exec(ctx, "SET LOCAL app.branch_id = $1", strings.TrimSpace(branchID)); err != nil {
+			tx.Rollback(ctx)
+			return nil, nil, nil, false, fmt.Errorf("failed to set app.branch_id: %w", err)
+		}
+	}
+
+	q := pg.New(tx)
+	txCtx := repository.WithTenantQueries(ctx, q)
+
+	return q, txCtx, tx, true, nil
+}
+
+// getTenantReadQueries returns tenant queries for read-only operations.
+// If a transaction exists in context, it reuses it. Otherwise, it creates a connection.
+// Returns: queries, enriched context, connection (nil if reusing tx), ownsConn (whether we created the conn), error
+func (s *InventoryS) getTenantReadQueries(ctx context.Context) (*pg.Queries, context.Context, pgx.Tx, bool, error) {
+	if existingTx, ok := repository.TenantTxFromContext(ctx); ok && existingTx != nil {
+		// Reuse existing transaction - get queries from context or create from tx
+		if q, ok := repository.TenantQueriesFromContext(ctx); ok && q != nil {
+			return q, ctx, existingTx, false, nil
+		}
+		q := pg.New(existingTx)
+		txCtx := repository.WithTenantQueries(ctx, q)
+		return q, txCtx, existingTx, false, nil
+	}
+
+	// For read-only operations without an existing transaction, acquire a connection
+	conn, err := s.repo.PgRepo.TenantPool.Acquire(ctx)
+	if err != nil {
+		return nil, nil, nil, false, fmt.Errorf("failed to acquire connection: %w", err)
+	}
+	defer conn.Release()
+
+	brandID, _ := ctx.Value("brand_id").(string)
+	brandID = strings.TrimSpace(brandID)
+	if brandID == "" {
+		return nil, nil, nil, false, fmt.Errorf("brand_id is missing in context")
+	}
+
+	schemaName := fmt.Sprintf("tenant_%s", brandID)
+	if _, err := conn.Exec(ctx, fmt.Sprintf(`SET search_path TO "%s", public`, schemaName)); err != nil {
+		return nil, nil, nil, false, fmt.Errorf("failed to set tenant search_path: %w", err)
+	}
+
+	if _, err := conn.Exec(ctx, "SET app.brand_id = $1", brandID); err != nil {
+		return nil, nil, nil, false, fmt.Errorf("failed to set app.brand_id: %w", err)
+	}
+
+	if branchID, _ := ctx.Value("branch_id").(string); strings.TrimSpace(branchID) != "" {
+		if _, err := conn.Exec(ctx, "SET app.branch_id = $1", strings.TrimSpace(branchID)); err != nil {
+			return nil, nil, nil, false, fmt.Errorf("failed to set app.branch_id: %w", err)
+		}
+	}
+
+	q := pg.New(conn.Conn())
+	txCtx := repository.WithTenantQueries(ctx, q)
+
+	return q, txCtx, nil, true, nil
 }
 
 // ─────────────────────────────────────────────
@@ -61,7 +169,15 @@ func (s *InventoryS) CreateInventory(ctx context.Context, req *model.CreateInven
 		return nil, fmt.Errorf("cannot create inventory with status 'deleted'")
 	}
 
-	created, err := s.repo.Tenant(ctx).CreateInventory(ctx, pg.CreateInventoryParams{
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	created, err := q.CreateInventory(txCtx, pg.CreateInventoryParams{
 		ID:              id,
 		Date:            pgtype.Date{Time: date, Valid: true},
 		StorageID:       storageID,
@@ -71,7 +187,16 @@ func (s *InventoryS) CreateInventory(ctx context.Context, req *model.CreateInven
 		CountedAt:       countedAt,
 	})
 	if err != nil {
+		if ownsTx {
+			tx.Rollback(ctx)
+		}
 		return nil, fmt.Errorf("failed to create inventory: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return toInventoryResponse(created), nil
@@ -115,7 +240,12 @@ func (s *InventoryS) GetInventoryByID(ctx context.Context, id string) (*model.In
 		return nil, fmt.Errorf("invalid inventory id: %w", err)
 	}
 
-	inv, err := s.repo.Tenant(ctx).GetInventoryByID(ctx, inventoryID)
+	q, txCtx, _, _, err := s.getTenantReadQueries(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+
+	inv, err := q.GetInventoryByID(txCtx, inventoryID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get inventory: %w", err)
 	}
@@ -164,7 +294,12 @@ func (s *InventoryS) GetInventoriesFiltered(ctx context.Context, dateFrom, dateT
 		sortOrder = "desc"
 	}
 
-	total, err := s.repo.Tenant(ctx).CountInventoriesFiltered(ctx, pg.CountInventoriesFilteredParams{
+	q, txCtx, _, _, err := s.getTenantReadQueries(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+
+	total, err := q.CountInventoriesFiltered(txCtx, pg.CountInventoriesFilteredParams{
 		DateFrom:     fromDate,
 		DateTo:       toDate,
 		StorageID:    storageUUID,
@@ -176,7 +311,7 @@ func (s *InventoryS) GetInventoriesFiltered(ctx context.Context, dateFrom, dateT
 		return nil, fmt.Errorf("failed to count inventories: %w", err)
 	}
 
-	invs, err := s.repo.Tenant(ctx).GetInventoriesFiltered(ctx, pg.GetInventoriesFilteredParams{
+	invs, err := q.GetInventoriesFiltered(txCtx, pg.GetInventoriesFilteredParams{
 		DateFrom:     fromDate,
 		DateTo:       toDate,
 		StorageID:    storageUUID,
@@ -220,12 +355,17 @@ func (s *InventoryS) GetInventoriesFiltered(ctx context.Context, dateFrom, dateT
 }
 
 func (s *InventoryS) GetAllInventoryItems(ctx context.Context, inventoryID *string, limit, offset int32) ([]*model.InventoryItemResponse, error) {
+	q, txCtx, _, _, err := s.getTenantReadQueries(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+
 	if inventoryID != nil && *inventoryID != "" {
 		invID, err := uuid.Parse(*inventoryID)
 		if err != nil {
 			return nil, fmt.Errorf("invalid inventory id: %w", err)
 		}
-		items, err := s.repo.Tenant(ctx).GetInventoryItemsByInventoryID(ctx, pg.GetInventoryItemsByInventoryIDParams{
+		items, err := q.GetInventoryItemsByInventoryID(txCtx, pg.GetInventoryItemsByInventoryIDParams{
 			InventoryID: invID,
 			Limit:       limit,
 			Offset:      offset,
@@ -240,7 +380,7 @@ func (s *InventoryS) GetAllInventoryItems(ctx context.Context, inventoryID *stri
 		return resp, nil
 	}
 
-	items, err := s.repo.Tenant(ctx).GetAllInventoryItems(ctx, pg.GetAllInventoryItemsParams{Limit: limit, Offset: offset})
+	items, err := q.GetAllInventoryItems(txCtx, pg.GetAllInventoryItemsParams{Limit: limit, Offset: offset})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get inventory items: %w", err)
 	}
@@ -257,7 +397,12 @@ func (s *InventoryS) GetInventoryItems(ctx context.Context, inventoryID string) 
 		return nil, fmt.Errorf("invalid inventory id: %w", err)
 	}
 
-	rows, err := s.repo.Tenant(ctx).GetInventoryItemsComputedAll(ctx, invID)
+	q, txCtx, _, _, err := s.getTenantReadQueries(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+
+	rows, err := q.GetInventoryItemsComputedAll(txCtx, invID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get inventory items: %w", err)
 	}
@@ -279,27 +424,50 @@ func (s *InventoryS) UpdateInventory(ctx context.Context, id string, req *model.
 		return nil, fmt.Errorf("invalid inventory id: %w", err)
 	}
 
-	// Lock the inventory row and read current status
-	invForApply, err := s.repo.Tenant(ctx).GetInventoryForApply(ctx, inventoryID)
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
 	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	// Lock the inventory row and read current status
+	invForApply, err := q.GetInventoryForApply(txCtx, inventoryID)
+	if err != nil {
+		if ownsTx {
+			tx.Rollback(ctx)
+		}
 		return nil, fmt.Errorf("inventory not found: %w", err)
 	}
 
 	if invForApply.Status == "deleted" {
+		if ownsTx {
+			tx.Rollback(ctx)
+		}
 		return nil, fmt.Errorf("cannot update a deleted inventory")
 	}
 
 	// Block changing status to "deleted" via update
 	if req.Status != nil && *req.Status == "deleted" {
+		if ownsTx {
+			tx.Rollback(ctx)
+		}
 		return nil, fmt.Errorf("cannot set status to 'deleted'; use the DELETE endpoint instead")
 	}
 
 	// Get full inventory record for counted_at information
-	invFull, err := s.repo.Tenant(ctx).GetInventoryByID(ctx, inventoryID)
+	invFull, err := q.GetInventoryByID(txCtx, inventoryID)
 	if err != nil {
+		if ownsTx {
+			tx.Rollback(ctx)
+		}
 		return nil, fmt.Errorf("failed to get inventory: %w", err)
 	}
-	if err := assertCanMutateInventorySnapshot(ctx, s.repo, invFull.StorageID, inventoryID, invFull.CountedAt, "inventory"); err != nil {
+	if err := assertCanMutateInventorySnapshot(txCtx, q, invFull.StorageID, inventoryID, invFull.CountedAt, "inventory"); err != nil {
+		if ownsTx {
+			tx.Rollback(ctx)
+		}
 		return nil, err
 	}
 
@@ -308,6 +476,9 @@ func (s *InventoryS) UpdateInventory(ctx context.Context, id string, req *model.
 	if req.CountedAt != nil && *req.CountedAt != "" {
 		ca, err := time.Parse(time.RFC3339, *req.CountedAt)
 		if err != nil {
+			if ownsTx {
+				tx.Rollback(ctx)
+			}
 			return nil, fmt.Errorf("invalid counted_at: %w", err)
 		}
 		finalCountedAt = ca
@@ -315,6 +486,9 @@ func (s *InventoryS) UpdateInventory(ctx context.Context, id string, req *model.
 
 	// Validate counted_at change: active inventory cannot change counted_at
 	if invForApply.Status == "active" && !isSameTime(invFull.CountedAt, finalCountedAt) {
+		if ownsTx {
+			tx.Rollback(ctx)
+		}
 		return nil, fmt.Errorf("cannot change counted_at for active inventory")
 	}
 
@@ -323,8 +497,11 @@ func (s *InventoryS) UpdateInventory(ctx context.Context, id string, req *model.
 		newStatus := *req.Status
 		storagePg := pgtype.UUID{Bytes: invForApply.StorageID, Valid: true}
 
-		items, err := s.repo.Tenant(ctx).GetInventoryItemsByInventoryIDAll(ctx, inventoryID)
+		items, err := q.GetInventoryItemsByInventoryIDAll(txCtx, inventoryID)
 		if err != nil {
+			if ownsTx {
+				tx.Rollback(ctx)
+			}
 			return nil, fmt.Errorf("failed to get inventory items: %w", err)
 		}
 
@@ -332,20 +509,32 @@ func (s *InventoryS) UpdateInventory(ctx context.Context, id string, req *model.
 
 		switch {
 		case invForApply.Status == "draft" && newStatus == "active":
-			if err := s.applyStockForItems(ctx, inventoryID, invForApply.StorageID, storagePg, items, "draft_to_active", &effectiveAt); err != nil {
+			if err := s.applyStockForItems(txCtx, inventoryID, invForApply.StorageID, storagePg, items, "draft_to_active", &effectiveAt); err != nil {
+				if ownsTx {
+					tx.Rollback(ctx)
+				}
 				return nil, err
 			}
 		case invForApply.Status == "active" && newStatus == "draft":
-			if err := s.reverseStockForItems(ctx, inventoryID, invForApply.StorageID, storagePg, items, "active_to_draft", &effectiveAt); err != nil {
+			if err := s.reverseStockForItems(txCtx, q, inventoryID, invForApply.StorageID, storagePg, items, "active_to_draft", &effectiveAt); err != nil {
+				if ownsTx {
+					tx.Rollback(ctx)
+				}
 				return nil, err
 			}
 		default:
+			if ownsTx {
+				tx.Rollback(ctx)
+			}
 			return nil, fmt.Errorf("invalid status transition: %s → %s", invForApply.Status, newStatus)
 		}
 	}
 
-	existing, err := s.repo.Tenant(ctx).GetInventoryByID(ctx, inventoryID)
+	existing, err := q.GetInventoryByID(txCtx, inventoryID)
 	if err != nil {
+		if ownsTx {
+			tx.Rollback(ctx)
+		}
 		return nil, fmt.Errorf("failed to get inventory: %w", err)
 	}
 
@@ -353,6 +542,9 @@ func (s *InventoryS) UpdateInventory(ctx context.Context, id string, req *model.
 	if req.Date != nil && *req.Date != "" {
 		d, err := parseDateYYYYMMDD(*req.Date)
 		if err != nil {
+			if ownsTx {
+				tx.Rollback(ctx)
+			}
 			return nil, fmt.Errorf("invalid date: %w", err)
 		}
 		finalDate = pgtype.Date{Time: d, Valid: true}
@@ -362,6 +554,9 @@ func (s *InventoryS) UpdateInventory(ctx context.Context, id string, req *model.
 	if req.StorageID != nil && *req.StorageID != "" {
 		sid, err := uuid.Parse(*req.StorageID)
 		if err != nil {
+			if ownsTx {
+				tx.Rollback(ctx)
+			}
 			return nil, fmt.Errorf("invalid storage_id: %w", err)
 		}
 		finalStorageID = sid
@@ -379,6 +574,9 @@ func (s *InventoryS) UpdateInventory(ctx context.Context, id string, req *model.
 		} else {
 			i18nID, err := uuid.Parse(*req.DescriptionI18n)
 			if err != nil {
+				if ownsTx {
+					tx.Rollback(ctx)
+				}
 				return nil, fmt.Errorf("invalid description_i18n: %w", err)
 			}
 			finalDescriptionI18n = pgtype.UUID{Bytes: i18nID, Valid: true}
@@ -390,7 +588,7 @@ func (s *InventoryS) UpdateInventory(ctx context.Context, id string, req *model.
 		finalStatus = *req.Status
 	}
 
-	updated, err := s.repo.Tenant(ctx).UpdateInventory(ctx, pg.UpdateInventoryParams{
+	updated, err := q.UpdateInventory(txCtx, pg.UpdateInventoryParams{
 		ID:              inventoryID,
 		Date:            finalDate,
 		StorageID:       finalStorageID,
@@ -400,7 +598,16 @@ func (s *InventoryS) UpdateInventory(ctx context.Context, id string, req *model.
 		CountedAt:       finalCountedAt,
 	})
 	if err != nil {
+		if ownsTx {
+			tx.Rollback(ctx)
+		}
 		return nil, fmt.Errorf("failed to update inventory: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return toInventoryResponse(updated), nil
@@ -412,45 +619,80 @@ func (s *InventoryS) UpdateInventoryItem(ctx context.Context, inventoryItemID st
 		return nil, fmt.Errorf("invalid inventory item id: %w", err)
 	}
 
-	item, err := s.repo.Tenant(ctx).GetInventoryItemByID(ctx, itemID)
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
 	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	item, err := q.GetInventoryItemByID(txCtx, itemID)
+	if err != nil {
+		if ownsTx {
+			tx.Rollback(ctx)
+		}
 		return nil, fmt.Errorf("failed to get inventory item: %w", err)
 	}
 
-	invFull, err := s.repo.Tenant(ctx).GetInventoryByID(ctx, item.InventoryID)
+	invFull, err := q.GetInventoryByID(txCtx, item.InventoryID)
 	if err != nil {
+		if ownsTx {
+			tx.Rollback(ctx)
+		}
 		return nil, fmt.Errorf("failed to get inventory details: %w", err)
 	}
 
-	if err := assertCanMutateInventorySnapshot(ctx, s.repo, invFull.StorageID, invFull.ID, invFull.CountedAt, "inventory item"); err != nil {
+	if err := assertCanMutateInventorySnapshot(txCtx, q, invFull.StorageID, invFull.ID, invFull.CountedAt, "inventory item"); err != nil {
+		if ownsTx {
+			tx.Rollback(ctx)
+		}
 		return nil, err
 	}
 
 	qty := pgtype.Numeric{}
 	if err := qty.Scan(req.CountedQuantity); err != nil {
+		if ownsTx {
+			tx.Rollback(ctx)
+		}
 		return nil, fmt.Errorf("invalid counted_quantity: %w", err)
 	}
 
-	updated, err := s.repo.Tenant(ctx).UpdateInventoryItem(ctx, pg.UpdateInventoryItemParams{
+	updated, err := q.UpdateInventoryItem(txCtx, pg.UpdateInventoryItemParams{
 		ID:              itemID,
 		CountedQuantity: qty,
 	})
 	if err != nil {
+		if ownsTx {
+			tx.Rollback(ctx)
+		}
 		return nil, fmt.Errorf("failed to update inventory item: %w", err)
 	}
 
-	totals, err := s.repo.Tenant(ctx).CalculateInventoryTotals(ctx, updated.InventoryID)
+	totals, err := q.CalculateInventoryTotals(txCtx, updated.InventoryID)
 	if err != nil {
+		if ownsTx {
+			tx.Rollback(ctx)
+		}
 		return nil, fmt.Errorf("failed to calculate inventory totals: %w", err)
 	}
 
-	if _, err := s.repo.Tenant(ctx).UpdateInventoryAmounts(ctx, pg.UpdateInventoryAmountsParams{
+	if _, err := q.UpdateInventoryAmounts(txCtx, pg.UpdateInventoryAmountsParams{
 		ID:              updated.InventoryID,
 		SurplusAmount:   totals.SurplusAmount,
 		ShortageAmount:  totals.ShortageAmount,
 		RemainingAmount: totals.RemainingAmount,
 	}); err != nil {
+		if ownsTx {
+			tx.Rollback(ctx)
+		}
 		return nil, fmt.Errorf("failed to update inventory amounts: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return toInventoryItemResponse(updated), nil
@@ -473,21 +715,38 @@ func (s *InventoryS) ReplaceInventoryItems(ctx context.Context, inventoryID stri
 		return nil, fmt.Errorf("invalid inventory_id: %w", err)
 	}
 
-	inv, err := s.repo.Tenant(ctx).GetInventoryByID(ctx, invID)
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
 	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	inv, err := q.GetInventoryByID(txCtx, invID)
+	if err != nil {
+		if ownsTx {
+			tx.Rollback(ctx)
+		}
 		if err == pgx.ErrNoRows {
 			return nil, fmt.Errorf("inventory not found")
 		}
 		return nil, fmt.Errorf("failed to get inventory: %w", err)
 	}
-	if err := assertCanMutateInventorySnapshot(ctx, s.repo, inv.StorageID, invID, inv.CountedAt, "inventory items"); err != nil {
+	if err := assertCanMutateInventorySnapshot(txCtx, q, inv.StorageID, invID, inv.CountedAt, "inventory items"); err != nil {
+		if ownsTx {
+			tx.Rollback(ctx)
+		}
 		return nil, err
 	}
 
 	// Replace endpoint uchun items authoritative list hisoblanadi.
 	// Yangi listda yo'q itemlar delete qilinadi.
-	items, err := s.repo.Tenant(ctx).GetInventoryItemsForProcessByInventoryID(ctx, invID)
+	items, err := q.GetInventoryItemsForProcessByInventoryID(txCtx, invID)
 	if err != nil {
+		if ownsTx {
+			tx.Rollback(ctx)
+		}
 		return nil, fmt.Errorf("failed to get inventory items: %w", err)
 	}
 
@@ -530,8 +789,8 @@ func (s *InventoryS) ReplaceInventoryItems(ctx context.Context, inventoryID stri
 
 		// 1) Yangi item
 		if !exists {
-			inserted, err := s.repo.Tenant(ctx).InsertInventoryItemWithSystemQty(
-				ctx,
+			inserted, err := q.InsertInventoryItemWithSystemQty(
+				txCtx,
 				uuid.New(),
 				invID,
 				ingID,
@@ -539,6 +798,9 @@ func (s *InventoryS) ReplaceInventoryItems(ctx context.Context, inventoryID stri
 				zero,
 			)
 			if err != nil {
+				if ownsTx {
+					tx.Rollback(ctx)
+				}
 				return nil, fmt.Errorf("items[%d]: failed to insert inventory item: %w", i, err)
 			}
 
@@ -546,8 +808,11 @@ func (s *InventoryS) ReplaceInventoryItems(ctx context.Context, inventoryID stri
 				continue
 			}
 
-			refreshed, err := s.repo.Tenant(ctx).UpdateInventoryItemSystemQuantityFromMovements(ctx, inserted.ID)
+			refreshed, err := q.UpdateInventoryItemSystemQuantityFromMovements(txCtx, inserted.ID)
 			if err != nil {
+				if ownsTx {
+					tx.Rollback(ctx)
+				}
 				return nil, fmt.Errorf("items[%d]: failed to refresh system_quantity: %w", i, err)
 			}
 
@@ -556,17 +821,24 @@ func (s *InventoryS) ReplaceInventoryItems(ctx context.Context, inventoryID stri
 				refreshed.CountedQuantity,
 			)
 			if err != nil {
+				if ownsTx {
+					tx.Rollback(ctx)
+				}
 				return nil, fmt.Errorf("items[%d]: failed to build inventory movement plan: %w", i, err)
 			}
 
 			if err := s.applyInventoryMovementPlan(
-				ctx,
+				txCtx,
+				q,
 				invID,
 				inv.StorageID,
 				ingID,
 				plan,
 				&effectiveAt,
 			); err != nil {
+				if ownsTx {
+					tx.Rollback(ctx)
+				}
 				return nil, fmt.Errorf("items[%d]: failed to apply inventory movement plan: %w", i, err)
 			}
 
@@ -576,7 +848,10 @@ func (s *InventoryS) ReplaceInventoryItems(ctx context.Context, inventoryID stri
 		// 2) Mavjud item update
 		oldQty := existing.CountedQuantity
 
-		if _, err := s.repo.Tenant(ctx).UpdateInventoryItemCountedQuantity(ctx, existing.ID, newQty); err != nil {
+		if _, err := q.UpdateInventoryItemCountedQuantity(txCtx, existing.ID, newQty); err != nil {
+			if ownsTx {
+				tx.Rollback(ctx)
+			}
 			return nil, fmt.Errorf("items[%d]: failed to update counted quantity: %w", i, err)
 		}
 
@@ -589,17 +864,24 @@ func (s *InventoryS) ReplaceInventoryItems(ctx context.Context, inventoryID stri
 		// Endi old counted -> new counted orasidagi farqni movement sifatida yozamiz.
 		plan, err := buildInventoryTransitionPlan(oldQty, newQty)
 		if err != nil {
+			if ownsTx {
+				tx.Rollback(ctx)
+			}
 			return nil, fmt.Errorf("items[%d]: failed to build inventory adjustment plan: %w", i, err)
 		}
 
 		if err := s.applyInventoryMovementPlan(
-			ctx,
+			txCtx,
+			q,
 			invID,
 			inv.StorageID,
 			ingID,
 			plan,
 			&effectiveAt,
 		); err != nil {
+			if ownsTx {
+				tx.Rollback(ctx)
+			}
 			return nil, fmt.Errorf("items[%d]: failed to apply inventory adjustment plan: %w", i, err)
 		}
 	}
@@ -615,23 +897,39 @@ func (s *InventoryS) ReplaceInventoryItems(ctx context.Context, inventoryID stri
 			// counted -> system
 			plan, err := buildInventoryTransitionPlan(item.CountedQuantity, item.SystemQuantity)
 			if err != nil {
+				if ownsTx {
+					tx.Rollback(ctx)
+				}
 				return nil, fmt.Errorf("failed to build inventory delete reversal plan for ingredient %s: %w", item.IngredientID.String(), err)
 			}
 
 			if err := s.applyInventoryMovementPlan(
-				ctx,
+				txCtx,
+				q,
 				invID,
 				inv.StorageID,
 				item.IngredientID,
 				plan,
 				&effectiveAt,
 			); err != nil {
+				if ownsTx {
+					tx.Rollback(ctx)
+				}
 				return nil, fmt.Errorf("failed to apply inventory delete reversal for ingredient %s: %w", item.IngredientID.String(), err)
 			}
 		}
 
-		if err := s.repo.Tenant(ctx).DeleteInventoryItem(ctx, item.ID); err != nil {
+		if err := q.DeleteInventoryItem(txCtx, item.ID); err != nil {
+			if ownsTx {
+				tx.Rollback(ctx)
+			}
 			return nil, fmt.Errorf("failed to delete inventory item %s: %w", item.ID.String(), err)
+		}
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
 		}
 	}
 
@@ -642,44 +940,121 @@ func (s *InventoryS) ReplaceInventoryItems(ctx context.Context, inventoryID stri
 //  Delete
 // ─────────────────────────────────────────────
 
+// isLatestInventory checks if the given inventory is the latest (most recent) for its storage.
+// Latest is determined by: date DESC, counted_at DESC, number DESC
+func (s *InventoryS) isLatestInventory(ctx context.Context, q *pg.Queries, inventoryID uuid.UUID, storageID uuid.UUID) (bool, error) {
+	// Get the latest inventory for this storage
+	latestInventories, err := q.GetInventoriesByStorageID(ctx, pg.GetInventoriesByStorageIDParams{
+		StorageID: storageID,
+		Limit:     1,
+		Offset:    0,
+	})
+	if err != nil {
+		return false, fmt.Errorf("failed to get latest inventory: %w", err)
+	}
+
+	// If no inventories exist, this is trivially the latest
+	if len(latestInventories) == 0 {
+		return true, nil
+	}
+
+	// Check if the given inventory matches the latest
+	return latestInventories[0].ID == inventoryID, nil
+}
+
 func (s *InventoryS) DeleteInventory(ctx context.Context, id string) error {
 	inventoryID, err := uuid.Parse(id)
 	if err != nil {
-		return fmt.Errorf("invalid inventory id: %w", err)
+		return fmt.Errorf("%w: %v", ErrInventoryDeleteFailed, err)
 	}
 
-	inv, err := s.repo.Tenant(ctx).GetInventoryForApply(ctx, inventoryID)
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
 	if err != nil {
-		return fmt.Errorf("inventory not found: %w", err)
+		return fmt.Errorf("%w: %v", ErrInventoryDeleteFailed, err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	inv, err := q.GetInventoryForApply(txCtx, inventoryID)
+	if err != nil {
+		if ownsTx {
+			tx.Rollback(ctx)
+		}
+		return fmt.Errorf("%w: %v", ErrInventoryNotFound, err)
 	}
 	if inv.Status == "deleted" {
-		return fmt.Errorf("inventory is already deleted")
+		if ownsTx {
+			tx.Rollback(ctx)
+		}
+		return ErrInventoryAlreadyDeleted
 	}
 
 	// Get full inventory record for date information
-	invFull, err := s.repo.Tenant(ctx).GetInventoryByID(ctx, inventoryID)
+	invFull, err := q.GetInventoryByID(txCtx, inventoryID)
 	if err != nil {
-		return fmt.Errorf("failed to get inventory: %w", err)
+		if ownsTx {
+			tx.Rollback(ctx)
+		}
+		return fmt.Errorf("%w: %v", ErrInventoryDeleteFailed, err)
 	}
-	if err := assertCanMutateInventorySnapshot(ctx, s.repo, inv.StorageID, inventoryID, invFull.CountedAt, "inventory"); err != nil {
-		return err
+	if err := assertCanMutateInventorySnapshot(txCtx, q, inv.StorageID, inventoryID, invFull.CountedAt, "inventory"); err != nil {
+		if ownsTx {
+			tx.Rollback(ctx)
+		}
+		return fmt.Errorf("%w: %v", ErrInventoryDeleteFailed, err)
 	}
 
-	// If active, reverse stock before deleting
-	if inv.Status == "active" {
-		storagePg := pgtype.UUID{Bytes: inv.StorageID, Valid: true}
-		items, err := s.repo.Tenant(ctx).GetInventoryItemsByInventoryIDAll(ctx, inventoryID)
+	// Business rule: Only latest inventory can be deleted
+	// Draft inventories can always be deleted (no stock impact)
+	// Active/applied inventories must be the latest for their storage
+	if inv.Status == "active" || inv.Status == "applied" {
+		isLatest, err := s.isLatestInventory(txCtx, q, inventoryID, inv.StorageID)
 		if err != nil {
-			return fmt.Errorf("failed to get inventory items: %w", err)
+			if ownsTx {
+				tx.Rollback(ctx)
+			}
+			return fmt.Errorf("%w: %v", ErrInventoryLatestCheckFailed, err)
+		}
+		if !isLatest {
+			if ownsTx {
+				tx.Rollback(ctx)
+			}
+			return ErrInventoryDeleteOnlyLatest
+		}
+	}
+
+	// If active or applied, reverse stock before deleting
+	// Both statuses have stock impact and require rollback
+	if inv.Status == "active" || inv.Status == "applied" {
+		storagePg := pgtype.UUID{Bytes: inv.StorageID, Valid: true}
+		items, err := q.GetInventoryItemsByInventoryIDAll(txCtx, inventoryID)
+		if err != nil {
+			if ownsTx {
+				tx.Rollback(ctx)
+			}
+			return fmt.Errorf("%w: %v", ErrInventoryDeleteFailed, err)
 		}
 		effectiveAt := pgtype.Timestamptz{Time: invFull.CountedAt, Valid: true}
-		if err := s.reverseStockForItems(ctx, inventoryID, inv.StorageID, storagePg, items, "inventory_deleted", &effectiveAt); err != nil {
-			return err
+		if err := s.reverseStockForItems(txCtx, q, inventoryID, inv.StorageID, storagePg, items, "inventory_deleted", &effectiveAt); err != nil {
+			if ownsTx {
+				tx.Rollback(ctx)
+			}
+			return fmt.Errorf("%w: %v", ErrInventoryDeleteFailed, err)
 		}
 	}
 
-	if err := s.repo.Tenant(ctx).DeleteInventory(ctx, inventoryID); err != nil {
-		return fmt.Errorf("failed to delete inventory: %w", err)
+	if err := q.DeleteInventory(txCtx, inventoryID); err != nil {
+		if ownsTx {
+			tx.Rollback(ctx)
+		}
+		return fmt.Errorf("%w: %v", ErrInventoryDeleteFailed, err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("%w: %v", ErrInventoryDeleteFailed, err)
+		}
 	}
 	return nil
 }
@@ -718,27 +1093,50 @@ func (s *InventoryS) DeleteInventoryItem(ctx context.Context, inventoryItemID st
 		return fmt.Errorf("invalid inventory item id: %w", err)
 	}
 
-	item, err := s.repo.Tenant(ctx).GetInventoryItemByID(ctx, itemID)
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
 	if err != nil {
+		return fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	item, err := q.GetInventoryItemByID(txCtx, itemID)
+	if err != nil {
+		if ownsTx {
+			tx.Rollback(ctx)
+		}
 		return fmt.Errorf("failed to get inventory item: %w", err)
 	}
 
-	inv, err := s.repo.Tenant(ctx).GetInventoryForApply(ctx, item.InventoryID)
+	inv, err := q.GetInventoryForApply(txCtx, item.InventoryID)
 	if err != nil {
+		if ownsTx {
+			tx.Rollback(ctx)
+		}
 		return fmt.Errorf("failed to get inventory: %w", err)
 	}
 
 	if inv.Status == "deleted" {
+		if ownsTx {
+			tx.Rollback(ctx)
+		}
 		return fmt.Errorf("cannot modify items of a deleted inventory")
 	}
 
 	// Get full inventory record for date information
-	invFull, err := s.repo.Tenant(ctx).GetInventoryByID(ctx, item.InventoryID)
+	invFull, err := q.GetInventoryByID(txCtx, item.InventoryID)
 	if err != nil {
+		if ownsTx {
+			tx.Rollback(ctx)
+		}
 		return fmt.Errorf("failed to get inventory details: %w", err)
 	}
 
-	if err := assertCanMutateInventorySnapshot(ctx, s.repo, inv.StorageID, item.InventoryID, invFull.CountedAt, "inventory item"); err != nil {
+	if err := assertCanMutateInventorySnapshot(txCtx, q, inv.StorageID, item.InventoryID, invFull.CountedAt, "inventory item"); err != nil {
+		if ownsTx {
+			tx.Rollback(ctx)
+		}
 		return err
 	}
 
@@ -756,16 +1154,19 @@ func (s *InventoryS) DeleteInventoryItem(ctx context.Context, inventoryItemID st
 
 	if inv.Status == "active" {
 		storagePg := pgtype.UUID{Bytes: inv.StorageID, Valid: true}
-		_, _ = s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
+		_, _ = q.EnsureIngredientStockByStorage(txCtx, pg.EnsureIngredientStockByStorageParams{
 			ID:           uuid.New(),
 			IngredientID: item.IngredientID,
 			StorageID:    storagePg,
 		})
-		locked, err := s.repo.Tenant(ctx).GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
+		locked, err := q.GetStockByIngredientAndStorageForUpdate(txCtx, pg.GetStockByIngredientAndStorageForUpdateParams{
 			IngredientID: item.IngredientID,
 			StorageID:    storagePg,
 		})
 		if err != nil {
+			if ownsTx {
+				tx.Rollback(ctx)
+			}
 			return fmt.Errorf("failed to lock stock: %w", err)
 		}
 		delta := numericToFloat(item.CountedQuantity) - numericToFloat(item.SystemQuantity)
@@ -773,15 +1174,18 @@ func (s *InventoryS) DeleteInventoryItem(ctx context.Context, inventoryItemID st
 			reversedFloat := numericToFloat(locked.Quantity) - delta
 			reversedQty := pgtype.Numeric{}
 			_ = reversedQty.Scan(fmt.Sprintf("%.6f", reversedFloat))
-			restored, err := s.repo.Tenant(ctx).UpdateIngredientStock(ctx, pg.UpdateIngredientStockParams{
+			restored, err := q.UpdateIngredientStock(txCtx, pg.UpdateIngredientStockParams{
 				ID:       locked.ID,
 				Quantity: reversedQty,
 			})
 			if err != nil {
+				if ownsTx {
+					tx.Rollback(ctx)
+				}
 				return fmt.Errorf("failed to restore stock: %w", err)
 			}
 			srcID := inv.ID
-			_ = s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+			_ = q.InsertIngredientStockMovement(txCtx, pg.InsertIngredientStockMovementParams{
 				ID: uuid.New(), StorageID: inv.StorageID, IngredientID: item.IngredientID,
 				EventType: string(pg.InventoryItemDeleted), QtyIn: zero, QtyOut: zero,
 				StockBefore: locked.Quantity, StockAfter: restored.Quantity,
@@ -791,21 +1195,36 @@ func (s *InventoryS) DeleteInventoryItem(ctx context.Context, inventoryItemID st
 		}
 	}
 
-	if err := s.repo.Tenant(ctx).DeleteInventoryItem(ctx, itemID); err != nil {
+	if err := q.DeleteInventoryItem(txCtx, itemID); err != nil {
+		if ownsTx {
+			tx.Rollback(ctx)
+		}
 		return fmt.Errorf("failed to delete inventory item: %w", err)
 	}
 
-	totals, err := s.repo.Tenant(ctx).CalculateInventoryTotals(ctx, item.InventoryID)
+	totals, err := q.CalculateInventoryTotals(txCtx, item.InventoryID)
 	if err != nil {
+		if ownsTx {
+			tx.Rollback(ctx)
+		}
 		return fmt.Errorf("failed to calculate inventory totals: %w", err)
 	}
-	if _, err := s.repo.Tenant(ctx).UpdateInventoryAmounts(ctx, pg.UpdateInventoryAmountsParams{
+	if _, err := q.UpdateInventoryAmounts(txCtx, pg.UpdateInventoryAmountsParams{
 		ID:              item.InventoryID,
 		SurplusAmount:   totals.SurplusAmount,
 		ShortageAmount:  totals.ShortageAmount,
 		RemainingAmount: totals.RemainingAmount,
 	}); err != nil {
+		if ownsTx {
+			tx.Rollback(ctx)
+		}
 		return fmt.Errorf("failed to update inventory amounts: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return nil
@@ -821,19 +1240,39 @@ func (s *InventoryS) CalculateInventory(ctx context.Context, inventoryID string)
 		return nil, fmt.Errorf("invalid inventory id: %w", err)
 	}
 
-	totals, err := s.repo.Tenant(ctx).CalculateInventoryTotals(ctx, invID)
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
 	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	totals, err := q.CalculateInventoryTotals(txCtx, invID)
+	if err != nil {
+		if ownsTx {
+			tx.Rollback(ctx)
+		}
 		return nil, fmt.Errorf("failed to calculate inventory totals: %w", err)
 	}
 
-	updated, err := s.repo.Tenant(ctx).UpdateInventoryAmounts(ctx, pg.UpdateInventoryAmountsParams{
+	updated, err := q.UpdateInventoryAmounts(txCtx, pg.UpdateInventoryAmountsParams{
 		ID:              invID,
 		SurplusAmount:   totals.SurplusAmount,
 		ShortageAmount:  totals.ShortageAmount,
 		RemainingAmount: totals.RemainingAmount,
 	})
 	if err != nil {
+		if ownsTx {
+			tx.Rollback(ctx)
+		}
 		return nil, fmt.Errorf("failed to update inventory amounts: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return toInventoryResponse(updated), nil
@@ -845,10 +1284,28 @@ func (s *InventoryS) RestoreInventory(ctx context.Context, id string) (*model.In
 		return nil, fmt.Errorf("invalid inventory id: %w", err)
 	}
 
-	inv, err := s.repo.Tenant(ctx).RestoreInventory(ctx, inventoryID)
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
 	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	inv, err := q.RestoreInventory(txCtx, inventoryID)
+	if err != nil {
+		if ownsTx {
+			tx.Rollback(ctx)
+		}
 		return nil, fmt.Errorf("failed to restore inventory: %w", err)
 	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return toInventoryResponse(inv), nil
 }
 
@@ -864,37 +1321,54 @@ func (s *InventoryS) UpsertInventoryItems(ctx context.Context, inventoryID strin
 // applyStockForItems refreshes each item's system_quantity to current stock then sets stock = counted.
 // Used when transitioning draft → active.
 func (s *InventoryS) applyStockForItems(ctx context.Context, invID uuid.UUID, storageID uuid.UUID, storagePg pgtype.UUID, items []pg.InventoryItemForProcess, eventType string, effectiveAt *pgtype.Timestamptz) error {
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	zero := pgtype.Numeric{}
 	_ = zero.Scan("0")
 	sourceType := "inventory"
 
 	for _, item := range items {
 		// Refresh system_quantity to point-in-time stock at inventory date
-		refreshed, err := s.repo.Tenant(ctx).UpdateInventoryItemSystemQuantityFromMovements(ctx, item.ID)
+		refreshed, err := q.UpdateInventoryItemSystemQuantityFromMovements(txCtx, item.ID)
 		if err != nil {
+			if ownsTx {
+				tx.Rollback(ctx)
+			}
 			return fmt.Errorf("failed to refresh system_quantity: %w", err)
 		}
 
-		_, _ = s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
+		_, _ = q.EnsureIngredientStockByStorage(txCtx, pg.EnsureIngredientStockByStorageParams{
 			ID:           uuid.New(),
 			IngredientID: item.IngredientID,
 			StorageID:    storagePg,
 		})
-		locked, err := s.repo.Tenant(ctx).GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
+		locked, err := q.GetStockByIngredientAndStorageForUpdate(txCtx, pg.GetStockByIngredientAndStorageForUpdateParams{
 			IngredientID: item.IngredientID,
 			StorageID:    storagePg,
 		})
 		if err != nil {
+			if ownsTx {
+				tx.Rollback(ctx)
+			}
 			return fmt.Errorf("failed to lock stock: %w", err)
 		}
 
 		delta := numericToFloat(refreshed.CountedQuantity) - numericToFloat(refreshed.SystemQuantity)
 		if delta != 0 {
-			updated, err := s.repo.Tenant(ctx).UpdateIngredientStock(ctx, pg.UpdateIngredientStockParams{
+			updated, err := q.UpdateIngredientStock(txCtx, pg.UpdateIngredientStockParams{
 				ID:       locked.ID,
 				Quantity: refreshed.CountedQuantity,
 			})
 			if err != nil {
+				if ownsTx {
+					tx.Rollback(ctx)
+				}
 				return fmt.Errorf("failed to apply stock: %w", err)
 			}
 			ev := pg.InventorySurplusIn
@@ -902,7 +1376,7 @@ func (s *InventoryS) applyStockForItems(ctx context.Context, invID uuid.UUID, st
 			srcID := invID
 			if delta > 0 {
 				_ = deltaQty.Scan(fmt.Sprintf("%.6f", delta))
-				_ = s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+				_ = q.InsertIngredientStockMovement(txCtx, pg.InsertIngredientStockMovementParams{
 					ID: uuid.New(), StorageID: storageID, IngredientID: item.IngredientID,
 					EventType: string(ev), QtyIn: deltaQty, QtyOut: zero,
 					StockBefore: locked.Quantity, StockAfter: updated.Quantity,
@@ -912,7 +1386,7 @@ func (s *InventoryS) applyStockForItems(ctx context.Context, invID uuid.UUID, st
 			} else {
 				ev = pg.InventoryShortageOut
 				_ = deltaQty.Scan(fmt.Sprintf("%.6f", -delta))
-				_ = s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+				_ = q.InsertIngredientStockMovement(txCtx, pg.InsertIngredientStockMovementParams{
 					ID: uuid.New(), StorageID: storageID, IngredientID: item.IngredientID,
 					EventType: string(ev), QtyIn: zero, QtyOut: deltaQty,
 					StockBefore: locked.Quantity, StockAfter: updated.Quantity,
@@ -922,20 +1396,28 @@ func (s *InventoryS) applyStockForItems(ctx context.Context, invID uuid.UUID, st
 			}
 		}
 	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
 	return nil
 }
 
 // reverseStockForItems reverses the delta (counted - system_quantity) for each item.
 // Used when transitioning active → draft or deleting an active inventory.
-func (s *InventoryS) reverseStockForItems(ctx context.Context, invID uuid.UUID, storageID uuid.UUID, storagePg pgtype.UUID, items []pg.InventoryItemForProcess, eventType string, effectiveAt *pgtype.Timestamptz) error {
-
+// This function expects to be called within an existing transaction context.
+// It accepts the tenant queries and transaction context from the caller to ensure
+// atomicity with the parent operation.
+func (s *InventoryS) reverseStockForItems(txCtx context.Context, q *pg.Queries, invID uuid.UUID, storageID uuid.UUID, storagePg pgtype.UUID, items []pg.InventoryItemForProcess, eventType string, effectiveAt *pgtype.Timestamptz) error {
 	for _, item := range items {
 		plan, err := buildInventoryTransitionPlan(item.CountedQuantity, item.SystemQuantity)
 		if err != nil {
 			return fmt.Errorf("failed to build inventory reverse plan: %w", err)
 		}
 
-		if err := s.applyInventoryMovementPlan(ctx, invID, storageID, item.IngredientID, plan, effectiveAt); err != nil {
+		if err := s.applyInventoryMovementPlan(txCtx, q, invID, storageID, item.IngredientID, plan, effectiveAt); err != nil {
 			return err
 		}
 	}

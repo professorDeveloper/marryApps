@@ -121,18 +121,26 @@ func (h *Handler) CreateOrder(c echo.Context) error {
 	order, err := h.service.Order().CreateOrder(c.Request().Context(), req)
 	if err != nil {
 		log.Printf("CreateOrder failed: %v", err)
-		if strings.Contains(strings.ToLower(err.Error()), "cafe table not found") {
+		errMsg := strings.ToLower(err.Error())
+		if strings.Contains(errMsg, "cafe table not found") {
 			return c.JSON(http.StatusNotFound, model.NewErrorResponse(
 				"cafe table not found",
 				err.Error(),
 				http.StatusNotFound,
 			))
 		}
-		if strings.Contains(strings.ToLower(err.Error()), "table already has an active order") {
+		if strings.Contains(errMsg, "table already has an active order") {
 			return c.JSON(http.StatusConflict, model.NewErrorResponse(
 				"table already has an active order",
 				err.Error(),
 				http.StatusConflict,
+			))
+		}
+		if strings.Contains(errMsg, "failed to fetch good") || strings.Contains(errMsg, "good not found") {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"good not found",
+				err.Error(),
+				http.StatusBadRequest,
 			))
 		}
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
@@ -1037,9 +1045,19 @@ func isIgnorableTableTimerCloseError(err error) bool {
 	}
 	msg := strings.ToLower(err.Error())
 
+	// Ignorable errors: timer close is best-effort for payment/cancel/delete flows
+	// These indicate the order doesn't have a timer or timer is already in a terminal state
 	return strings.Contains(msg, "table timer is only available for time_based tables") ||
 		strings.Contains(msg, "table timer is only available for dine_in orders") ||
-		strings.Contains(msg, "order has no table")
+		strings.Contains(msg, "order has no table") ||
+		strings.Contains(msg, "cannot manage timer for paid order") ||
+		strings.Contains(msg, "cannot manage timer for cancelled order") ||
+		strings.Contains(msg, "failed to lock timer session: no rows in result set") ||
+		strings.Contains(msg, "failed to get open timer session: no rows in result set") ||
+		strings.Contains(msg, "timer is not running") ||
+		strings.Contains(msg, "timer is not paused") ||
+		strings.Contains(msg, "timer has no active_started_at") ||
+		strings.Contains(msg, "timer is already closed")
 }
 
 // MarkOrderPaid marks an order as paid
@@ -1102,14 +1120,22 @@ func (h *Handler) MarkOrderPaid(c echo.Context) error {
 	role, _ := c.Get("role").(string)
 
 	effectiveTableCharge := req.TableCharge
-	hasClientTableCharge := req.TableCharge != nil && strings.TrimSpace(*req.TableCharge) != ""
+	hasClientTableCharge := false
+	if req.TableCharge != nil {
+		hasClientTableCharge = strings.TrimSpace(*req.TableCharge) != ""
+	}
 
-	timerResp, timerErr := h.service.TableTimer().CloseTableTimer(
-		c.Request().Context(),
-		orderID,
-		cashierID,
-		role,
-	)
+	tableTimer := h.service.TableTimer()
+	var timerResp *model.TableTimerResponse
+	var timerErr error
+	if tableTimer != nil {
+		timerResp, timerErr = tableTimer.CloseTableTimer(
+			c.Request().Context(),
+			orderID,
+			cashierID,
+			role,
+		)
+	}
 	if timerErr != nil {
 		if !isIgnorableTableTimerCloseError(timerErr) {
 			log.Printf("MarkOrderPaid failed to close table timer for order %s: %v", orderID, timerErr)
@@ -1152,7 +1178,8 @@ func (h *Handler) MarkOrderPaid(c echo.Context) error {
 			strings.Contains(errMsg, "discount_amount") ||
 			strings.Contains(errMsg, "table_charge") ||
 			strings.Contains(errMsg, "provide only one of discount_percent or discount_amount") ||
-			strings.Contains(errMsg, "for split payment, cash_amount + card_amount must equal customer_paid_amount") {
+			strings.Contains(errMsg, "for split payment, cash_amount + card_amount must equal customer_paid_amount") ||
+			strings.Contains(errMsg, "is required") {
 			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
 				"invalid payment payload",
 				err.Error(),

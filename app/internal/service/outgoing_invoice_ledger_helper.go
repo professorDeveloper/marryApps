@@ -37,6 +37,7 @@ type outgoingTouchedKey struct {
 
 func (s *OutgoingInvoiceS) applyOutgoingInvoiceMovement(
 	ctx context.Context,
+	q *pg.Queries,
 	invoiceID uuid.UUID,
 	storageID uuid.UUID,
 	ingredientID uuid.UUID,
@@ -53,7 +54,7 @@ func (s *OutgoingInvoiceS) applyOutgoingInvoiceMovement(
 	sourceType := "outgoing_invoice"
 	sourceID := invoiceID
 
-	if err := s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+	if err := q.InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
 		ID:           uuid.New(),
 		StorageID:    storageID,
 		IngredientID: ingredientID,
@@ -72,6 +73,7 @@ func (s *OutgoingInvoiceS) applyOutgoingInvoiceMovement(
 
 	if err := s.rebalanceOutgoingIngredientLedger(
 		ctx,
+		q,
 		pgtype.UUID{Bytes: storageID, Valid: true},
 		ingredientID,
 	); err != nil {
@@ -83,75 +85,25 @@ func (s *OutgoingInvoiceS) applyOutgoingInvoiceMovement(
 
 func (s *OutgoingInvoiceS) rebalanceOutgoingInvoiceIngredientLedger(
 	ctx context.Context,
+	q *pg.Queries,
 	storageID pgtype.UUID,
 	ingredientID uuid.UUID,
 ) error {
-	return s.rebalanceOutgoingIngredientLedger(ctx, storageID, ingredientID)
+	return s.rebalanceOutgoingIngredientLedger(ctx, q, storageID, ingredientID)
 }
 
 func (s *OutgoingInvoiceS) rebalanceOutgoingIngredientLedger(
 	ctx context.Context,
+	q *pg.Queries,
 	storageID pgtype.UUID,
 	ingredientID uuid.UUID,
 ) error {
-	if !storageID.Valid {
-		return fmt.Errorf("storage_id is required for outgoing invoice ledger rebalance")
-	}
-
-	q := s.repo.Tenant(ctx)
-
-	_, _ = q.EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
-		ID:           uuid.New(),
-		IngredientID: ingredientID,
-		StorageID:    storageID,
-	})
-
-	rows, err := q.ListIngredientStockMovementsForRebalance(ctx, storageID.Bytes, ingredientID)
-	if err != nil {
-		return fmt.Errorf("failed to list stock movements for rebalance: %w", err)
-	}
-
-	running := inventoryZeroNumeric()
-
-	for _, row := range rows {
-		before := running
-
-		after, err := applyMovementDelta(before, row.QtyIn, row.QtyOut, 6)
-		if err != nil {
-			return fmt.Errorf("failed to calculate outgoing invoice movement balance for movement %s: %w", row.ID, err)
-		}
-
-		if err := q.UpdateIngredientStockMovementBalances(ctx, pg.UpdateIngredientStockMovementBalancesParams{
-			ID:          row.ID,
-			StockBefore: before,
-			StockAfter:  after,
-		}); err != nil {
-			return fmt.Errorf("failed to update outgoing invoice movement balances for movement %s: %w", row.ID, err)
-		}
-
-		running = after
-	}
-
-	stockRow, err := q.GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
-		IngredientID: ingredientID,
-		StorageID:    storageID,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to lock ingredient stock for final sync: %w", err)
-	}
-
-	if _, err := q.UpdateIngredientStock(ctx, pg.UpdateIngredientStockParams{
-		ID:       stockRow.ID,
-		Quantity: running,
-	}); err != nil {
-		return fmt.Errorf("failed to sync ingredient_stock quantity after outgoing invoice rebalance: %w", err)
-	}
-
-	return nil
+	return rebalanceIngredientStockLedger(ctx, q, storageID, ingredientID, "outgoing_invoice")
 }
 
 func (s *OutgoingInvoiceS) applyOutgoingInvoiceActiveStock(
 	ctx context.Context,
+	q *pg.Queries,
 	invoice pg.OutgoingInvoice,
 	items []pg.OutgoingInvoiceItem,
 	eventType string,
@@ -170,7 +122,7 @@ func (s *OutgoingInvoiceS) applyOutgoingInvoiceActiveStock(
 	touched := make(map[outgoingTouchedKey]struct{})
 
 	for _, item := range items {
-		stockID, err := s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
+		stockID, err := q.EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
 			ID:           uuid.New(),
 			IngredientID: item.IngredientID,
 			StorageID:    storageID,
@@ -179,7 +131,7 @@ func (s *OutgoingInvoiceS) applyOutgoingInvoiceActiveStock(
 			return fmt.Errorf("failed to ensure stock row: %w", err)
 		}
 
-		locked, err := s.repo.Tenant(ctx).GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
+		locked, err := q.GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
 			IngredientID: item.IngredientID,
 			StorageID:    storageID,
 		})
@@ -187,7 +139,7 @@ func (s *OutgoingInvoiceS) applyOutgoingInvoiceActiveStock(
 			return fmt.Errorf("failed to lock stock row: %w", err)
 		}
 
-		updated, err := s.repo.Tenant(ctx).RemoveFromIngredientStock(ctx, pg.RemoveFromIngredientStockParams{
+		updated, err := q.RemoveFromIngredientStock(ctx, pg.RemoveFromIngredientStockParams{
 			ID:       stockID,
 			Quantity: item.Quantity,
 		})
@@ -196,7 +148,7 @@ func (s *OutgoingInvoiceS) applyOutgoingInvoiceActiveStock(
 		}
 
 		if saveSnapshots {
-			if _, err := s.repo.Tenant(ctx).UpdateOutgoingInvoiceItemStockSnapshot(ctx, pg.UpdateOutgoingInvoiceItemStockSnapshotParams{
+			if _, err := q.UpdateOutgoingInvoiceItemStockSnapshot(ctx, pg.UpdateOutgoingInvoiceItemStockSnapshotParams{
 				ID:          item.ID,
 				StockBefore: locked.Quantity,
 				StockAfter:  updated.Quantity,
@@ -209,7 +161,7 @@ func (s *OutgoingInvoiceS) applyOutgoingInvoiceActiveStock(
 			continue
 		}
 
-		if err := s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+		if err := q.InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
 			ID:           uuid.New(),
 			StorageID:    uuid.UUID(storageID.Bytes),
 			IngredientID: item.IngredientID,
@@ -233,7 +185,7 @@ func (s *OutgoingInvoiceS) applyOutgoingInvoiceActiveStock(
 	}
 
 	for key := range touched {
-		if err := s.rebalanceOutgoingIngredientLedger(ctx, pgtype.UUID{Bytes: key.StorageID, Valid: true}, key.IngredientID); err != nil {
+		if err := s.rebalanceOutgoingIngredientLedger(ctx, q, pgtype.UUID{Bytes: key.StorageID, Valid: true}, key.IngredientID); err != nil {
 			return fmt.Errorf("failed to rebalance outgoing invoice ledger: %w", err)
 		}
 	}
@@ -245,6 +197,7 @@ func (s *OutgoingInvoiceS) applyOutgoingInvoiceActiveStock(
 // cancel/delete/update move paytida ishlatiladi.
 func (s *OutgoingInvoiceS) reverseOutgoingInvoiceActiveStock(
 	ctx context.Context,
+	q *pg.Queries,
 	invoice pg.OutgoingInvoice,
 	items []pg.OutgoingInvoiceItem,
 	eventType string,
@@ -262,7 +215,7 @@ func (s *OutgoingInvoiceS) reverseOutgoingInvoiceActiveStock(
 	touched := make(map[outgoingTouchedKey]struct{})
 
 	for _, item := range items {
-		stockID, err := s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
+		stockID, err := q.EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
 			ID:           uuid.New(),
 			IngredientID: item.IngredientID,
 			StorageID:    storageID,
@@ -271,7 +224,7 @@ func (s *OutgoingInvoiceS) reverseOutgoingInvoiceActiveStock(
 			return fmt.Errorf("failed to ensure stock row during reverse: %w", err)
 		}
 
-		locked, err := s.repo.Tenant(ctx).GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
+		locked, err := q.GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
 			IngredientID: item.IngredientID,
 			StorageID:    storageID,
 		})
@@ -279,7 +232,7 @@ func (s *OutgoingInvoiceS) reverseOutgoingInvoiceActiveStock(
 			return fmt.Errorf("failed to lock stock row during reverse: %w", err)
 		}
 
-		updated, err := s.repo.Tenant(ctx).AddToIngredientStock(ctx, pg.AddToIngredientStockParams{
+		updated, err := q.AddToIngredientStock(ctx, pg.AddToIngredientStockParams{
 			ID:       stockID,
 			Quantity: item.Quantity,
 		})
@@ -291,7 +244,7 @@ func (s *OutgoingInvoiceS) reverseOutgoingInvoiceActiveStock(
 			continue
 		}
 
-		if err := s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+		if err := q.InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
 			ID:           uuid.New(),
 			StorageID:    uuid.UUID(storageID.Bytes),
 			IngredientID: item.IngredientID,
@@ -315,7 +268,7 @@ func (s *OutgoingInvoiceS) reverseOutgoingInvoiceActiveStock(
 	}
 
 	for key := range touched {
-		if err := s.rebalanceOutgoingIngredientLedger(ctx, pgtype.UUID{Bytes: key.StorageID, Valid: true}, key.IngredientID); err != nil {
+		if err := s.rebalanceOutgoingIngredientLedger(ctx, q, pgtype.UUID{Bytes: key.StorageID, Valid: true}, key.IngredientID); err != nil {
 			return fmt.Errorf("failed to rebalance outgoing invoice reverse ledger: %w", err)
 		}
 	}

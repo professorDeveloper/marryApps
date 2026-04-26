@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -9,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"gitlab.yurtal.tech/company/maryai/back/internal/model"
+	"gitlab.yurtal.tech/company/maryai/back/internal/service"
 )
 
 // CreateInventory creates a new inventory
@@ -473,6 +475,8 @@ func (h *Handler) DeleteInventoryItemsBatch(c echo.Context) error {
 // @Success 200 {object} model.SuccessResponse "Inventories deleted successfully"
 // @Failure 400 {object} model.ErrorResponse "Invalid request"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
+// @Failure 404 {object} model.ErrorResponse "Inventory not found"
+// @Failure 409 {object} model.ErrorResponse "Inventory already deleted or not the latest"
 // @Failure 500 {object} model.ErrorResponse "Internal server error"
 // @Router /api/v1/inventories/batch [delete]
 func (h *Handler) DeleteInventoriesBatch(c echo.Context) error {
@@ -484,8 +488,36 @@ func (h *Handler) DeleteInventoriesBatch(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid request", "ids is required", http.StatusBadRequest))
 	}
 
-	if err := h.service.Inventory().DeleteInventoriesBatch(c.Request().Context(), req.IDs); err != nil {
-		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
+	err := h.service.Inventory().DeleteInventoriesBatch(c.Request().Context(), req.IDs)
+	if err != nil {
+		// Map service sentinel errors to HTTP status codes
+		if errors.Is(err, service.ErrInventoryNotFound) {
+			return c.JSON(http.StatusNotFound, model.NewErrorResponse(
+				"inventory not found",
+				err.Error(),
+				http.StatusNotFound,
+			))
+		}
+		if errors.Is(err, service.ErrInventoryAlreadyDeleted) {
+			return c.JSON(http.StatusConflict, model.NewErrorResponse(
+				"inventory is already deleted",
+				err.Error(),
+				http.StatusConflict,
+			))
+		}
+		if errors.Is(err, service.ErrInventoryDeleteOnlyLatest) {
+			return c.JSON(http.StatusConflict, model.NewErrorResponse(
+				"only the latest inventory can be deleted",
+				err.Error(),
+				http.StatusConflict,
+			))
+		}
+		// Internal failures
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+			"failed to delete inventories",
+			err.Error(),
+			http.StatusInternalServerError,
+		))
 	}
 
 	return c.JSON(http.StatusOK, model.NewSuccessResponse("Inventories deleted successfully", struct{}{}, http.StatusOK))
@@ -652,13 +684,43 @@ func (h *Handler) UpdateInventory(c echo.Context) error {
 // @Success 204 {object} model.SuccessResponse "Inventory deleted successfully"
 // @Failure 400 {object} model.ErrorResponse "Invalid inventory ID"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
+// @Failure 404 {object} model.ErrorResponse "Inventory not found"
+// @Failure 409 {object} model.ErrorResponse "Inventory already deleted or not the latest"
 // @Failure 500 {object} model.ErrorResponse "Internal server error"
 // @Router /api/v1/inventories/{id} [delete]
 func (h *Handler) DeleteInventory(c echo.Context) error {
 	id := c.Param("id")
 
-	if err := h.service.Inventory().DeleteInventory(c.Request().Context(), id); err != nil {
-		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("Operation failed", err.Error(), http.StatusBadRequest))
+	err := h.service.Inventory().DeleteInventory(c.Request().Context(), id)
+	if err != nil {
+		// Map service sentinel errors to HTTP status codes
+		if errors.Is(err, service.ErrInventoryNotFound) {
+			return c.JSON(http.StatusNotFound, model.NewErrorResponse(
+				"inventory not found",
+				err.Error(),
+				http.StatusNotFound,
+			))
+		}
+		if errors.Is(err, service.ErrInventoryAlreadyDeleted) {
+			return c.JSON(http.StatusConflict, model.NewErrorResponse(
+				"inventory is already deleted",
+				err.Error(),
+				http.StatusConflict,
+			))
+		}
+		if errors.Is(err, service.ErrInventoryDeleteOnlyLatest) {
+			return c.JSON(http.StatusConflict, model.NewErrorResponse(
+				"only the latest inventory can be deleted",
+				err.Error(),
+				http.StatusConflict,
+			))
+		}
+		// Internal failures (latest check, delete operation, etc.)
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+			"failed to delete inventory",
+			err.Error(),
+			http.StatusInternalServerError,
+		))
 	}
 
 	return c.JSON(http.StatusNoContent, nil)

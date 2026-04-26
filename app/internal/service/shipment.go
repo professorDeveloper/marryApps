@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"gitlab.yurtal.tech/company/maryai/back/internal/model"
@@ -35,6 +36,52 @@ func NewShipmentS(repo *repository.Repository) *ShipmentS {
 	return &ShipmentS{repo: repo}
 }
 
+func (s *ShipmentS) getTenantMutationQueries(ctx context.Context) (*pg.Queries, context.Context, pgx.Tx, bool, error) {
+	if existingTx, ok := repository.TenantTxFromContext(ctx); ok && existingTx != nil {
+		if q, ok := repository.TenantQueriesFromContext(ctx); ok && q != nil {
+			return q, ctx, existingTx, false, nil
+		}
+		q := pg.New(existingTx)
+		txCtx := repository.WithTenantQueries(ctx, q)
+		return q, txCtx, existingTx, false, nil
+	}
+
+	tx, err := s.repo.PgRepo.TenantPool.Begin(ctx)
+	if err != nil {
+		return nil, nil, nil, false, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+
+	brandID, _ := ctx.Value("brand_id").(string)
+	brandID = strings.TrimSpace(brandID)
+	if brandID == "" {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("brand_id is missing in context")
+	}
+
+	schemaName := fmt.Sprintf("tenant_%s", brandID)
+	if _, err := tx.Exec(ctx, fmt.Sprintf(`SET LOCAL search_path TO "%s", public`, schemaName)); err != nil {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("failed to set tenant search_path: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx, "SET LOCAL app.brand_id = $1", brandID); err != nil {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("failed to set app.brand_id: %w", err)
+	}
+
+	if branchID, _ := ctx.Value("branch_id").(string); strings.TrimSpace(branchID) != "" {
+		if _, err := tx.Exec(ctx, "SET LOCAL app.branch_id = $1", strings.TrimSpace(branchID)); err != nil {
+			tx.Rollback(ctx)
+			return nil, nil, nil, false, fmt.Errorf("failed to set app.branch_id: %w", err)
+		}
+	}
+
+	q := pg.New(tx)
+	txCtx := repository.WithTenantQueries(ctx, q)
+
+	return q, txCtx, tx, true, nil
+}
+
 type shipmentTouchedKey struct {
 	StorageID    uuid.UUID
 	IngredientID uuid.UUID
@@ -58,7 +105,7 @@ func shipmentFreezeDate(ts pgtype.Timestamp, entityName string) (time.Time, erro
 	return ts.Time, nil
 }
 
-func assertCanMutateShipmentCurrent(ctx context.Context, repo *repository.Repository, sh pg.Shipment, entityName string) error {
+func assertCanMutateShipmentCurrent(ctx context.Context, q *pg.Queries, sh pg.Shipment, entityName string) error {
 	if !sh.StorageID.Valid {
 		return nil
 	}
@@ -68,10 +115,10 @@ func assertCanMutateShipmentCurrent(ctx context.Context, repo *repository.Reposi
 		return err
 	}
 
-	return assertCanMutateAfterInventory(ctx, repo, sh.StorageID.Bytes, effectiveAt, entityName)
+	return assertCanMutateAfterInventory(ctx, q, sh.StorageID.Bytes, effectiveAt, entityName)
 }
 
-func assertCanMutateShipmentTarget(ctx context.Context, repo *repository.Repository, storageID pgtype.UUID, shipmentDate pgtype.Timestamp, entityName string) error {
+func assertCanMutateShipmentTarget(ctx context.Context, q *pg.Queries, storageID pgtype.UUID, shipmentDate pgtype.Timestamp, entityName string) error {
 	if !storageID.Valid {
 		return nil
 	}
@@ -81,15 +128,15 @@ func assertCanMutateShipmentTarget(ctx context.Context, repo *repository.Reposit
 		return err
 	}
 
-	return assertCanMutateAfterInventory(ctx, repo, storageID.Bytes, effectiveAt, entityName)
+	return assertCanMutateAfterInventory(ctx, q, storageID.Bytes, effectiveAt, entityName)
 }
 
-func assertCanMutateShipmentChange(ctx context.Context, repo *repository.Repository, current pg.Shipment, targetStorage pgtype.UUID, targetDate pgtype.Timestamp, entityName string) error {
-	if err := assertCanMutateShipmentCurrent(ctx, repo, current, entityName); err != nil {
+func assertCanMutateShipmentChange(ctx context.Context, q *pg.Queries, current pg.Shipment, targetStorage pgtype.UUID, targetDate pgtype.Timestamp, entityName string) error {
+	if err := assertCanMutateShipmentCurrent(ctx, q, current, entityName); err != nil {
 		return err
 	}
 
-	if err := assertCanMutateShipmentTarget(ctx, repo, targetStorage, targetDate, entityName); err != nil {
+	if err := assertCanMutateShipmentTarget(ctx, q, targetStorage, targetDate, entityName); err != nil {
 		return err
 	}
 
@@ -98,66 +145,22 @@ func assertCanMutateShipmentChange(ctx context.Context, repo *repository.Reposit
 
 func (s *ShipmentS) rebalanceShipmentIngredientLedger(
 	ctx context.Context,
+	q *pg.Queries,
 	storageID pgtype.UUID,
 	ingredientID uuid.UUID,
 ) error {
-	if !storageID.Valid {
-		return fmt.Errorf("storage_id is required for shipment ledger rebalance")
-	}
-
-	q := s.repo.Tenant(ctx)
-
-	_, _ = q.EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
-		ID:           uuid.New(),
-		IngredientID: ingredientID,
-		StorageID:    storageID,
-	})
-
-	rows, err := q.ListIngredientStockMovementsForRebalance(ctx, storageID.Bytes, ingredientID)
-	if err != nil {
-		return fmt.Errorf("failed to list shipment stock movements for rebalance: %w", err)
-	}
-
-	running := inventoryZeroNumeric()
-
-	for _, row := range rows {
-		before := running
-
-		after, err := applyMovementDelta(before, row.QtyIn, row.QtyOut, 6)
-		if err != nil {
-			return fmt.Errorf("failed to calculate shipment balance for movement %s: %w", row.ID, err)
-		}
-
-		if err := q.UpdateIngredientStockMovementBalances(ctx, pg.UpdateIngredientStockMovementBalancesParams{
-			ID:          row.ID,
-			StockBefore: before,
-			StockAfter:  after,
-		}); err != nil {
-			return fmt.Errorf("failed to update shipment balances for movement %s: %w", row.ID, err)
-		}
-
-		running = after
-	}
-
-	stockRow, err := q.GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
-		IngredientID: ingredientID,
-		StorageID:    storageID,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to lock ingredient stock for shipment final sync: %w", err)
-	}
-
-	if _, err := q.UpdateIngredientStock(ctx, pg.UpdateIngredientStockParams{
-		ID:       stockRow.ID,
-		Quantity: running,
-	}); err != nil {
-		return fmt.Errorf("failed to sync ingredient_stock quantity after shipment rebalance: %w", err)
-	}
-
-	return nil
+	return rebalanceIngredientStockLedger(ctx, q, storageID, ingredientID, "shipment")
 }
 
 func (s *ShipmentS) CreateShipment(ctx context.Context, req *model.CreateShipmentRequest) (*model.ShipmentResponse, error) {
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	params := pg.CreateShipmentParams{
 		Date:    pgtype.Timestamp{Time: time.Now(), Valid: true},
 		Column5: pg.ShipmentStatusDraft,
@@ -187,11 +190,11 @@ func (s *ShipmentS) CreateShipment(ctx context.Context, req *model.CreateShipmen
 		}
 	}
 
-	if err := assertCanMutateShipmentTarget(ctx, s.repo, params.StorageID, params.Date, "shipment"); err != nil {
+	if err := assertCanMutateShipmentTarget(txCtx, q, params.StorageID, params.Date, "shipment"); err != nil {
 		return nil, err
 	}
 
-	row, err := s.repo.Tenant(ctx).CreateShipment(ctx, params)
+	row, err := q.CreateShipment(txCtx, params)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create shipment: %w", err)
 	}
@@ -202,8 +205,14 @@ func (s *ShipmentS) CreateShipment(ctx context.Context, req *model.CreateShipmen
 		if row.Date.Valid {
 			shipmentDate = pgtype.Timestamptz{Time: row.Date.Time.In(time.UTC), Valid: true}
 		}
-		if err := s.deductStock(ctx, row.ID, row.StorageID, string(pg.ShipmentOut), shipmentDate); err != nil {
+		if err := s.deductStock(txCtx, q, row.ID, row.StorageID, string(pg.ShipmentOut), shipmentDate); err != nil {
 			return nil, err
+		}
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
 		}
 	}
 
@@ -216,14 +225,24 @@ func (s *ShipmentS) GetShipment(ctx context.Context, id string) (*model.Shipment
 		return nil, fmt.Errorf("invalid shipment id: %w", err)
 	}
 
-	row, err := s.repo.Tenant(ctx).GetShipmentByID(ctx, shipmentID)
-	if err != nil {
-		return nil, fmt.Errorf("shipment not found: %w", err)
-	}
+	var row pg.Shipment
+	var items []pg.ShipmentItem
 
-	items, err := s.repo.Tenant(ctx).GetShipmentItemsByShipmentID(ctx, shipmentID)
+	err = withTenantRead(ctx, s.repo, func(tenantCtx context.Context, q *pg.Queries) error {
+		var err error
+		row, err = q.GetShipmentByID(tenantCtx, shipmentID)
+		if err != nil {
+			return fmt.Errorf("shipment not found: %w", err)
+		}
+
+		items, err = q.GetShipmentItemsByShipmentID(tenantCtx, shipmentID)
+		if err != nil {
+			return fmt.Errorf("failed to get shipment items: %w", err)
+		}
+		return nil
+	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get shipment items: %w", err)
+		return nil, err
 	}
 
 	itemResponses := make([]model.ShipmentItemResponse, 0, len(items))
@@ -241,9 +260,14 @@ func (s *ShipmentS) GetShipment(ctx context.Context, id string) (*model.Shipment
 			!(resp.StockBefore == "0" && resp.StockAfter == "0")
 
 		if !snapshotSaved && row.StorageID.Valid {
-			stock, err := s.repo.Tenant(ctx).GetStockByIngredientAndStorage(ctx, pg.GetStockByIngredientAndStorageParams{
-				IngredientID: it.IngredientID,
-				StorageID:    row.StorageID,
+			var stock pg.IngredientStock
+			err = withTenantRead(ctx, s.repo, func(tenantCtx context.Context, q *pg.Queries) error {
+				var err error
+				stock, err = q.GetStockByIngredientAndStorage(tenantCtx, pg.GetStockByIngredientAndStorageParams{
+					IngredientID: it.IngredientID,
+					StorageID:    row.StorageID,
+				})
+				return err
 			})
 
 			currentQty := 0.0
@@ -313,60 +337,72 @@ func (s *ShipmentS) UpdateShipmentBatch(ctx context.Context, id string, req *mod
 }
 
 func (s *ShipmentS) ListShipments(ctx context.Context, storageID, supplierID, status *string, startDate, endDate *string, limit, offset int32) ([]*model.ShipmentResponse, int64, string, error) {
-	listParams := pg.ListShipmentsParams{Limit: limit, Offset: offset}
-	countParams := pg.CountShipmentsParams{}
-	sumParams := pg.SumShipmentsTotalAmountParams{}
+	var result []*model.ShipmentResponse
+	var total int64
+	var totalAmountSum string
 
-	if storageID != nil {
-		listParams.Column1 = *storageID
-		countParams.Column1 = *storageID
-		sumParams.Column1 = *storageID
-	}
-	if supplierID != nil {
-		listParams.Column2 = *supplierID
-		countParams.Column2 = *supplierID
-		sumParams.Column2 = *supplierID
-	}
-	if status != nil {
-		listParams.Column3 = *status
-		countParams.Column3 = *status
-		sumParams.Column3 = *status
-	}
-	if startDate != nil {
-		if t, err := time.Parse(time.RFC3339, *startDate); err == nil {
-			ts := pgtype.Timestamp{Time: t, Valid: true}
-			listParams.Column4 = ts
-			countParams.Column4 = ts
-			sumParams.Column4 = ts
+	err := withTenantRead(ctx, s.repo, func(tenantCtx context.Context, q *pg.Queries) error {
+		listParams := pg.ListShipmentsParams{Limit: limit, Offset: offset}
+		countParams := pg.CountShipmentsParams{}
+		sumParams := pg.SumShipmentsTotalAmountParams{}
+
+		if storageID != nil {
+			listParams.Column1 = *storageID
+			countParams.Column1 = *storageID
+			sumParams.Column1 = *storageID
 		}
-	}
-	if endDate != nil {
-		if t, err := time.Parse(time.RFC3339, *endDate); err == nil {
-			ts := pgtype.Timestamp{Time: t, Valid: true}
-			listParams.Column5 = ts
-			countParams.Column5 = ts
-			sumParams.Column5 = ts
+		if supplierID != nil {
+			listParams.Column2 = *supplierID
+			countParams.Column2 = *supplierID
+			sumParams.Column2 = *supplierID
 		}
+		if status != nil {
+			listParams.Column3 = *status
+			countParams.Column3 = *status
+			sumParams.Column3 = *status
+		}
+		if startDate != nil {
+			if t, err := time.Parse(time.RFC3339, *startDate); err == nil {
+				ts := pgtype.Timestamp{Time: t, Valid: true}
+				listParams.Column4 = ts
+				countParams.Column4 = ts
+				sumParams.Column4 = ts
+			}
+		}
+		if endDate != nil {
+			if t, err := time.Parse(time.RFC3339, *endDate); err == nil {
+				ts := pgtype.Timestamp{Time: t, Valid: true}
+				listParams.Column5 = ts
+				countParams.Column5 = ts
+				sumParams.Column5 = ts
+			}
+		}
+
+		rows, err := q.ListShipments(tenantCtx, listParams)
+		if err != nil {
+			return fmt.Errorf("failed to list shipments: %w", err)
+		}
+		total, err = q.CountShipments(tenantCtx, countParams)
+		if err != nil {
+			return fmt.Errorf("failed to count shipments: %w", err)
+		}
+		sumN, err := q.SumShipmentsTotalAmount(tenantCtx, sumParams)
+		totalAmountSum = "0"
+		if err == nil {
+			totalAmountSum = pgNumericToStr(sumN)
+		}
+
+		result = make([]*model.ShipmentResponse, 0, len(rows))
+		for _, row := range rows {
+			result = append(result, shipmentToResponse(row))
+		}
+		return nil
+	})
+
+	if err != nil {
+		return nil, 0, "0", err
 	}
 
-	rows, err := s.repo.Tenant(ctx).ListShipments(ctx, listParams)
-	if err != nil {
-		return nil, 0, "0", fmt.Errorf("failed to list shipments: %w", err)
-	}
-	total, err := s.repo.Tenant(ctx).CountShipments(ctx, countParams)
-	if err != nil {
-		return nil, 0, "0", fmt.Errorf("failed to count shipments: %w", err)
-	}
-	sumN, err := s.repo.Tenant(ctx).SumShipmentsTotalAmount(ctx, sumParams)
-	totalAmountSum := "0"
-	if err == nil {
-		totalAmountSum = pgNumericToStr(sumN)
-	}
-
-	result := make([]*model.ShipmentResponse, 0, len(rows))
-	for _, row := range rows {
-		result = append(result, shipmentToResponse(row))
-	}
 	return result, total, totalAmountSum, nil
 }
 
@@ -376,7 +412,15 @@ func (s *ShipmentS) UpdateShipment(ctx context.Context, id string, req *model.Up
 		return nil, fmt.Errorf("invalid shipment id: %w", err)
 	}
 
-	current, err := s.repo.Tenant(ctx).GetShipmentByID(ctx, shipmentID)
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	current, err := q.GetShipmentByID(txCtx, shipmentID)
 	if err != nil {
 		return nil, fmt.Errorf("shipment not found: %w", err)
 	}
@@ -420,7 +464,7 @@ func (s *ShipmentS) UpdateShipment(ctx context.Context, id string, req *model.Up
 	}
 
 	// Historical lock check for both current and target state.
-	if err := assertCanMutateShipmentChange(ctx, s.repo, current, effectiveStorage, effectiveDate, "shipment"); err != nil {
+	if err := assertCanMutateShipmentChange(txCtx, q, current, effectiveStorage, effectiveDate, "shipment"); err != nil {
 		return nil, err
 	}
 
@@ -445,7 +489,7 @@ func (s *ShipmentS) UpdateShipment(ctx context.Context, id string, req *model.Up
 		params.Description = req.Description
 	}
 
-	row, err := s.repo.Tenant(ctx).UpdateShipment(ctx, params)
+	row, err := q.UpdateShipment(txCtx, params)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update shipment: %w", err)
 	}
@@ -464,7 +508,7 @@ func (s *ShipmentS) UpdateShipment(ctx context.Context, id string, req *model.Up
 			return nil, fmt.Errorf("shipment must have a storage selected before activating")
 		}
 
-		items, err := s.repo.Tenant(ctx).GetShipmentItemsByShipmentID(ctx, shipmentID)
+		items, err := q.GetShipmentItemsByShipmentID(txCtx, shipmentID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get shipment items: %w", err)
 		}
@@ -480,11 +524,11 @@ func (s *ShipmentS) UpdateShipment(ctx context.Context, id string, req *model.Up
 			}
 		}
 
-		if err := s.deductStock(ctx, shipmentID, row.StorageID, "shipment_out", shipmentDate); err != nil {
+		if err := s.deductStock(txCtx, q, shipmentID, row.StorageID, "shipment_out", shipmentDate); err != nil {
 			return nil, fmt.Errorf("failed to deduct stock on shipment activation: %w", err)
 		}
 
-		activated, err := s.repo.Tenant(ctx).ActivateShipment(ctx, shipmentID)
+		activated, err := q.ActivateShipment(txCtx, shipmentID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to activate shipment: %w", err)
 		}
@@ -501,12 +545,12 @@ func (s *ShipmentS) UpdateShipment(ctx context.Context, id string, req *model.Up
 				}
 			}
 
-			if err := s.reverseStock(ctx, shipmentID, current.StorageID, "shipment_deactivated", oldShipmentDate); err != nil {
+			if err := s.reverseStock(txCtx, q, shipmentID, current.StorageID, "shipment_deactivated", oldShipmentDate); err != nil {
 				return nil, fmt.Errorf("failed to reverse stock on shipment deactivation: %w", err)
 			}
 		}
 
-		deactivated, err := s.repo.Tenant(ctx).DeactivateShipment(ctx, shipmentID)
+		deactivated, err := q.DeactivateShipment(txCtx, shipmentID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to deactivate shipment: %w", err)
 		}
@@ -537,11 +581,11 @@ func (s *ShipmentS) UpdateShipment(ctx context.Context, id string, req *model.Up
 			}
 		}
 
-		if err := s.reverseStock(ctx, shipmentID, current.StorageID, "shipment_storage_change", oldShipmentDate); err != nil {
+		if err := s.reverseStock(txCtx, q, shipmentID, current.StorageID, "shipment_storage_change", oldShipmentDate); err != nil {
 			return nil, fmt.Errorf("failed to reverse old storage on shipment storage change: %w", err)
 		}
 
-		if err := s.deductStock(ctx, shipmentID, row.StorageID, "shipment_storage_change_out", newShipmentDate); err != nil {
+		if err := s.deductStock(txCtx, q, shipmentID, row.StorageID, "shipment_storage_change_out", newShipmentDate); err != nil {
 			return nil, fmt.Errorf("failed to deduct new storage on shipment storage change: %w", err)
 		}
 
@@ -567,12 +611,18 @@ func (s *ShipmentS) UpdateShipment(ctx context.Context, id string, req *model.Up
 			}
 		}
 
-		if err := s.reverseStock(ctx, shipmentID, current.StorageID, "shipment_date_change", oldShipmentDate); err != nil {
+		if err := s.reverseStock(txCtx, q, shipmentID, current.StorageID, "shipment_date_change", oldShipmentDate); err != nil {
 			return nil, fmt.Errorf("failed to reverse old shipment date contribution: %w", err)
 		}
 
-		if err := s.deductStock(ctx, shipmentID, row.StorageID, "shipment_date_change_out", newShipmentDate); err != nil {
+		if err := s.deductStock(txCtx, q, shipmentID, row.StorageID, "shipment_date_change_out", newShipmentDate); err != nil {
 			return nil, fmt.Errorf("failed to deduct shipment on new date: %w", err)
+		}
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
 		}
 	}
 
@@ -584,11 +634,19 @@ func (s *ShipmentS) DeleteShipment(ctx context.Context, id string) error {
 		return fmt.Errorf("invalid shipment id: %w", err)
 	}
 
-	shipment, err := s.repo.Tenant(ctx).GetShipmentByID(ctx, shipmentID)
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	shipment, err := q.GetShipmentByID(txCtx, shipmentID)
 	if err != nil {
 		return fmt.Errorf("shipment not found: %w", err)
 	}
-	if err := assertCanMutateShipmentCurrent(ctx, s.repo, shipment, "shipment"); err != nil {
+	if err := assertCanMutateShipmentCurrent(txCtx, q, shipment, "shipment"); err != nil {
 		return err
 	}
 
@@ -598,12 +656,22 @@ func (s *ShipmentS) DeleteShipment(ctx context.Context, id string) error {
 		if shipment.Date.Valid {
 			shipmentDate = pgtype.Timestamptz{Time: shipment.Date.Time.In(time.UTC), Valid: true}
 		}
-		if err := s.reverseStock(ctx, shipmentID, shipment.StorageID, "shipment_deleted", shipmentDate); err != nil {
+		if err := s.reverseStock(txCtx, q, shipmentID, shipment.StorageID, "shipment_deleted", shipmentDate); err != nil {
 			return fmt.Errorf("failed to reverse stock before deleting shipment: %w", err)
 		}
 	}
 
-	return s.repo.Tenant(ctx).DeleteShipment(ctx, shipmentID)
+	if err := q.DeleteShipment(txCtx, shipmentID); err != nil {
+		return fmt.Errorf("failed to delete shipment: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
+	return nil
 }
 
 func (s *ShipmentS) UpsertShipmentItems(ctx context.Context, shipmentID string, req *model.UpsertShipmentItemsRequest) ([]model.ShipmentItemResponse, error) {
@@ -612,19 +680,27 @@ func (s *ShipmentS) UpsertShipmentItems(ctx context.Context, shipmentID string, 
 		return nil, fmt.Errorf("invalid shipment id: %w", err)
 	}
 
-	shipment, err := s.repo.Tenant(ctx).GetShipmentByID(ctx, sID)
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	shipment, err := q.GetShipmentByID(txCtx, sID)
 	if err != nil {
 		return nil, fmt.Errorf("shipment not found: %w", err)
 	}
 
-	if err := assertCanMutateShipmentCurrent(ctx, s.repo, shipment, "shipment items"); err != nil {
+	if err := assertCanMutateShipmentCurrent(txCtx, q, shipment, "shipment items"); err != nil {
 		return nil, err
 	}
 
 	// active shipment uchun old qty map kerak
 	oldQtyMap := make(map[uuid.UUID]pgtype.Numeric)
 	if shipment.Status == pg.ShipmentStatusActive {
-		existing, _ := s.repo.Tenant(ctx).GetShipmentItemsByShipmentID(ctx, sID)
+		existing, _ := q.GetShipmentItemsByShipmentID(txCtx, sID)
 		for _, ex := range existing {
 			oldQtyMap[ex.IngredientID] = ex.Quantity
 		}
@@ -632,15 +708,21 @@ func (s *ShipmentS) UpsertShipmentItems(ctx context.Context, shipmentID string, 
 
 	results := make([]model.ShipmentItemResponse, 0, len(req.Items))
 	for _, r := range req.Items {
-		resp, err := s.upsertOneItem(ctx, sID, shipment, &r, oldQtyMap)
+		resp, err := s.upsertOneItem(txCtx, q, sID, shipment, &r, oldQtyMap)
 		if err != nil {
 			return nil, err
 		}
 		results = append(results, *resp)
 	}
 
-	if err := s.recalcShipmentTotal(ctx, sID); err != nil {
+	if err := s.recalcShipmentTotal(txCtx, q, sID); err != nil {
 		return nil, err
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return results, nil
@@ -649,6 +731,7 @@ func (s *ShipmentS) UpsertShipmentItems(ctx context.Context, shipmentID string, 
 // upsertOneItem saves a single item. For active shipments, immediately adjusts stock.
 func (s *ShipmentS) upsertOneItem(
 	ctx context.Context,
+	q *pg.Queries,
 	sID uuid.UUID,
 	shipment pg.Shipment,
 	req *model.UpsertShipmentItemRequest,
@@ -673,7 +756,7 @@ func (s *ShipmentS) upsertOneItem(
 		return nil, fmt.Errorf("invalid quantity: %w", err)
 	}
 
-	ing, err := s.repo.Tenant(ctx).GetIngredientByID(ctx, iID)
+	ing, err := q.GetIngredientByID(ctx, iID)
 	if err != nil {
 		return nil, fmt.Errorf("ingredient not found: %w", err)
 	}
@@ -684,7 +767,7 @@ func (s *ShipmentS) upsertOneItem(
 		price = ing.PricePerUnit
 	}
 
-	item, err := s.repo.Tenant(ctx).UpsertShipmentItem(ctx, pg.UpsertShipmentItemParams{
+	item, err := q.UpsertShipmentItem(ctx, pg.UpsertShipmentItemParams{
 		ShipmentID:   sID,
 		IngredientID: iID,
 		Quantity:     qty,
@@ -704,7 +787,7 @@ func (s *ShipmentS) upsertOneItem(
 
 	// Active shipment bo'lsa stockni real-time adjust qilamiz
 	if shipment.Status == pg.ShipmentStatusActive && shipment.StorageID.Valid {
-		stockID, err := s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
+		stockID, err := q.EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
 			ID:           uuid.New(),
 			IngredientID: iID,
 			StorageID:    shipment.StorageID,
@@ -720,7 +803,7 @@ func (s *ShipmentS) upsertOneItem(
 
 		// old item bo'lsa avval eski deductionni qaytaramiz
 		if oldQty, ok := oldQtyMap[iID]; ok {
-			locked, err := s.repo.Tenant(ctx).GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
+			locked, err := q.GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
 				IngredientID: iID,
 				StorageID:    shipment.StorageID,
 			})
@@ -728,7 +811,7 @@ func (s *ShipmentS) upsertOneItem(
 				return nil, fmt.Errorf("failed to lock stock row for old qty reverse: %w", err)
 			}
 
-			restored, err := s.repo.Tenant(ctx).AddToIngredientStock(ctx, pg.AddToIngredientStockParams{
+			restored, err := q.AddToIngredientStock(ctx, pg.AddToIngredientStockParams{
 				ID:       stockID,
 				Quantity: oldQty,
 			})
@@ -737,7 +820,7 @@ func (s *ShipmentS) upsertOneItem(
 			}
 
 			if !shouldSkipStockMovement(oldQty, zero) {
-				if err := s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+				if err := q.InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
 					ID:           uuid.New(),
 					StorageID:    uuid.UUID(shipment.StorageID.Bytes),
 					IngredientID: iID,
@@ -756,7 +839,7 @@ func (s *ShipmentS) upsertOneItem(
 			}
 		}
 
-		locked, err := s.repo.Tenant(ctx).GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
+		locked, err := q.GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
 			IngredientID: iID,
 			StorageID:    shipment.StorageID,
 		})
@@ -764,7 +847,7 @@ func (s *ShipmentS) upsertOneItem(
 			return nil, fmt.Errorf("failed to lock stock row for new qty deduct: %w", err)
 		}
 
-		updated, err := s.repo.Tenant(ctx).RemoveFromIngredientStock(ctx, pg.RemoveFromIngredientStockParams{
+		updated, err := q.RemoveFromIngredientStock(ctx, pg.RemoveFromIngredientStockParams{
 			ID:       stockID,
 			Quantity: qty,
 		})
@@ -772,7 +855,7 @@ func (s *ShipmentS) upsertOneItem(
 			return nil, fmt.Errorf("failed to deduct shipment qty: %w", err)
 		}
 
-		item, err = s.repo.Tenant(ctx).UpdateShipmentItemStockSnapshot(ctx, pg.UpdateShipmentItemStockSnapshotParams{
+		item, err = q.UpdateShipmentItemStockSnapshot(ctx, pg.UpdateShipmentItemStockSnapshotParams{
 			ID:          item.ID,
 			StockBefore: locked.Quantity,
 			StockAfter:  updated.Quantity,
@@ -782,7 +865,7 @@ func (s *ShipmentS) upsertOneItem(
 		}
 
 		if !shouldSkipStockMovement(zero, qty) {
-			if err := s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+			if err := q.InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
 				ID:           uuid.New(),
 				StorageID:    uuid.UUID(shipment.StorageID.Bytes),
 				IngredientID: iID,
@@ -802,6 +885,7 @@ func (s *ShipmentS) upsertOneItem(
 
 		if err := s.rebalanceShipmentIngredientLedger(
 			ctx,
+			q,
 			pgtype.UUID{Bytes: shipment.StorageID.Bytes, Valid: true},
 			iID,
 		); err != nil {
@@ -821,17 +905,25 @@ func (s *ShipmentS) DeleteShipmentItem(ctx context.Context, itemID string) error
 		return fmt.Errorf("invalid item id: %w", err)
 	}
 
-	item, err := s.repo.Tenant(ctx).GetShipmentItemByID(ctx, id)
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	item, err := q.GetShipmentItemByID(txCtx, id)
 	if err != nil {
 		return fmt.Errorf("item not found: %w", err)
 	}
 
-	shipment, err := s.repo.Tenant(ctx).GetShipmentByID(ctx, item.ShipmentID)
+	shipment, err := q.GetShipmentByID(txCtx, item.ShipmentID)
 	if err != nil {
 		return fmt.Errorf("failed to get shipment: %w", err)
 	}
 
-	if err := assertCanMutateShipmentCurrent(ctx, s.repo, shipment, "shipment item"); err != nil {
+	if err := assertCanMutateShipmentCurrent(txCtx, q, shipment, "shipment item"); err != nil {
 		return err
 	}
 
@@ -847,7 +939,7 @@ func (s *ShipmentS) DeleteShipmentItem(ctx context.Context, itemID string) error
 		srcType := "shipment_item_deleted"
 		srcID := item.ShipmentID
 
-		stockID, err := s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
+		stockID, err := q.EnsureIngredientStockByStorage(txCtx, pg.EnsureIngredientStockByStorageParams{
 			ID:           uuid.New(),
 			IngredientID: item.IngredientID,
 			StorageID:    storageID,
@@ -856,7 +948,7 @@ func (s *ShipmentS) DeleteShipmentItem(ctx context.Context, itemID string) error
 			return fmt.Errorf("failed to ensure stock row during shipment item delete: %w", err)
 		}
 
-		locked, err := s.repo.Tenant(ctx).GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
+		locked, err := q.GetStockByIngredientAndStorageForUpdate(txCtx, pg.GetStockByIngredientAndStorageForUpdateParams{
 			IngredientID: item.IngredientID,
 			StorageID:    storageID,
 		})
@@ -864,7 +956,7 @@ func (s *ShipmentS) DeleteShipmentItem(ctx context.Context, itemID string) error
 			return fmt.Errorf("failed to lock stock row during shipment item delete: %w", err)
 		}
 
-		updated, err := s.repo.Tenant(ctx).AddToIngredientStock(ctx, pg.AddToIngredientStockParams{
+		updated, err := q.AddToIngredientStock(txCtx, pg.AddToIngredientStockParams{
 			ID:       stockID,
 			Quantity: item.Quantity,
 		})
@@ -873,7 +965,7 @@ func (s *ShipmentS) DeleteShipmentItem(ctx context.Context, itemID string) error
 		}
 
 		if !shouldSkipStockMovement(item.Quantity, zero) {
-			if err := s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+			if err := q.InsertIngredientStockMovement(txCtx, pg.InsertIngredientStockMovementParams{
 				ID:           uuid.New(),
 				StorageID:    uuid.UUID(storageID.Bytes),
 				IngredientID: item.IngredientID,
@@ -891,7 +983,8 @@ func (s *ShipmentS) DeleteShipmentItem(ctx context.Context, itemID string) error
 			}
 
 			if err := s.rebalanceShipmentIngredientLedger(
-				ctx,
+				txCtx,
+				q,
 				pgtype.UUID{Bytes: storageID.Bytes, Valid: true},
 				item.IngredientID,
 			); err != nil {
@@ -900,18 +993,24 @@ func (s *ShipmentS) DeleteShipmentItem(ctx context.Context, itemID string) error
 		}
 	}
 
-	if err := s.repo.Tenant(ctx).DeleteShipmentItem(ctx, id); err != nil {
+	if err := q.DeleteShipmentItem(txCtx, id); err != nil {
 		return fmt.Errorf("failed to delete shipment item: %w", err)
 	}
 
-	if err := s.recalcShipmentTotal(ctx, item.ShipmentID); err != nil {
+	if err := s.recalcShipmentTotal(txCtx, q, item.ShipmentID); err != nil {
 		return fmt.Errorf("failed to recalculate shipment total after item delete: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return nil
 }
-func (s *ShipmentS) recalcShipmentTotal(ctx context.Context, shipmentID uuid.UUID) error {
-	items, err := s.repo.Tenant(ctx).GetShipmentItemsByShipmentID(ctx, shipmentID)
+func (s *ShipmentS) recalcShipmentTotal(ctx context.Context, q *pg.Queries, shipmentID uuid.UUID) error {
+	items, err := q.GetShipmentItemsByShipmentID(ctx, shipmentID)
 	if err != nil {
 		return fmt.Errorf("failed to get items for total recalc: %w", err)
 	}
@@ -924,7 +1023,7 @@ func (s *ShipmentS) recalcShipmentTotal(ctx context.Context, shipmentID uuid.UUI
 	if err := totalN.Scan(fmt.Sprintf("%.2f", total)); err != nil {
 		return err
 	}
-	_, err = s.repo.Tenant(ctx).UpdateShipmentTotalAmount(ctx, pg.UpdateShipmentTotalAmountParams{
+	_, err = q.UpdateShipmentTotalAmount(ctx, pg.UpdateShipmentTotalAmountParams{
 		ID:          shipmentID,
 		TotalAmount: totalN,
 	})
@@ -932,8 +1031,8 @@ func (s *ShipmentS) recalcShipmentTotal(ctx context.Context, shipmentID uuid.UUI
 }
 
 // deductStock removes ingredient quantities from stock for an active shipment.
-func (s *ShipmentS) deductStock(ctx context.Context, shipmentID uuid.UUID, storageID pgtype.UUID, eventType string, shipmentDate pgtype.Timestamptz) error {
-	items, err := s.repo.Tenant(ctx).GetShipmentItemsByShipmentID(ctx, shipmentID)
+func (s *ShipmentS) deductStock(ctx context.Context, q *pg.Queries, shipmentID uuid.UUID, storageID pgtype.UUID, eventType string, shipmentDate pgtype.Timestamptz) error {
+	items, err := q.GetShipmentItemsByShipmentID(ctx, shipmentID)
 	if err != nil {
 		return fmt.Errorf("failed to get shipment items: %w", err)
 	}
@@ -944,7 +1043,7 @@ func (s *ShipmentS) deductStock(ctx context.Context, shipmentID uuid.UUID, stora
 	touched := make(map[shipmentTouchedKey]struct{})
 
 	for _, item := range items {
-		stockID, err := s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
+		stockID, err := q.EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
 			ID:           uuid.New(),
 			IngredientID: item.IngredientID,
 			StorageID:    storageID,
@@ -953,7 +1052,7 @@ func (s *ShipmentS) deductStock(ctx context.Context, shipmentID uuid.UUID, stora
 			return fmt.Errorf("failed to ensure stock row: %w", err)
 		}
 
-		locked, err := s.repo.Tenant(ctx).GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
+		locked, err := q.GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
 			IngredientID: item.IngredientID,
 			StorageID:    storageID,
 		})
@@ -961,7 +1060,7 @@ func (s *ShipmentS) deductStock(ctx context.Context, shipmentID uuid.UUID, stora
 			return fmt.Errorf("failed to lock stock row: %w", err)
 		}
 
-		updated, err := s.repo.Tenant(ctx).RemoveFromIngredientStock(ctx, pg.RemoveFromIngredientStockParams{
+		updated, err := q.RemoveFromIngredientStock(ctx, pg.RemoveFromIngredientStockParams{
 			ID:       stockID,
 			Quantity: item.Quantity,
 		})
@@ -969,7 +1068,7 @@ func (s *ShipmentS) deductStock(ctx context.Context, shipmentID uuid.UUID, stora
 			return fmt.Errorf("failed to deduct stock: %w", err)
 		}
 
-		if _, err := s.repo.Tenant(ctx).UpdateShipmentItemStockSnapshot(ctx, pg.UpdateShipmentItemStockSnapshotParams{
+		if _, err := q.UpdateShipmentItemStockSnapshot(ctx, pg.UpdateShipmentItemStockSnapshotParams{
 			ID:          item.ID,
 			StockBefore: locked.Quantity,
 			StockAfter:  updated.Quantity,
@@ -981,7 +1080,7 @@ func (s *ShipmentS) deductStock(ctx context.Context, shipmentID uuid.UUID, stora
 			continue
 		}
 
-		if err := s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+		if err := q.InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
 			ID:           uuid.New(),
 			StorageID:    uuid.UUID(storageID.Bytes),
 			IngredientID: item.IngredientID,
@@ -1005,7 +1104,7 @@ func (s *ShipmentS) deductStock(ctx context.Context, shipmentID uuid.UUID, stora
 	}
 
 	for key := range touched {
-		if err := s.rebalanceShipmentIngredientLedger(ctx, pgtype.UUID{Bytes: key.StorageID, Valid: true}, key.IngredientID); err != nil {
+		if err := s.rebalanceShipmentIngredientLedger(ctx, q, pgtype.UUID{Bytes: key.StorageID, Valid: true}, key.IngredientID); err != nil {
 			return fmt.Errorf("failed to rebalance shipment ledger: %w", err)
 		}
 	}
@@ -1014,8 +1113,8 @@ func (s *ShipmentS) deductStock(ctx context.Context, shipmentID uuid.UUID, stora
 }
 
 // reverseStock adds back ingredient quantities when an active shipment is deactivated or deleted.
-func (s *ShipmentS) reverseStock(ctx context.Context, shipmentID uuid.UUID, storageID pgtype.UUID, eventType string, shipmentDate pgtype.Timestamptz) error {
-	items, err := s.repo.Tenant(ctx).GetShipmentItemsByShipmentID(ctx, shipmentID)
+func (s *ShipmentS) reverseStock(ctx context.Context, q *pg.Queries, shipmentID uuid.UUID, storageID pgtype.UUID, eventType string, shipmentDate pgtype.Timestamptz) error {
+	items, err := q.GetShipmentItemsByShipmentID(ctx, shipmentID)
 	if err != nil {
 		return fmt.Errorf("failed to get shipment items: %w", err)
 	}
@@ -1026,7 +1125,7 @@ func (s *ShipmentS) reverseStock(ctx context.Context, shipmentID uuid.UUID, stor
 	touched := make(map[shipmentTouchedKey]struct{})
 
 	for _, item := range items {
-		stockID, err := s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
+		stockID, err := q.EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
 			ID:           uuid.New(),
 			IngredientID: item.IngredientID,
 			StorageID:    storageID,
@@ -1035,7 +1134,7 @@ func (s *ShipmentS) reverseStock(ctx context.Context, shipmentID uuid.UUID, stor
 			return fmt.Errorf("failed to ensure stock row during shipment reverse: %w", err)
 		}
 
-		locked, err := s.repo.Tenant(ctx).GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
+		locked, err := q.GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
 			IngredientID: item.IngredientID,
 			StorageID:    storageID,
 		})
@@ -1043,7 +1142,7 @@ func (s *ShipmentS) reverseStock(ctx context.Context, shipmentID uuid.UUID, stor
 			return fmt.Errorf("failed to lock stock row during shipment reverse: %w", err)
 		}
 
-		updated, err := s.repo.Tenant(ctx).AddToIngredientStock(ctx, pg.AddToIngredientStockParams{
+		updated, err := q.AddToIngredientStock(ctx, pg.AddToIngredientStockParams{
 			ID:       stockID,
 			Quantity: item.Quantity,
 		})
@@ -1055,7 +1154,7 @@ func (s *ShipmentS) reverseStock(ctx context.Context, shipmentID uuid.UUID, stor
 			continue
 		}
 
-		if err := s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+		if err := q.InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
 			ID:           uuid.New(),
 			StorageID:    uuid.UUID(storageID.Bytes),
 			IngredientID: item.IngredientID,
@@ -1079,7 +1178,7 @@ func (s *ShipmentS) reverseStock(ctx context.Context, shipmentID uuid.UUID, stor
 	}
 
 	for key := range touched {
-		if err := s.rebalanceShipmentIngredientLedger(ctx, pgtype.UUID{Bytes: key.StorageID, Valid: true}, key.IngredientID); err != nil {
+		if err := s.rebalanceShipmentIngredientLedger(ctx, q, pgtype.UUID{Bytes: key.StorageID, Valid: true}, key.IngredientID); err != nil {
 			return fmt.Errorf("failed to rebalance shipment reverse ledger: %w", err)
 		}
 	}
