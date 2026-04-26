@@ -3,9 +3,11 @@ package service
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"gitlab.yurtal.tech/company/maryai/back/internal/model"
 	"gitlab.yurtal.tech/company/maryai/back/internal/repository"
@@ -63,7 +65,61 @@ func NewIngredientS(repo *repository.Repository) *IngredientS {
 	return &IngredientS{repo: repo}
 }
 
+func (i *IngredientS) getTenantMutationQueries(ctx context.Context) (*pg.Queries, context.Context, pgx.Tx, bool, error) {
+	if existingTx, ok := repository.TenantTxFromContext(ctx); ok && existingTx != nil {
+		if q, ok := repository.TenantQueriesFromContext(ctx); ok && q != nil {
+			return q, ctx, existingTx, false, nil
+		}
+		q := pg.New(existingTx)
+		txCtx := repository.WithTenantQueries(ctx, q)
+		return q, txCtx, existingTx, false, nil
+	}
+
+	tx, err := i.repo.PgRepo.TenantPool.Begin(ctx)
+	if err != nil {
+		return nil, nil, nil, false, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+
+	brandID, _ := ctx.Value("brand_id").(string)
+	brandID = strings.TrimSpace(brandID)
+	if brandID == "" {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("brand_id is missing in context")
+	}
+
+	schemaName := fmt.Sprintf("tenant_%s", brandID)
+	if _, err := tx.Exec(ctx, fmt.Sprintf(`SET LOCAL search_path TO "%s", public`, schemaName)); err != nil {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("failed to set tenant search_path: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx, "SET LOCAL app.brand_id = $1", brandID); err != nil {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("failed to set app.brand_id: %w", err)
+	}
+
+	if branchID, _ := ctx.Value("branch_id").(string); strings.TrimSpace(branchID) != "" {
+		if _, err := tx.Exec(ctx, "SET LOCAL app.branch_id = $1", strings.TrimSpace(branchID)); err != nil {
+			tx.Rollback(ctx)
+			return nil, nil, nil, false, fmt.Errorf("failed to set app.branch_id: %w", err)
+		}
+	}
+
+	q := pg.New(tx)
+	txCtx := repository.WithTenantQueries(ctx, q)
+
+	return q, txCtx, tx, true, nil
+}
+
 func (i *IngredientS) CreateIngredientGroup(ctx context.Context, name string, nameI18n *uuid.UUID, pictureUrl *string, colorCode *string) (*model.IngredientGroupResponse, error) {
+	q, txCtx, tx, ownsTx, err := i.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	if name == "" {
 		return nil, fmt.Errorf("ingredient group name is required")
 	}
@@ -73,7 +129,7 @@ func (i *IngredientS) CreateIngredientGroup(ctx context.Context, name string, na
 		nameI18nUUID = pgtype.UUID{Bytes: *nameI18n, Valid: true}
 	}
 
-	group, err := i.repo.Tenant(ctx).CreateIngredientGroup(ctx, pg.CreateIngredientGroupParams{
+	group, err := q.CreateIngredientGroup(txCtx, pg.CreateIngredientGroupParams{
 		ID:         uuid.New(),
 		Name:       name,
 		NameI18n:   nameI18nUUID,
@@ -82,6 +138,12 @@ func (i *IngredientS) CreateIngredientGroup(ctx context.Context, name string, na
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create ingredient group: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return mapIngredientGroupToResponse(group.ID, group.Name, group.NameI18n, group.PictureUrl, group.ColorCode, group.CreatedAt, group.UpdatedAt), nil
@@ -94,7 +156,12 @@ func (i *IngredientS) GetIngredientGroupByID(ctx context.Context, groupID string
 		return nil, fmt.Errorf("invalid ingredient group ID: %w", err)
 	}
 
-	group, err := i.repo.Tenant(ctx).GetIngredientGroupByID(ctx, id)
+	var group pg.IngredientGroup
+	err = withTenantRead(ctx, i.repo, func(tenantCtx context.Context, q *pg.Queries) error {
+		var err error
+		group, err = q.GetIngredientGroupByID(tenantCtx, id)
+		return err
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get ingredient group: %w", err)
 	}
@@ -104,17 +171,24 @@ func (i *IngredientS) GetIngredientGroupByID(ctx context.Context, groupID string
 
 // GetAllIngredientGroups retrieves all ingredient groups
 func (i *IngredientS) GetAllIngredientGroups(ctx context.Context, limit, offset int32) ([]model.IngredientGroupResponse, int64, error) {
-	total, err := i.repo.Tenant(ctx).CountIngredientGroups(ctx)
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to count ingredient groups: %w", err)
-	}
+	var total int64
+	var groups []pg.IngredientGroup
 
-	groups, err := i.repo.Tenant(ctx).GetAllIngredientGroups(ctx, pg.GetAllIngredientGroupsParams{
-		Limit:  limit,
-		Offset: offset,
+	err := withTenantRead(ctx, i.repo, func(tenantCtx context.Context, q *pg.Queries) error {
+		var err error
+		total, err = q.CountIngredientGroups(tenantCtx)
+		if err != nil {
+			return fmt.Errorf("failed to count ingredient groups: %w", err)
+		}
+
+		groups, err = q.GetAllIngredientGroups(tenantCtx, pg.GetAllIngredientGroupsParams{
+			Limit:  limit,
+			Offset: offset,
+		})
+		return err
 	})
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to get ingredient groups: %w", err)
+		return nil, 0, err
 	}
 
 	var responses []model.IngredientGroupResponse
@@ -127,10 +201,16 @@ func (i *IngredientS) GetAllIngredientGroups(ctx context.Context, limit, offset 
 
 // SearchIngredientGroups searches ingredient groups by name
 func (i *IngredientS) SearchIngredientGroups(ctx context.Context, query string, limit, offset int32) ([]model.IngredientGroupResponse, error) {
-	groups, err := i.repo.Tenant(ctx).SearchIngredientGroups(ctx, pg.SearchIngredientGroupsParams{
-		Column1: &query,
-		Limit:   limit,
-		Offset:  offset,
+	var groups []pg.IngredientGroup
+
+	err := withTenantRead(ctx, i.repo, func(tenantCtx context.Context, q *pg.Queries) error {
+		var err error
+		groups, err = q.SearchIngredientGroups(tenantCtx, pg.SearchIngredientGroupsParams{
+			Column1: &query,
+			Limit:   limit,
+			Offset:  offset,
+		})
+		return err
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to search ingredient groups: %w", err)
@@ -145,13 +225,21 @@ func (i *IngredientS) SearchIngredientGroups(ctx context.Context, query string, 
 
 // UpdateIngredientGroup updates an ingredient group
 func (i *IngredientS) UpdateIngredientGroup(ctx context.Context, groupID string, name *string, nameI18n *string, pictureUrl *string, colorCode *string) (*model.IngredientGroupResponse, error) {
+	q, txCtx, tx, ownsTx, err := i.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	id, err := uuid.Parse(groupID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid ingredient group ID: %w", err)
 	}
 
 	// Use current values as defaults
-	groupData, err := i.repo.Tenant(ctx).GetIngredientGroupByID(ctx, id)
+	groupData, err := q.GetIngredientGroupByID(txCtx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get ingredient group: %w", err)
 	}
@@ -180,7 +268,7 @@ func (i *IngredientS) UpdateIngredientGroup(ctx context.Context, groupID string,
 		updatedColorCode = colorCode
 	}
 
-	group, err := i.repo.Tenant(ctx).UpdateIngredientGroup(ctx, pg.UpdateIngredientGroupParams{
+	group, err := q.UpdateIngredientGroup(txCtx, pg.UpdateIngredientGroupParams{
 		ID:         id,
 		Name:       updatedName,
 		NameI18n:   updatedNameI18n,
@@ -191,18 +279,38 @@ func (i *IngredientS) UpdateIngredientGroup(ctx context.Context, groupID string,
 		return nil, fmt.Errorf("failed to update ingredient group: %w", err)
 	}
 
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return mapIngredientGroupToResponse(group.ID, group.Name, group.NameI18n, group.PictureUrl, group.ColorCode, group.CreatedAt, group.UpdatedAt), nil
 }
 
 // DeleteIngredientGroup soft deletes an ingredient group
 func (i *IngredientS) DeleteIngredientGroup(ctx context.Context, groupID string) error {
+	q, txCtx, tx, ownsTx, err := i.getTenantMutationQueries(ctx)
+	if err != nil {
+		return err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	id, err := uuid.Parse(groupID)
 	if err != nil {
 		return fmt.Errorf("invalid ingredient group ID: %w", err)
 	}
 
-	if err := i.repo.Tenant(ctx).DeleteIngredientGroup(ctx, id); err != nil {
+	if err := q.DeleteIngredientGroup(txCtx, id); err != nil {
 		return fmt.Errorf("failed to delete ingredient group: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return nil
@@ -457,13 +565,27 @@ func (i *IngredientS) GetIngredientInventoryStatusReport(ctx context.Context, re
 
 // RestoreIngredientGroup restores a deleted ingredient group
 func (i *IngredientS) RestoreIngredientGroup(ctx context.Context, groupID string) error {
+	q, txCtx, tx, ownsTx, err := i.getTenantMutationQueries(ctx)
+	if err != nil {
+		return err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	id, err := uuid.Parse(groupID)
 	if err != nil {
 		return fmt.Errorf("invalid ingredient group ID: %w", err)
 	}
 
-	if err := i.repo.Tenant(ctx).RestoreIngredientGroup(ctx, id); err != nil {
+	if err := q.RestoreIngredientGroup(txCtx, id); err != nil {
 		return fmt.Errorf("failed to restore ingredient group: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return nil
@@ -473,6 +595,14 @@ func (i *IngredientS) RestoreIngredientGroup(ctx context.Context, groupID string
 
 // CreateIngredient creates a new ingredient
 func (i *IngredientS) CreateIngredient(ctx context.Context, name string, nameI18n *uuid.UUID, groupID *string, measurement *string, pictureUrl *string, colorCode *string) (*model.IngredientResponse, error) {
+	q, txCtx, tx, ownsTx, err := i.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	if name == "" {
 		return nil, fmt.Errorf("ingredient name is required")
 	}
@@ -496,7 +626,7 @@ func (i *IngredientS) CreateIngredient(ctx context.Context, name string, nameI18
 		measurementNullable = pg.NullMeasurementType{MeasurementType: pg.MeasurementType(*measurement), Valid: true}
 	}
 
-	ingredient, err := i.repo.Tenant(ctx).CreateIngredient(ctx, pg.CreateIngredientParams{
+	ingredient, err := q.CreateIngredient(txCtx, pg.CreateIngredientParams{
 		ID:          uuid.New(),
 		Name:        name,
 		NameI18n:    nameI18nUUID,
@@ -510,7 +640,13 @@ func (i *IngredientS) CreateIngredient(ctx context.Context, name string, nameI18
 	}
 
 	// Auto-set visibility for the current branch
-	_ = i.repo.Tenant(ctx).EnsureIngredientVisibilityForCurrentBranch(ctx, ingredient.ID)
+	_ = q.EnsureIngredientVisibilityForCurrentBranch(txCtx, ingredient.ID)
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
 
 	return mapIngredientToResponse(ingredient), nil
 }
@@ -522,7 +658,12 @@ func (i *IngredientS) GetIngredientByID(ctx context.Context, ingredientID string
 		return nil, fmt.Errorf("invalid ingredient ID: %w", err)
 	}
 
-	ingredient, err := i.repo.Tenant(ctx).GetIngredientByID(ctx, id)
+	var ingredient pg.Ingredient
+	err = withTenantRead(ctx, i.repo, func(tenantCtx context.Context, q *pg.Queries) error {
+		var err error
+		ingredient, err = q.GetIngredientByID(tenantCtx, id)
+		return err
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get ingredient: %w", err)
 	}
@@ -532,17 +673,24 @@ func (i *IngredientS) GetIngredientByID(ctx context.Context, ingredientID string
 
 // GetAllIngredients retrieves all ingredients
 func (i *IngredientS) GetAllIngredients(ctx context.Context, limit, offset int32) ([]model.IngredientResponse, int64, error) {
-	total, err := i.repo.Tenant(ctx).CountIngredients(ctx)
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to count ingredients: %w", err)
-	}
+	var total int64
+	var ingredients []pg.Ingredient
 
-	ingredients, err := i.repo.Tenant(ctx).GetAllIngredients(ctx, pg.GetAllIngredientsParams{
-		Limit:  limit,
-		Offset: offset,
+	err := withTenantRead(ctx, i.repo, func(tenantCtx context.Context, q *pg.Queries) error {
+		var err error
+		total, err = q.CountIngredients(tenantCtx)
+		if err != nil {
+			return fmt.Errorf("failed to count ingredients: %w", err)
+		}
+
+		ingredients, err = q.GetAllIngredients(tenantCtx, pg.GetAllIngredientsParams{
+			Limit:  limit,
+			Offset: offset,
+		})
+		return err
 	})
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to get ingredients: %w", err)
+		return nil, 0, err
 	}
 
 	var responses []model.IngredientResponse
@@ -558,10 +706,16 @@ func (i *IngredientS) GetAllIngredients(ctx context.Context, limit, offset int32
 
 // SearchIngredients searches ingredients by name
 func (i *IngredientS) SearchIngredients(ctx context.Context, query string, limit, offset int32) ([]model.IngredientResponse, error) {
-	ingredients, err := i.repo.Tenant(ctx).SearchIngredients(ctx, pg.SearchIngredientsParams{
-		Column1: &query,
-		Limit:   limit,
-		Offset:  offset,
+	var ingredients []pg.Ingredient
+
+	err := withTenantRead(ctx, i.repo, func(tenantCtx context.Context, q *pg.Queries) error {
+		var err error
+		ingredients, err = q.SearchIngredients(tenantCtx, pg.SearchIngredientsParams{
+			Column1: &query,
+			Limit:   limit,
+			Offset:  offset,
+		})
+		return err
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to search ingredients: %w", err)
@@ -584,18 +738,25 @@ func (i *IngredientS) GetIngredientsByGroupID(ctx context.Context, groupID strin
 		return nil, 0, fmt.Errorf("invalid group ID: %w", err)
 	}
 
-	total, err := i.repo.Tenant(ctx).CountIngredientsByGroupID(ctx, pgtype.UUID{Bytes: id, Valid: true})
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to count ingredients by group: %w", err)
-	}
+	var total int64
+	var ingredients []pg.Ingredient
 
-	ingredients, err := i.repo.Tenant(ctx).GetIngredientsByGroupID(ctx, pg.GetIngredientsByGroupIDParams{
-		GroupID: pgtype.UUID{Bytes: id, Valid: true},
-		Limit:   limit,
-		Offset:  offset,
+	err = withTenantRead(ctx, i.repo, func(tenantCtx context.Context, q *pg.Queries) error {
+		var err error
+		total, err = q.CountIngredientsByGroupID(tenantCtx, pgtype.UUID{Bytes: id, Valid: true})
+		if err != nil {
+			return fmt.Errorf("failed to count ingredients by group: %w", err)
+		}
+
+		ingredients, err = q.GetIngredientsByGroupID(tenantCtx, pg.GetIngredientsByGroupIDParams{
+			GroupID: pgtype.UUID{Bytes: id, Valid: true},
+			Limit:   limit,
+			Offset:  offset,
+		})
+		return err
 	})
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to get ingredients by group: %w", err)
+		return nil, 0, err
 	}
 
 	var responses []model.IngredientResponse
@@ -611,12 +772,20 @@ func (i *IngredientS) GetIngredientsByGroupID(ctx context.Context, groupID strin
 
 // UpdateIngredient updates an ingredient
 func (i *IngredientS) UpdateIngredient(ctx context.Context, ingredientID string, name *string, nameI18n *string, groupID *string, measurement *string, pictureUrl *string, brandID *string, colorCode *string, pricePerUnit *string) (*model.IngredientResponse, error) {
+	q, txCtx, tx, ownsTx, err := i.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	id, err := uuid.Parse(ingredientID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid ingredient ID: %w", err)
 	}
 
-	existing, err := i.repo.Tenant(ctx).GetIngredientByID(ctx, id)
+	existing, err := q.GetIngredientByID(txCtx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get ingredient: %w", err)
 	}
@@ -654,7 +823,7 @@ func (i *IngredientS) UpdateIngredient(ctx context.Context, ingredientID string,
 		finalColorCode = colorCode
 	}
 
-	ingredient, err := i.repo.Tenant(ctx).UpdateIngredient(ctx, pg.UpdateIngredientParams{
+	ingredient, err := q.UpdateIngredient(txCtx, pg.UpdateIngredientParams{
 		ID:          id,
 		Name:        finalName,
 		NameI18n:    finalNameI18n,
@@ -675,14 +844,25 @@ func (i *IngredientS) UpdateIngredient(ctx context.Context, ingredientID string,
 			}
 		}
 
-		priceUpdated, err := i.repo.Tenant(ctx).UpdateIngredientPriceAndQuantity(ctx, pg.UpdateIngredientPriceAndQuantityParams{
+		priceUpdated, err := q.UpdateIngredientPriceAndQuantity(txCtx, pg.UpdateIngredientPriceAndQuantityParams{
 			ID:           id,
 			PricePerUnit: price,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to update ingredient price/quantity: %w", err)
 		}
+		if ownsTx {
+			if err := tx.Commit(ctx); err != nil {
+				return nil, fmt.Errorf("failed to commit transaction: %w", err)
+			}
+		}
 		return mapIngredientToResponse(priceUpdated), nil
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return mapIngredientToResponse(ingredient), nil
@@ -690,13 +870,27 @@ func (i *IngredientS) UpdateIngredient(ctx context.Context, ingredientID string,
 
 // DeleteIngredient soft deletes an ingredient
 func (i *IngredientS) DeleteIngredient(ctx context.Context, ingredientID string) error {
+	q, txCtx, tx, ownsTx, err := i.getTenantMutationQueries(ctx)
+	if err != nil {
+		return err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	id, err := uuid.Parse(ingredientID)
 	if err != nil {
 		return fmt.Errorf("invalid ingredient ID: %w", err)
 	}
 
-	if err := i.repo.Tenant(ctx).DeleteIngredient(ctx, id); err != nil {
+	if err := q.DeleteIngredient(txCtx, id); err != nil {
 		return fmt.Errorf("failed to delete ingredient: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return nil
@@ -704,13 +898,27 @@ func (i *IngredientS) DeleteIngredient(ctx context.Context, ingredientID string)
 
 // RestoreIngredient restores a deleted ingredient
 func (i *IngredientS) RestoreIngredient(ctx context.Context, ingredientID string) error {
+	q, txCtx, tx, ownsTx, err := i.getTenantMutationQueries(ctx)
+	if err != nil {
+		return err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	id, err := uuid.Parse(ingredientID)
 	if err != nil {
 		return fmt.Errorf("invalid ingredient ID: %w", err)
 	}
 
-	if err := i.repo.Tenant(ctx).RestoreIngredient(ctx, id); err != nil {
+	if err := q.RestoreIngredient(txCtx, id); err != nil {
 		return fmt.Errorf("failed to restore ingredient: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return nil
@@ -720,6 +928,14 @@ func (i *IngredientS) RestoreIngredient(ctx context.Context, ingredientID string
 
 // CreateIngredientStock creates a new ingredient stock entry
 func (i *IngredientS) CreateIngredientStock(ctx context.Context, ingredientID string, quantity string, branchID *string, storageID *string) (*model.IngredientStockResponse, error) {
+	q, txCtx, tx, ownsTx, err := i.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	if ingredientID == "" {
 		return nil, fmt.Errorf("ingredient_id is required")
 	}
@@ -755,7 +971,7 @@ func (i *IngredientS) CreateIngredientStock(ctx context.Context, ingredientID st
 		storageUUID = pgtype.UUID{Bytes: sID, Valid: true}
 	}
 
-	stock, err := i.repo.Tenant(ctx).CreateIngredientStock(ctx, pg.CreateIngredientStockParams{
+	stock, err := q.CreateIngredientStock(txCtx, pg.CreateIngredientStockParams{
 		ID:           uuid.New(),
 		IngredientID: ingID,
 		Quantity:     quantityNum,
@@ -764,6 +980,12 @@ func (i *IngredientS) CreateIngredientStock(ctx context.Context, ingredientID st
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create ingredient stock: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return toIngredientStockResponse(stock), nil
@@ -776,7 +998,12 @@ func (i *IngredientS) GetIngredientStockByID(ctx context.Context, stockID string
 		return nil, fmt.Errorf("invalid stock ID: %w", err)
 	}
 
-	stock, err := i.repo.Tenant(ctx).GetIngredientStockByID(ctx, id)
+	var stock pg.IngredientStock
+	err = withTenantRead(ctx, i.repo, func(tenantCtx context.Context, q *pg.Queries) error {
+		var err error
+		stock, err = q.GetIngredientStockByID(tenantCtx, id)
+		return err
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get ingredient stock: %w", err)
 	}
@@ -796,9 +1023,14 @@ func (i *IngredientS) GetStockByIngredientAndBranch(ctx context.Context, ingredi
 		return nil, fmt.Errorf("invalid branch ID: %w", err)
 	}
 
-	stock, err := i.repo.Tenant(ctx).GetStockByIngredientAndBranch(ctx, pg.GetStockByIngredientAndBranchParams{
-		IngredientID: ingID,
-		BranchID:     pgtype.UUID{Bytes: bID, Valid: true},
+	var stock pg.IngredientStock
+	err = withTenantRead(ctx, i.repo, func(tenantCtx context.Context, q *pg.Queries) error {
+		var err error
+		stock, err = q.GetStockByIngredientAndBranch(tenantCtx, pg.GetStockByIngredientAndBranchParams{
+			IngredientID: ingID,
+			BranchID:     pgtype.UUID{Bytes: bID, Valid: true},
+		})
+		return err
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get ingredient stock: %w", err)
@@ -809,53 +1041,58 @@ func (i *IngredientS) GetStockByIngredientAndBranch(ctx context.Context, ingredi
 
 // GetAllIngredientStock retrieves all ingredient stock entries
 func (i *IngredientS) GetAllIngredientStock(ctx context.Context, filter model.IngredientStockFilter, limit, offset int32) ([]model.IngredientStockResponse, int64, error) {
-	q := i.repo.Tenant(ctx)
+	var total int64
+	var stocks []pg.IngredientStock
 
-	params := pg.GetIngredientStockFilteredParams{
-		Limit:  limit,
-		Offset: offset,
-	}
-	countParams := pg.CountIngredientStockFilteredParams{}
-
-	if filter.IngredientID != nil {
-		if id, err := uuid.Parse(*filter.IngredientID); err == nil {
-			params.IngredientID = id
-			countParams.IngredientID = id
+	err := withTenantRead(ctx, i.repo, func(tenantCtx context.Context, q *pg.Queries) error {
+		params := pg.GetIngredientStockFilteredParams{
+			Limit:  limit,
+			Offset: offset,
 		}
-	}
-	if filter.IngredientName != nil {
-		params.IngredientName = *filter.IngredientName
-		countParams.IngredientName = *filter.IngredientName
-	}
-	if filter.Search != nil {
-		params.Search = *filter.Search
-		countParams.Search = *filter.Search
-	}
-	if filter.StorageID != nil {
-		if id, err := uuid.Parse(*filter.StorageID); err == nil {
-			params.StorageID = id
-			countParams.StorageID = id
+		countParams := pg.CountIngredientStockFilteredParams{}
+
+		if filter.IngredientID != nil {
+			if id, err := uuid.Parse(*filter.IngredientID); err == nil {
+				params.IngredientID = id
+				countParams.IngredientID = id
+			}
 		}
-	}
-	if filter.Measurement != nil {
-		params.Measurement = *filter.Measurement
-		countParams.Measurement = *filter.Measurement
-	}
-	if filter.SortBy != nil {
-		params.SortBy = *filter.SortBy
-	}
-	if filter.SortOrder != nil {
-		params.SortOrder = *filter.SortOrder
-	}
+		if filter.IngredientName != nil {
+			params.IngredientName = *filter.IngredientName
+			countParams.IngredientName = *filter.IngredientName
+		}
+		if filter.Search != nil {
+			params.Search = *filter.Search
+			countParams.Search = *filter.Search
+		}
+		if filter.StorageID != nil {
+			if id, err := uuid.Parse(*filter.StorageID); err == nil {
+				params.StorageID = id
+				countParams.StorageID = id
+			}
+		}
+		if filter.Measurement != nil {
+			params.Measurement = *filter.Measurement
+			countParams.Measurement = *filter.Measurement
+		}
+		if filter.SortBy != nil {
+			params.SortBy = *filter.SortBy
+		}
+		if filter.SortOrder != nil {
+			params.SortOrder = *filter.SortOrder
+		}
 
-	total, err := q.CountIngredientStockFiltered(ctx, countParams)
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to count ingredient stock: %w", err)
-	}
+		var err error
+		total, err = q.CountIngredientStockFiltered(tenantCtx, countParams)
+		if err != nil {
+			return fmt.Errorf("failed to count ingredient stock: %w", err)
+		}
 
-	stocks, err := q.GetIngredientStockFiltered(ctx, params)
+		stocks, err = q.GetIngredientStockFiltered(tenantCtx, params)
+		return err
+	})
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to get ingredient stock: %w", err)
+		return nil, 0, err
 	}
 
 	var responses []model.IngredientStockResponse
@@ -873,18 +1110,25 @@ func (i *IngredientS) GetStockByBranchID(ctx context.Context, branchID string, l
 		return nil, 0, fmt.Errorf("invalid branch ID: %w", err)
 	}
 
-	total, err := i.repo.Tenant(ctx).CountIngredientStockByBranchID(ctx, pgtype.UUID{Bytes: bID, Valid: true})
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to count stock by branch: %w", err)
-	}
+	var total int64
+	var stocks []pg.IngredientStock
 
-	stocks, err := i.repo.Tenant(ctx).GetStockByBranchID(ctx, pg.GetStockByBranchIDParams{
-		BranchID: pgtype.UUID{Bytes: bID, Valid: true},
-		Limit:    limit,
-		Offset:   offset,
+	err = withTenantRead(ctx, i.repo, func(tenantCtx context.Context, q *pg.Queries) error {
+		var err error
+		total, err = q.CountIngredientStockByBranchID(tenantCtx, pgtype.UUID{Bytes: bID, Valid: true})
+		if err != nil {
+			return fmt.Errorf("failed to count stock by branch: %w", err)
+		}
+
+		stocks, err = q.GetStockByBranchID(tenantCtx, pg.GetStockByBranchIDParams{
+			BranchID: pgtype.UUID{Bytes: bID, Valid: true},
+			Limit:    limit,
+			Offset:   offset,
+		})
+		return err
 	})
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to get stock by branch: %w", err)
+		return nil, 0, err
 	}
 
 	var responses []model.IngredientStockResponse
@@ -902,18 +1146,25 @@ func (i *IngredientS) GetStockByIngredientID(ctx context.Context, ingredientID s
 		return nil, 0, fmt.Errorf("invalid ingredient ID: %w", err)
 	}
 
-	total, err := i.repo.Tenant(ctx).CountIngredientStockByIngredientID(ctx, ingID)
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to count stock by ingredient: %w", err)
-	}
+	var total int64
+	var stocks []pg.IngredientStock
 
-	stocks, err := i.repo.Tenant(ctx).GetStockByIngredientID(ctx, pg.GetStockByIngredientIDParams{
-		IngredientID: ingID,
-		Limit:        limit,
-		Offset:       offset,
+	err = withTenantRead(ctx, i.repo, func(tenantCtx context.Context, q *pg.Queries) error {
+		var err error
+		total, err = q.CountIngredientStockByIngredientID(tenantCtx, ingID)
+		if err != nil {
+			return fmt.Errorf("failed to count stock by ingredient: %w", err)
+		}
+
+		stocks, err = q.GetStockByIngredientID(tenantCtx, pg.GetStockByIngredientIDParams{
+			IngredientID: ingID,
+			Limit:        limit,
+			Offset:       offset,
+		})
+		return err
 	})
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to get stock by ingredient: %w", err)
+		return nil, 0, err
 	}
 
 	var responses []model.IngredientStockResponse
@@ -926,6 +1177,14 @@ func (i *IngredientS) GetStockByIngredientID(ctx context.Context, ingredientID s
 
 // UpdateIngredientStock updates ingredient stock quantity
 func (i *IngredientS) UpdateIngredientStock(ctx context.Context, stockID string, quantity string) (*model.IngredientStockResponse, error) {
+	q, txCtx, tx, ownsTx, err := i.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	id, err := uuid.Parse(stockID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid stock ID: %w", err)
@@ -936,13 +1195,13 @@ func (i *IngredientS) UpdateIngredientStock(ctx context.Context, stockID string,
 		return nil, fmt.Errorf("invalid quantity: %w", err)
 	}
 
-	locked, err := i.repo.Tenant(ctx).GetIngredientStockByIDForUpdate(ctx, id)
+	locked, err := q.GetIngredientStockByIDForUpdate(txCtx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to lock ingredient stock: %w", err)
 	}
 	stockBefore := locked.Quantity
 
-	ing, err := i.repo.Tenant(ctx).GetIngredientByID(ctx, locked.IngredientID)
+	ing, err := q.GetIngredientByID(txCtx, locked.IngredientID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get ingredient: %w", err)
 	}
@@ -951,7 +1210,7 @@ func (i *IngredientS) UpdateIngredientStock(ctx context.Context, stockID string,
 		_ = price.Scan("0")
 	}
 
-	stock, err := i.repo.Tenant(ctx).UpdateIngredientStock(ctx, pg.UpdateIngredientStockParams{
+	stock, err := q.UpdateIngredientStock(txCtx, pg.UpdateIngredientStockParams{
 		ID:       id,
 		Quantity: quantityNum,
 	})
@@ -982,7 +1241,7 @@ func (i *IngredientS) UpdateIngredientStock(ctx context.Context, stockID string,
 	}
 
 	eventType := "manual_adjustment"
-	if err := i.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+	if err := q.InsertIngredientStockMovement(txCtx, pg.InsertIngredientStockMovementParams{
 		ID:           uuid.New(),
 		StorageID:    uuid.UUID(locked.StorageID.Bytes),
 		IngredientID: locked.IngredientID,
@@ -998,11 +1257,25 @@ func (i *IngredientS) UpdateIngredientStock(ctx context.Context, stockID string,
 		return nil, fmt.Errorf("failed to insert stock movement: %w", err)
 	}
 
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return toIngredientStockResponse(stock), nil
 }
 
 // AddToIngredientStock increases ingredient stock quantity
 func (i *IngredientS) AddToIngredientStock(ctx context.Context, stockID string, quantity string) (*model.IngredientStockResponse, error) {
+	q, txCtx, tx, ownsTx, err := i.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	id, err := uuid.Parse(stockID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid stock ID: %w", err)
@@ -1013,13 +1286,13 @@ func (i *IngredientS) AddToIngredientStock(ctx context.Context, stockID string, 
 		return nil, fmt.Errorf("invalid quantity: %w", err)
 	}
 
-	locked, err := i.repo.Tenant(ctx).GetIngredientStockByIDForUpdate(ctx, id)
+	locked, err := q.GetIngredientStockByIDForUpdate(txCtx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to lock ingredient stock: %w", err)
 	}
 	stockBefore := locked.Quantity
 
-	ing, err := i.repo.Tenant(ctx).GetIngredientByID(ctx, locked.IngredientID)
+	ing, err := q.GetIngredientByID(txCtx, locked.IngredientID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get ingredient: %w", err)
 	}
@@ -1028,7 +1301,7 @@ func (i *IngredientS) AddToIngredientStock(ctx context.Context, stockID string, 
 		_ = price.Scan("0")
 	}
 
-	stock, err := i.repo.Tenant(ctx).AddToIngredientStock(ctx, pg.AddToIngredientStockParams{
+	stock, err := q.AddToIngredientStock(txCtx, pg.AddToIngredientStockParams{
 		ID:       id,
 		Quantity: quantityNum,
 	})
@@ -1039,7 +1312,7 @@ func (i *IngredientS) AddToIngredientStock(ctx context.Context, stockID string, 
 	zero := pgtype.Numeric{}
 	_ = zero.Scan("0")
 	eventType := "manual_in"
-	if err := i.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+	if err := q.InsertIngredientStockMovement(txCtx, pg.InsertIngredientStockMovementParams{
 		ID:           uuid.New(),
 		StorageID:    uuid.UUID(locked.StorageID.Bytes),
 		IngredientID: locked.IngredientID,
@@ -1055,11 +1328,25 @@ func (i *IngredientS) AddToIngredientStock(ctx context.Context, stockID string, 
 		return nil, fmt.Errorf("failed to insert stock movement: %w", err)
 	}
 
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return toIngredientStockResponse(stock), nil
 }
 
 // RemoveFromIngredientStock decreases ingredient stock quantity
 func (i *IngredientS) RemoveFromIngredientStock(ctx context.Context, stockID string, quantity string) (*model.IngredientStockResponse, error) {
+	q, txCtx, tx, ownsTx, err := i.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	id, err := uuid.Parse(stockID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid stock ID: %w", err)
@@ -1070,13 +1357,13 @@ func (i *IngredientS) RemoveFromIngredientStock(ctx context.Context, stockID str
 		return nil, fmt.Errorf("invalid quantity: %w", err)
 	}
 
-	locked, err := i.repo.Tenant(ctx).GetIngredientStockByIDForUpdate(ctx, id)
+	locked, err := q.GetIngredientStockByIDForUpdate(txCtx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to lock ingredient stock: %w", err)
 	}
 	stockBefore := locked.Quantity
 
-	ing, err := i.repo.Tenant(ctx).GetIngredientByID(ctx, locked.IngredientID)
+	ing, err := q.GetIngredientByID(txCtx, locked.IngredientID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get ingredient: %w", err)
 	}
@@ -1085,7 +1372,7 @@ func (i *IngredientS) RemoveFromIngredientStock(ctx context.Context, stockID str
 		_ = price.Scan("0")
 	}
 
-	stock, err := i.repo.Tenant(ctx).RemoveFromIngredientStock(ctx, pg.RemoveFromIngredientStockParams{
+	stock, err := q.RemoveFromIngredientStock(txCtx, pg.RemoveFromIngredientStockParams{
 		ID:       id,
 		Quantity: quantityNum,
 	})
@@ -1096,7 +1383,7 @@ func (i *IngredientS) RemoveFromIngredientStock(ctx context.Context, stockID str
 	zero := pgtype.Numeric{}
 	_ = zero.Scan("0")
 	eventType := "manual_out"
-	if err := i.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+	if err := q.InsertIngredientStockMovement(txCtx, pg.InsertIngredientStockMovementParams{
 		ID:           uuid.New(),
 		StorageID:    uuid.UUID(locked.StorageID.Bytes),
 		IngredientID: locked.IngredientID,
@@ -1112,18 +1399,38 @@ func (i *IngredientS) RemoveFromIngredientStock(ctx context.Context, stockID str
 		return nil, fmt.Errorf("failed to insert stock movement: %w", err)
 	}
 
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return toIngredientStockResponse(stock), nil
 }
 
 // DeleteIngredientStock soft deletes ingredient stock
 func (i *IngredientS) DeleteIngredientStock(ctx context.Context, stockID string) error {
+	q, txCtx, tx, ownsTx, err := i.getTenantMutationQueries(ctx)
+	if err != nil {
+		return err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	id, err := uuid.Parse(stockID)
 	if err != nil {
 		return fmt.Errorf("invalid stock ID: %w", err)
 	}
 
-	if err := i.repo.Tenant(ctx).DeleteIngredientStock(ctx, id); err != nil {
+	if err := q.DeleteIngredientStock(txCtx, id); err != nil {
 		return fmt.Errorf("failed to delete ingredient stock: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return nil
@@ -1131,13 +1438,27 @@ func (i *IngredientS) DeleteIngredientStock(ctx context.Context, stockID string)
 
 // RestoreIngredientStock restores deleted ingredient stock
 func (i *IngredientS) RestoreIngredientStock(ctx context.Context, stockID string) error {
+	q, txCtx, tx, ownsTx, err := i.getTenantMutationQueries(ctx)
+	if err != nil {
+		return err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	id, err := uuid.Parse(stockID)
 	if err != nil {
 		return fmt.Errorf("invalid stock ID: %w", err)
 	}
 
-	if err := i.repo.Tenant(ctx).RestoreIngredientStock(ctx, id); err != nil {
+	if err := q.RestoreIngredientStock(txCtx, id); err != nil {
 		return fmt.Errorf("failed to restore ingredient stock: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return nil
@@ -1205,9 +1526,14 @@ func (i *IngredientS) GetIngredientGroupByIDWithLang(ctx context.Context, groupI
 		return nil, fmt.Errorf("invalid group ID: %w", err)
 	}
 
-	group, err := i.repo.Tenant(ctx).GetIngredientGroupByIDWithLanguage(ctx, pg.GetIngredientGroupByIDWithLanguageParams{
-		ID:      id,
-		Column2: lang,
+	var group pg.IngredientGroup
+	err = withTenantRead(ctx, i.repo, func(tenantCtx context.Context, q *pg.Queries) error {
+		var err error
+		group, err = q.GetIngredientGroupByIDWithLanguage(tenantCtx, pg.GetIngredientGroupByIDWithLanguageParams{
+			ID:      id,
+			Column2: lang,
+		})
+		return err
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get ingredient group: %w", err)
@@ -1218,18 +1544,25 @@ func (i *IngredientS) GetIngredientGroupByIDWithLang(ctx context.Context, groupI
 
 // GetAllIngredientGroupsWithLang retrieves all ingredient groups with language support
 func (i *IngredientS) GetAllIngredientGroupsWithLang(ctx context.Context, lang string, limit, offset int32) ([]model.IngredientGroupResponse, int64, error) {
-	total, err := i.repo.Tenant(ctx).CountIngredientGroups(ctx)
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to count ingredient groups: %w", err)
-	}
+	var total int64
+	var groups []pg.IngredientGroup
 
-	groups, err := i.repo.Tenant(ctx).GetAllIngredientGroupsWithLanguage(ctx, pg.GetAllIngredientGroupsWithLanguageParams{
-		Column1: lang,
-		Limit:   limit,
-		Offset:  offset,
+	err := withTenantRead(ctx, i.repo, func(tenantCtx context.Context, q *pg.Queries) error {
+		var err error
+		total, err = q.CountIngredientGroups(tenantCtx)
+		if err != nil {
+			return fmt.Errorf("failed to count ingredient groups: %w", err)
+		}
+
+		groups, err = q.GetAllIngredientGroupsWithLanguage(tenantCtx, pg.GetAllIngredientGroupsWithLanguageParams{
+			Column1: lang,
+			Limit:   limit,
+			Offset:  offset,
+		})
+		return err
 	})
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to get ingredient groups: %w", err)
+		return nil, 0, err
 	}
 
 	var responses []model.IngredientGroupResponse
@@ -1246,9 +1579,14 @@ func (i *IngredientS) GetIngredientByIDWithLang(ctx context.Context, ingredientI
 		return nil, fmt.Errorf("invalid ingredient ID: %w", err)
 	}
 
-	ingredient, err := i.repo.Tenant(ctx).GetIngredientByIDWithLanguage(ctx, pg.GetIngredientByIDWithLanguageParams{
-		ID:      id,
-		Column2: lang,
+	var ingredient pg.Ingredient
+	err = withTenantRead(ctx, i.repo, func(tenantCtx context.Context, q *pg.Queries) error {
+		var err error
+		ingredient, err = q.GetIngredientByIDWithLanguage(tenantCtx, pg.GetIngredientByIDWithLanguageParams{
+			ID:      id,
+			Column2: lang,
+		})
+		return err
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get ingredient: %w", err)
@@ -1259,18 +1597,25 @@ func (i *IngredientS) GetIngredientByIDWithLang(ctx context.Context, ingredientI
 
 // GetAllIngredientsWithLang retrieves all ingredients with language support
 func (i *IngredientS) GetAllIngredientsWithLang(ctx context.Context, lang string, limit, offset int32) ([]model.IngredientResponse, int64, error) {
-	total, err := i.repo.Tenant(ctx).CountIngredients(ctx)
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to count ingredients: %w", err)
-	}
+	var total int64
+	var ingredients []pg.Ingredient
 
-	ingredients, err := i.repo.Tenant(ctx).GetAllIngredientsWithLanguage(ctx, pg.GetAllIngredientsWithLanguageParams{
-		Column1: lang,
-		Limit:   limit,
-		Offset:  offset,
+	err := withTenantRead(ctx, i.repo, func(tenantCtx context.Context, q *pg.Queries) error {
+		var err error
+		total, err = q.CountIngredients(tenantCtx)
+		if err != nil {
+			return fmt.Errorf("failed to count ingredients: %w", err)
+		}
+
+		ingredients, err = q.GetAllIngredientsWithLanguage(tenantCtx, pg.GetAllIngredientsWithLanguageParams{
+			Column1: lang,
+			Limit:   limit,
+			Offset:  offset,
+		})
+		return err
 	})
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to get ingredients: %w", err)
+		return nil, 0, err
 	}
 
 	var responses []model.IngredientResponse

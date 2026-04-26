@@ -3,9 +3,11 @@ package service
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"gitlab.yurtal.tech/company/maryai/back/internal/model"
 	"gitlab.yurtal.tech/company/maryai/back/internal/repository"
@@ -20,8 +22,62 @@ func NewTransactionS(repo *repository.Repository) *TransactionS {
 	return &TransactionS{repo: repo}
 }
 
+func (s *TransactionS) getTenantMutationQueries(ctx context.Context) (*pg.Queries, context.Context, pgx.Tx, bool, error) {
+	if existingTx, ok := repository.TenantTxFromContext(ctx); ok && existingTx != nil {
+		if q, ok := repository.TenantQueriesFromContext(ctx); ok && q != nil {
+			return q, ctx, existingTx, false, nil
+		}
+		q := pg.New(existingTx)
+		txCtx := repository.WithTenantQueries(ctx, q)
+		return q, txCtx, existingTx, false, nil
+	}
+
+	tx, err := s.repo.PgRepo.TenantPool.Begin(ctx)
+	if err != nil {
+		return nil, nil, nil, false, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+
+	brandID, _ := ctx.Value("brand_id").(string)
+	brandID = strings.TrimSpace(brandID)
+	if brandID == "" {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("brand_id is missing in context")
+	}
+
+	schemaName := fmt.Sprintf("tenant_%s", brandID)
+	if _, err := tx.Exec(ctx, fmt.Sprintf(`SET LOCAL search_path TO "%s", public`, schemaName)); err != nil {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("failed to set tenant search_path: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx, "SET LOCAL app.brand_id = $1", brandID); err != nil {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("failed to set app.brand_id: %w", err)
+	}
+
+	if branchID, _ := ctx.Value("branch_id").(string); strings.TrimSpace(branchID) != "" {
+		if _, err := tx.Exec(ctx, "SET LOCAL app.branch_id = $1", strings.TrimSpace(branchID)); err != nil {
+			tx.Rollback(ctx)
+			return nil, nil, nil, false, fmt.Errorf("failed to set app.branch_id: %w", err)
+		}
+	}
+
+	q := pg.New(tx)
+	txCtx := repository.WithTenantQueries(ctx, q)
+
+	return q, txCtx, tx, true, nil
+}
+
 // CreateIncomeExpense creates an income or expense transaction
 func (s *TransactionS) CreateIncomeExpense(ctx context.Context, userID string, req model.CreateIncomeExpenseRequest) (*model.TransactionResponse, error) {
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	cashRegUUID, err := uuid.Parse(req.CashRegisterID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid cash_register_id: %w", err)
@@ -68,18 +124,32 @@ func (s *TransactionS) CreateIncomeExpense(ctx context.Context, userID string, r
 		}
 	}
 
-	tx, err := s.repo.Tenant(ctx).CreateTransaction(ctx, params)
+	createdTx, err := q.CreateTransaction(txCtx, params)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create transaction: %w", err)
 	}
 
-	return toTransactionResponse(tx), nil
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
+	return toTransactionResponse(createdTx), nil
 }
 
 // CreateTransfer creates two transaction records for a transfer:
 //   - transfer_expense in the sender's branch/cash register (money OUT)
 //   - transfer_income in the receiver's branch/cash register (money IN)
 func (s *TransactionS) CreateTransfer(ctx context.Context, userID string, req model.CreateCashTransferRequest) (*model.TransactionResponse, error) {
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	fromCR, err := uuid.Parse(req.FromCashRegisterID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid from_cash_register_id: %w", err)
@@ -151,7 +221,7 @@ func (s *TransactionS) CreateTransfer(ctx context.Context, userID string, req mo
 		UserID:             userPg,
 		BranchID:           fromBranchPg, // sender's branch (null = current branch from middleware)
 	}
-	expenseTx, err := s.repo.Tenant(ctx).CreateTransaction(ctx, expenseParams)
+	expenseTx, err := q.CreateTransaction(txCtx, expenseParams)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create transfer_expense: %w", err)
 	}
@@ -170,8 +240,14 @@ func (s *TransactionS) CreateTransfer(ctx context.Context, userID string, req mo
 		UserID:             userPg,
 		BranchID:           toBranchPg, // receiver's branch (null = current branch from middleware)
 	}
-	if _, err := s.repo.Tenant(ctx).CreateTransaction(ctx, incomeParams); err != nil {
+	if _, err := q.CreateTransaction(txCtx, incomeParams); err != nil {
 		return nil, fmt.Errorf("failed to create transfer_income: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	// Return the expense (sender) side as the primary response
@@ -180,10 +256,19 @@ func (s *TransactionS) CreateTransfer(ctx context.Context, userID string, req mo
 
 // GetTransactionByID retrieves a transaction by ID
 func (s *TransactionS) GetTransactionByID(ctx context.Context, id uuid.UUID) (*model.TransactionResponse, error) {
-	tx, err := s.repo.Tenant(ctx).GetTransactionByID(ctx, id)
+	var tx pg.Transaction
+	err := withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		tx, err = q.GetTransactionByID(ctx, id)
+		if err != nil {
+			return fmt.Errorf("transaction not found: %w", err)
+		}
+		return nil
+	})
 	if err != nil {
-		return nil, fmt.Errorf("transaction not found: %w", err)
+		return nil, err
 	}
+
 	return toTransactionResponse(tx), nil
 }
 
@@ -232,34 +317,43 @@ func (s *TransactionS) GetAllTransactions(ctx context.Context, filter model.Tran
 		dateTo = pgtype.Timestamptz{Time: t, Valid: true}
 	}
 
-	total, err := s.repo.Tenant(ctx).CountTransactions(ctx, pg.CountTransactionsParams{
-		Search:             filter.Search,
-		Type:               filter.Type,
-		PayType:            filter.PayType,
-		CashRegisterID:     cashRegisterUUID,
-		GroupTransactionID: groupTransactionUUID,
-		DateFrom:           dateFrom,
-		DateTo:             dateTo,
-	})
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to count transactions: %w", err)
-	}
+	var total int64
+	var rows []pg.Transaction
+	err := withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		total, err = q.CountTransactions(ctx, pg.CountTransactionsParams{
+			Search:             filter.Search,
+			Type:               filter.Type,
+			PayType:            filter.PayType,
+			CashRegisterID:     cashRegisterUUID,
+			GroupTransactionID: groupTransactionUUID,
+			DateFrom:           dateFrom,
+			DateTo:             dateTo,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to count transactions: %w", err)
+		}
 
-	rows, err := s.repo.Tenant(ctx).GetAllTransactions(ctx, pg.GetAllTransactionsParams{
-		Search:             filter.Search,
-		Type:               filter.Type,
-		PayType:            filter.PayType,
-		CashRegisterID:     cashRegisterUUID,
-		GroupTransactionID: groupTransactionUUID,
-		DateFrom:           dateFrom,
-		DateTo:             dateTo,
-		SortBy:             filter.SortBy,
-		SortOrder:          filter.SortOrder,
-		Limit:              limit,
-		Offset:             offset,
+		rows, err = q.GetAllTransactions(ctx, pg.GetAllTransactionsParams{
+			Search:             filter.Search,
+			Type:               filter.Type,
+			PayType:            filter.PayType,
+			CashRegisterID:     cashRegisterUUID,
+			GroupTransactionID: groupTransactionUUID,
+			DateFrom:           dateFrom,
+			DateTo:             dateTo,
+			SortBy:             filter.SortBy,
+			SortOrder:          filter.SortOrder,
+			Limit:              limit,
+			Offset:             offset,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to get transactions: %w", err)
+		}
+		return nil
 	})
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to get transactions: %w", err)
+		return nil, 0, err
 	}
 
 	resp := make([]*model.TransactionResponse, 0, len(rows))
@@ -272,14 +366,23 @@ func (s *TransactionS) GetAllTransactions(ctx context.Context, filter model.Tran
 
 // GetTransactionsByType returns transactions filtered by type
 func (s *TransactionS) GetTransactionsByType(ctx context.Context, txType string, limit, offset int32) ([]model.TransactionResponse, error) {
-	rows, err := s.repo.Tenant(ctx).GetTransactionsByType(ctx, pg.GetTransactionsByTypeParams{
-		Type:   pg.TransactionType(txType),
-		Limit:  limit,
-		Offset: offset,
+	var rows []pg.Transaction
+	err := withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		rows, err = q.GetTransactionsByType(ctx, pg.GetTransactionsByTypeParams{
+			Type:   pg.TransactionType(txType),
+			Limit:  limit,
+			Offset: offset,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to get transactions: %w", err)
+		}
+		return nil
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get transactions: %w", err)
+		return nil, err
 	}
+
 	return toTransactionResponses(rows), nil
 }
 
@@ -289,28 +392,47 @@ func (s *TransactionS) GetTransactionsByCashRegister(ctx context.Context, cashRe
 	if err != nil {
 		return nil, fmt.Errorf("invalid cash_register_id: %w", err)
 	}
-	rows, err := s.repo.Tenant(ctx).GetTransactionsByCashRegister(ctx, pg.GetTransactionsByCashRegisterParams{
-		CashRegisterID: pgtype.UUID{Bytes: crID, Valid: true},
-		Limit:          limit,
-		Offset:         offset,
+
+	var rows []pg.Transaction
+	err = withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		rows, err = q.GetTransactionsByCashRegister(ctx, pg.GetTransactionsByCashRegisterParams{
+			CashRegisterID: pgtype.UUID{Bytes: crID, Valid: true},
+			Limit:          limit,
+			Offset:         offset,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to get transactions: %w", err)
+		}
+		return nil
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get transactions: %w", err)
+		return nil, err
 	}
+
 	return toTransactionResponses(rows), nil
 }
 
 // GetTransactionsByDateRange returns transactions within a date range
 func (s *TransactionS) GetTransactionsByDateRange(ctx context.Context, from, to time.Time, limit, offset int32) ([]model.TransactionResponse, error) {
-	rows, err := s.repo.Tenant(ctx).GetTransactionsByDateRange(ctx, pg.GetTransactionsByDateRangeParams{
-		Date:   from,
-		Date_2: to,
-		Limit:  limit,
-		Offset: offset,
+	var rows []pg.Transaction
+	err := withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		rows, err = q.GetTransactionsByDateRange(ctx, pg.GetTransactionsByDateRangeParams{
+			Date:   from,
+			Date_2: to,
+			Limit:  limit,
+			Offset: offset,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to get transactions: %w", err)
+		}
+		return nil
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get transactions: %w", err)
+		return nil, err
 	}
+
 	return toTransactionResponses(rows), nil
 }
 
@@ -320,20 +442,38 @@ func (s *TransactionS) GetTransactionsByGroup(ctx context.Context, groupID strin
 	if err != nil {
 		return nil, fmt.Errorf("invalid group_transaction_id: %w", err)
 	}
-	rows, err := s.repo.Tenant(ctx).GetTransactionsByGroup(ctx, pg.GetTransactionsByGroupParams{
-		GroupTransactionID: pgtype.UUID{Bytes: gid, Valid: true},
-		Limit:              limit,
-		Offset:             offset,
+
+	var rows []pg.Transaction
+	err = withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		rows, err = q.GetTransactionsByGroup(ctx, pg.GetTransactionsByGroupParams{
+			GroupTransactionID: pgtype.UUID{Bytes: gid, Valid: true},
+			Limit:              limit,
+			Offset:             offset,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to get transactions: %w", err)
+		}
+		return nil
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get transactions: %w", err)
+		return nil, err
 	}
+
 	return toTransactionResponses(rows), nil
 }
 
 // UpdateTransaction updates amount, description, pay_type, date
 func (s *TransactionS) UpdateTransaction(ctx context.Context, id uuid.UUID, req model.UpdateTransactionRequest) (*model.TransactionResponse, error) {
-	existing, err := s.repo.Tenant(ctx).GetTransactionByID(ctx, id)
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	existing, err := q.GetTransactionByID(txCtx, id)
 	if err != nil {
 		return nil, fmt.Errorf("transaction not found: %w", err)
 	}
@@ -360,7 +500,7 @@ func (s *TransactionS) UpdateTransaction(ctx context.Context, id uuid.UUID, req 
 		finalDate = *req.Date
 	}
 
-	tx, err := s.repo.Tenant(ctx).UpdateTransaction(ctx, pg.UpdateTransactionParams{
+	updatedTx, err := q.UpdateTransaction(txCtx, pg.UpdateTransactionParams{
 		ID:          id,
 		Amount:      finalAmount,
 		Description: finalDesc,
@@ -371,14 +511,35 @@ func (s *TransactionS) UpdateTransaction(ctx context.Context, id uuid.UUID, req 
 		return nil, fmt.Errorf("failed to update transaction: %w", err)
 	}
 
-	return toTransactionResponse(tx), nil
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
+	return toTransactionResponse(updatedTx), nil
 }
 
 // DeleteTransaction soft-deletes a transaction
 func (s *TransactionS) DeleteTransaction(ctx context.Context, id uuid.UUID) error {
-	if err := s.repo.Tenant(ctx).DeleteTransaction(ctx, id); err != nil {
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	if err := q.DeleteTransaction(txCtx, id); err != nil {
 		return fmt.Errorf("failed to delete transaction: %w", err)
 	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return nil
 }
 
@@ -471,35 +632,45 @@ func (s *TransactionS) GetCashReport(ctx context.Context, req model.CashReportRe
 		crPg = pgtype.UUID{Bytes: id, Valid: true}
 	}
 
-	repo := s.repo.Tenant(ctx)
+	var summaryRows []pg.GetTransactionReportSummaryRow
+	var groupRows []pg.GetTransactionGroupReportRow
+	var ob pg.GetTransactionOpeningBalanceRow
 
-	// 1. Summary by type
-	summaryRows, err := repo.GetTransactionReportSummary(ctx, pg.GetTransactionReportSummaryParams{
-		FromDate:       from,
-		ToDate:         to,
-		CashRegisterID: crPg,
+	err = withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		// 1. Summary by type
+		summaryRows, err = q.GetTransactionReportSummary(ctx, pg.GetTransactionReportSummaryParams{
+			FromDate:       from,
+			ToDate:         to,
+			CashRegisterID: crPg,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to get report summary: %w", err)
+		}
+
+		// 2. Group detail (income + expense panels)
+		groupRows, err = q.GetTransactionGroupReport(ctx, pg.GetTransactionGroupReportParams{
+			FromDate:       from,
+			ToDate:         to,
+			CashRegisterID: crPg,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to get group report: %w", err)
+		}
+
+		// 3. Opening balance (all transactions before from date)
+		ob, err = q.GetTransactionOpeningBalance(ctx, pg.GetTransactionOpeningBalanceParams{
+			FromDate:       from,
+			CashRegisterID: crPg,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to get opening balance: %w", err)
+		}
+
+		return nil
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get report summary: %w", err)
-	}
-
-	// 2. Group detail (income + expense panels)
-	groupRows, err := repo.GetTransactionGroupReport(ctx, pg.GetTransactionGroupReportParams{
-		FromDate:       from,
-		ToDate:         to,
-		CashRegisterID: crPg,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to get group report: %w", err)
-	}
-
-	// 3. Opening balance (all transactions before from date)
-	ob, err := repo.GetTransactionOpeningBalance(ctx, pg.GetTransactionOpeningBalanceParams{
-		FromDate:       from,
-		CashRegisterID: crPg,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to get opening balance: %w", err)
+		return nil, err
 	}
 
 	// --- Build response ---

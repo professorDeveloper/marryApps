@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -22,8 +23,62 @@ func NewHallS(repo *repository.Repository) *HallS {
 	return &HallS{repo: repo}
 }
 
+func (h *HallS) getTenantMutationQueries(ctx context.Context) (*pg.Queries, context.Context, pgx.Tx, bool, error) {
+	if existingTx, ok := repository.TenantTxFromContext(ctx); ok && existingTx != nil {
+		if q, ok := repository.TenantQueriesFromContext(ctx); ok && q != nil {
+			return q, ctx, existingTx, false, nil
+		}
+		q := pg.New(existingTx)
+		txCtx := repository.WithTenantQueries(ctx, q)
+		return q, txCtx, existingTx, false, nil
+	}
+
+	tx, err := h.repo.PgRepo.TenantPool.Begin(ctx)
+	if err != nil {
+		return nil, nil, nil, false, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+
+	brandID, _ := ctx.Value("brand_id").(string)
+	brandID = strings.TrimSpace(brandID)
+	if brandID == "" {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("brand_id is missing in context")
+	}
+
+	schemaName := fmt.Sprintf("tenant_%s", brandID)
+	if _, err := tx.Exec(ctx, fmt.Sprintf(`SET LOCAL search_path TO "%s", public`, schemaName)); err != nil {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("failed to set tenant search_path: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx, "SET LOCAL app.brand_id = $1", brandID); err != nil {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("failed to set app.brand_id: %w", err)
+	}
+
+	if branchID, _ := ctx.Value("branch_id").(string); strings.TrimSpace(branchID) != "" {
+		if _, err := tx.Exec(ctx, "SET LOCAL app.branch_id = $1", strings.TrimSpace(branchID)); err != nil {
+			tx.Rollback(ctx)
+			return nil, nil, nil, false, fmt.Errorf("failed to set app.branch_id: %w", err)
+		}
+	}
+
+	q := pg.New(tx)
+	txCtx := repository.WithTenantQueries(ctx, q)
+
+	return q, txCtx, tx, true, nil
+}
+
 // CreateHall creates a new hall
 func (h *HallS) CreateHall(ctx context.Context, name string, branchID string, nameI18n *uuid.UUID, width, height *int32) (*model.HallResponse, error) {
+	q, txCtx, tx, ownsTx, err := h.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	if name == "" {
 		return nil, fmt.Errorf("hall name is required")
 	}
@@ -46,7 +101,7 @@ func (h *HallS) CreateHall(ctx context.Context, name string, branchID string, na
 		finalHeight = *height
 	}
 
-	hall, err := h.repo.Tenant(ctx).CreateHall(ctx, pg.CreateHallParams{
+	hall, err := q.CreateHall(txCtx, pg.CreateHallParams{
 		ID:       uuid.New(),
 		BranchID: bID,
 		Name:     name,
@@ -57,6 +112,12 @@ func (h *HallS) CreateHall(ctx context.Context, name string, branchID string, na
 	if err != nil {
 		log.Printf("CreateHall failed: %v", err)
 		return nil, fmt.Errorf("failed to create hall: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return toHallResponse(hall), nil
@@ -255,13 +316,21 @@ func (h *HallS) GetHallsByBranchIDWithLang(ctx context.Context, branchID string,
 
 // UpdateHall updates a hall
 func (h *HallS) UpdateHall(ctx context.Context, hallID string, name *string, branchID *string, nameI18n *string, width, height *int32) (*model.HallResponse, error) {
+	q, txCtx, tx, ownsTx, err := h.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	id, err := uuid.Parse(hallID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid hall ID: %w", err)
 	}
 
 	// Get existing hall
-	existing, err := h.repo.Tenant(ctx).GetHallByID(ctx, id)
+	existing, err := q.GetHallByID(txCtx, id)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, fmt.Errorf("hall not found")
@@ -304,7 +373,7 @@ func (h *HallS) UpdateHall(ctx context.Context, hallID string, name *string, bra
 		finalHeight = *height
 	}
 
-	hall, err := h.repo.Tenant(ctx).UpdateHall(ctx, pg.UpdateHallParams{
+	hall, err := q.UpdateHall(txCtx, pg.UpdateHallParams{
 		ID:       id,
 		BranchID: finalBranchID,
 		Name:     finalName,
@@ -317,34 +386,70 @@ func (h *HallS) UpdateHall(ctx context.Context, hallID string, name *string, bra
 		return nil, fmt.Errorf("failed to update hall: %w", err)
 	}
 
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return toHallResponse(hall), nil
 }
 
 // DeleteHall soft deletes a hall
 func (h *HallS) DeleteHall(ctx context.Context, hallID string) error {
+	q, txCtx, tx, ownsTx, err := h.getTenantMutationQueries(ctx)
+	if err != nil {
+		return err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	id, err := uuid.Parse(hallID)
 	if err != nil {
 		return fmt.Errorf("invalid hall ID: %w", err)
 	}
 
-	if err := h.repo.Tenant(ctx).DeleteHall(ctx, id); err != nil {
+	if err := q.DeleteHall(txCtx, id); err != nil {
 		log.Printf("DeleteHall failed: %v", err)
 		return fmt.Errorf("failed to delete hall: %w", err)
 	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return nil
 }
 
 // RestoreHall restores a soft-deleted hall
 func (h *HallS) RestoreHall(ctx context.Context, hallID string) (*model.HallResponse, error) {
+	q, txCtx, tx, ownsTx, err := h.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	id, err := uuid.Parse(hallID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid hall ID: %w", err)
 	}
 
-	if err := h.repo.Tenant(ctx).RestoreHall(ctx, id); err != nil {
+	if err := q.RestoreHall(txCtx, id); err != nil {
 		log.Printf("RestoreHall failed: %v", err)
 		return nil, fmt.Errorf("failed to restore hall: %w", err)
 	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return toHallResponse(pg.Hall{ID: id}), nil
 }
 

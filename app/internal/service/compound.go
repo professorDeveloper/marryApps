@@ -146,44 +146,8 @@ func toMeasurementString(measurement pg.NullMeasurementType) *string {
 
 func toPriceString(price pgtype.Numeric) *string {
 	if price.Valid {
-		// Convert to Decimal string representation
-		if price.NaN {
-			str := "NaN"
-			return &str
-		}
-		if price.InfinityModifier > 0 {
-			str := "Infinity"
-			return &str
-		}
-		if price.InfinityModifier < 0 {
-			str := "-Infinity"
-			return &str
-		}
-
-		// If Int is nil, return 0
-		if price.Int == nil {
-			str := "0"
-			return &str
-		}
-
-		// Apply exponent to format the number
-		str := price.Int.String()
-		if price.Exp < 0 {
-			// Need to add decimal point
-			exp := -int(price.Exp)
-			if exp >= len(str) {
-				// Add leading zeros and decimal
-				str = "0." + strings.Repeat("0", exp-len(str)) + str
-			} else {
-				// Insert decimal point
-				str = str[:len(str)-exp] + "." + str[len(str)-exp:]
-			}
-		} else if price.Exp > 0 {
-			// Add trailing zeros
-			str = str + strings.Repeat("0", int(price.Exp))
-		}
-
-		return &str
+		s := numericToStr(price)
+		return &s
 	}
 	return nil
 }
@@ -196,7 +160,61 @@ func NewCompoundS(repo *repository.Repository) *CompoundS {
 	return &CompoundS{repo: repo}
 }
 
+func (c *CompoundS) getTenantMutationQueries(ctx context.Context) (*pg.Queries, context.Context, pgx.Tx, bool, error) {
+	if existingTx, ok := repository.TenantTxFromContext(ctx); ok && existingTx != nil {
+		if q, ok := repository.TenantQueriesFromContext(ctx); ok && q != nil {
+			return q, ctx, existingTx, false, nil
+		}
+		q := pg.New(existingTx)
+		txCtx := repository.WithTenantQueries(ctx, q)
+		return q, txCtx, existingTx, false, nil
+	}
+
+	tx, err := c.repo.PgRepo.TenantPool.Begin(ctx)
+	if err != nil {
+		return nil, nil, nil, false, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+
+	brandID, _ := ctx.Value("brand_id").(string)
+	brandID = strings.TrimSpace(brandID)
+	if brandID == "" {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("brand_id is missing in context")
+	}
+
+	schemaName := fmt.Sprintf("tenant_%s", brandID)
+	if _, err := tx.Exec(ctx, fmt.Sprintf(`SET LOCAL search_path TO "%s", public`, schemaName)); err != nil {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("failed to set tenant search_path: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx, "SET LOCAL app.brand_id = $1", brandID); err != nil {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("failed to set app.brand_id: %w", err)
+	}
+
+	if branchID, _ := ctx.Value("branch_id").(string); strings.TrimSpace(branchID) != "" {
+		if _, err := tx.Exec(ctx, "SET LOCAL app.branch_id = $1", strings.TrimSpace(branchID)); err != nil {
+			tx.Rollback(ctx)
+			return nil, nil, nil, false, fmt.Errorf("failed to set app.branch_id: %w", err)
+		}
+	}
+
+	q := pg.New(tx)
+	txCtx := repository.WithTenantQueries(ctx, q)
+
+	return q, txCtx, tx, true, nil
+}
+
 func (c *CompoundS) CreateCompound(ctx context.Context, name string, nameI18n, description, descriptionI18n, measurement *string, quantity float64, price *string, pictureUrl *string, colorCode *string, ingredientGroupID *string) (*model.CompoundResponse, error) {
+	q, txCtx, tx, ownsTx, err := c.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	if name == "" {
 		return nil, fmt.Errorf("compound name is required")
 	}
@@ -222,7 +240,9 @@ func (c *CompoundS) CreateCompound(ctx context.Context, name string, nameI18n, d
 
 	numPrice := pgtype.Numeric{}
 	if price != nil && *price != "" {
-		numPrice.Scan(*price)
+		if err := numPrice.Scan(*price); err != nil {
+			return nil, fmt.Errorf("invalid price format: %w", err)
+		}
 	}
 
 	measurementType := pg.NullMeasurementType{}
@@ -240,7 +260,7 @@ func (c *CompoundS) CreateCompound(ctx context.Context, name string, nameI18n, d
 		ingredientGroupUUID = pgtype.UUID{Bytes: igID, Valid: true}
 	}
 
-	compound, err := c.repo.Tenant(ctx).CreateCompound(ctx, pg.CreateCompoundParams{
+	compound, err := q.CreateCompound(txCtx, pg.CreateCompoundParams{
 		ID:                id,
 		Name:              name,
 		NameI18n:          nameI18nUUID,
@@ -258,6 +278,12 @@ func (c *CompoundS) CreateCompound(ctx context.Context, name string, nameI18n, d
 		return nil, fmt.Errorf("failed to create compound: %w", err)
 	}
 
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return compoundToResponseAny(compound), nil
 }
 
@@ -267,7 +293,12 @@ func (c *CompoundS) GetCompoundByID(ctx context.Context, compoundID string) (*mo
 		return nil, fmt.Errorf("invalid compound ID: %w", err)
 	}
 
-	compound, err := c.repo.Tenant(ctx).GetCompoundByID(ctx, id)
+	var compound any
+	err = withTenantRead(ctx, c.repo, func(tenantCtx context.Context, q *pg.Queries) error {
+		var err error
+		compound, err = q.GetCompoundByID(tenantCtx, id)
+		return err
+	})
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, fmt.Errorf("compound not found")
@@ -287,39 +318,61 @@ func (s *CompoundS) GetAllCompounds(ctx context.Context, filter model.CompoundLi
 		filter.SortOrder = "desc"
 	}
 
-	total, err := s.repo.Tenant(ctx).CountCompounds(ctx, filter.Search)
-	if err != nil {
-		log.Printf("CountCompounds failed: %v", err)
-		return nil, 0, fmt.Errorf("failed to count compounds: %w", err)
-	}
+	var total int64
+	var rows any
 
-	rows, err := s.repo.Tenant(ctx).GetAllCompounds(ctx, pg.GetAllCompoundsParams{
-		Search:    filter.Search,
-		SortBy:    filter.SortBy,
-		SortOrder: filter.SortOrder,
-		Limit:     limit,
-		Offset:    offset,
+	err := withTenantRead(ctx, s.repo, func(tenantCtx context.Context, q *pg.Queries) error {
+		var err error
+		total, err = q.CountCompounds(tenantCtx, filter.Search)
+		if err != nil {
+			log.Printf("CountCompounds failed: %v", err)
+			return fmt.Errorf("failed to count compounds: %w", err)
+		}
+
+		rows, err = q.GetAllCompounds(tenantCtx, pg.GetAllCompoundsParams{
+			Search:    filter.Search,
+			SortBy:    filter.SortBy,
+			SortOrder: filter.SortOrder,
+			Limit:     limit,
+			Offset:    offset,
+		})
+		return err
 	})
 	if err != nil {
 		log.Printf("GetAllCompounds failed: %v", err)
 		return nil, 0, fmt.Errorf("failed to retrieve compounds: %w", err)
 	}
 
-	responses := make([]*model.CompoundResponse, 0, len(rows))
-	for _, row := range rows {
-		responses = append(responses, compoundToResponseAny(row))
+	responses := make([]*model.CompoundResponse, 0)
+	switch v := rows.(type) {
+	case []pg.GetAllCompoundsRow:
+		for _, row := range v {
+			responses = append(responses, compoundToResponseAny(row))
+		}
+	case []pg.Compound:
+		for _, row := range v {
+			responses = append(responses, compoundToResponseAny(row))
+		}
 	}
 
 	return responses, total, nil
 }
 
 func (c *CompoundS) UpdateCompound(ctx context.Context, compoundID string, name, nameI18n, description, descriptionI18n, measurement *string, quantity *float64, price *string, pictureUrl *string, colorCode *string, ingredientGroupID *string) (*model.CompoundResponse, error) {
+	q, txCtx, tx, ownsTx, err := c.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	id, err := uuid.Parse(compoundID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid compound ID: %w", err)
 	}
 
-	existing, err := c.repo.Tenant(ctx).GetCompoundByID(ctx, id)
+	existing, err := q.GetCompoundByID(txCtx, id)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, fmt.Errorf("compound not found")
@@ -370,7 +423,9 @@ func (c *CompoundS) UpdateCompound(ctx context.Context, compoundID string, name,
 
 	finalPrice := existing.Price
 	if price != nil && *price != "" {
-		finalPrice.Scan(*price)
+		if err := finalPrice.Scan(*price); err != nil {
+			return nil, fmt.Errorf("invalid price format: %w", err)
+		}
 	}
 
 	finalPictureUrl := existing.PictureUrl
@@ -392,7 +447,7 @@ func (c *CompoundS) UpdateCompound(ctx context.Context, compoundID string, name,
 		finalIngredientGroupID = pgtype.UUID{Bytes: igID, Valid: true}
 	}
 
-	compound, err := c.repo.Tenant(ctx).UpdateCompound(ctx, pg.UpdateCompoundParams{
+	compound, err := q.UpdateCompound(txCtx, pg.UpdateCompoundParams{
 		ID:                id,
 		Name:              finalName,
 		NameI18n:          finalNameI18n,
@@ -410,39 +465,82 @@ func (c *CompoundS) UpdateCompound(ctx context.Context, compoundID string, name,
 		return nil, fmt.Errorf("failed to update compound: %w", err)
 	}
 
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return compoundToResponseAny(compound), nil
 }
 
 // DeleteCompound soft deletes a compound
 func (c *CompoundS) DeleteCompound(ctx context.Context, compoundID string) error {
+	q, txCtx, tx, ownsTx, err := c.getTenantMutationQueries(ctx)
+	if err != nil {
+		return err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	id, err := uuid.Parse(compoundID)
 	if err != nil {
 		return fmt.Errorf("invalid compound ID: %w", err)
 	}
 
-	if err := c.repo.Tenant(ctx).DeleteCompound(ctx, id); err != nil {
+	if err := q.DeleteCompound(txCtx, id); err != nil {
 		log.Printf("DeleteCompound failed: %v", err)
 		return fmt.Errorf("failed to delete compound: %w", err)
 	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return nil
 }
 
 // RestoreCompound restores a soft-deleted compound
 func (c *CompoundS) RestoreCompound(ctx context.Context, compoundID string) (*model.CompoundResponse, error) {
+	q, txCtx, tx, ownsTx, err := c.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	id, err := uuid.Parse(compoundID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid compound ID: %w", err)
 	}
 
-	if err := c.repo.Tenant(ctx).RestoreCompound(ctx, id); err != nil {
+	if err := q.RestoreCompound(txCtx, id); err != nil {
 		log.Printf("RestoreCompound failed: %v", err)
 		return nil, fmt.Errorf("failed to restore compound: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return c.GetCompoundByID(ctx, compoundID)
 }
 
 func (c *CompoundS) CreateCompoundDetail(ctx context.Context, compoundID, ingredientID string, quantity int64) (*model.CompoundDetailResponse, error) {
+	q, txCtx, tx, ownsTx, err := c.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	id := uuid.New()
 	compID, err := uuid.Parse(compoundID)
 	if err != nil {
@@ -454,7 +552,7 @@ func (c *CompoundS) CreateCompoundDetail(ctx context.Context, compoundID, ingred
 		return nil, fmt.Errorf("invalid ingredient ID: %w", err)
 	}
 
-	detail, err := c.repo.Tenant(ctx).CreateCompoundDetail(ctx, pg.CreateCompoundDetailParams{
+	detail, err := q.CreateCompoundDetail(txCtx, pg.CreateCompoundDetailParams{
 		ID:           id,
 		CompoundID:   compID,
 		IngredientID: ingID,
@@ -463,6 +561,12 @@ func (c *CompoundS) CreateCompoundDetail(ctx context.Context, compoundID, ingred
 	if err != nil {
 		log.Printf("CreateCompoundDetail failed: %v", err)
 		return nil, fmt.Errorf("failed to create compound detail: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return toCompoundDetailResponse(detail), nil
@@ -474,7 +578,12 @@ func (c *CompoundS) GetCompoundDetailByID(ctx context.Context, detailID string) 
 		return nil, fmt.Errorf("invalid detail ID: %w", err)
 	}
 
-	detail, err := c.repo.Tenant(ctx).GetCompoundDetailByID(ctx, id)
+	var detail pg.CompoundsDetail
+	err = withTenantRead(ctx, c.repo, func(tenantCtx context.Context, q *pg.Queries) error {
+		var err error
+		detail, err = q.GetCompoundDetailByID(tenantCtx, id)
+		return err
+	})
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, fmt.Errorf("compound detail not found")
@@ -492,7 +601,12 @@ func (c *CompoundS) GetCompoundDetailsByCompoundID(ctx context.Context, compound
 		return nil, fmt.Errorf("invalid compound ID: %w", err)
 	}
 
-	details, err := c.repo.Tenant(ctx).GetCompoundDetailsByCompoundID(ctx, id)
+	var details []pg.CompoundsDetail
+	err = withTenantRead(ctx, c.repo, func(tenantCtx context.Context, q *pg.Queries) error {
+		var err error
+		details, err = q.GetCompoundDetailsByCompoundID(tenantCtx, id)
+		return err
+	})
 	if err != nil {
 		log.Printf("GetCompoundDetailsByCompoundID failed: %v", err)
 		return nil, fmt.Errorf("failed to retrieve compound details: %w", err)
@@ -511,10 +625,15 @@ func (c *CompoundS) GetCompoundDetailsByIngredientID(ctx context.Context, ingred
 		return nil, fmt.Errorf("invalid ingredient ID: %w", err)
 	}
 
-	details, err := c.repo.Tenant(ctx).GetCompoundDetailsByIngredientID(ctx, pg.GetCompoundDetailsByIngredientIDParams{
-		IngredientID: id,
-		Limit:        limit,
-		Offset:       offset,
+	var details []pg.CompoundsDetail
+	err = withTenantRead(ctx, c.repo, func(tenantCtx context.Context, q *pg.Queries) error {
+		var err error
+		details, err = q.GetCompoundDetailsByIngredientID(tenantCtx, pg.GetCompoundDetailsByIngredientIDParams{
+			IngredientID: id,
+			Limit:        limit,
+			Offset:       offset,
+		})
+		return err
 	})
 	if err != nil {
 		log.Printf("GetCompoundDetailsByIngredientID failed: %v", err)
@@ -529,12 +648,20 @@ func (c *CompoundS) GetCompoundDetailsByIngredientID(ctx context.Context, ingred
 }
 
 func (c *CompoundS) UpdateCompoundDetail(ctx context.Context, detailID string, compoundID, ingredientID *string, quantity *int64) (*model.CompoundDetailResponse, error) {
+	q, txCtx, tx, ownsTx, err := c.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	id, err := uuid.Parse(detailID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid detail ID: %w", err)
 	}
 
-	existing, err := c.repo.Tenant(ctx).GetCompoundDetailByID(ctx, id)
+	existing, err := q.GetCompoundDetailByID(txCtx, id)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, fmt.Errorf("compound detail not found")
@@ -565,7 +692,7 @@ func (c *CompoundS) UpdateCompoundDetail(ctx context.Context, detailID string, c
 		finalQuantity = *quantity
 	}
 
-	detail, err := c.repo.Tenant(ctx).UpdateCompoundDetail(ctx, pg.UpdateCompoundDetailParams{
+	detail, err := q.UpdateCompoundDetail(txCtx, pg.UpdateCompoundDetailParams{
 		ID:           id,
 		CompoundID:   finalCompoundID,
 		IngredientID: finalIngredientID,
@@ -576,33 +703,68 @@ func (c *CompoundS) UpdateCompoundDetail(ctx context.Context, detailID string, c
 		return nil, fmt.Errorf("failed to update compound detail: %w", err)
 	}
 
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return toCompoundDetailResponse(detail), nil
 }
 
 // DeleteCompoundDetail deletes a compound detail
 func (c *CompoundS) DeleteCompoundDetail(ctx context.Context, detailID string) error {
+	q, txCtx, tx, ownsTx, err := c.getTenantMutationQueries(ctx)
+	if err != nil {
+		return err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	id, err := uuid.Parse(detailID)
 	if err != nil {
 		return fmt.Errorf("invalid detail ID: %w", err)
 	}
 
-	if err := c.repo.Tenant(ctx).DeleteCompoundDetail(ctx, id); err != nil {
+	if err := q.DeleteCompoundDetail(txCtx, id); err != nil {
 		log.Printf("DeleteCompoundDetail failed: %v", err)
 		return fmt.Errorf("failed to delete compound detail: %w", err)
 	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return nil
 }
 
 // RestoreCompoundDetail restores a deleted compound detail
 func (c *CompoundS) RestoreCompoundDetail(ctx context.Context, detailID string) (*model.CompoundDetailResponse, error) {
+	q, txCtx, tx, ownsTx, err := c.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	id, err := uuid.Parse(detailID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid detail ID: %w", err)
 	}
 
-	if err := c.repo.Tenant(ctx).RestoreCompoundDetail(ctx, id); err != nil {
+	if err := q.RestoreCompoundDetail(txCtx, id); err != nil {
 		log.Printf("RestoreCompoundDetail failed: %v", err)
 		return nil, fmt.Errorf("failed to restore compound detail: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return c.GetCompoundDetailByID(ctx, detailID)
@@ -612,6 +774,14 @@ func (c *CompoundS) RestoreCompoundDetail(ctx context.Context, detailID string) 
 
 // CreateCompoundStock creates a new compound stock entry
 func (c *CompoundS) CreateCompoundStock(ctx context.Context, compoundID, branchID string, quantity int64) (*model.CompoundStockResponse, error) {
+	q, txCtx, tx, ownsTx, err := c.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	id := uuid.New()
 	compID, err := uuid.Parse(compoundID)
 	if err != nil {
@@ -623,7 +793,7 @@ func (c *CompoundS) CreateCompoundStock(ctx context.Context, compoundID, branchI
 		return nil, fmt.Errorf("invalid branch ID: %w", err)
 	}
 
-	stock, err := c.repo.Tenant(ctx).CreateCompoundStock(ctx, pg.CreateCompoundStockParams{
+	stock, err := q.CreateCompoundStock(txCtx, pg.CreateCompoundStockParams{
 		ID:         id,
 		CompoundID: compID,
 		Quantity:   quantity,
@@ -632,6 +802,12 @@ func (c *CompoundS) CreateCompoundStock(ctx context.Context, compoundID, branchI
 	if err != nil {
 		log.Printf("CreateCompoundStock failed: %v", err)
 		return nil, fmt.Errorf("failed to create compound stock: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return toCompoundStockResponse(stock), nil
@@ -644,7 +820,12 @@ func (c *CompoundS) GetCompoundStockByID(ctx context.Context, stockID string) (*
 		return nil, fmt.Errorf("invalid stock ID: %w", err)
 	}
 
-	stock, err := c.repo.Tenant(ctx).GetCompoundStockByID(ctx, id)
+	var stock pg.CompoundStock
+	err = withTenantRead(ctx, c.repo, func(tenantCtx context.Context, q *pg.Queries) error {
+		var err error
+		stock, err = q.GetCompoundStockByID(tenantCtx, id)
+		return err
+	})
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, fmt.Errorf("compound stock not found")
@@ -668,9 +849,14 @@ func (c *CompoundS) GetStockByCompoundAndBranch(ctx context.Context, compoundID,
 		return nil, fmt.Errorf("invalid branch ID: %w", err)
 	}
 
-	stock, err := c.repo.Tenant(ctx).GetStockByCompoundAndBranch(ctx, pg.GetStockByCompoundAndBranchParams{
-		CompoundID: compID,
-		BranchID:   bID,
+	var stock pg.CompoundStock
+	err = withTenantRead(ctx, c.repo, func(tenantCtx context.Context, q *pg.Queries) error {
+		var err error
+		stock, err = q.GetStockByCompoundAndBranch(tenantCtx, pg.GetStockByCompoundAndBranchParams{
+			CompoundID: compID,
+			BranchID:   bID,
+		})
+		return err
 	})
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -685,9 +871,14 @@ func (c *CompoundS) GetStockByCompoundAndBranch(ctx context.Context, compoundID,
 
 // GetAllCompoundStock retrieves all compound stocks with pagination
 func (c *CompoundS) GetAllCompoundStock(ctx context.Context, limit, offset int32) ([]*model.CompoundStockResponse, error) {
-	stocks, err := c.repo.Tenant(ctx).GetAllCompoundStock(ctx, pg.GetAllCompoundStockParams{
-		Limit:  limit,
-		Offset: offset,
+	var stocks []pg.CompoundStock
+	err := withTenantRead(ctx, c.repo, func(tenantCtx context.Context, q *pg.Queries) error {
+		var err error
+		stocks, err = q.GetAllCompoundStock(tenantCtx, pg.GetAllCompoundStockParams{
+			Limit:  limit,
+			Offset: offset,
+		})
+		return err
 	})
 	if err != nil {
 		log.Printf("GetAllCompoundStock failed: %v", err)
@@ -708,10 +899,15 @@ func (c *CompoundS) GetCompoundStockByBranchID(ctx context.Context, branchID str
 		return nil, fmt.Errorf("invalid branch ID: %w", err)
 	}
 
-	stocks, err := c.repo.Tenant(ctx).GetCompoundStockByBranchID(ctx, pg.GetCompoundStockByBranchIDParams{
-		BranchID: bID,
-		Limit:    limit,
-		Offset:   offset,
+	var stocks []pg.CompoundStock
+	err = withTenantRead(ctx, c.repo, func(tenantCtx context.Context, q *pg.Queries) error {
+		var err error
+		stocks, err = q.GetCompoundStockByBranchID(tenantCtx, pg.GetCompoundStockByBranchIDParams{
+			BranchID: bID,
+			Limit:    limit,
+			Offset:   offset,
+		})
+		return err
 	})
 	if err != nil {
 		log.Printf("GetCompoundStockByBranchID failed: %v", err)
@@ -732,10 +928,15 @@ func (c *CompoundS) GetCompoundStockByCompoundID(ctx context.Context, compoundID
 		return nil, fmt.Errorf("invalid compound ID: %w", err)
 	}
 
-	stocks, err := c.repo.Tenant(ctx).GetCompoundStockByCompoundID(ctx, pg.GetCompoundStockByCompoundIDParams{
-		CompoundID: compID,
-		Limit:      limit,
-		Offset:     offset,
+	var stocks []pg.CompoundStock
+	err = withTenantRead(ctx, c.repo, func(tenantCtx context.Context, q *pg.Queries) error {
+		var err error
+		stocks, err = q.GetCompoundStockByCompoundID(tenantCtx, pg.GetCompoundStockByCompoundIDParams{
+			CompoundID: compID,
+			Limit:      limit,
+			Offset:     offset,
+		})
+		return err
 	})
 	if err != nil {
 		log.Printf("GetCompoundStockByCompoundID failed: %v", err)
@@ -751,12 +952,20 @@ func (c *CompoundS) GetCompoundStockByCompoundID(ctx context.Context, compoundID
 
 // UpdateCompoundStock updates compound stock quantity
 func (c *CompoundS) UpdateCompoundStock(ctx context.Context, stockID string, quantity int64) (*model.CompoundStockResponse, error) {
+	q, txCtx, tx, ownsTx, err := c.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	id, err := uuid.Parse(stockID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid stock ID: %w", err)
 	}
 
-	stock, err := c.repo.Tenant(ctx).UpdateCompoundStock(ctx, pg.UpdateCompoundStockParams{
+	stock, err := q.UpdateCompoundStock(txCtx, pg.UpdateCompoundStockParams{
 		ID:       id,
 		Quantity: quantity,
 	})
@@ -765,17 +974,31 @@ func (c *CompoundS) UpdateCompoundStock(ctx context.Context, stockID string, qua
 		return nil, fmt.Errorf("failed to update compound stock: %w", err)
 	}
 
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return toCompoundStockResponse(stock), nil
 }
 
 // AddToCompoundStock adds quantity to compound stock
 func (c *CompoundS) AddToCompoundStock(ctx context.Context, stockID string, quantity int64) (*model.CompoundStockResponse, error) {
+	q, txCtx, tx, ownsTx, err := c.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	id, err := uuid.Parse(stockID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid stock ID: %w", err)
 	}
 
-	stock, err := c.repo.Tenant(ctx).AddToCompoundStock(ctx, pg.AddToCompoundStockParams{
+	stock, err := q.AddToCompoundStock(txCtx, pg.AddToCompoundStockParams{
 		ID:       id,
 		Quantity: quantity,
 	})
@@ -784,17 +1007,31 @@ func (c *CompoundS) AddToCompoundStock(ctx context.Context, stockID string, quan
 		return nil, fmt.Errorf("failed to add to compound stock: %w", err)
 	}
 
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return toCompoundStockResponse(stock), nil
 }
 
 // RemoveFromCompoundStock removes quantity from compound stock
 func (c *CompoundS) RemoveFromCompoundStock(ctx context.Context, stockID string, quantity int64) (*model.CompoundStockResponse, error) {
+	q, txCtx, tx, ownsTx, err := c.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	id, err := uuid.Parse(stockID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid stock ID: %w", err)
 	}
 
-	stock, err := c.repo.Tenant(ctx).RemoveFromCompoundStock(ctx, pg.RemoveFromCompoundStockParams{
+	stock, err := q.RemoveFromCompoundStock(txCtx, pg.RemoveFromCompoundStockParams{
 		ID:       id,
 		Quantity: quantity,
 	})
@@ -803,33 +1040,68 @@ func (c *CompoundS) RemoveFromCompoundStock(ctx context.Context, stockID string,
 		return nil, fmt.Errorf("failed to remove from compound stock: %w", err)
 	}
 
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return toCompoundStockResponse(stock), nil
 }
 
 // DeleteCompoundStock deletes compound stock
 func (c *CompoundS) DeleteCompoundStock(ctx context.Context, stockID string) error {
+	q, txCtx, tx, ownsTx, err := c.getTenantMutationQueries(ctx)
+	if err != nil {
+		return err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	id, err := uuid.Parse(stockID)
 	if err != nil {
 		return fmt.Errorf("invalid stock ID: %w", err)
 	}
 
-	if err := c.repo.Tenant(ctx).DeleteCompoundStock(ctx, id); err != nil {
+	if err := q.DeleteCompoundStock(txCtx, id); err != nil {
 		log.Printf("DeleteCompoundStock failed: %v", err)
 		return fmt.Errorf("failed to delete compound stock: %w", err)
 	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return nil
 }
 
 // RestoreCompoundStock restores deleted compound stock
 func (c *CompoundS) RestoreCompoundStock(ctx context.Context, stockID string) (*model.CompoundStockResponse, error) {
+	q, txCtx, tx, ownsTx, err := c.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	id, err := uuid.Parse(stockID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid stock ID: %w", err)
 	}
 
-	if err := c.repo.Tenant(ctx).RestoreCompoundStock(ctx, id); err != nil {
+	if err := q.RestoreCompoundStock(txCtx, id); err != nil {
 		log.Printf("RestoreCompoundStock failed: %v", err)
 		return nil, fmt.Errorf("failed to restore compound stock: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return c.GetCompoundStockByID(ctx, stockID)
@@ -881,13 +1153,21 @@ func toCompoundStockResponse(stock pg.CompoundStock) *model.CompoundStockRespons
 
 // RecalculateCompoundPrice manually recalculates the price of a compound based on its ingredient calculations
 func (c *CompoundS) RecalculateCompoundPrice(ctx context.Context, compoundID string) (*model.CompoundResponse, error) {
+	q, txCtx, tx, ownsTx, err := c.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	id, err := uuid.Parse(compoundID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid compound_id: %w", err)
 	}
 
 	// Get all ingredient calculations for this compound (excluding compound-to-compound)
-	calculations, err := c.repo.Tenant(ctx).GetCalculationsByCompoundID(ctx, pgtype.UUID{Bytes: id, Valid: true})
+	calculations, err := q.GetCalculationsByCompoundID(txCtx, pgtype.UUID{Bytes: id, Valid: true})
 	if err != nil && err != pgx.ErrNoRows {
 		log.Printf("RecalculateCompoundPrice: failed to fetch calculations: %v", err)
 		return nil, fmt.Errorf("failed to fetch calculations: %w", err)
@@ -921,10 +1201,16 @@ func (c *CompoundS) RecalculateCompoundPrice(ctx context.Context, compoundID str
 		Price: stringToNumeric(fmt.Sprintf("%.2f", totalPrice)),
 	}
 
-	updated, err := c.repo.Tenant(ctx).UpdateCompound(ctx, updateParams)
+	updated, err := q.UpdateCompound(txCtx, updateParams)
 	if err != nil {
 		log.Printf("RecalculateCompoundPrice: failed to update compound: %v", err)
 		return nil, fmt.Errorf("failed to update compound: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return compoundToResponseAny(updated), nil
@@ -937,9 +1223,14 @@ func (c *CompoundS) GetCompoundByIDWithLang(ctx context.Context, compoundID stri
 		return nil, fmt.Errorf("invalid compound ID: %w", err)
 	}
 
-	compound, err := c.repo.Tenant(ctx).GetCompoundByIDWithLanguage(ctx, pg.GetCompoundByIDWithLanguageParams{
-		ID:      id,
-		Column2: lang,
+	var compound any
+	err = withTenantRead(ctx, c.repo, func(tenantCtx context.Context, q *pg.Queries) error {
+		var err error
+		compound, err = q.GetCompoundByIDWithLanguage(tenantCtx, pg.GetCompoundByIDWithLanguageParams{
+			ID:      id,
+			Column2: lang,
+		})
+		return err
 	})
 	if err != nil {
 		log.Printf("GetCompoundByIDWithLang failed: %v", err)
@@ -958,28 +1249,42 @@ func (c *CompoundS) GetAllCompoundsWithLang(ctx context.Context, lang string, fi
 		filter.SortOrder = "desc"
 	}
 
-	total, err := c.repo.Tenant(ctx).CountCompounds(ctx, filter.Search)
-	if err != nil {
-		log.Printf("CountCompounds (WithLang) failed: %v", err)
-		return nil, 0, fmt.Errorf("failed to count compounds: %w", err)
-	}
+	var total int64
+	var compounds any
 
-	compounds, err := c.repo.Tenant(ctx).GetAllCompoundsWithLanguage(ctx, pg.GetAllCompoundsWithLanguageParams{
-		Lang:      lang,
-		Search:    filter.Search,
-		SortBy:    filter.SortBy,
-		SortOrder: filter.SortOrder,
-		Limit:     limit,
-		Offset:    offset,
+	err := withTenantRead(ctx, c.repo, func(tenantCtx context.Context, q *pg.Queries) error {
+		var err error
+		total, err = q.CountCompounds(tenantCtx, filter.Search)
+		if err != nil {
+			log.Printf("CountCompounds (WithLang) failed: %v", err)
+			return fmt.Errorf("failed to count compounds: %w", err)
+		}
+
+		compounds, err = q.GetAllCompoundsWithLanguage(tenantCtx, pg.GetAllCompoundsWithLanguageParams{
+			Lang:      lang,
+			Search:    filter.Search,
+			SortBy:    filter.SortBy,
+			SortOrder: filter.SortOrder,
+			Limit:     limit,
+			Offset:    offset,
+		})
+		return err
 	})
 	if err != nil {
 		log.Printf("GetAllCompoundsWithLang failed: %v", err)
 		return nil, 0, fmt.Errorf("failed to get compounds: %w", err)
 	}
 
-	responses := make([]*model.CompoundResponse, 0, len(compounds))
-	for _, compound := range compounds {
-		responses = append(responses, compoundToResponseAny(compound))
+	responses := make([]*model.CompoundResponse, 0)
+	switch v := compounds.(type) {
+	case []pg.GetAllCompoundsWithLanguageRow:
+		for _, compound := range v {
+			responses = append(responses, compoundToResponseAny(compound))
+		}
+	case []pg.Compound:
+		for _, compound := range v {
+			responses = append(responses, compoundToResponseAny(compound))
+		}
 	}
 
 	return responses, total, nil

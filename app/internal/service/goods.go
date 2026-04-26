@@ -190,8 +190,62 @@ func NewGoodsS(repo *repository.Repository) *GoodsS {
 	return &GoodsS{repo: repo}
 }
 
+func (g *GoodsS) getTenantMutationQueries(ctx context.Context) (*pg.Queries, context.Context, pgx.Tx, bool, error) {
+	if existingTx, ok := repository.TenantTxFromContext(ctx); ok && existingTx != nil {
+		if q, ok := repository.TenantQueriesFromContext(ctx); ok && q != nil {
+			return q, ctx, existingTx, false, nil
+		}
+		q := pg.New(existingTx)
+		txCtx := repository.WithTenantQueries(ctx, q)
+		return q, txCtx, existingTx, false, nil
+	}
+
+	tx, err := g.repo.PgRepo.TenantPool.Begin(ctx)
+	if err != nil {
+		return nil, nil, nil, false, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+
+	brandID, _ := ctx.Value("brand_id").(string)
+	brandID = strings.TrimSpace(brandID)
+	if brandID == "" {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("brand_id is missing in context")
+	}
+
+	schemaName := fmt.Sprintf("tenant_%s", brandID)
+	if _, err := tx.Exec(ctx, fmt.Sprintf(`SET LOCAL search_path TO "%s", public`, schemaName)); err != nil {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("failed to set tenant search_path: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx, "SET LOCAL app.brand_id = $1", brandID); err != nil {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("failed to set app.brand_id: %w", err)
+	}
+
+	if branchID, _ := ctx.Value("branch_id").(string); strings.TrimSpace(branchID) != "" {
+		if _, err := tx.Exec(ctx, "SET LOCAL app.branch_id = $1", strings.TrimSpace(branchID)); err != nil {
+			tx.Rollback(ctx)
+			return nil, nil, nil, false, fmt.Errorf("failed to set app.branch_id: %w", err)
+		}
+	}
+
+	q := pg.New(tx)
+	txCtx := repository.WithTenantQueries(ctx, q)
+
+	return q, txCtx, tx, true, nil
+}
+
 // CreateGood creates a new good/menu item
 func (g *GoodsS) CreateGood(ctx context.Context, name string, description *string, nameI18n, descriptionI18n, categoryID *string, price string, cookTime *int32, pictureUrl *string, colorCode *string) (*model.GoodResponse, error) {
+	q, txCtx, tx, ownsTx, err := g.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	if name == "" {
 		return nil, fmt.Errorf("good name is required")
 	}
@@ -231,7 +285,7 @@ func (g *GoodsS) CreateGood(ctx context.Context, name string, description *strin
 	numPrice := pgtype.Numeric{}
 	numPrice.Scan(price)
 
-	good, err := g.repo.Tenant(ctx).CreateGood(ctx, pg.CreateGoodParams{
+	good, err := q.CreateGood(txCtx, pg.CreateGoodParams{
 		ID:              id,
 		Name:            name,
 		Description:     description,
@@ -248,6 +302,12 @@ func (g *GoodsS) CreateGood(ctx context.Context, name string, description *strin
 		return nil, fmt.Errorf("failed to create good: %w", err)
 	}
 
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return goodToResponseAny(good), nil
 }
 
@@ -258,13 +318,21 @@ func (g *GoodsS) GetGoodByID(ctx context.Context, goodID string) (*model.GoodRes
 		return nil, fmt.Errorf("invalid good ID: %w", err)
 	}
 
-	good, err := g.repo.Tenant(ctx).GetGoodByID(ctx, id)
-	if err != nil {
-		if err == pgx.ErrNoRows {
-			return nil, fmt.Errorf("good not found")
+	var good pg.GetGoodByIDRow
+	err = withTenantRead(ctx, g.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		good, err = q.GetGoodByID(ctx, id)
+		if err != nil {
+			if err == pgx.ErrNoRows {
+				return fmt.Errorf("good not found")
+			}
+			log.Printf("GetGoodByID failed: %v", err)
+			return fmt.Errorf("failed to retrieve good: %w", err)
 		}
-		log.Printf("GetGoodByID failed: %v", err)
-		return nil, fmt.Errorf("failed to retrieve good: %w", err)
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
 
 	return goodToResponseAny(good), nil
@@ -321,41 +389,44 @@ func (g *GoodsS) GetGoodsList(ctx context.Context, filter model.GoodsListFilter,
 	}
 
 	var total int64
-	countErr := withTenantSavepoint(ctx, "goods_list_count", func() error {
+	var rows []pg.GetGoodsListRow
+	err = withTenantRead(ctx, g.repo, func(ctx context.Context, q *pg.Queries) error {
 		var err error
-		total, err = g.repo.Tenant(ctx).CountGoodsList(ctx, countParams)
-		return err
-	})
-	if countErr != nil {
-		log.Printf("CountGoodsList failed: lang=%q limit=%d offset=%d filter=%+v err=%v", lang, limit, offset, filter, countErr)
-		total = 0
-	}
+		total, err = q.CountGoodsList(ctx, countParams)
+		if err != nil {
+			log.Printf("CountGoodsList failed: lang=%q limit=%d offset=%d filter=%+v err=%v", lang, limit, offset, filter, err)
+			total = 0
+			return nil
+		}
 
-	if countErr == nil {
 		if total == 0 {
-			return []*model.GoodResponse{}, 0, nil
+			return nil
 		}
 		if int64(offset) >= total {
-			return []*model.GoodResponse{}, total, nil
+			return nil
 		}
-	}
 
-	rows, err := g.repo.Tenant(ctx).GetGoodsList(ctx, pg.GetGoodsListParams{
-		Lang:         lang,
-		CategoryID:   categoryUUID,
-		DepartmentID: departmentUUID,
-		StorageID:    storageUUID,
-		Search:       filter.Search,
-		MinPrice:     minPrice,
-		MaxPrice:     maxPrice,
-		SortBy:       filter.SortBy,
-		SortOrder:    filter.SortOrder,
-		Limit:        limit,
-		Offset:       offset,
+		rows, err = q.GetGoodsList(ctx, pg.GetGoodsListParams{
+			Lang:         lang,
+			CategoryID:   categoryUUID,
+			DepartmentID: departmentUUID,
+			StorageID:    storageUUID,
+			Search:       filter.Search,
+			MinPrice:     minPrice,
+			MaxPrice:     maxPrice,
+			SortBy:       filter.SortBy,
+			SortOrder:    filter.SortOrder,
+			Limit:        limit,
+			Offset:       offset,
+		})
+		if err != nil {
+			log.Printf("GetGoodsList failed: lang=%q limit=%d offset=%d filter=%+v err=%v", lang, limit, offset, filter, err)
+			return fmt.Errorf("failed to retrieve goods: %w", err)
+		}
+		return nil
 	})
 	if err != nil {
-		log.Printf("GetGoodsList failed: lang=%q limit=%d offset=%d filter=%+v err=%v", lang, limit, offset, filter, err)
-		return nil, 0, fmt.Errorf("failed to retrieve goods: %w", err)
+		return nil, 0, err
 	}
 
 	responses := make([]*model.GoodResponse, 0, len(rows))
@@ -375,32 +446,35 @@ func (g *GoodsS) GetAllGoods(ctx context.Context, limit, offset int32) ([]*model
 	}
 
 	var total int64
-	countErr := withTenantSavepoint(ctx, "goods_count", func() error {
+	var goods []pg.GetAllGoodsRow
+	err := withTenantRead(ctx, g.repo, func(ctx context.Context, q *pg.Queries) error {
 		var err error
-		total, err = g.repo.Tenant(ctx).CountGoods(ctx)
-		return err
-	})
-	if countErr != nil {
-		log.Printf("CountGoods failed: limit=%d offset=%d err=%v", limit, offset, countErr)
-		total = 0
-	}
+		total, err = q.CountGoods(ctx)
+		if err != nil {
+			log.Printf("CountGoods failed: limit=%d offset=%d err=%v", limit, offset, err)
+			total = 0
+			return nil
+		}
 
-	if countErr == nil {
 		if total == 0 {
-			return []*model.GoodResponse{}, 0, nil
+			return nil
 		}
 		if int64(offset) >= total {
-			return []*model.GoodResponse{}, total, nil
+			return nil
 		}
-	}
 
-	goods, err := g.repo.Tenant(ctx).GetAllGoods(ctx, pg.GetAllGoodsParams{
-		Limit:  limit,
-		Offset: offset,
+		goods, err = q.GetAllGoods(ctx, pg.GetAllGoodsParams{
+			Limit:  limit,
+			Offset: offset,
+		})
+		if err != nil {
+			log.Printf("GetAllGoods failed: limit=%d offset=%d err=%v", limit, offset, err)
+			return fmt.Errorf("failed to retrieve goods: %w", err)
+		}
+		return nil
 	})
 	if err != nil {
-		log.Printf("GetAllGoods failed: limit=%d offset=%d err=%v", limit, offset, err)
-		return nil, 0, fmt.Errorf("failed to retrieve goods: %w", err)
+		return nil, 0, err
 	}
 
 	responses := make([]*model.GoodResponse, 0, len(goods))
@@ -418,14 +492,22 @@ func (g *GoodsS) GetGoodsByCategory(ctx context.Context, categoryID string, limi
 		return nil, fmt.Errorf("invalid category ID: %w", err)
 	}
 
-	goods, err := g.repo.Tenant(ctx).GetGoodsByCategoryID(ctx, pg.GetGoodsByCategoryIDParams{
-		CategoryID: pgtype.UUID{Bytes: id, Valid: true},
-		Limit:      limit,
-		Offset:     offset,
+	var goods []pg.GetGoodsByCategoryIDRow
+	err = withTenantRead(ctx, g.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		goods, err = q.GetGoodsByCategoryID(ctx, pg.GetGoodsByCategoryIDParams{
+			CategoryID: pgtype.UUID{Bytes: id, Valid: true},
+			Limit:      limit,
+			Offset:     offset,
+		})
+		if err != nil {
+			log.Printf("GetGoodsByCategory failed: %v", err)
+			return fmt.Errorf("failed to retrieve goods: %w", err)
+		}
+		return nil
 	})
 	if err != nil {
-		log.Printf("GetGoodsByCategory failed: %v", err)
-		return nil, fmt.Errorf("failed to retrieve goods: %w", err)
+		return nil, err
 	}
 
 	var responses []*model.GoodResponse
@@ -437,6 +519,14 @@ func (g *GoodsS) GetGoodsByCategory(ctx context.Context, categoryID string, limi
 
 // UpdateGood updates a good
 func (g *GoodsS) UpdateGood(ctx context.Context, goodID string, name, description, nameI18n, descriptionI18n, categoryID, price *string, cookTime *int32, pictureUrl *string, colorCode *string) (*model.GoodResponse, error) {
+	q, txCtx, tx, ownsTx, err := g.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	id, err := uuid.Parse(goodID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid good ID: %w", err)
@@ -484,7 +574,7 @@ func (g *GoodsS) UpdateGood(ctx context.Context, goodID string, name, descriptio
 		finalDescription = description
 	}
 
-	good, err := g.repo.Tenant(ctx).UpdateGood(ctx, pg.UpdateGoodParams{
+	good, err := q.UpdateGood(txCtx, pg.UpdateGoodParams{
 		ID:              id,
 		Name:            finalName,
 		Description:     finalDescription,
@@ -501,11 +591,25 @@ func (g *GoodsS) UpdateGood(ctx context.Context, goodID string, name, descriptio
 		return nil, fmt.Errorf("failed to update good: %w", err)
 	}
 
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return goodToResponseAny(good), nil
 }
 
 // UpdateGoodPrice updates the price of a good
 func (g *GoodsS) UpdateGoodPrice(ctx context.Context, goodID, price string) (*model.GoodResponse, error) {
+	q, txCtx, tx, ownsTx, err := g.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	id, err := uuid.Parse(goodID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid good ID: %w", err)
@@ -514,7 +618,7 @@ func (g *GoodsS) UpdateGoodPrice(ctx context.Context, goodID, price string) (*mo
 	priceNum := pgtype.Numeric{}
 	priceNum.Scan(price)
 
-	good, err := g.repo.Tenant(ctx).UpdateGoodPrice(ctx, pg.UpdateGoodPriceParams{
+	good, err := q.UpdateGoodPrice(txCtx, pg.UpdateGoodPriceParams{
 		ID:    id,
 		Price: priceNum,
 	})
@@ -523,33 +627,68 @@ func (g *GoodsS) UpdateGoodPrice(ctx context.Context, goodID, price string) (*mo
 		return nil, fmt.Errorf("failed to update good price: %w", err)
 	}
 
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return goodToResponseAny(good), nil
 }
 
 // DeleteGood deletes a good
 func (g *GoodsS) DeleteGood(ctx context.Context, goodID string) error {
+	q, txCtx, tx, ownsTx, err := g.getTenantMutationQueries(ctx)
+	if err != nil {
+		return err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	id, err := uuid.Parse(goodID)
 	if err != nil {
 		return fmt.Errorf("invalid good ID: %w", err)
 	}
 
-	if err := g.repo.Tenant(ctx).DeleteGood(ctx, id); err != nil {
+	if err := q.DeleteGood(txCtx, id); err != nil {
 		log.Printf("DeleteGood failed: %v", err)
 		return fmt.Errorf("failed to delete good: %w", err)
 	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return nil
 }
 
 // RestoreGood restores a deleted good
 func (g *GoodsS) RestoreGood(ctx context.Context, goodID string) (*model.GoodResponse, error) {
+	q, txCtx, tx, ownsTx, err := g.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	id, err := uuid.Parse(goodID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid good ID: %w", err)
 	}
 
-	if err := g.repo.Tenant(ctx).RestoreGood(ctx, id); err != nil {
+	if err := q.RestoreGood(txCtx, id); err != nil {
 		log.Printf("RestoreGood failed: %v", err)
 		return nil, fmt.Errorf("failed to restore good: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return g.GetGoodByID(ctx, goodID)
@@ -559,6 +698,14 @@ func (g *GoodsS) RestoreGood(ctx context.Context, goodID string) (*model.GoodRes
 
 // CreateGoodDetail creates a new good detail
 func (g *GoodsS) CreateGoodDetail(ctx context.Context, goodID string, ingredientID, compoundID *string, measurement *string, quantity int64) (*model.GoodDetailResponse, error) {
+	q, txCtx, tx, ownsTx, err := g.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	id := uuid.New()
 	gID, err := uuid.Parse(goodID)
 	if err != nil {
@@ -591,7 +738,7 @@ func (g *GoodsS) CreateGoodDetail(ctx context.Context, goodID string, ingredient
 		measurementType.Valid = true
 	}
 
-	detail, err := g.repo.Tenant(ctx).CreateGoodDetail(ctx, pg.CreateGoodDetailParams{
+	detail, err := q.CreateGoodDetail(txCtx, pg.CreateGoodDetailParams{
 		ID:           id,
 		GoodID:       gID,
 		IngredientID: ingID,
@@ -604,6 +751,12 @@ func (g *GoodsS) CreateGoodDetail(ctx context.Context, goodID string, ingredient
 		return nil, fmt.Errorf("failed to create good detail: %w", err)
 	}
 
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return toGoodDetailResponse(detail), nil
 }
 
@@ -614,13 +767,21 @@ func (g *GoodsS) GetGoodDetailByID(ctx context.Context, detailID string) (*model
 		return nil, fmt.Errorf("invalid detail ID: %w", err)
 	}
 
-	detail, err := g.repo.Tenant(ctx).GetGoodDetailByID(ctx, id)
-	if err != nil {
-		if err == pgx.ErrNoRows {
-			return nil, fmt.Errorf("good detail not found")
+	var detail pg.GoodsDetail
+	err = withTenantRead(ctx, g.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		detail, err = q.GetGoodDetailByID(ctx, id)
+		if err != nil {
+			if err == pgx.ErrNoRows {
+				return fmt.Errorf("good detail not found")
+			}
+			log.Printf("GetGoodDetailByID failed: %v", err)
+			return fmt.Errorf("failed to retrieve good detail: %w", err)
 		}
-		log.Printf("GetGoodDetailByID failed: %v", err)
-		return nil, fmt.Errorf("failed to retrieve good detail: %w", err)
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
 
 	return toGoodDetailResponse(detail), nil
@@ -633,10 +794,18 @@ func (g *GoodsS) GetGoodDetailsByGood(ctx context.Context, goodID string) ([]*mo
 		return nil, fmt.Errorf("invalid good ID: %w", err)
 	}
 
-	details, err := g.repo.Tenant(ctx).GetGoodDetailsByGoodID(ctx, id)
+	var details []pg.GoodsDetail
+	err = withTenantRead(ctx, g.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		details, err = q.GetGoodDetailsByGoodID(ctx, id)
+		if err != nil {
+			log.Printf("GetGoodDetailsByGood failed: %v", err)
+			return fmt.Errorf("failed to retrieve good details: %w", err)
+		}
+		return nil
+	})
 	if err != nil {
-		log.Printf("GetGoodDetailsByGood failed: %v", err)
-		return nil, fmt.Errorf("failed to retrieve good details: %w", err)
+		return nil, err
 	}
 
 	var responses []*model.GoodDetailResponse
@@ -653,14 +822,22 @@ func (g *GoodsS) GetGoodDetailsByIngredient(ctx context.Context, ingredientID st
 		return nil, fmt.Errorf("invalid ingredient ID: %w", err)
 	}
 
-	details, err := g.repo.Tenant(ctx).GetGoodDetailsByIngredientID(ctx, pg.GetGoodDetailsByIngredientIDParams{
-		IngredientID: pgtype.UUID{Bytes: id, Valid: true},
-		Limit:        limit,
-		Offset:       offset,
+	var details []pg.GoodsDetail
+	err = withTenantRead(ctx, g.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		details, err = q.GetGoodDetailsByIngredientID(ctx, pg.GetGoodDetailsByIngredientIDParams{
+			IngredientID: pgtype.UUID{Bytes: id, Valid: true},
+			Limit:        limit,
+			Offset:       offset,
+		})
+		if err != nil {
+			log.Printf("GetGoodDetailsByIngredient failed: %v", err)
+			return fmt.Errorf("failed to retrieve good details: %w", err)
+		}
+		return nil
 	})
 	if err != nil {
-		log.Printf("GetGoodDetailsByIngredient failed: %v", err)
-		return nil, fmt.Errorf("failed to retrieve good details: %w", err)
+		return nil, err
 	}
 
 	var responses []*model.GoodDetailResponse
@@ -677,14 +854,22 @@ func (g *GoodsS) GetGoodDetailsByCompound(ctx context.Context, compoundID string
 		return nil, fmt.Errorf("invalid compound ID: %w", err)
 	}
 
-	details, err := g.repo.Tenant(ctx).GetGoodDetailsByCompoundID(ctx, pg.GetGoodDetailsByCompoundIDParams{
-		CompoundID: pgtype.UUID{Bytes: id, Valid: true},
-		Limit:      limit,
-		Offset:     offset,
+	var details []pg.GoodsDetail
+	err = withTenantRead(ctx, g.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		details, err = q.GetGoodDetailsByCompoundID(ctx, pg.GetGoodDetailsByCompoundIDParams{
+			CompoundID: pgtype.UUID{Bytes: id, Valid: true},
+			Limit:      limit,
+			Offset:     offset,
+		})
+		if err != nil {
+			log.Printf("GetGoodDetailsByCompound failed: %v", err)
+			return fmt.Errorf("failed to retrieve good details: %w", err)
+		}
+		return nil
 	})
 	if err != nil {
-		log.Printf("GetGoodDetailsByCompound failed: %v", err)
-		return nil, fmt.Errorf("failed to retrieve good details: %w", err)
+		return nil, err
 	}
 
 	var responses []*model.GoodDetailResponse
@@ -696,13 +881,21 @@ func (g *GoodsS) GetGoodDetailsByCompound(ctx context.Context, compoundID string
 
 // UpdateGoodDetail updates a good detail
 func (g *GoodsS) UpdateGoodDetail(ctx context.Context, detailID string, goodID, ingredientID, compoundID *string, measurement *string, quantity *int64) (*model.GoodDetailResponse, error) {
+	q, txCtx, tx, ownsTx, err := g.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	id, err := uuid.Parse(detailID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid detail ID: %w", err)
 	}
 
 	// Get existing detail
-	existing, err := g.repo.Tenant(ctx).GetGoodDetailByID(ctx, id)
+	existing, err := q.GetGoodDetailByID(txCtx, id)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, fmt.Errorf("good detail not found")
@@ -750,7 +943,7 @@ func (g *GoodsS) UpdateGoodDetail(ctx context.Context, detailID string, goodID, 
 		finalQuantity = *quantity
 	}
 
-	detail, err := g.repo.Tenant(ctx).UpdateGoodDetail(ctx, pg.UpdateGoodDetailParams{
+	detail, err := q.UpdateGoodDetail(txCtx, pg.UpdateGoodDetailParams{
 		ID:           id,
 		GoodID:       finalGoodID,
 		IngredientID: finalIngredientID,
@@ -763,17 +956,31 @@ func (g *GoodsS) UpdateGoodDetail(ctx context.Context, detailID string, goodID, 
 		return nil, fmt.Errorf("failed to update good detail: %w", err)
 	}
 
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return toGoodDetailResponse(detail), nil
 }
 
 // UpdateGoodDetailQuantity updates the quantity of a good detail
 func (g *GoodsS) UpdateGoodDetailQuantity(ctx context.Context, detailID string, quantity int64) (*model.GoodDetailResponse, error) {
+	q, txCtx, tx, ownsTx, err := g.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	id, err := uuid.Parse(detailID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid detail ID: %w", err)
 	}
 
-	detail, err := g.repo.Tenant(ctx).UpdateGoodDetailQuantity(ctx, pg.UpdateGoodDetailQuantityParams{
+	detail, err := q.UpdateGoodDetailQuantity(txCtx, pg.UpdateGoodDetailQuantityParams{
 		ID:       id,
 		Quantity: quantity,
 	})
@@ -782,33 +989,68 @@ func (g *GoodsS) UpdateGoodDetailQuantity(ctx context.Context, detailID string, 
 		return nil, fmt.Errorf("failed to update good detail quantity: %w", err)
 	}
 
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return toGoodDetailResponse(detail), nil
 }
 
 // DeleteGoodDetail deletes a good detail
 func (g *GoodsS) DeleteGoodDetail(ctx context.Context, detailID string) error {
+	q, txCtx, tx, ownsTx, err := g.getTenantMutationQueries(ctx)
+	if err != nil {
+		return err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	id, err := uuid.Parse(detailID)
 	if err != nil {
 		return fmt.Errorf("invalid detail ID: %w", err)
 	}
 
-	if err := g.repo.Tenant(ctx).DeleteGoodDetail(ctx, id); err != nil {
+	if err := q.DeleteGoodDetail(txCtx, id); err != nil {
 		log.Printf("DeleteGoodDetail failed: %v", err)
 		return fmt.Errorf("failed to delete good detail: %w", err)
 	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return nil
 }
 
 // RestoreGoodDetail restores a deleted good detail
 func (g *GoodsS) RestoreGoodDetail(ctx context.Context, detailID string) (*model.GoodDetailResponse, error) {
+	q, txCtx, tx, ownsTx, err := g.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	id, err := uuid.Parse(detailID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid detail ID: %w", err)
 	}
 
-	if err := g.repo.Tenant(ctx).RestoreGoodDetail(ctx, id); err != nil {
+	if err := q.RestoreGoodDetail(txCtx, id); err != nil {
 		log.Printf("RestoreGoodDetail failed: %v", err)
 		return nil, fmt.Errorf("failed to restore good detail: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return g.GetGoodDetailByID(ctx, detailID)
@@ -919,13 +1161,21 @@ func (g *GoodsS) GetGoodByIDWithLang(ctx context.Context, goodID string, lang st
 		return nil, fmt.Errorf("invalid good ID: %w", err)
 	}
 
-	good, err := g.repo.Tenant(ctx).GetGoodByIDWithLanguage(ctx, pg.GetGoodByIDWithLanguageParams{
-		ID:      id,
-		Column2: lang,
+	var good pg.GetGoodByIDWithLanguageRow
+	err = withTenantRead(ctx, g.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		good, err = q.GetGoodByIDWithLanguage(ctx, pg.GetGoodByIDWithLanguageParams{
+			ID:      id,
+			Column2: lang,
+		})
+		if err != nil {
+			log.Printf("GetGoodByIDWithLang failed: %v", err)
+			return fmt.Errorf("failed to get good: %w", err)
+		}
+		return nil
 	})
 	if err != nil {
-		log.Printf("GetGoodByIDWithLang failed: %v", err)
-		return nil, fmt.Errorf("failed to get good: %w", err)
+		return nil, err
 	}
 
 	return goodToResponseAny(good), nil
@@ -941,33 +1191,36 @@ func (g *GoodsS) GetAllGoodsWithLang(ctx context.Context, lang string, limit, of
 	}
 
 	var total int64
-	countErr := withTenantSavepoint(ctx, "goods_count_with_lang", func() error {
+	var goods []pg.GetAllGoodsWithLanguageRow
+	err := withTenantRead(ctx, g.repo, func(ctx context.Context, q *pg.Queries) error {
 		var err error
-		total, err = g.repo.Tenant(ctx).CountGoods(ctx)
-		return err
-	})
-	if countErr != nil {
-		log.Printf("CountGoods (WithLang) failed: lang=%q limit=%d offset=%d err=%v", lang, limit, offset, countErr)
-		total = 0
-	}
+		total, err = q.CountGoods(ctx)
+		if err != nil {
+			log.Printf("CountGoods (WithLang) failed: lang=%q limit=%d offset=%d err=%v", lang, limit, offset, err)
+			total = 0
+			return nil
+		}
 
-	if countErr == nil {
 		if total == 0 {
-			return []*model.GoodResponse{}, 0, nil
+			return nil
 		}
 		if int64(offset) >= total {
-			return []*model.GoodResponse{}, total, nil
+			return nil
 		}
-	}
 
-	goods, err := g.repo.Tenant(ctx).GetAllGoodsWithLanguage(ctx, pg.GetAllGoodsWithLanguageParams{
-		Column1: lang,
-		Limit:   limit,
-		Offset:  offset,
+		goods, err = q.GetAllGoodsWithLanguage(ctx, pg.GetAllGoodsWithLanguageParams{
+			Column1: lang,
+			Limit:   limit,
+			Offset:  offset,
+		})
+		if err != nil {
+			log.Printf("GetAllGoodsWithLang failed: lang=%q limit=%d offset=%d err=%v", lang, limit, offset, err)
+			return fmt.Errorf("failed to get goods: %w", err)
+		}
+		return nil
 	})
 	if err != nil {
-		log.Printf("GetAllGoodsWithLang failed: lang=%q limit=%d offset=%d err=%v", lang, limit, offset, err)
-		return nil, 0, fmt.Errorf("failed to get goods: %w", err)
+		return nil, 0, err
 	}
 
 	responses := make([]*model.GoodResponse, 0, len(goods))

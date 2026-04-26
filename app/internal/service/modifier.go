@@ -22,44 +22,50 @@ func NewModifierS(repo *repository.Repository) *ModifierS {
 	return &ModifierS{repo: repo}
 }
 
-// withTenantRead executes a read-only function within a tenant-scoped transaction.
-// The transaction is always rolled back (read-only).
-// This helper is for tenant-safe read operations.
-func (s *ModifierS) withTenantRead(ctx context.Context, fn func(context.Context, *pg.Queries) error) error {
-	brandID, _ := ctx.Value("brand_id").(string)
-	brandID = strings.TrimSpace(brandID)
-	if brandID == "" {
-		return fmt.Errorf("brand_id is missing in context")
+func (s *ModifierS) getTenantMutationQueries(ctx context.Context) (*pg.Queries, context.Context, pgx.Tx, bool, error) {
+	if existingTx, ok := repository.TenantTxFromContext(ctx); ok && existingTx != nil {
+		if q, ok := repository.TenantQueriesFromContext(ctx); ok && q != nil {
+			return q, ctx, existingTx, false, nil
+		}
+		q := pg.New(existingTx)
+		txCtx := repository.WithTenantQueries(ctx, q)
+		return q, txCtx, existingTx, false, nil
 	}
-
-	schemaName := fmt.Sprintf("tenant_%s", brandID)
 
 	tx, err := s.repo.PgRepo.TenantPool.Begin(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to begin transaction: %w", err)
+		return nil, nil, nil, false, fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback(ctx)
 
+	brandID, _ := ctx.Value("brand_id").(string)
+	brandID = strings.TrimSpace(brandID)
+	if brandID == "" {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("brand_id is missing in context")
+	}
+
+	schemaName := fmt.Sprintf("tenant_%s", brandID)
 	if _, err := tx.Exec(ctx, fmt.Sprintf(`SET LOCAL search_path TO "%s", public`, schemaName)); err != nil {
-		return fmt.Errorf("failed to set tenant search_path: %w", err)
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("failed to set tenant search_path: %w", err)
 	}
 
 	if _, err := tx.Exec(ctx, "SET LOCAL app.brand_id = $1", brandID); err != nil {
-		return fmt.Errorf("failed to set app.brand_id: %w", err)
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("failed to set app.brand_id: %w", err)
 	}
 
 	if branchID, _ := ctx.Value("branch_id").(string); strings.TrimSpace(branchID) != "" {
 		if _, err := tx.Exec(ctx, "SET LOCAL app.branch_id = $1", strings.TrimSpace(branchID)); err != nil {
-			return fmt.Errorf("failed to set app.branch_id: %w", err)
+			tx.Rollback(ctx)
+			return nil, nil, nil, false, fmt.Errorf("failed to set app.branch_id: %w", err)
 		}
 	}
 
 	q := pg.New(tx)
-	if err := fn(ctx, q); err != nil {
-		return err
-	}
+	txCtx := repository.WithTenantQueries(ctx, q)
 
-	return nil
+	return q, txCtx, tx, true, nil
 }
 
 func mapModifierToResponse(row pg.Modifier) *model.ModifierResponse {
@@ -77,6 +83,14 @@ func mapModifierToResponse(row pg.Modifier) *model.ModifierResponse {
 }
 
 func (s *ModifierS) CreateModifier(ctx context.Context, req model.CreateModifierRequest) (*model.ModifierResponse, error) {
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	if strings.TrimSpace(req.Name) == "" {
 		return nil, fmt.Errorf("modifier name is required")
 	}
@@ -97,7 +111,7 @@ func (s *ModifierS) CreateModifier(ctx context.Context, req model.CreateModifier
 		if trimmedCode == "" {
 			req.Code = nil
 		} else {
-			_, err := s.repo.Tenant(ctx).GetModifierByCode(ctx, req.Code)
+			_, err := q.GetModifierByCode(txCtx, req.Code)
 			if err == nil {
 				return nil, fmt.Errorf("modifier code already exists")
 			}
@@ -113,7 +127,7 @@ func (s *ModifierS) CreateModifier(ctx context.Context, req model.CreateModifier
 		finalIsActive = *req.IsActive
 	}
 
-	row, err := s.repo.Tenant(ctx).CreateModifier(ctx, pg.CreateModifierParams{
+	row, err := q.CreateModifier(txCtx, pg.CreateModifierParams{
 		ID:          uuid.New(),
 		Name:        strings.TrimSpace(req.Name),
 		NameI18n:    nameI18nUUID,
@@ -127,6 +141,12 @@ func (s *ModifierS) CreateModifier(ctx context.Context, req model.CreateModifier
 		return nil, fmt.Errorf("failed to create modifier: %w", err)
 	}
 
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return mapModifierToResponse(row), nil
 }
 
@@ -137,7 +157,7 @@ func (s *ModifierS) GetModifierByID(ctx context.Context, modifierID string) (*mo
 	}
 
 	var row pg.Modifier
-	err = s.withTenantRead(ctx, func(ctx context.Context, q *pg.Queries) error {
+	err = withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
 		var err error
 		row, err = q.GetModifierByID(ctx, id)
 		if err != nil {
@@ -161,7 +181,7 @@ func (s *ModifierS) GetModifiers(ctx context.Context, query string, limit, offse
 
 	var rows []pg.Modifier
 	var total int64
-	err := s.withTenantRead(ctx, func(ctx context.Context, queries *pg.Queries) error {
+	err := withTenantRead(ctx, s.repo, func(ctx context.Context, queries *pg.Queries) error {
 		var err error
 		rows, err = queries.GetModifiers(ctx, pg.GetModifiersParams{
 			Column1: q,
@@ -193,12 +213,20 @@ func (s *ModifierS) GetModifiers(ctx context.Context, query string, limit, offse
 }
 
 func (s *ModifierS) UpdateModifier(ctx context.Context, modifierID string, req model.UpdateModifierRequest) (*model.ModifierResponse, error) {
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	id, err := uuid.Parse(modifierID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid modifier ID: %w", err)
 	}
 
-	existing, err := s.repo.Tenant(ctx).GetModifierByID(ctx, id)
+	existing, err := q.GetModifierByID(txCtx, id)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, fmt.Errorf("modifier not found")
@@ -242,7 +270,7 @@ func (s *ModifierS) UpdateModifier(ctx context.Context, modifierID string, req m
 		if trimmedCode == "" {
 			finalCode = nil
 		} else {
-			found, err := s.repo.Tenant(ctx).GetModifierByCode(ctx, &trimmedCode)
+			found, err := q.GetModifierByCode(txCtx, &trimmedCode)
 			if err == nil && found.ID != existing.ID {
 				return nil, fmt.Errorf("modifier code already exists")
 			}
@@ -263,7 +291,7 @@ func (s *ModifierS) UpdateModifier(ctx context.Context, modifierID string, req m
 		finalPictureURL = req.PictureUrl
 	}
 
-	row, err := s.repo.Tenant(ctx).UpdateModifier(ctx, pg.UpdateModifierParams{
+	row, err := q.UpdateModifier(txCtx, pg.UpdateModifierParams{
 		ID:          id,
 		Name:        finalName,
 		NameI18n:    finalNameI18n,
@@ -277,16 +305,30 @@ func (s *ModifierS) UpdateModifier(ctx context.Context, modifierID string, req m
 		return nil, fmt.Errorf("failed to update modifier: %w", err)
 	}
 
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return mapModifierToResponse(row), nil
 }
 
 func (s *ModifierS) DeleteModifier(ctx context.Context, modifierID string) error {
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	id, err := uuid.Parse(modifierID)
 	if err != nil {
 		return fmt.Errorf("invalid modifier ID: %w", err)
 	}
 
-	_, err = s.repo.Tenant(ctx).GetModifierByID(ctx, id)
+	_, err = q.GetModifierByID(txCtx, id)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return fmt.Errorf("modifier not found")
@@ -295,7 +337,7 @@ func (s *ModifierS) DeleteModifier(ctx context.Context, modifierID string) error
 		return fmt.Errorf("failed to validate modifier: %w", err)
 	}
 
-	activeCount, err := s.repo.Tenant(ctx).CountActiveOrderItemModifiersByModifierID(ctx, id)
+	activeCount, err := q.CountActiveOrderItemModifiersByModifierID(txCtx, id)
 	if err != nil {
 		log.Printf("CountActiveOrderItemModifiersByModifierID failed: %v", err)
 		return fmt.Errorf("failed to validate modifier usage: %w", err)
@@ -304,23 +346,43 @@ func (s *ModifierS) DeleteModifier(ctx context.Context, modifierID string) error
 		return fmt.Errorf("modifier cannot be deleted: it is used by active order items")
 	}
 
-	if err := s.repo.Tenant(ctx).DeleteModifier(ctx, id); err != nil {
+	if err := q.DeleteModifier(txCtx, id); err != nil {
 		log.Printf("DeleteModifier failed: %v", err)
 		return fmt.Errorf("failed to delete modifier: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return nil
 }
 
 func (s *ModifierS) RestoreModifier(ctx context.Context, modifierID string) error {
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	id, err := uuid.Parse(modifierID)
 	if err != nil {
 		return fmt.Errorf("invalid modifier ID: %w", err)
 	}
 
-	if err := s.repo.Tenant(ctx).RestoreModifier(ctx, id); err != nil {
+	if err := q.RestoreModifier(txCtx, id); err != nil {
 		log.Printf("RestoreModifier failed: %v", err)
 		return fmt.Errorf("failed to restore modifier: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return nil

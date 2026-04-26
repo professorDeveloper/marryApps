@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"gitlab.yurtal.tech/company/maryai/back/internal/model"
 	"gitlab.yurtal.tech/company/maryai/back/internal/repository"
@@ -18,6 +20,52 @@ type StorageS struct {
 
 func NewStorageS(repo *repository.Repository) *StorageS {
 	return &StorageS{repo: repo}
+}
+
+func (s *StorageS) getTenantMutationQueries(ctx context.Context) (*pg.Queries, context.Context, pgx.Tx, bool, error) {
+	if existingTx, ok := repository.TenantTxFromContext(ctx); ok && existingTx != nil {
+		if q, ok := repository.TenantQueriesFromContext(ctx); ok && q != nil {
+			return q, ctx, existingTx, false, nil
+		}
+		q := pg.New(existingTx)
+		txCtx := repository.WithTenantQueries(ctx, q)
+		return q, txCtx, existingTx, false, nil
+	}
+
+	tx, err := s.repo.PgRepo.TenantPool.Begin(ctx)
+	if err != nil {
+		return nil, nil, nil, false, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+
+	brandID, _ := ctx.Value("brand_id").(string)
+	brandID = strings.TrimSpace(brandID)
+	if brandID == "" {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("brand_id is missing in context")
+	}
+
+	schemaName := fmt.Sprintf("tenant_%s", brandID)
+	if _, err := tx.Exec(ctx, fmt.Sprintf(`SET LOCAL search_path TO "%s", public`, schemaName)); err != nil {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("failed to set tenant search_path: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx, "SET LOCAL app.brand_id = $1", brandID); err != nil {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("failed to set app.brand_id: %w", err)
+	}
+
+	if branchID, _ := ctx.Value("branch_id").(string); strings.TrimSpace(branchID) != "" {
+		if _, err := tx.Exec(ctx, "SET LOCAL app.branch_id = $1", strings.TrimSpace(branchID)); err != nil {
+			tx.Rollback(ctx)
+			return nil, nil, nil, false, fmt.Errorf("failed to set app.branch_id: %w", err)
+		}
+	}
+
+	q := pg.New(tx)
+	txCtx := repository.WithTenantQueries(ctx, q)
+
+	return q, txCtx, tx, true, nil
 }
 
 // Helper function
@@ -38,6 +86,14 @@ func mapStorageToResponse(id uuid.UUID, name string, branchID pgtype.UUID, nameI
 
 // CreateStorage creates a new storage
 func (s *StorageS) CreateStorage(ctx context.Context, name string, branchID string, nameI18n *uuid.UUID, pictureUrl *string, colorCode *string) (*model.StorageResponse, error) {
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	if name == "" {
 		return nil, fmt.Errorf("storage name is required")
 	}
@@ -51,7 +107,7 @@ func (s *StorageS) CreateStorage(ctx context.Context, name string, branchID stri
 		nameI18nUUID = pgtype.UUID{Bytes: *nameI18n, Valid: true}
 	}
 
-	storage, err := s.repo.Tenant(ctx).CreateStorage(ctx, pg.CreateStorageParams{
+	storage, err := q.CreateStorage(txCtx, pg.CreateStorageParams{
 		ID:         uuid.New(),
 		Name:       name,
 		BranchID:   pgtype.UUID{Bytes: bID, Valid: true},
@@ -61,6 +117,12 @@ func (s *StorageS) CreateStorage(ctx context.Context, name string, branchID stri
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create storage: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return mapStorageToResponse(storage.ID, storage.Name, storage.BranchID, storage.NameI18n, storage.PictureUrl, storage.ColorCode, storage.CreatedAt, storage.UpdatedAt), nil
@@ -181,13 +243,21 @@ func (s *StorageS) GetStoragesByBranchID(ctx context.Context, branchID string, l
 
 // UpdateStorage updates a storage
 func (s *StorageS) UpdateStorage(ctx context.Context, storageID string, name *string, branchID *string, nameI18n *string, pictureUrl *string, colorCode *string, uz *string, ru *string, en *string) (*model.StorageResponse, error) {
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	id, err := uuid.Parse(storageID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid storage ID: %w", err)
 	}
 
 	// Get current storage to use as default
-	currentStorage, err := s.repo.Tenant(ctx).GetStorageByID(ctx, id)
+	currentStorage, err := q.GetStorageByID(txCtx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get storage: %w", err)
 	}
@@ -228,7 +298,7 @@ func (s *StorageS) UpdateStorage(ctx context.Context, storageID string, name *st
 		updatedColorCode = colorCode
 	}
 
-	storage, err := s.repo.Tenant(ctx).UpdateStorage(ctx, pg.UpdateStorageParams{
+	storage, err := q.UpdateStorage(txCtx, pg.UpdateStorageParams{
 		ID:         id,
 		Name:       updatedName,
 		BranchID:   updatedBranchID,
@@ -244,7 +314,7 @@ func (s *StorageS) UpdateStorage(ctx context.Context, storageID string, name *st
 	var finalUz, finalRu, finalEn *string
 	if uz != nil || ru != nil || en != nil {
 		if storage.NameI18n.Valid {
-			tr, trErr := s.repo.Tenant(ctx).UpdateTranslation(ctx, pg.UpdateTranslationParams{
+			tr, trErr := q.UpdateTranslation(txCtx, pg.UpdateTranslationParams{
 				ID: storage.NameI18n.Bytes,
 				Uz: uz,
 				Ru: ru,
@@ -256,7 +326,7 @@ func (s *StorageS) UpdateStorage(ctx context.Context, storageID string, name *st
 			finalUz, finalRu, finalEn = tr.Uz, tr.Ru, tr.En
 		} else {
 			translationID := uuid.New()
-			tr, trErr := s.repo.Tenant(ctx).CreateTranslation(ctx, pg.CreateTranslationParams{
+			tr, trErr := q.CreateTranslation(txCtx, pg.CreateTranslationParams{
 				ID: translationID,
 				Uz: uz,
 				Ru: ru,
@@ -266,7 +336,7 @@ func (s *StorageS) UpdateStorage(ctx context.Context, storageID string, name *st
 				return nil, fmt.Errorf("failed to create translation: %w", trErr)
 			}
 			finalUz, finalRu, finalEn = tr.Uz, tr.Ru, tr.En
-			storage, err = s.repo.Tenant(ctx).UpdateStorage(ctx, pg.UpdateStorageParams{
+			storage, err = q.UpdateStorage(txCtx, pg.UpdateStorageParams{
 				ID:         id,
 				Name:       storage.Name,
 				BranchID:   storage.BranchID,
@@ -280,6 +350,12 @@ func (s *StorageS) UpdateStorage(ctx context.Context, storageID string, name *st
 		}
 	}
 
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	resp := mapStorageToResponse(storage.ID, storage.Name, storage.BranchID, storage.NameI18n, storage.PictureUrl, storage.ColorCode, storage.CreatedAt, storage.UpdatedAt)
 	resp.Uz = finalUz
 	resp.Ru = finalRu
@@ -289,13 +365,27 @@ func (s *StorageS) UpdateStorage(ctx context.Context, storageID string, name *st
 
 // DeleteStorage soft deletes a storage
 func (s *StorageS) DeleteStorage(ctx context.Context, storageID string) error {
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	id, err := uuid.Parse(storageID)
 	if err != nil {
 		return fmt.Errorf("invalid storage ID: %w", err)
 	}
 
-	if err := s.repo.Tenant(ctx).DeleteStorage(ctx, id); err != nil {
+	if err := q.DeleteStorage(txCtx, id); err != nil {
 		return fmt.Errorf("failed to delete storage: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return nil
@@ -303,13 +393,27 @@ func (s *StorageS) DeleteStorage(ctx context.Context, storageID string) error {
 
 // RestoreStorage restores a deleted storage
 func (s *StorageS) RestoreStorage(ctx context.Context, storageID string) error {
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	id, err := uuid.Parse(storageID)
 	if err != nil {
 		return fmt.Errorf("invalid storage ID: %w", err)
 	}
 
-	if err := s.repo.Tenant(ctx).RestoreStorage(ctx, id); err != nil {
+	if err := q.RestoreStorage(txCtx, id); err != nil {
 		return fmt.Errorf("failed to restore storage: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return nil

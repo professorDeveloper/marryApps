@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"gitlab.yurtal.tech/company/maryai/back/internal/model"
 	"gitlab.yurtal.tech/company/maryai/back/internal/repository"
@@ -19,6 +20,52 @@ type CafeTableS struct {
 
 func NewCafeTableS(repo *repository.Repository) *CafeTableS {
 	return &CafeTableS{repo: repo}
+}
+
+func (s *CafeTableS) getTenantMutationQueries(ctx context.Context) (*pg.Queries, context.Context, pgx.Tx, bool, error) {
+	if existingTx, ok := repository.TenantTxFromContext(ctx); ok && existingTx != nil {
+		if q, ok := repository.TenantQueriesFromContext(ctx); ok && q != nil {
+			return q, ctx, existingTx, false, nil
+		}
+		q := pg.New(existingTx)
+		txCtx := repository.WithTenantQueries(ctx, q)
+		return q, txCtx, existingTx, false, nil
+	}
+
+	tx, err := s.repo.PgRepo.TenantPool.Begin(ctx)
+	if err != nil {
+		return nil, nil, nil, false, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+
+	brandID, _ := ctx.Value("brand_id").(string)
+	brandID = strings.TrimSpace(brandID)
+	if brandID == "" {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("brand_id is missing in context")
+	}
+
+	schemaName := fmt.Sprintf("tenant_%s", brandID)
+	if _, err := tx.Exec(ctx, fmt.Sprintf(`SET LOCAL search_path TO "%s", public`, schemaName)); err != nil {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("failed to set tenant search_path: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx, "SET LOCAL app.brand_id = $1", brandID); err != nil {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("failed to set app.brand_id: %w", err)
+	}
+
+	if branchID, _ := ctx.Value("branch_id").(string); strings.TrimSpace(branchID) != "" {
+		if _, err := tx.Exec(ctx, "SET LOCAL app.branch_id = $1", strings.TrimSpace(branchID)); err != nil {
+			tx.Rollback(ctx)
+			return nil, nil, nil, false, fmt.Errorf("failed to set app.branch_id: %w", err)
+		}
+	}
+
+	q := pg.New(tx)
+	txCtx := repository.WithTenantQueries(ctx, q)
+
+	return q, txCtx, tx, true, nil
 }
 
 func normalizeCafeTableType(input *string, defaultToSimple bool) (string, error) {
@@ -51,6 +98,14 @@ func (s *CafeTableS) CreateCafeTable(
 	tableType *string,
 	shape *string,
 ) (*model.CafeTableResponse, error) {
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	if hallID == "" {
 		return nil, fmt.Errorf("hall_id is required")
 	}
@@ -125,7 +180,7 @@ func (s *CafeTableS) CreateCafeTable(
 		pph = intToNumeric(*pricePerHour)
 	}
 
-	table, err := s.repo.Tenant(ctx).CreateCafeTable(ctx, pg.CreateCafeTableParams{
+	table, err := q.CreateCafeTable(txCtx, pg.CreateCafeTableParams{
 		ID:           uuid.New(),
 		HallID:       hID,
 		Number:       number,
@@ -142,6 +197,12 @@ func (s *CafeTableS) CreateCafeTable(
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create cafe table: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return toCafeTableResponse(table, nil), nil
@@ -456,12 +517,20 @@ func (s *CafeTableS) UpdateCafeTable(
 	tableType *string,
 	shape *string,
 ) (*model.CafeTableResponse, error) {
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	id, err := uuid.Parse(tableID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid table ID: %w", err)
 	}
 
-	currentTable, err := s.repo.Tenant(ctx).GetCafeTableByID(ctx, id)
+	currentTable, err := q.GetCafeTableByID(txCtx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get cafe table: %w", err)
 	}
@@ -560,7 +629,7 @@ func (s *CafeTableS) UpdateCafeTable(
 		updatedShape = shapeValue
 	}
 
-	table, err := s.repo.Tenant(ctx).UpdateCafeTable(ctx, pg.UpdateCafeTableParams{
+	table, err := q.UpdateCafeTable(txCtx, pg.UpdateCafeTableParams{
 		ID:           id,
 		HallID:       updatedHallID,
 		Number:       updatedNumber,
@@ -579,11 +648,25 @@ func (s *CafeTableS) UpdateCafeTable(
 		return nil, fmt.Errorf("failed to update cafe table: %w", err)
 	}
 
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return toCafeTableResponse(table, nil), nil
 }
 
 // UpdateCafeTableStatus updates only the status of a cafe table
 func (s *CafeTableS) UpdateCafeTableStatus(ctx context.Context, tableID string, status string) (*model.CafeTableResponse, error) {
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	status = strings.ToLower(strings.TrimSpace(status))
 	if status == "" {
 		return nil, fmt.Errorf("status is required")
@@ -602,7 +685,7 @@ func (s *CafeTableS) UpdateCafeTableStatus(ctx context.Context, tableID string, 
 		Valid:       true,
 	}
 
-	table, err := s.repo.Tenant(ctx).UpdateCafeTableStatus(ctx, pg.UpdateCafeTableStatusParams{
+	table, err := q.UpdateCafeTableStatus(txCtx, pg.UpdateCafeTableStatusParams{
 		ID:     id,
 		Status: nullStatus,
 	})
@@ -610,25 +693,50 @@ func (s *CafeTableS) UpdateCafeTableStatus(ctx context.Context, tableID string, 
 		return nil, fmt.Errorf("failed to update cafe table status: %w", err)
 	}
 
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return toCafeTableResponse(table, nil), nil
 }
 
 // SetTableFree marks a table as free
 func (s *CafeTableS) SetTableFree(ctx context.Context, tableID string) (*model.CafeTableResponse, error) {
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	id, err := uuid.Parse(tableID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid table ID: %w", err)
 	}
 
 	// Idempotent: check if already free
-	existing, err := s.repo.Tenant(ctx).GetCafeTableByID(ctx, id)
+	existing, err := q.GetCafeTableByID(txCtx, id)
 	if err == nil && existing.Status == "free" {
+		if ownsTx {
+			if err := tx.Commit(ctx); err != nil {
+				return nil, fmt.Errorf("failed to commit transaction: %w", err)
+			}
+		}
 		return toCafeTableResponse(existing, nil), nil
 	}
 
-	table, err := s.repo.Tenant(ctx).SetTableFree(ctx, id)
+	table, err := q.SetTableFree(txCtx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to set table free: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return toCafeTableResponse(table, nil), nil
@@ -636,20 +744,39 @@ func (s *CafeTableS) SetTableFree(ctx context.Context, tableID string) (*model.C
 
 // SetTableBusy marks a table as busy
 func (s *CafeTableS) SetTableBusy(ctx context.Context, tableID string) (*model.CafeTableResponse, error) {
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	id, err := uuid.Parse(tableID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid table ID: %w", err)
 	}
 
 	// Idempotent: check if already busy
-	existing, err := s.repo.Tenant(ctx).GetCafeTableByID(ctx, id)
+	existing, err := q.GetCafeTableByID(txCtx, id)
 	if err == nil && existing.Status == "busy" {
+		if ownsTx {
+			if err := tx.Commit(ctx); err != nil {
+				return nil, fmt.Errorf("failed to commit transaction: %w", err)
+			}
+		}
 		return toCafeTableResponse(existing, nil), nil
 	}
 
-	table, err := s.repo.Tenant(ctx).SetTableBusy(ctx, id)
+	table, err := q.SetTableBusy(txCtx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to set table busy: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return toCafeTableResponse(table, nil), nil
@@ -657,13 +784,27 @@ func (s *CafeTableS) SetTableBusy(ctx context.Context, tableID string) (*model.C
 
 // DeleteCafeTable soft deletes a cafe table
 func (s *CafeTableS) DeleteCafeTable(ctx context.Context, tableID string) error {
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	id, err := uuid.Parse(tableID)
 	if err != nil {
 		return fmt.Errorf("invalid table ID: %w", err)
 	}
 
-	if err := s.repo.Tenant(ctx).DeleteCafeTable(ctx, id); err != nil {
+	if err := q.DeleteCafeTable(txCtx, id); err != nil {
 		return fmt.Errorf("failed to delete cafe table: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return nil
@@ -671,13 +812,27 @@ func (s *CafeTableS) DeleteCafeTable(ctx context.Context, tableID string) error 
 
 // RestoreCafeTable restores a soft deleted cafe table
 func (s *CafeTableS) RestoreCafeTable(ctx context.Context, tableID string) error {
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	id, err := uuid.Parse(tableID)
 	if err != nil {
 		return fmt.Errorf("invalid table ID: %w", err)
 	}
 
-	if err := s.repo.Tenant(ctx).RestoreCafeTable(ctx, id); err != nil {
+	if err := q.RestoreCafeTable(txCtx, id); err != nil {
 		return fmt.Errorf("failed to restore cafe table: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return nil

@@ -50,11 +50,19 @@ func toModifierCalculationResponse(m pg.ModifierCalculation) *model.ModifierCalc
 
 // CreateModifierCalculationForIngredient adds an ingredient line to a modifier tech card.
 func (c *CalculationS) CreateModifierCalculationForIngredient(ctx context.Context, modifierID, ingredientID, quantity string) (*model.ModifierCalculationResponse, error) {
+	q, txCtx, tx, ownsTx, err := c.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	modifierUUID, err := uuid.Parse(modifierID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid modifier_id: %w", err)
 	}
-	if _, err := c.repo.Tenant(ctx).GetModifierByID(ctx, modifierUUID); err != nil {
+	if _, err := q.GetModifierByID(txCtx, modifierUUID); err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, fmt.Errorf("modifier not found")
 		}
@@ -75,7 +83,7 @@ func (c *CalculationS) CreateModifierCalculationForIngredient(ctx context.Contex
 		return nil, fmt.Errorf("quantity must be greater than 0")
 	}
 
-	ingredient, err := c.repo.Tenant(ctx).GetIngredientByID(ctx, ingredientUUID)
+	ingredient, err := q.GetIngredientByID(txCtx, ingredientUUID)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, fmt.Errorf("ingredient not found")
@@ -98,7 +106,7 @@ func (c *CalculationS) CreateModifierCalculationForIngredient(ctx context.Contex
 		measurementUnit = string(ingredient.Measurement.MeasurementType)
 	}
 
-	row, err := c.repo.Tenant(ctx).CreateModifierCalculation(ctx, pg.CreateModifierCalculationParams{
+	row, err := q.CreateModifierCalculation(txCtx, pg.CreateModifierCalculationParams{
 		ID:                  uuid.New(),
 		ModifierID:          modifierUUID,
 		IngredientID:        pgtype.UUID{Bytes: ingredientUUID, Valid: true},
@@ -113,16 +121,30 @@ func (c *CalculationS) CreateModifierCalculationForIngredient(ctx context.Contex
 		return nil, fmt.Errorf("failed to create modifier calculation: %w", err)
 	}
 
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return toModifierCalculationResponse(row), nil
 }
 
 // CreateModifierCalculationForCompound adds a child compound line to a modifier tech card.
 func (c *CalculationS) CreateModifierCalculationForCompound(ctx context.Context, modifierID, childCompoundID, quantity string) (*model.ModifierCalculationResponse, error) {
+	q, txCtx, tx, ownsTx, err := c.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	modifierUUID, err := uuid.Parse(modifierID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid modifier_id: %w", err)
 	}
-	if _, err := c.repo.Tenant(ctx).GetModifierByID(ctx, modifierUUID); err != nil {
+	if _, err := q.GetModifierByID(txCtx, modifierUUID); err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, fmt.Errorf("modifier not found")
 		}
@@ -142,7 +164,7 @@ func (c *CalculationS) CreateModifierCalculationForCompound(ctx context.Context,
 		return nil, fmt.Errorf("quantity must be greater than 0")
 	}
 
-	childCompound, err := c.repo.Tenant(ctx).GetCompoundByID(ctx, childUUID)
+	childCompound, err := q.GetCompoundByID(txCtx, childUUID)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, fmt.Errorf("compound not found")
@@ -154,7 +176,7 @@ func (c *CalculationS) CreateModifierCalculationForCompound(ctx context.Context,
 	childPriceFloat, _ := strconv.ParseFloat(childPrice, 64)
 	totalCostCalc := childPriceFloat * quantityFloat
 
-	row, err := c.repo.Tenant(ctx).CreateModifierCalculation(ctx, pg.CreateModifierCalculationParams{
+	row, err := q.CreateModifierCalculation(txCtx, pg.CreateModifierCalculationParams{
 		ID:                  uuid.New(),
 		ModifierID:          modifierUUID,
 		IngredientID:        pgtype.UUID{Valid: false},
@@ -167,6 +189,12 @@ func (c *CalculationS) CreateModifierCalculationForCompound(ctx context.Context,
 	if err != nil {
 		log.Printf("CreateModifierCalculationForCompound failed: %v", err)
 		return nil, fmt.Errorf("failed to create modifier calculation: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return toModifierCalculationResponse(row), nil
@@ -261,6 +289,14 @@ func (c *CalculationS) GetTotalCostByModifierID(ctx context.Context, modifierID 
 
 // UpdateModifierCalculation updates quantity and recalculates total_cost from stored price_per_unit.
 func (c *CalculationS) UpdateModifierCalculation(ctx context.Context, calculationID string, quantity *string) (*model.ModifierCalculationResponse, error) {
+	q, txCtx, tx, ownsTx, err := c.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	id, err := uuid.Parse(calculationID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid calculation id: %w", err)
@@ -276,7 +312,7 @@ func (c *CalculationS) UpdateModifierCalculation(ctx context.Context, calculatio
 		return nil, fmt.Errorf("quantity must be greater than 0")
 	}
 
-	current, err := c.repo.Tenant(ctx).GetModifierCalculationByID(ctx, id)
+	current, err := q.GetModifierCalculationByID(txCtx, id)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, fmt.Errorf("modifier calculation not found")
@@ -291,7 +327,7 @@ func (c *CalculationS) UpdateModifierCalculation(ctx context.Context, calculatio
 	}
 	newTotalCost := quantityFloat * pricePerUnitFloat
 
-	row, err := c.repo.Tenant(ctx).UpdateModifierCalculation(ctx, pg.UpdateModifierCalculationParams{
+	row, err := q.UpdateModifierCalculation(txCtx, pg.UpdateModifierCalculationParams{
 		ID:              id,
 		Quantity:        stringToNumeric(*quantity),
 		MeasurementUnit: current.MeasurementUnit,
@@ -301,17 +337,39 @@ func (c *CalculationS) UpdateModifierCalculation(ctx context.Context, calculatio
 	if err != nil {
 		return nil, fmt.Errorf("failed to update modifier calculation: %w", err)
 	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return toModifierCalculationResponse(row), nil
 }
 
 // DeleteModifierCalculation soft-deletes a modifier calculation row.
 func (c *CalculationS) DeleteModifierCalculation(ctx context.Context, calculationID string) error {
+	q, txCtx, tx, ownsTx, err := c.getTenantMutationQueries(ctx)
+	if err != nil {
+		return err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	id, err := uuid.Parse(calculationID)
 	if err != nil {
 		return fmt.Errorf("invalid calculation id: %w", err)
 	}
-	if err := c.repo.Tenant(ctx).DeleteModifierCalculation(ctx, id); err != nil {
+	if err := q.DeleteModifierCalculation(txCtx, id); err != nil {
 		return fmt.Errorf("failed to delete modifier calculation: %w", err)
 	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return nil
 }

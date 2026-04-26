@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -69,7 +70,61 @@ func NewCategoryS(repo *repository.Repository) *CategoryS {
 	return &CategoryS{repo: repo}
 }
 
+func (c *CategoryS) getTenantMutationQueries(ctx context.Context) (*pg.Queries, context.Context, pgx.Tx, bool, error) {
+	if existingTx, ok := repository.TenantTxFromContext(ctx); ok && existingTx != nil {
+		if q, ok := repository.TenantQueriesFromContext(ctx); ok && q != nil {
+			return q, ctx, existingTx, false, nil
+		}
+		q := pg.New(existingTx)
+		txCtx := repository.WithTenantQueries(ctx, q)
+		return q, txCtx, existingTx, false, nil
+	}
+
+	tx, err := c.repo.PgRepo.TenantPool.Begin(ctx)
+	if err != nil {
+		return nil, nil, nil, false, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+
+	brandID, _ := ctx.Value("brand_id").(string)
+	brandID = strings.TrimSpace(brandID)
+	if brandID == "" {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("brand_id is missing in context")
+	}
+
+	schemaName := fmt.Sprintf("tenant_%s", brandID)
+	if _, err := tx.Exec(ctx, fmt.Sprintf(`SET LOCAL search_path TO "%s", public`, schemaName)); err != nil {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("failed to set tenant search_path: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx, "SET LOCAL app.brand_id = $1", brandID); err != nil {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("failed to set app.brand_id: %w", err)
+	}
+
+	if branchID, _ := ctx.Value("branch_id").(string); strings.TrimSpace(branchID) != "" {
+		if _, err := tx.Exec(ctx, "SET LOCAL app.branch_id = $1", strings.TrimSpace(branchID)); err != nil {
+			tx.Rollback(ctx)
+			return nil, nil, nil, false, fmt.Errorf("failed to set app.branch_id: %w", err)
+		}
+	}
+
+	q := pg.New(tx)
+	txCtx := repository.WithTenantQueries(ctx, q)
+
+	return q, txCtx, tx, true, nil
+}
+
 func (c *CategoryS) CreateCategory(ctx context.Context, name string, nameI18n, departmentID, parent *string, pictureUrl, colorCode *string) (*model.CategoryResponse, error) {
+	q, txCtx, tx, ownsTx, err := c.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	if name == "" {
 		return nil, fmt.Errorf("category name is required")
 	}
@@ -102,7 +157,7 @@ func (c *CategoryS) CreateCategory(ctx context.Context, name string, nameI18n, d
 		parentUUID = pgtype.UUID{Bytes: pid, Valid: true}
 	}
 
-	row, err := c.repo.Tenant(ctx).CreateCategory(ctx, pg.CreateCategoryParams{
+	row, err := q.CreateCategory(txCtx, pg.CreateCategoryParams{
 		ID:           id,
 		Name:         name,
 		NameI18n:     nameI18nUUID,
@@ -114,6 +169,12 @@ func (c *CategoryS) CreateCategory(ctx context.Context, name string, nameI18n, d
 	if err != nil {
 		log.Printf("CreateCategory failed: %v", err)
 		return nil, fmt.Errorf("failed to create category: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return mapCategoryToResponse(row.ID, row.Name, row.NameI18n, row.DepartmentID, row.StorageID, row.Parent, row.PictureUrl, row.ColorCode, row.CreatedAt, row.UpdatedAt), nil
@@ -366,12 +427,20 @@ func (c *CategoryS) GetRootCategories(ctx context.Context, limit, offset int32) 
 }
 
 func (c *CategoryS) UpdateCategory(ctx context.Context, categoryID string, name, nameI18n, departmentID, parent *string, pictureUrl *string, colorCode *string) (*model.CategoryResponse, error) {
+	q, txCtx, tx, ownsTx, err := c.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	id, err := uuid.Parse(categoryID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid category ID: %w", err)
 	}
 
-	existing, err := c.repo.Tenant(ctx).GetCategoryByID(ctx, id)
+	existing, err := q.GetCategoryByID(txCtx, id)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, fmt.Errorf("category not found")
@@ -421,7 +490,7 @@ func (c *CategoryS) UpdateCategory(ctx context.Context, categoryID string, name,
 		finalColorCode = colorCode
 	}
 
-	row, err := c.repo.Tenant(ctx).UpdateCategory(ctx, pg.UpdateCategoryParams{
+	row, err := q.UpdateCategory(txCtx, pg.UpdateCategoryParams{
 		ID:           id,
 		Name:         finalName,
 		NameI18n:     finalNameI18n,
@@ -435,31 +504,66 @@ func (c *CategoryS) UpdateCategory(ctx context.Context, categoryID string, name,
 		return nil, fmt.Errorf("failed to update category: %w", err)
 	}
 
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return mapCategoryToResponse(row.ID, row.Name, row.NameI18n, row.DepartmentID, row.StorageID, row.Parent, row.PictureUrl, row.ColorCode, row.CreatedAt, row.UpdatedAt), nil
 }
 
 func (c *CategoryS) DeleteCategory(ctx context.Context, categoryID string) error {
+	q, txCtx, tx, ownsTx, err := c.getTenantMutationQueries(ctx)
+	if err != nil {
+		return err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	id, err := uuid.Parse(categoryID)
 	if err != nil {
 		return fmt.Errorf("invalid category ID: %w", err)
 	}
 
-	if err := c.repo.Tenant(ctx).DeleteCategory(ctx, id); err != nil {
+	if err := q.DeleteCategory(txCtx, id); err != nil {
 		log.Printf("DeleteCategory failed: %v", err)
 		return fmt.Errorf("failed to delete category: %w", err)
 	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return nil
 }
 
 func (c *CategoryS) RestoreCategory(ctx context.Context, categoryID string) (*model.CategoryResponse, error) {
+	q, txCtx, tx, ownsTx, err := c.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
 	id, err := uuid.Parse(categoryID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid category ID: %w", err)
 	}
 
-	if err := c.repo.Tenant(ctx).RestoreCategory(ctx, id); err != nil {
+	if err := q.RestoreCategory(txCtx, id); err != nil {
 		log.Printf("RestoreCategory failed: %v", err)
 		return nil, fmt.Errorf("failed to restore category: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return c.GetCategoryByID(ctx, categoryID)
