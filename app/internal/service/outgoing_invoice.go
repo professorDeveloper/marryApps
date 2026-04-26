@@ -229,17 +229,27 @@ func (s *OutgoingInvoiceS) ListOutgoingInvoices(ctx context.Context, storageID, 
 		}
 	}
 
-	rows, err := s.repo.Tenant(ctx).ListOutgoingInvoices(ctx, listParams)
+	var rows []pg.OutgoingInvoice
+	var total int64
+	var totalSum pgtype.Numeric
+	err := withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		rows, err = q.ListOutgoingInvoices(ctx, listParams)
+		if err != nil {
+			return fmt.Errorf("failed to list outgoing invoices: %w", err)
+		}
+		total, err = q.CountOutgoingInvoices(ctx, countParams)
+		if err != nil {
+			return fmt.Errorf("failed to count outgoing invoices: %w", err)
+		}
+		totalSum, err = q.SumOutgoingInvoices(ctx, sumParams)
+		if err != nil {
+			return fmt.Errorf("failed to sum outgoing invoices: %w", err)
+		}
+		return nil
+	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to list outgoing invoices: %w", err)
-	}
-	total, err := s.repo.Tenant(ctx).CountOutgoingInvoices(ctx, countParams)
-	if err != nil {
-		return nil, fmt.Errorf("failed to count outgoing invoices: %w", err)
-	}
-	totalSum, err := s.repo.Tenant(ctx).SumOutgoingInvoices(ctx, sumParams)
-	if err != nil {
-		return nil, fmt.Errorf("failed to sum outgoing invoices: %w", err)
+		return nil, err
 	}
 
 	data := make([]*model.OutgoingInvoiceResponse, 0, len(rows))
