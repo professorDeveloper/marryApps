@@ -96,7 +96,9 @@ func numericToString(n pgtype.Numeric) string {
 	}
 
 	if isNegative && str != "0" {
-		str = "-" + str
+		if !strings.HasPrefix(str, "-") {
+			str = "-" + str
+		}
 	}
 	return str
 }
