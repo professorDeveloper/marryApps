@@ -3,9 +3,11 @@ package service
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"gitlab.yurtal.tech/company/maryai/back/internal/model"
 	"gitlab.yurtal.tech/company/maryai/back/internal/repository"
@@ -20,6 +22,52 @@ func NewOrganizationS(repo *repository.Repository) *OrganizationS {
 	return &OrganizationS{repo: repo}
 }
 
+func (o *OrganizationS) getTenantMutationQueries(ctx context.Context) (*pg.Queries, context.Context, pgx.Tx, bool, error) {
+	if existingTx, ok := repository.TenantTxFromContext(ctx); ok && existingTx != nil {
+		if q, ok := repository.TenantQueriesFromContext(ctx); ok && q != nil {
+			return q, ctx, existingTx, false, nil
+		}
+		q := pg.New(existingTx)
+		txCtx := repository.WithTenantQueries(ctx, q)
+		return q, txCtx, existingTx, false, nil
+	}
+
+	tx, err := o.repo.PgRepo.TenantPool.Begin(ctx)
+	if err != nil {
+		return nil, nil, nil, false, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+
+	brandID, _ := ctx.Value("brand_id").(string)
+	brandID = strings.TrimSpace(brandID)
+	if brandID == "" {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("brand_id is missing in context")
+	}
+
+	schemaName := fmt.Sprintf("tenant_%s", brandID)
+	if _, err := tx.Exec(ctx, fmt.Sprintf(`SET LOCAL search_path TO "%s", public`, schemaName)); err != nil {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("failed to set tenant search_path: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx, "SET LOCAL app.brand_id = $1", brandID); err != nil {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("failed to set app.brand_id: %w", err)
+	}
+
+	if branchID, _ := ctx.Value("branch_id").(string); strings.TrimSpace(branchID) != "" {
+		if _, err := tx.Exec(ctx, "SET LOCAL app.branch_id = $1", strings.TrimSpace(branchID)); err != nil {
+			tx.Rollback(ctx)
+			return nil, nil, nil, false, fmt.Errorf("failed to set app.branch_id: %w", err)
+		}
+	}
+
+	q := pg.New(tx)
+	txCtx := repository.WithTenantQueries(ctx, q)
+
+	return q, txCtx, tx, true, nil
+}
+
 // CreateBranch creates a new branch
 func (o *OrganizationS) CreateBranch(ctx context.Context, name string, nameI18n *uuid.UUID, address, phone *string) (*model.BranchResponse, error) {
 	if name == "" {
@@ -31,12 +79,27 @@ func (o *OrganizationS) CreateBranch(ctx context.Context, name string, nameI18n 
 		nameI18nUUID = pgtype.UUID{Bytes: *nameI18n, Valid: true}
 	}
 
-	branch, err := o.repo.Tenant(ctx).CreateBranch(ctx, pg.CreateBranchParams{
+	q, txCtx, tx, shouldCommit, err := o.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if shouldCommit {
+		defer tx.Rollback(ctx)
+	}
+
+	branch, err := q.CreateBranch(txCtx, pg.CreateBranchParams{
 		ID: uuid.New(), Name: name, NameI18n: nameI18nUUID, Address: address, Phone: phone,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create branch: %w", err)
 	}
+
+	if shouldCommit {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return toBranchResponse(branch), nil
 }
 
@@ -46,23 +109,42 @@ func (o *OrganizationS) GetBranchByID(ctx context.Context, branchID string) (*mo
 	if err != nil {
 		return nil, fmt.Errorf("invalid branch ID: %w", err)
 	}
-	branch, err := o.repo.Tenant(ctx).GetBranchByID(ctx, id)
+
+	var branch pg.GetBranchByIDRow
+	err = withTenantRead(ctx, o.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		branch, err = q.GetBranchByID(ctx, id)
+		if err != nil {
+			return fmt.Errorf("failed to get branch: %w", err)
+		}
+		return nil
+	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get branch: %w", err)
+		return nil, err
 	}
 	return toBranchResponse(branch), nil
 }
 
 // GetAllBranches retrieves all branches
 func (o *OrganizationS) GetAllBranches(ctx context.Context, limit, offset int32) ([]model.BranchResponse, int64, error) {
-	total, err := o.repo.Tenant(ctx).CountBranches(ctx)
+	var total int64
+	var branches []pg.GetAllBranchesRow
+	err := withTenantRead(ctx, o.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		total, err = q.CountBranches(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to count branches: %w", err)
+		}
+		branches, err = q.GetAllBranches(ctx, pg.GetAllBranchesParams{Limit: limit, Offset: offset})
+		if err != nil {
+			return fmt.Errorf("failed to get branches: %w", err)
+		}
+		return nil
+	})
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to count branches: %w", err)
+		return nil, 0, err
 	}
-	branches, err := o.repo.Tenant(ctx).GetAllBranches(ctx, pg.GetAllBranchesParams{Limit: limit, Offset: offset})
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to get branches: %w", err)
-	}
+
 	var responses []model.BranchResponse
 	for _, b := range branches {
 		responses = append(responses, *toBranchResponse(b))
@@ -91,7 +173,15 @@ func (o *OrganizationS) UpdateBranch(ctx context.Context, branchID string, name,
 		nameI18nUUID = pgtype.UUID{Bytes: parsed, Valid: true}
 	}
 
-	branch, err := o.repo.Tenant(ctx).UpdateBranch(ctx, pg.UpdateBranchParams{
+	q, txCtx, tx, shouldCommit, err := o.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if shouldCommit {
+		defer tx.Rollback(ctx)
+	}
+
+	branch, err := q.UpdateBranch(txCtx, pg.UpdateBranchParams{
 		ID:       id,
 		Name:     nameStr,
 		NameI18n: nameI18nUUID,
@@ -101,6 +191,13 @@ func (o *OrganizationS) UpdateBranch(ctx context.Context, branchID string, name,
 	if err != nil {
 		return nil, fmt.Errorf("failed to update branch: %w", err)
 	}
+
+	if shouldCommit {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return toBranchResponse(branch), nil
 }
 
@@ -110,9 +207,25 @@ func (o *OrganizationS) DeleteBranch(ctx context.Context, branchID string) error
 	if err != nil {
 		return fmt.Errorf("invalid branch ID: %w", err)
 	}
-	if err := o.repo.Tenant(ctx).DeleteBranch(ctx, id); err != nil {
+
+	q, txCtx, tx, shouldCommit, err := o.getTenantMutationQueries(ctx)
+	if err != nil {
+		return err
+	}
+	if shouldCommit {
+		defer tx.Rollback(ctx)
+	}
+
+	if err := q.DeleteBranch(txCtx, id); err != nil {
 		return fmt.Errorf("failed to delete branch: %w", err)
 	}
+
+	if shouldCommit {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return nil
 }
 
@@ -122,9 +235,25 @@ func (o *OrganizationS) RestoreBranch(ctx context.Context, branchID string) erro
 	if err != nil {
 		return fmt.Errorf("invalid branch ID: %w", err)
 	}
-	if err := o.repo.Tenant(ctx).RestoreBranch(ctx, id); err != nil {
+
+	q, txCtx, tx, shouldCommit, err := o.getTenantMutationQueries(ctx)
+	if err != nil {
+		return err
+	}
+	if shouldCommit {
+		defer tx.Rollback(ctx)
+	}
+
+	if err := q.RestoreBranch(txCtx, id); err != nil {
 		return fmt.Errorf("failed to restore branch: %w", err)
 	}
+
+	if shouldCommit {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
 	return nil
 }
 
@@ -325,30 +454,49 @@ func (o *OrganizationS) GetBranchByIDWithLang(ctx context.Context, branchID stri
 	if err != nil {
 		return nil, fmt.Errorf("invalid branch ID: %w", err)
 	}
-	branch, err := o.repo.Tenant(ctx).GetBranchByIDWithLanguage(ctx, pg.GetBranchByIDWithLanguageParams{
-		ID:      id,
-		Column2: lang,
+
+	var branch pg.GetBranchByIDWithLanguageRow
+	err = withTenantRead(ctx, o.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		branch, err = q.GetBranchByIDWithLanguage(ctx, pg.GetBranchByIDWithLanguageParams{
+			ID:      id,
+			Column2: lang,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to get branch: %w", err)
+		}
+		return nil
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get branch: %w", err)
+		return nil, err
 	}
 	return toBranchResponse(branch), nil
 }
 
 // GetAllBranchesWithLang retrieves all branches with language support
 func (o *OrganizationS) GetAllBranchesWithLang(ctx context.Context, lang string, limit, offset int32) ([]model.BranchResponse, int64, error) {
-	total, err := o.repo.Tenant(ctx).CountBranches(ctx)
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to count branches: %w", err)
-	}
-	branches, err := o.repo.Tenant(ctx).GetAllBranchesWithLanguage(ctx, pg.GetAllBranchesWithLanguageParams{
-		Column1: lang,
-		Limit:   limit,
-		Offset:  offset,
+	var total int64
+	var branches []pg.GetAllBranchesWithLanguageRow
+	err := withTenantRead(ctx, o.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		total, err = q.CountBranches(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to count branches: %w", err)
+		}
+		branches, err = q.GetAllBranchesWithLanguage(ctx, pg.GetAllBranchesWithLanguageParams{
+			Column1: lang,
+			Limit:   limit,
+			Offset:  offset,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to get branches: %w", err)
+		}
+		return nil
 	})
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to get branches: %w", err)
+		return nil, 0, err
 	}
+
 	var responses []model.BranchResponse
 	for _, b := range branches {
 		responses = append(responses, *toBranchResponse(b))

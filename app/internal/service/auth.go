@@ -49,6 +49,52 @@ func roleToString(v interface{}) (string, bool) {
 	}
 }
 
+func (s *AuthS) getTenantMutationQueries(ctx context.Context) (*pg.Queries, context.Context, pgx.Tx, bool, error) {
+	if existingTx, ok := repository.TenantTxFromContext(ctx); ok && existingTx != nil {
+		if q, ok := repository.TenantQueriesFromContext(ctx); ok && q != nil {
+			return q, ctx, existingTx, false, nil
+		}
+		q := pg.New(existingTx)
+		txCtx := repository.WithTenantQueries(ctx, q)
+		return q, txCtx, existingTx, false, nil
+	}
+
+	tx, err := s.repo.PgRepo.TenantPool.Begin(ctx)
+	if err != nil {
+		return nil, nil, nil, false, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+
+	brandID, _ := ctx.Value("brand_id").(string)
+	brandID = strings.TrimSpace(brandID)
+	if brandID == "" {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("brand_id is missing in context")
+	}
+
+	schemaName := fmt.Sprintf("tenant_%s", brandID)
+	if _, err := tx.Exec(ctx, fmt.Sprintf(`SET LOCAL search_path TO "%s", public`, schemaName)); err != nil {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("failed to set tenant search_path: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx, "SET LOCAL app.brand_id = $1", brandID); err != nil {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("failed to set app.brand_id: %w", err)
+	}
+
+	if branchID, _ := ctx.Value("branch_id").(string); strings.TrimSpace(branchID) != "" {
+		if _, err := tx.Exec(ctx, "SET LOCAL app.branch_id = $1", strings.TrimSpace(branchID)); err != nil {
+			tx.Rollback(ctx)
+			return nil, nil, nil, false, fmt.Errorf("failed to set app.branch_id: %w", err)
+		}
+	}
+
+	q := pg.New(tx)
+	txCtx := repository.WithTenantQueries(ctx, q)
+
+	return q, txCtx, tx, true, nil
+}
+
 type AuthS struct {
 	cfg  *config.Config
 	repo *repository.Repository
@@ -829,9 +875,17 @@ func (s *AuthS) Refresh(ctx context.Context, req model.RefreshRequest, jwtCfg *c
 }
 
 func (s *AuthS) UpdateUserPassword(ctx context.Context, userID uuid.UUID, currentPassword, newPassword string) error {
-	existingUser, err := s.repo.Tenant(ctx).GetUserByID(ctx, userID)
+	var existingUser pg.User
+	err := withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		existingUser, err = q.GetUserByID(ctx, userID)
+		if err != nil {
+			return fmt.Errorf("failed to get user: %w", err)
+		}
+		return nil
+	})
 	if err != nil {
-		return fmt.Errorf("failed to get user: %w", err)
+		return err
 	}
 
 	if existingUser.HashPassword == nil || *existingUser.HashPassword == "" {
@@ -847,10 +901,24 @@ func (s *AuthS) UpdateUserPassword(ctx context.Context, userID uuid.UUID, curren
 		return fmt.Errorf("failed to hash password: %w", err)
 	}
 
+	q, txCtx, tx, shouldCommit, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return err
+	}
+	if shouldCommit {
+		defer tx.Rollback(ctx)
+	}
+
 	params := pg.UpdateUserPasswordParams{ID: existingUser.ID, HashPassword: &hashedPassword}
 
-	if _, err := s.repo.Tenant(ctx).UpdateUserPassword(ctx, params); err != nil {
+	if _, err := q.UpdateUserPassword(txCtx, params); err != nil {
 		return fmt.Errorf("failed to update password: %w", err)
+	}
+
+	if shouldCommit {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return nil
@@ -861,9 +929,21 @@ func (s *AuthS) GetUserByID(ctx context.Context, userID string) (model.UserRespo
 	if err != nil {
 		return model.UserResponse{}, err
 	}
-	user, err := s.repo.Tenant(ctx).GetUserByID(ctx, uuidID)
+
+	var user pg.User
+	err = withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		user, err = q.GetUserByID(ctx, uuidID)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
 	if err != nil {
-		return model.UserResponse{}, err
+		if errors.Is(err, pgx.ErrNoRows) {
+			return model.UserResponse{}, fmt.Errorf("user not found")
+		}
+		return model.UserResponse{}, fmt.Errorf("failed to fetch user: %w", err)
 	}
 	return toUserResponse(user), nil
 }
@@ -916,14 +996,23 @@ func (s *AuthS) GetUsers(ctx context.Context, req model.GetUsersRequest) ([]mode
 		}
 	}
 
-	total, err := s.repo.Tenant(ctx).CountUsersFiltered(ctx, countParams)
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to count users: %w", err)
-	}
+	var total int64
+	var users []pg.User
+	err := withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		total, err = q.CountUsersFiltered(ctx, countParams)
+		if err != nil {
+			return fmt.Errorf("failed to count users: %w", err)
+		}
 
-	users, err := s.repo.Tenant(ctx).GetUsersFiltered(ctx, listParams)
+		users, err = q.GetUsersFiltered(ctx, listParams)
+		if err != nil {
+			return fmt.Errorf("failed to get users: %w", err)
+		}
+		return nil
+	})
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to get users: %w", err)
+		return nil, 0, err
 	}
 
 	resp := make([]model.UserResponse, 0, len(users))
@@ -939,12 +1028,21 @@ func (s *AuthS) UpdateUser(ctx context.Context, req model.UpdateUserRequest, use
 	if err != nil {
 		return model.UserResponse{}, err
 	}
-	existingUser, err := s.repo.Tenant(ctx).GetUserByID(ctx, uuidID)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return model.UserResponse{}, fmt.Errorf("user not found")
+
+	var existingUser pg.User
+	err = withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		existingUser, err = q.GetUserByID(ctx, uuidID)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return fmt.Errorf("user not found")
+			}
+			return fmt.Errorf("failed to fetch user: %w", err)
 		}
-		return model.UserResponse{}, fmt.Errorf("failed to fetch user: %w", err)
+		return nil
+	})
+	if err != nil {
+		return model.UserResponse{}, err
 	}
 
 	params := pg.UpdateUserParams{
@@ -979,20 +1077,23 @@ func (s *AuthS) UpdateUser(ctx context.Context, req model.UpdateUserRequest, use
 		params.PhoneNumber = req.PhoneNumber
 	}
 
-	user, err := s.repo.Tenant(ctx).UpdateUser(ctx, params)
+	q, txCtx, tx, shouldCommit, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return model.UserResponse{}, err
+	}
+	if shouldCommit {
+		defer tx.Rollback(ctx)
+	}
+
+	user, err := q.UpdateUser(txCtx, params)
 	if err != nil {
 		log.Printf("Failed to update user: %v", err)
 		return model.UserResponse{}, fmt.Errorf("failed to update user: %w", err)
 	}
 
-	if req.IsActive != nil {
-		user, err = s.repo.Tenant(ctx).UpdateUserIsActive(ctx, pg.UpdateUserIsActiveParams{
-			ID:       existingUser.ID,
-			IsActive: *req.IsActive,
-		})
-		if err != nil {
-			log.Printf("Failed to update user is_active: %v", err)
-			return model.UserResponse{}, fmt.Errorf("failed to update user is_active: %w", err)
+	if shouldCommit {
+		if err := tx.Commit(ctx); err != nil {
+			return model.UserResponse{}, fmt.Errorf("failed to commit transaction: %w", err)
 		}
 	}
 
@@ -1007,7 +1108,6 @@ func toUserResponse(u pg.User) model.UserResponse {
 		username  *string
 		shiftID   *string
 		createdAt *time.Time
-		updatedAt *time.Time
 		brandID   *string
 		branchID  *string
 	)
@@ -1025,10 +1125,6 @@ func toUserResponse(u pg.User) model.UserResponse {
 	if u.CreatedAt.Valid {
 		t := u.CreatedAt.Time
 		createdAt = &t
-	}
-	if u.UpdatedAt.Valid {
-		t := u.UpdatedAt.Time
-		updatedAt = &t
 	}
 
 	if u.BrandID.Valid {
@@ -1064,25 +1160,31 @@ func toUserResponse(u pg.User) model.UserResponse {
 		BranchID:       branchID,
 		CashRegisterID: cashRegisterID,
 		CreatedAt:      createdAt,
-		UpdatedAt:      updatedAt,
 	}
 }
 
 func (s *AuthS) GetUsersByRole(ctx context.Context, role string, limit, offset int32) ([]model.UserResponse, int64, error) {
-	role = strings.TrimSpace(strings.ToLower(role))
+	var total int64
+	var users []pg.User
+	err := withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		total, err = q.CountUsersByRole(ctx, role)
+		if err != nil {
+			return fmt.Errorf("failed to count users by role: %w", err)
+		}
 
-	total, err := s.repo.Tenant(ctx).CountUsersByRole(ctx, role)
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to count users by role: %w", err)
-	}
-
-	users, err := s.repo.Tenant(ctx).GetUsersByRolePaginated(ctx, pg.GetUsersByRolePaginatedParams{
-		Role:   role,
-		Limit:  limit,
-		Offset: offset,
+		users, err = q.GetUsersByRolePaginated(ctx, pg.GetUsersByRolePaginatedParams{
+			Role:   role,
+			Limit:  limit,
+			Offset: offset,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to get users by role: %w", err)
+		}
+		return nil
 	})
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to get users by role: %w", err)
+		return nil, 0, err
 	}
 
 	var responses []model.UserResponse
@@ -1093,20 +1195,30 @@ func (s *AuthS) GetUsersByRole(ctx context.Context, role string, limit, offset i
 }
 
 func (s *AuthS) GetKitchenStaff(ctx context.Context, limit, offset int32) ([]model.UserResponse, int64, error) {
-	total, err := s.repo.Tenant(ctx).CountStaffUsers(ctx)
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to count staff: %w", err)
-	}
-	users, err := s.repo.Tenant(ctx).GetStaffUsersPaginated(ctx, pg.GetStaffUsersPaginatedParams{
-		Limit:  limit,
-		Offset: offset,
+	var total int64
+	var users []pg.User
+	err := withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		total, err = q.CountStaffUsers(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to count staff: %w", err)
+		}
+		users, err = q.GetStaffUsersPaginated(ctx, pg.GetStaffUsersPaginatedParams{
+			Limit:  limit,
+			Offset: offset,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to get staff: %w", err)
+		}
+		return nil
 	})
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to get staff: %w", err)
+		return nil, 0, err
 	}
+
 	var responses []model.UserResponse
-	for _, u := range users {
-		responses = append(responses, toUserResponse(u))
+	for _, user := range users {
+		responses = append(responses, toUserResponse(user))
 	}
 	return responses, total, nil
 }
@@ -1117,9 +1229,23 @@ func (s *AuthS) DeleteUser(ctx context.Context, userID string) error {
 		return fmt.Errorf("invalid user ID format: %w", err)
 	}
 
-	_, err = s.repo.Tenant(ctx).SoftDeleteUser(ctx, uuidID)
+	q, txCtx, tx, shouldCommit, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return err
+	}
+	if shouldCommit {
+		defer tx.Rollback(ctx)
+	}
+
+	_, err = q.SoftDeleteUser(txCtx, uuidID)
 	if err != nil {
 		return fmt.Errorf("failed to delete user: %w", err)
+	}
+
+	if shouldCommit {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return nil
@@ -1131,22 +1257,44 @@ func (s *AuthS) RestoreUser(ctx context.Context, userID string) error {
 		return fmt.Errorf("invalid user ID format: %w", err)
 	}
 
-	_, err = s.repo.Tenant(ctx).RestoreUser(ctx, uuidID)
+	q, txCtx, tx, shouldCommit, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return err
+	}
+	if shouldCommit {
+		defer tx.Rollback(ctx)
+	}
+
+	_, err = q.RestoreUser(txCtx, uuidID)
 	if err != nil {
 		return fmt.Errorf("failed to restore user: %w", err)
+	}
+
+	if shouldCommit {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return nil
 }
 
 func (s *AuthS) SearchUsers(ctx context.Context, query string, limit, offset int32) ([]model.UserResponse, error) {
-	users, err := s.repo.Tenant(ctx).SearchUsers(ctx, pg.SearchUsersParams{
-		Column1: &query,
-		Limit:   limit,
-		Offset:  offset,
+	var users []pg.User
+	err := withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		users, err = q.SearchUsers(ctx, pg.SearchUsersParams{
+			Column1: &query,
+			Limit:   limit,
+			Offset:  offset,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to search users: %w", err)
+		}
+		return nil
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to search users: %w", err)
+		return nil, err
 	}
 
 	var responses []model.UserResponse
