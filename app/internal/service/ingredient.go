@@ -376,14 +376,21 @@ func (i *IngredientS) GetIngredientReport(ctx context.Context, req model.GetIngr
 		SortOrder:     sortOrder,
 	}
 
-	totalsRow, err := i.repo.Tenant(ctx).GetIngredientReportTotals(ctx, params)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get ingredient report totals: %w", err)
-	}
-
-	rows, err := i.repo.Tenant(ctx).GetIngredientReport(ctx, params)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get ingredient report: %w", err)
+	var totalsRow pg.IngredientReportTotalsRow
+	var rows []pg.IngredientReportRow
+	if err := withTenantRead(ctx, i.repo, func(tenantCtx context.Context, q *pg.Queries) error {
+		var err error
+		totalsRow, err = q.GetIngredientReportTotals(tenantCtx, params)
+		if err != nil {
+			return fmt.Errorf("failed to get ingredient report totals: %w", err)
+		}
+		rows, err = q.GetIngredientReport(tenantCtx, params)
+		if err != nil {
+			return fmt.Errorf("failed to get ingredient report: %w", err)
+		}
+		return nil
+	}); err != nil {
+		return nil, err
 	}
 
 	items := make([]model.IngredientReportItem, 0, len(rows))
@@ -455,15 +462,20 @@ func (i *IngredientS) GetIngredientReportMovements(ctx context.Context, req mode
 		limit = 50
 	}
 
-	rows, err := i.repo.Tenant(ctx).GetIngredientStockMovements(ctx, pg.GetIngredientStockMovementsParams{
+	movementParams := pg.GetIngredientStockMovementsParams{
 		StorageID:    storageUUID,
 		IngredientID: ingredientUUID,
 		Start:        start,
 		End:          end,
 		Limit:        limit,
 		Offset:       req.Offset,
-	})
-	if err != nil {
+	}
+	var rows []pg.IngredientStockMovementRow
+	if err := withTenantRead(ctx, i.repo, func(tenantCtx context.Context, q *pg.Queries) error {
+		var err error
+		rows, err = q.GetIngredientStockMovements(tenantCtx, movementParams)
+		return err
+	}); err != nil {
 		return nil, fmt.Errorf("failed to get ingredient stock movements: %w", err)
 	}
 
@@ -525,14 +537,21 @@ func (i *IngredientS) GetIngredientInventoryStatusReport(ctx context.Context, re
 		Offset:       req.Offset,
 	}
 
-	totalsRow, err := i.repo.Tenant(ctx).GetIngredientInventoryStatusReportTotals(ctx, params)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get inventory status report totals: %w", err)
-	}
-
-	rows, err := i.repo.Tenant(ctx).GetIngredientInventoryStatusReport(ctx, params)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get inventory status report: %w", err)
+	var totalsRow pg.IngredientReportTotalsRow
+	var rows []pg.IngredientReportRow
+	if err := withTenantRead(ctx, i.repo, func(tenantCtx context.Context, q *pg.Queries) error {
+		var err error
+		totalsRow, err = q.GetIngredientInventoryStatusReportTotals(tenantCtx, params)
+		if err != nil {
+			return fmt.Errorf("failed to get inventory status report totals: %w", err)
+		}
+		rows, err = q.GetIngredientInventoryStatusReport(tenantCtx, params)
+		if err != nil {
+			return fmt.Errorf("failed to get inventory status report: %w", err)
+		}
+		return nil
+	}); err != nil {
+		return nil, err
 	}
 
 	items := make([]model.IngredientReportItem, 0, len(rows))
