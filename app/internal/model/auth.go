@@ -25,10 +25,11 @@ type LoginRequest struct {
 }
 
 type PincodeLoginRequest struct {
-	Password string  `json:"password" example:"superSecret123"`
-	Pincode  *string `json:"pincode,omitempty" example:"1234"`
-	BrandID  string  `json:"brand_id" example:"my_restaurant"`
-	FCMToken *string `json:"fcm_token,omitempty" example:"eP8...firebase...token"`
+	Password    string  `json:"password" example:"superSecret123"`
+	PosPassword string  `json:"pos_password" example:"superSecret123"`
+	Pincode     *string `json:"pincode,omitempty" example:"1234"`
+	BrandID     string  `json:"brand_id" example:"my_restaurant"`
+	FCMToken    *string `json:"fcm_token,omitempty" example:"eP8...firebase...token"`
 }
 
 type GlobalLoginRequest struct {
@@ -182,7 +183,6 @@ type UpdateShiftRequest struct {
 	OpenTime    *string `json:"open_time,omitempty" example:"09:00:00"`
 	CloseTime   *string `json:"close_time,omitempty" example:"17:00:00"`
 }
-
 
 type UpdatePrinterSettingsRequest struct {
 	CashierPrinterIP string `json:"cashier_printer_ip" example:"192.168.1.100"`

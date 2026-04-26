@@ -79,9 +79,14 @@ func (h *Handler) LoginWithPincode(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("brand_id is required", "see logs for details", http.StatusBadRequest))
 	}
 
-	if req.Password == "" {
-		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("password is required", "see logs for details", http.StatusBadRequest))
+	password := req.Password
+	if password == "" {
+		password = req.PosPassword
 	}
+	if password == "" {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("password is required (password, password_, or pos_password)", "see logs for details", http.StatusBadRequest))
+	}
+	req.Password = password
 
 	if req.Pincode == nil || *req.Pincode == "" {
 		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("pincode is required", "see logs for details", http.StatusBadRequest))
