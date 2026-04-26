@@ -27,7 +27,14 @@ const buildQueryString = (params: Partial<IIngredientReportsFilterParams>): stri
     }
     if (params.start) queryParams.append('start', params.start);
     if (params.end) queryParams.append('end', params.end);
-    if (params.ingredient_id) queryParams.append('ingredient_id', params.ingredient_id);
+    if (params.ingredient_ids && params.ingredient_ids.length > 0) {
+        queryParams.append('ingredient_ids', params.ingredient_ids.join(','));
+    } else if (params.ingredient_id) {
+        queryParams.append('ingredient_id', params.ingredient_id);
+    }
+    if (params.measurement) queryParams.append('measurement', params.measurement);
+    if (params.sort_by) queryParams.append('sort_by', params.sort_by);
+    if (params.sort_order) queryParams.append('sort_order', params.sort_order);
 
     queryParams.append('limit', String(params.limit ?? 500));
     queryParams.append('offset', String(params.offset ?? 0));
@@ -109,6 +116,54 @@ export function useGetIngredientReportDetail(
             reportValidating: isValidating,
         }),
         [report, error, isLoading, isValidating]
+    );
+
+    return memoizedValue;
+}
+
+/**
+ * Get inventory status report for a storage
+ * This replaces ingredient stock for inventory forms
+ */
+export function useGetInventoryStatus(
+    storageId: string | undefined,
+    options?: {
+        end?: string;
+        ingredient_id?: string;
+        limit?: number;
+        offset?: number;
+    }
+) {
+    const params = {
+        storage_id: storageId || '',
+        ...(options?.end && { end: options.end }),
+        ...(options?.ingredient_id && { ingredient_id: options.ingredient_id }),
+        limit: options?.limit || 1000,
+        offset: options?.offset || 0,
+    };
+
+    const { data, isLoading, error, isValidating } = useSWR<IIngredientReportsResponse>(
+        storageId ? [endpoints.ingredientReports.inventoryStatus, { params }] : null,
+        fetcher,
+        { ...swrOptions }
+    );
+
+    const reports = useMemo(() => {
+        if (!data?.data) return [];
+        return Array.isArray(data.data) ? data.data : [];
+    }, [data]);
+    const pagination = useMemo(() => data?.pagination, [data]);
+
+    const memoizedValue = useMemo(
+        () => ({
+            reports,
+            pagination,
+            loading: isLoading,
+            error,
+            validating: isValidating,
+            empty: !isLoading && !isValidating && !reports.length,
+        }),
+        [reports, pagination, error, isLoading, isValidating]
     );
 
     return memoizedValue;

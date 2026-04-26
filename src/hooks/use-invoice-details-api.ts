@@ -36,6 +36,8 @@ export interface InvoiceListFilters {
     status?: string;
     expand?: string;
     search?: string;
+    ingredient_ids?: string[];
+    general_search?: string;
     limit?: number;
     offset?: number;
 }
@@ -89,6 +91,12 @@ export function useInvoiceDetailsAPI(): UseInvoiceDetailsAPIReturn {
         assignIfPresent('search', filters.search);
         assignIfPresent('limit', filters.limit);
         assignIfPresent('offset', filters.offset);
+
+        if (filters.ingredient_ids && Array.isArray(filters.ingredient_ids) && filters.ingredient_ids.length > 0) {
+            params.ingredient_ids = filters.ingredient_ids.join(',');
+        }
+
+        assignIfPresent('general_search', filters.general_search);
 
         return params;
     };

@@ -36,7 +36,14 @@
       "Bash(wc -l /home/spike/Documents/work/MARY_AI/mary_front/frontv2/src/sections/cashbox/*.tsx)",
       "Bash(awk -F: '{print $1}')",
       "Bash(curl -s -X GET 'https://back.staging.maryai.yurtal.tech/api/v1/orders?from=2026-04-19&to=2026-04-20&limit=10' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiNTg5ZjY3NWUtODE4Mi00OTA1LWJmMTUtYTZiYmE0ZDA0MzdkIiwiYnJhbmRfaWQiOiJtYXJ5X2FpIiwiYnJhbmNoX2lkIjoiMzg2OTEyNDEtYmYxNC00NzE3LWI3OTYtMmVhNzJhYWY4MjQzIiwicm9sZSI6ImFkbWluIiwiaXNfZ2xvYmFsIjpmYWxzZSwidG9rZW5fdHlwZSI6ImFjY2VzcyIsImV4cCI6MTc3NjY1MjcyNCwiaWF0IjoxNzc2NTY2MzI0LCJuYmYiOjE3NzY1NjYzMjQsInN1YiI6IjU4OWY2NzVlLTgxODItNDkwNS1iZjE1LWE2YmJhNGQwNDM3ZCJ9.vUuQBjvyjlvAWmrD91OtGzSwq5PnsfUEO-tuPk0teoY' -H 'X-Brand-Id: mary_ai' -H 'X-Branch-ID: 3869124-bf14-4717-b796-2ea72aaf8243')",
-      "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")"
+      "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")",
+      "Bash(curl -s http://localhost:8082/auth/jwt/sign-in)",
+      "Bash(curl -s http://localhost:8082/)",
+      "Bash(npm run *)",
+      "Bash(grep -E \"^-.*\\\\.tsx$\")"
+    ],
+    "additionalDirectories": [
+      "/tmp"
     ]
   }
 }

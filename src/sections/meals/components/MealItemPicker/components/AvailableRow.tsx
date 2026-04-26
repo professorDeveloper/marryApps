@@ -22,10 +22,11 @@ const ROW_SX = {
     py: 0.75,
     m: 0,
     borderBottom: 1,
-    borderColor: 'divider',
+    borderColor: 'var(--color-border)',
     cursor: 'pointer',
-    '&:hover': { bgcolor: 'action.hover' },
+    '&:hover': { bgcolor: 'var(--color-primary-soft)' },
     boxSizing: 'border-box',
+    fontFamily: '"Inter", sans-serif',
 } as const;
 
 const CB_CELL_SX = { display: 'flex', justifyContent: 'center' } as const;
@@ -49,7 +50,12 @@ const CHIP_SX = {
     fontSize: '0.65rem',
     height: 16,
     minWidth: 32,
+    fontFamily: '"Inter", sans-serif',
     '& .MuiChip-label': { px: 0.5 },
+    '&.MuiChip-outlined': {
+        borderColor: 'var(--color-border)',
+        color: 'var(--color-text)',
+    },
 } as const;
 
 export const AvailableRow = React.memo(function AvailableRow({
@@ -85,17 +91,17 @@ export const AvailableRow = React.memo(function AvailableRow({
             </Box>
             <Box sx={CONTENT_CELL_SX}>
                 <Box sx={TEXT_COL_SX}>
-                    <Typography variant="body2" noWrap sx={NAME_SX}>
+                    <Typography variant="body2" noWrap sx={NAME_SX} fontFamily='"Inter", sans-serif'>
                         {item.name}
                     </Typography>
-                    <Typography variant="caption" color="text.secondary" noWrap sx={MEAS_SX}>
+                    <Typography variant="caption" color="text.secondary" noWrap sx={MEAS_SX} fontFamily='"Inter", sans-serif'>
                         {item.measurement || '—'}
                     </Typography>
                 </Box>
                 <Chip
                     size="small"
                     label={item.type === 'ingredient' ? ingredientLabel : compoundLabel}
-                    color={item.type === 'ingredient' ? 'primary' : 'secondary'}
+                    variant="outlined"
                     sx={CHIP_SX}
                 />
             </Box>

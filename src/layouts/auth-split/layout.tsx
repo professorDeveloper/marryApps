@@ -14,10 +14,11 @@ import { paths } from 'src/routes/paths';
 import { RouterLink } from 'src/routes/components';
 
 import { Logo } from 'src/components/logo';
+import { NeuralGrid, DarkTechPattern } from 'src/components/animate/background-patterns';
 
 import { AuthSplitContent } from './content';
 import { SettingsButton } from '../components/settings-button';
-import { MainSection, LayoutSection, HeaderSection } from '../core';
+import { LayoutSection, HeaderSection } from '../core';
 
 // ----------------------------------------------------------------------
 
@@ -94,18 +95,37 @@ export function AuthSplitLayout({
   const renderFooter = () => null;
 
   const renderMain = () => (
-    <MainSection
+    <Box
+      component="main"
+      sx={{
+        display: 'flex',
+        flexDirection: { xs: 'column', [layoutQuery]: 'row' },
+        minHeight: '100vh',
+        ...(Array.isArray(slotProps?.main?.sx)
+          ? slotProps.main.sx.reduce((acc, s) => ({ ...acc, ...s }), {})
+          : slotProps?.main?.sx),
+      }}
       {...slotProps?.main}
-      sx={[
-        (theme) => ({ [theme.breakpoints.up(layoutQuery)]: { flexDirection: 'row' } }),
-        ...(Array.isArray(slotProps?.main?.sx) ? slotProps.main.sx : [slotProps?.main?.sx]),
-      ]}
     >
-    
+      {/* Left Panel — Form Sidebar */}
       <AuthSplitContent layoutQuery={layoutQuery} {...slotProps?.content}>
         {children}
       </AuthSplitContent>
-    </MainSection>
+
+      {/* Right Panel — Cyber Background (hidden on mobile) */}
+      <Box
+        sx={{
+          display: { xs: 'none', [layoutQuery]: 'flex' },
+          flex: '1 1 60%',
+          position: 'relative',
+          overflow: 'hidden',
+          bgcolor: 'common.black',
+        }}
+      >
+        <NeuralGrid />
+        <DarkTechPattern bright />
+      </Box>
+    </Box>
   );
 
   return (
@@ -121,7 +141,7 @@ export function AuthSplitLayout({
       /** **************************************
        * @Styles
        *************************************** */
-      cssVars={{ '--layout-auth-content-width': '420px', ...cssVars }}
+      cssVars={cssVars}
       sx={sx}
     >
       {renderMain()}

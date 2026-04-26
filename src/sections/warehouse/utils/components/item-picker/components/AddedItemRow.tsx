@@ -9,7 +9,7 @@ const INPUT_STYLE: React.CSSProperties = {
     width: '100%',
     padding: '4px 6px',
     fontSize: '0.8125rem',
-    border: '1px solid var(--palette-divider, rgba(145,158,171,0.32))',
+    border: '1px solid var(--color-border)',
     borderRadius: 6,
     outline: 'none',
     background: 'transparent',
@@ -33,24 +33,67 @@ function itemDisplayEqual(
 
 function areEqual(prev: AddedItemRowProps, next: AddedItemRowProps) {
     if (prev.rowIndex !== next.rowIndex) return false;
+    if (prev.totalRows !== next.totalRows) return false;
     if (!itemDisplayEqual(prev.item, next.item, prev.columns)) return false;
     if (prev.onValueChange !== next.onValueChange || prev.onRemove !== next.onRemove) return false;
     if (prev.removeTitle !== next.removeTitle || prev.gridTemplate !== next.gridTemplate) return false;
     if (prev.columns !== next.columns) return false;
+    if (prev.onNavigateFocus !== next.onNavigateFocus) return false;
 
     return true;
 }
 
 export const AddedItemRow = memo(function AddedItemRow({
     rowIndex,
+    totalRows,
     item,
     columns,
     onValueChange,
     onRemove,
     removeTitle,
     gridTemplate,
+    onNavigateFocus,
 }: AddedItemRowProps) {
     const handleRemove = useCallback(() => onRemove(item.id), [onRemove, item.id]);
+
+    const handleKeyDown = useCallback(
+        (e: React.KeyboardEvent<HTMLInputElement>, columnKey: string) => {
+            if (e.key === 'ArrowDown' && onNavigateFocus) {
+                e.preventDefault();
+                if (rowIndex < totalRows - 1) {
+                    onNavigateFocus('down', rowIndex, columnKey);
+                }
+            } else if (e.key === 'ArrowUp' && onNavigateFocus) {
+                e.preventDefault();
+                if (rowIndex > 0) {
+                    onNavigateFocus('up', rowIndex, columnKey);
+                }
+            } else if (e.key === 'ArrowLeft' && onNavigateFocus) {
+                const input = e.currentTarget;
+                const cursorPosition = input.selectionStart;
+                const valueLength = input.value.length;
+
+                // Only switch columns if cursor is at the start of the value
+                if (cursorPosition === 0) {
+                    e.preventDefault();
+                    onNavigateFocus('left', rowIndex, columnKey);
+                }
+                // Otherwise, let default behavior move cursor left within the number
+            } else if (e.key === 'ArrowRight' && onNavigateFocus) {
+                const input = e.currentTarget;
+                const cursorPosition = input.selectionStart;
+                const valueLength = input.value.length;
+
+                // Only switch columns if cursor is at the end of the value
+                if (cursorPosition === valueLength) {
+                    e.preventDefault();
+                    onNavigateFocus('right', rowIndex, columnKey);
+                }
+                // Otherwise, let default behavior move cursor right within the number
+            }
+        },
+        [rowIndex, totalRows, onNavigateFocus]
+    );
 
     return (
         <Box
@@ -87,6 +130,7 @@ export const AddedItemRow = memo(function AddedItemRow({
                     col={col}
                     item={item}
                     onValueChange={onValueChange}
+                    onKeyDown={col.editable && (col.key === 'counted_quantity' || col.key === 'quantity' || col.key === 'price_per_unit' || col.key === 'total') ? (e) => handleKeyDown(e, col.key) : undefined}
                 />
             ))}
 
@@ -108,30 +152,96 @@ interface CellRendererProps {
     col: ColumnDef;
     item: AddedItemRowProps['item'];
     onValueChange: AddedItemRowProps['onValueChange'];
+    onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
 }
 
-const CellRenderer = memo(function CellRenderer({ col, item, onValueChange }: CellRendererProps) {
-    const value = item[col.key] ?? '';
+const CellRenderer = memo(function CellRenderer({ col, item, onValueChange, onKeyDown }: CellRendererProps) {
+    const value = item[col.key];
+    const [isFocused, setIsFocused] = React.useState(false);
+    const [localValue, setLocalValue] = React.useState<string>('');
+
+    // Sync local value with prop value when not focused
+    React.useEffect(() => {
+        if (!isFocused) {
+            setLocalValue(String(value || ''));
+        }
+    }, [value, isFocused]);
+
+    // Format number with spaces for display
+    const formatNumberWithSpaces = (num: number | string | undefined | null): string => {
+        if (num === undefined || num === null || num === 0) return '';
+        const stringValue = String(num);
+
+        const numericValue = parseFloat(stringValue);
+        if (isNaN(numericValue)) return stringValue;
+
+        // Check if the value has decimal places
+        const hasDecimals = numericValue % 1 !== 0;
+
+        return new Intl.NumberFormat('en-US', {
+            useGrouping: true,
+            minimumFractionDigits: hasDecimals ? 2 : 0,
+            maximumFractionDigits: hasDecimals ? 2 : 0,
+        }).format(numericValue).replace(/,/g, ' ');
+    };
+
+    const displayValue = isFocused ? localValue : formatNumberWithSpaces(localValue);
 
     const handleChange = useCallback(
         (e: React.ChangeEvent<HTMLInputElement>) => {
-            onValueChange(item.id, col.key, e.target.value);
+            const newValue = e.target.value;
+
+            // Validate: only allow numbers and at most one dot
+            const dotCount = (newValue.match(/\./g) || []).length;
+            const hasInvalidChars = /[^0-9.]/.test(newValue);
+
+            if (hasInvalidChars || dotCount > 1) {
+                // Filter out invalid characters and extra dots
+                const firstDotIndex = newValue.indexOf('.');
+                let filtered = newValue.replace(/[^0-9.]/g, '');
+                if (firstDotIndex !== -1) {
+                    const parts = filtered.split('.');
+                    filtered = parts[0] + (parts.length > 1 ? '.' + parts.slice(1).join('') : '');
+                }
+                setLocalValue(filtered);
+
+                const rawValue = filtered.replace(/\s/g, '');
+                onValueChange(item.id, col.key, rawValue);
+            } else {
+                setLocalValue(newValue);
+
+                const rawValue = newValue.replace(/\s/g, '');
+                onValueChange(item.id, col.key, rawValue);
+            }
         },
         [onValueChange, item.id, col.key]
     );
 
+    const handleFocus = useCallback(() => {
+        setIsFocused(true);
+        setLocalValue(String(value || ''));
+    }, [value]);
+
+    const handleBlur = useCallback(() => {
+        setIsFocused(false);
+    }, []);
+
     if (col.editable) {
         const suffix = col.suffix?.(item);
+        const inputType = col.type === 'text' ? 'text' : 'text'; // Always use text to avoid browser limits
 
         if (suffix) {
             return (
                 <div style={{ position: 'relative' }}>
                     <input
-                        type={col.type ?? 'number'}
-                        value={value}
+                        type={inputType}
+                        value={displayValue}
                         onChange={handleChange}
-                        step={col.step ?? '0.01'}
-                        min={col.min ?? '0'}
+                        onKeyDown={onKeyDown}
+                        onFocus={handleFocus}
+                        onBlur={handleBlur}
+                        inputMode="decimal"
+                        placeholder="0"
                         style={{ ...INPUT_STYLE, paddingRight: 40 }}
                     />
                     <span
@@ -153,11 +263,14 @@ const CellRenderer = memo(function CellRenderer({ col, item, onValueChange }: Ce
 
         return (
             <input
-                type={col.type ?? 'number'}
-                value={value}
+                type={inputType}
+                value={displayValue}
                 onChange={handleChange}
-                step={col.step ?? '0.01'}
-                min={col.min ?? '0'}
+                onKeyDown={onKeyDown}
+                onFocus={handleFocus}
+                onBlur={handleBlur}
+                inputMode="decimal"
+                placeholder="0"
                 style={INPUT_STYLE}
             />
         );

@@ -32,9 +32,10 @@ export function DataTableColumnMenu<T>({
         sx: {
           mt: 1,
           minWidth: 260,
-          backgroundColor: SURFACE_BG,
-          border: `1px solid ${BORDER}`,
+          backgroundColor: 'var(--color-surface-0)',
+          border: '1px solid var(--color-border)',
           backdropFilter: 'blur(12px)',
+          boxShadow: 'var(--glow-shadow-md)',
         },
       }}
     >
@@ -43,13 +44,13 @@ export function DataTableColumnMenu<T>({
           px: 1.5,
           py: 1,
           fontSize: 12,
-          color: 'rgba(255,255,255,0.65)',
+          color: 'var(--color-text-muted)',
           fontFamily: '"Inter", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif',
         }}
       >
         Columns
       </Typography>
-      <Divider sx={{ borderColor: BORDER }} />
+      <Divider sx={{ borderColor: 'var(--color-border)' }} />
       {columns.map((c) => {
         const toggleable = c.toggleable !== false;
         const checked = visibility[c.key] !== false;
@@ -60,15 +61,21 @@ export function DataTableColumnMenu<T>({
             onClick={() => {
               if (toggleable) onToggleVisibility(c.key);
             }}
-            sx={{ fontSize: 13 }}
+            sx={{
+              fontSize: 13,
+              '&:hover': {
+                backgroundColor: 'var(--glow-sm)',
+                boxShadow: 'var(--glow-shadow-md)',
+              },
+            }}
           >
             <Checkbox
               size="small"
               checked={checked}
               sx={{
                 mr: 1,
-                color: 'rgba(255,255,255,0.35)',
-                '&.Mui-checked': { color: ACCENT },
+                color: 'var(--color-text-muted)',
+                '&.Mui-checked': { color: 'var(--color-primary)' },
               }}
             />
             {c.label}

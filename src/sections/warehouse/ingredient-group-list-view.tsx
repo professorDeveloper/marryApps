@@ -10,7 +10,6 @@ import {
     Typography,
     IconButton,
     DialogTitle,
-    ListItemText,
     DialogActions,
     DialogContent,
 } from '@mui/material';
@@ -26,23 +25,8 @@ import { Iconify } from 'src/components/iconify';
 import { GenericViewModal } from 'src/components/generic-view-view';
 
 import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
-
-function RenderCellGroupName({ row }: { row: any }) {
-    const name = row.name || '-';
-
-    return (
-        <Box
-            sx={{
-                py: 2,
-                width: 1,
-                display: 'flex',
-                alignItems: 'center',
-            }}
-        >
-            <ListItemText primary={<span>{name}</span>} />
-        </Box>
-    );
-}
+import { CELL_SX } from './deduction/components/utility-data-table/utils';
+import { RouterLink } from 'src/routes/components';
 
 export function IngredientGroupListView() {
     const { t } = useTranslation('menu');
@@ -113,7 +97,9 @@ export function IngredientGroupListView() {
                 align: 'left' as const,
                 getValue: (row: IIngredientGroupItem) => row?.name ?? '',
                 renderCell: ({ row }: { row: IIngredientGroupItem }) => (
-                    <RenderCellGroupName row={row} />
+                    <Box sx={CELL_SX}>
+                        {row.name || '-'}
+                    </Box>
                 ),
             },
             {
@@ -276,6 +262,7 @@ export function IngredientGroupListView() {
                         <Button
                             variant="contained"
                             startIcon={<Iconify icon="mingcute:add-line" />}
+                            component={RouterLink}
                             href={paths.menu.ingredients_group.new}
                             size="small"
                         >

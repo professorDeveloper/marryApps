@@ -15,14 +15,18 @@ import { getInitials } from 'src/utils/avatar';
 import { getFullImageUrl } from 'src/utils/image-url';
 
 import { DashboardContent } from 'src/layouts/dashboard';
-import { useGetStorages, useGetDepartments, useDeleteDepartment, useGetCategoriesByDepartment } from 'src/actions/departments';
+import { useGetDepartments, useDeleteDepartment, useGetCategoriesByDepartment } from 'src/actions/departments';
+import { useMetadata } from 'src/hooks/use-metadata';
+import { MetadataEntity } from 'src/types/metadata';
 
 import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
 import { GenericViewModal } from 'src/components/generic-view-view';
 
 import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
+import { StorageFilter } from 'src/sections/warehouse/deduction/components/utility-data-table/components/StorageFilter';
 import { DEPARTMENTS_TABLE_PERSIST_KEY } from 'src/sections/menu/compounds/utilities';
+import { RouterLink } from 'src/routes/components';
 
 interface CellRenderParams {
   row: IDepartmentItem;
@@ -85,7 +89,8 @@ function RenderCellColor({ row }: CellRenderParams) {
 function CategoriesTable({ departmentId }: { departmentId: string }) {
   const { t } = useTranslation('menu');
   const { categories, categoriesLoading } = useGetCategoriesByDepartment(departmentId);
-  const { storages } = useGetStorages();
+  const { data: metadata } = useMetadata([MetadataEntity.STORAGES]);
+  const storages = metadata.storages || [];
   const [imageUrls, setImageUrls] = useState<{ [key: string]: string | null }>({});
 
   // Create storage map for quick lookup
@@ -260,7 +265,8 @@ export function DepartmentsListView() {
     page: 0,
     pageSize: 20,
   });
-  const { storages } = useGetStorages();
+  const { data: metadata } = useMetadata([MetadataEntity.STORAGES]);
+  const storages = metadata.storages || [];
 
   // Debounce quick filter input before hitting search API
   useEffect(() => {
@@ -451,16 +457,17 @@ export function DepartmentsListView() {
             setSortState({ key: sort.key, dir: sort.dir });
             setPaginationModel((prev) => ({ ...prev, page: 0 }));
           }}
-          showStorageSelector={true}
-          storageSelectorProps={{
-            storageId: storageId || '',
-            storages: (storages || []).map((s: any) => ({ id: s.id, name: s.name })),
-            onStorageChange: (id: string) => {
-              setStorageId(id);
-              setPaginationModel((prev) => ({ ...prev, page: 0 }));
-            },
-            label: t('common.storage', 'Storage'),
-          }}
+          toolbarActions={
+            <StorageFilter
+              storageId={storageId || ''}
+              storages={(storages || []).map((s: any) => ({ id: s.id, name: s.name }))}
+              onStorageChange={(id: string) => {
+                setStorageId(id);
+                setPaginationModel((prev) => ({ ...prev, page: 0 }));
+              }}
+              label={t('common.storage', 'Storage')}
+            />
+          }
           page={paginationModel.page}
           rowsPerPage={paginationModel.pageSize}
           totalCount={departmentsTotal || 0}
@@ -476,6 +483,7 @@ export function DepartmentsListView() {
             <Button
               variant="contained"
               startIcon={<Iconify icon="mingcute:add-line" />}
+              component={RouterLink}
               href={paths.menu.product.new}
               size="small"
             >

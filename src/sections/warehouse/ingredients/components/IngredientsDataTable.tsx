@@ -11,6 +11,7 @@ import { useRouter } from 'src/routes/hooks';
 import { Iconify } from '../../../../components/iconify';
 import { useIngredients } from '../hooks/use-ingredients';
 import { DataTable } from '../../deduction/components/utility-data-table';
+import { RouterLink } from 'src/routes/components';
 import {
   IngredientNameCell,
   IngredientColorCell,
@@ -173,6 +174,7 @@ export function IngredientsDataTable({
           <Button
             variant="contained"
             startIcon={<Iconify icon="mingcute:add-line" />}
+            component={RouterLink}
             href={paths.menu.ingredients.new}
             size="small"
           >

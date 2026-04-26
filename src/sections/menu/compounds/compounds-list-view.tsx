@@ -32,10 +32,11 @@ import {
     useGetCompoundsPage,
     useGetCompoundWithCalculations,
 } from 'src/hooks/use-compounds';
+import { useMetadata } from 'src/hooks/use-metadata';
+import { MetadataEntity } from 'src/types/metadata';
 
 import { DashboardContent } from 'src/layouts/dashboard';
 import { useGetIngredients } from 'src/actions/ingredients';
-import { useGetIngredientGroups } from 'src/actions/ingredient-group';
 import { useGetDepartments } from 'src/actions/departments';
 
 import { Iconify } from 'src/components/iconify';
@@ -44,6 +45,7 @@ import { formatDate, formatPrice } from 'src/components/generic-view-view/modal-
 
 import { DataTable } from 'src/sections/warehouse/deduction/components/utility-data-table';
 import { CELL_SX } from 'src/sections/warehouse/deduction/components/utility-data-table/utils/constants';
+import { RouterLink } from 'src/routes/components';
 
 
 // ============================================================================
@@ -434,6 +436,7 @@ export function HalfMeals() {
     const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 20 });
     const [sortState, setSortState] = useState<{ key: string | null; dir: 'asc' | 'desc' | null }>({ key: null, dir: null });
     const { departments } = useGetDepartments();
+    const { data: metadata } = useMetadata([MetadataEntity.INGREDIENT_GROUPS]);
 
     useEffect(() => {
         const timeout = setTimeout(() => {
@@ -457,7 +460,6 @@ export function HalfMeals() {
         sort_order: sortState.dir || undefined,
         department_id: departmentId || undefined,
     });
-    const { ingredientGroups } = useGetIngredientGroups();
     const { deleteCompound } = useDeleteCompound();
     const { deleteCompounds } = useDeleteCompounds();
 
@@ -469,6 +471,7 @@ export function HalfMeals() {
 
     const ingredientGroupMap = useMemo(() => {
         const map = new Map<string, string>();
+        const ingredientGroups = metadata.ingredient_groups || [];
 
         ingredientGroups.forEach((group: any) => {
             if (group?.id) {
@@ -477,7 +480,7 @@ export function HalfMeals() {
         });
 
         return map;
-    }, [ingredientGroups]);
+    }, [metadata.ingredient_groups]);
 
     // Measurement options with translations
     const _measurementOptions = useMemo(
@@ -492,6 +495,7 @@ export function HalfMeals() {
     // Ingredient group options for filtering (derived from expanded compounds to avoid extra API call)
     const ingredientGroupOptions = useMemo(() => {
         const map = new Map<string, string>();
+        const ingredientGroups = metadata.ingredient_groups || [];
 
         ingredientGroups.forEach((group: any) => {
             if (group?.id) {
@@ -508,7 +512,7 @@ export function HalfMeals() {
             }
         });
         return Array.from(map.entries()).map(([value, label]) => ({ value, label }));
-    }, [compounds, ingredientGroups]);
+    }, [compounds, metadata.ingredient_groups]);
 
     // DataTable columns
     const columns = useMemo(
@@ -621,6 +625,7 @@ export function HalfMeals() {
                     }}>
                         <IconButton
                             size="small"
+                            component={RouterLink}
                             href={paths.menu.semifinished.edit(row.id)}
                             onClick={(e) => e.stopPropagation()}
                             sx={{ 
@@ -770,12 +775,14 @@ export function HalfMeals() {
                         <Button
                             variant="contained"
                             startIcon={<Iconify icon="mingcute:add-line" />}
+                            component={RouterLink}
                             href={paths.menu.semifinished.new}
                             size="small"
                         >
                             {t('semifinishedProducts.add')}
                         </Button>
                     }
+                    showTotals={false}
                 />
             </DashboardContent>
 

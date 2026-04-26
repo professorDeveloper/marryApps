@@ -485,9 +485,9 @@ export function TransfersDetailsCalculation({
       <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
         <Button
           variant="contained"
+          color="primary"
           onClick={handleSave}
           disabled={saving || !transferredIds.length}
-          sx={{ backgroundColor: '#FB6633', color: '#FFFFFF' }}
         >
           {saving ? (
             <>

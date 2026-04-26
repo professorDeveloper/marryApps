@@ -1,17 +1,11 @@
-import { CONFIG } from 'src/global-config';
-
-import { JwtSignInView } from 'src/auth/view/jwt';
-
-// ----------------------------------------------------------------------
-
-const metadata = { title: `Sign in | Jwt - ${CONFIG.appName}` };
+import { AuthVisualLayout, SignInForm } from 'src/sections/auth/components';
 
 export default function Page() {
   return (
     <>
-      <title>{metadata.title}</title>
-
-      <JwtSignInView />
+      <AuthVisualLayout>
+        <SignInForm />
+      </AuthVisualLayout>
     </>
   );
 }

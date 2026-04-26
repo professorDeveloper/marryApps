@@ -181,7 +181,7 @@ export const navData: NavSectionProps['data'] = [
         path: paths.warehouse.root,
         icon: ICONS.folder,
         children: [
-          { title: 'Storage', path: paths.menu.inventory.root },
+          { title: 'Storage', path: paths.warehouse.storage.root },
           { title: 'Ingredients', path: paths.menu.ingredients.root },
           { title: 'Stocks', path: paths.warehouse.stocks.root },
           { title: 'Transfers', path: paths.warehouse.transfers.root },

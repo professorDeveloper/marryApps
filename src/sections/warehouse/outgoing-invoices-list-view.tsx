@@ -39,6 +39,7 @@ import { Iconify } from 'src/components/iconify';
 import { GenericViewModal } from 'src/components/generic-view-view';
 
 import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
+import { RouterLink } from 'src/routes/components';
 
 const getTodayUtcBoundary = (endOfDay = false): string => {
   const now = dayjs();
@@ -567,6 +568,7 @@ export function OutgoingInvoicesListView() {
             <Button
               variant="contained"
               startIcon={<Iconify icon="mingcute:add-line" />}
+              component={RouterLink}
               href={paths.warehouse.outgoingInvoices.new}
               size="small"
             >

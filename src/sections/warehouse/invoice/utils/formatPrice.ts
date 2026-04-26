@@ -3,7 +3,8 @@ export const formatPrice = (price: number) => {
     return new Intl.NumberFormat('uz-UZ', {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
-    }).format(formatted);
+        useGrouping: true,
+    }).format(formatted).replace(/,/g, ' ');
 };
 
 export const formatNumber = (num: number): number => Math.round(num * 100) / 100;

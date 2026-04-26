@@ -28,9 +28,9 @@ export const AvailableItemRow = memo(function AvailableItemRow({
                 px: 1,
                 py: 0.75,
                 borderRadius: 1,
-                backgroundColor: isSelected ? 'action.selected' : 'background.paper',
+                backgroundColor: isSelected ? 'var(--glow-md)' : 'var(--color-surface-0)',
                 cursor: onRowActivate ? 'pointer' : 'default',
-                '&:hover': { bgcolor: isSelected ? 'action.selected' : 'action.hover' },
+                '&:hover': { bgcolor: isSelected ? 'var(--glow-md)' : 'var(--color-surface-1)' },
                 contentVisibility: 'auto',
             }}
         >

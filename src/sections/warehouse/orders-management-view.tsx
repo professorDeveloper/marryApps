@@ -17,6 +17,7 @@ import { useGetCafeTables } from 'src/actions/cafe-tables';
 import { Iconify } from 'src/components/iconify';
 
 import { DataTable } from 'src/sections/warehouse/deduction/components/utility-data-table';
+import { RouterLink } from 'src/routes/components';
 
 // Date utility functions
 const getTodayUtcBoundary = (endOfDay = false): string => {
@@ -302,6 +303,7 @@ export function OrdersManagementView() {
           <Button
             variant="contained"
             startIcon={<Iconify icon="mingcute:add-line" />}
+            component={RouterLink}
             href={paths.warehouse.orders.new}
             size="small"
           >

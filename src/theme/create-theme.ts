@@ -34,7 +34,7 @@ export const baseTheme: ThemeOptions = {
   mixins,
   components,
   typography,
-  shape: { borderRadius: 8 },
+  shape: { borderRadius: 14 },
   direction: themeConfig.direction,
   cssVariables: themeConfig.cssVariables,
 };

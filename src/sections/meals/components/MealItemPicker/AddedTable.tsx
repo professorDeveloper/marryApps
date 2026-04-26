@@ -44,6 +44,10 @@ interface AddedTableProps {
     ingredientLabel: string;
     compoundLabel: string;
     isEmpty: boolean;
+    menuPrice?: string;
+    showProfitMargin?: boolean;
+    tableHeight?: string | number;
+    onNavigateFocus?: (direction: 'up' | 'down' | 'left' | 'right', currentRowIndex: number, currentColumnKey: string) => void;
 }
 
 export const AddedTable = React.memo(function AddedTable({
@@ -67,6 +71,7 @@ export const AddedTable = React.memo(function AddedTable({
     ingredientLabel,
     compoundLabel,
     isEmpty,
+    onNavigateFocus,
 }: AddedTableProps) {
     const { t } = useTranslation('menu');
     const scrollRef = React.useRef<HTMLDivElement>(null);
@@ -217,6 +222,9 @@ export const AddedTable = React.memo(function AddedTable({
                                         pricePerUnit={priceByKey.get(key) ?? 0}
                                         ingredientLabel={ingredientLabel}
                                         compoundLabel={compoundLabel}
+                                        rowIndex={vi.index}
+                                        totalRows={rows.length}
+                                        onNavigateFocus={onNavigateFocus}
                                     />
                                 </Box>
                             );

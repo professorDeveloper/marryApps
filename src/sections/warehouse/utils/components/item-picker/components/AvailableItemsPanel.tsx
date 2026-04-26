@@ -27,6 +27,7 @@ export const AvailableItemsPanel = React.memo<AvailableItemsPanelProps>(({
     excludedIdSet,
     onMoveRight,
     onAddNewItem,
+    metaFieldsOpen,
 }) => {
     const { t } = useTranslation('menu');
 
@@ -88,7 +89,12 @@ export const AvailableItemsPanel = React.memo<AvailableItemsPanelProps>(({
     const virtualRows = rowVirtualizer.getVirtualItems();
     const isAllSelected = filtered.length > 0 && filtered.length === selectedItems.size;
     return (
-        <Paper sx={{ p: 2 }}>
+        <Paper sx={{ 
+            p: 2,
+            maxHeight: metaFieldsOpen ? 'calc(100vh - 320px)' : LIST_MAX_HEIGHT,
+            display: 'flex',
+            flexDirection: 'column',
+         }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                 <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
                     {t('warehouse.invoiceDetails.availableIngredients', 'Available Items')}
@@ -127,11 +133,11 @@ export const AvailableItemsPanel = React.memo<AvailableItemsPanelProps>(({
                         alignItems: 'center',
                         flex: 1,
                         border: '1px solid',
-                        borderColor: 'divider',
+                        borderColor: 'var(--color-border)',
                         borderRadius: 1,
                         px: 1,
                         '&:focus-within': {
-                            borderColor: 'primary.main',
+                            borderColor: 'var(--color-primary)',
                             outline: 'none',
                         },
                     }}
@@ -159,9 +165,10 @@ export const AvailableItemsPanel = React.memo<AvailableItemsPanelProps>(({
             <Box
                 ref={scrollRef}
                 sx={{
-                    maxHeight: LIST_MAX_HEIGHT,
+                    flex: 1,
                     overflow: 'auto',
                     position: 'relative',
+                    minHeight: 0,
                 }}
             >
                 {loading ? (

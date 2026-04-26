@@ -49,10 +49,11 @@ export function DataTableFilterPopover<T>({
         sx: {
           mt: 1,
           width: 320,
-          backgroundColor: SURFACE_BG,
-          border: `1px solid ${BORDER}`,
+          backgroundColor: 'var(--color-surface-0)',
+          border: '1px solid var(--color-border)',
           backdropFilter: 'blur(12px)',
           p: 1.5,
+          boxShadow: 'var(--glow-shadow-md)',
         },
       }}
     >
@@ -63,7 +64,7 @@ export function DataTableFilterPopover<T>({
               sx={{
                 fontSize: 12.5,
                 fontWeight: 700,
-                color: 'rgba(255,255,255,0.86)',
+                color: 'var(--color-text)',
                 fontFamily: '"Inter", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif',
               }}
             >
@@ -79,8 +80,8 @@ export function DataTableFilterPopover<T>({
                 sx={{
                   textTransform: 'none',
                   fontSize: 12,
-                  color: 'rgba(255,255,255,0.7)',
-                  '&:hover': { backgroundColor: 'rgba(255,255,255,0.06)' },
+                  color: 'var(--color-text-muted)',
+                  '&:hover': { backgroundColor: 'var(--glow-sm)', boxShadow: 'var(--glow-shadow-md)' },
                 }}
               >
                 Clear
@@ -91,8 +92,8 @@ export function DataTableFilterPopover<T>({
                 sx={{
                   textTransform: 'none',
                   fontSize: 12,
-                  color: 'rgba(255,255,255,0.7)',
-                  '&:hover': { backgroundColor: 'rgba(255,255,255,0.06)' },
+                  color: 'var(--color-text-muted)',
+                  '&:hover': { backgroundColor: 'var(--glow-sm)', boxShadow: 'var(--glow-shadow-md)' },
                 }}
               >
                 Close
@@ -139,15 +140,15 @@ export function DataTableFilterPopover<T>({
                         checked={checked}
                         sx={{
                           mr: 1,
-                          color: 'rgba(255,255,255,0.35)',
-                          '&.Mui-checked': { color: ACCENT },
+                          color: 'var(--color-text-muted)',
+                          '&.Mui-checked': { color: 'var(--color-primary)' },
                         }}
                       />
                       <Typography
                         noWrap
                         sx={{
                           fontSize: 12.5,
-                          color: 'rgba(255,255,255,0.82)',
+                          color: 'var(--color-text-muted)',
                           minWidth: 0,
                         }}
                       >
@@ -173,14 +174,14 @@ export function DataTableFilterPopover<T>({
                 '& .MuiInputBase-root': {
                   height: 36,
                   fontSize: 12.5,
-                  backgroundColor: 'rgba(9,9,11,0.7)',
+                  backgroundColor: 'var(--color-surface-0)',
                   borderRadius: 1,
                   fontFamily: '"Inter", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif',
                 },
-                '& .MuiOutlinedInput-notchedOutline': { borderColor: BORDER },
+                '& .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--color-border)' },
                 '& .MuiInputBase-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                  borderColor: ACCENT,
-                  boxShadow: `0 0 0 3px rgba(245, 158, 11, 0.15)`,
+                  borderColor: 'var(--color-primary)',
+                  boxShadow: '0 0 0 3px var(--glow-md)',
                 },
               }}
             />

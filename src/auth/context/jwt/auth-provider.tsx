@@ -1,7 +1,7 @@
 import type { AuthState } from '../../types';
 
 import { useSetState } from 'minimal-shared/hooks';
-import { useMemo, useEffect, useCallback } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 
 import axios, { endpoints } from 'src/lib/axios';
 
@@ -23,6 +23,7 @@ type Props = {
 
 export function AuthProvider({ children }: Props) {
   const { state, setState } = useSetState<AuthState>({ user: null, loading: true });
+  const [hasBootstrapped, setHasBootstrapped] = useState(false);
 
   const checkUserSession = useCallback(async () => {
     try {
@@ -116,7 +117,9 @@ export function AuthProvider({ children }: Props) {
   }, [setState]);
 
   useEffect(() => {
-    checkUserSession();
+    checkUserSession().finally(() => {
+      setHasBootstrapped(true);
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -133,8 +136,9 @@ export function AuthProvider({ children }: Props) {
       loading: status === 'loading',
       authenticated: status === 'authenticated',
       unauthenticated: status === 'unauthenticated',
+      hasBootstrapped,
     }),
-    [checkUserSession, state.user, status]
+    [checkUserSession, state.user, status, hasBootstrapped]
   );
 
   return <AuthContext value={memoizedValue}>{children}</AuthContext>;

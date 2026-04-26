@@ -106,3 +106,19 @@ export interface SortState {
   dir: SortDirection;
 }
 
+export type SearchMode = 'simple' | 'advanced';
+
+export type SearchOutput = {
+  query?: string;
+  optionIds?: string[];
+  customQueries?: string[];
+};
+
+export interface ToolbarSearchProps {
+  mode?: SearchMode;
+  allowFreeText?: boolean;
+  options?: { id: string; label: string }[];
+  onSearch: (data: SearchOutput) => void;
+  value?: string;
+}
+

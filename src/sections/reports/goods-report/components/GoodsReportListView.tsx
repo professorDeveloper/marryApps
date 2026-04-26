@@ -1,17 +1,23 @@
 import type { IGoodsReportItem } from 'src/types/goods-reports';
-import type { DataTableColumn, DataTableDefaultConfig } from 'src/sections/warehouse/deduction/components/utility-data-table/types/types';
+import type { SearchOutput, DataTableColumn, DataTableDefaultConfig } from 'src/sections/warehouse/deduction/components/utility-data-table/types/types';
 
 import dayjs from 'dayjs';
-import { useCallback } from 'react';
+import { useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Box } from '@mui/material';
 
 import { paths } from 'src/routes/paths';
 
+import { useMetadata } from 'src/hooks/use-metadata';
+import { MetadataEntity } from 'src/types/metadata';
 import { useGetGoodsReports } from 'src/actions/goods-reports';
+import { useGetDepartments } from 'src/actions/departments';
+import { useGetCategories } from 'src/actions/categories';
 
 import { DataTable } from 'src/sections/warehouse/deduction/components/utility-data-table/components/DataTable';
+import { DepartmentFilter } from 'src/sections/warehouse/deduction/components/utility-data-table/components/DepartmentFilter';
+import { CategoryFilter } from 'src/sections/warehouse/deduction/components/utility-data-table/components/CategoryFilter';
 
 import { PERSIST_KEY, PAGE_SIZE_OPTIONS } from '../constants';
 import { formatAmount, formatPercent } from '../utils/formatters';
@@ -19,6 +25,15 @@ import { useGoodsReportFilters } from '../hooks/useGoodsReportFilters';
 
 export function GoodsReportListView() {
   const { t } = useTranslation('menu');
+
+  const { departments } = useGetDepartments();
+  const { categories } = useGetCategories();
+  const { data: metadata } = useMetadata([MetadataEntity.MENUS]);
+
+  const goodOptions = useMemo(
+    () => (metadata.menus || []).map((m: any) => ({ id: String(m.id), label: m.name || String(m.id) })),
+    [metadata.menus]
+  );
 
   const {
     filters,
@@ -32,17 +47,29 @@ export function GoodsReportListView() {
     handleEndDateChange,
     handlePaginationChange,
     handleReset,
+    handleGoodIdsChange,
+    handleSortChange,
   } = useGoodsReportFilters();
+
+  const handleSearch = useCallback(
+    ({ optionIds = [] }: SearchOutput) => {
+      handleGoodIdsChange(optionIds);
+    },
+    [handleGoodIdsChange]
+  );
 
   const { reports, totals, reportsLoading, reportsPagination } = useGetGoodsReports({
     start_date: filters.start_date,
     end_date: filters.end_date,
     department_id: filters.department_id || undefined,
     category_id: filters.category_id || undefined,
-    good_id: filters.good_id || undefined,
+    good_ids: filters.good_ids.length > 0 ? filters.good_ids : undefined,
+    good_id: filters.good_ids.length === 0 && filters.good_id ? filters.good_id : undefined,
     waiter_id: filters.waiter_id || undefined,
     hall_id: filters.hall_id || undefined,
     table_id: filters.table_id || undefined,
+    sort_by: filters.sort_by || undefined,
+    sort_order: filters.sort_order || undefined,
     limit: filters.limit,
     offset: filters.offset,
   });
@@ -69,6 +96,20 @@ export function GoodsReportListView() {
 
   const getRowId = useCallback((row: IGoodsReportItem) => String(row.good_id), []);
 
+  const handleDepartmentChange = useCallback(
+    (departmentId: string) => {
+      handleFilterChange({ department_id: departmentId === 'all' ? '' : departmentId, category_id: '', good_id: '' });
+    },
+    [handleFilterChange]
+  );
+
+  const handleCategoryChange = useCallback(
+    (categoryId: string) => {
+      handleFilterChange({ category_id: categoryId === 'all' ? '' : categoryId, good_id: '' });
+    },
+    [handleFilterChange]
+  );
+
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, px:2 }}>
  
@@ -81,8 +122,11 @@ export function GoodsReportListView() {
         onReset={handleReset}
         showRowNumbers
         getRowId={getRowId}
-        searchValue=""
-        onSearchChange={() => {}}
+        searchMode="advanced"
+        allowFreeText={false}
+        searchOptions={goodOptions}
+        onSearch={handleSearch}
+        onSortChange={handleSortChange}
         page={paginationModel.page}
         rowsPerPage={paginationModel.pageSize}
         totalCount={reportsPagination?.total ?? totals?.total_count ?? 0}
@@ -101,6 +145,24 @@ export function GoodsReportListView() {
           activePeriod: activeRange,
           onPeriodChange: handleRangeChange,
         }}
+        toolbarActions={
+          <>
+            <DepartmentFilter
+              departmentId={filters.department_id || "all"}
+              departments={departments.map((d) => ({ id: d.id, name: d.name }))}
+              onDepartmentChange={handleDepartmentChange}
+              label={t('goodsReports.department', 'Department')}
+              disabled={departments.length === 0}
+            />
+            <CategoryFilter
+              categoryId={filters.category_id || 'all'}
+              categories={categories.map((c) => ({ id: c.id, name: c.name }))}
+              onCategoryChange={handleCategoryChange}
+              label={t('goodsReports.category', 'Category')}
+              disabled={categories.length === 0}
+            />
+          </>
+        }
         rowActions={[
           {
             label: t('viewDetails', 'View Details'),

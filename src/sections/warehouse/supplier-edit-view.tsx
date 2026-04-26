@@ -9,6 +9,7 @@ import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
 
 import { useSupplierAPI } from 'src/hooks/use-supplier-api';
+import { useTranslationsAPI } from 'src/hooks/use-translations-api';
 
 import { useTranslate } from 'src/locales';
 
@@ -31,6 +32,7 @@ export function SupplierEditView({
     const router = useRouter();
     const { id: urlId } = useParams<{ id?: string }>();
     const { createSupplier, getSupplierById, updateSupplier, deleteSuppliers } = useSupplierAPI();
+    const { createTranslation, updateTranslation } = useTranslationsAPI();
     const [supplierData, setSupplierData] = useState<Record<string, any> | null>(null);
     const [loading, setLoading] = useState(false);
 
@@ -65,8 +67,35 @@ export function SupplierEditView({
                     throw new Error(t('warehouse.suppliers.nameRequired'));
                 }
 
+                // Create or update translation if translations are provided
+                let name_i18n = formData.name_i18n;
+                if (formData.name_en || formData.name_ru) {
+                    const translationData: any = {
+                        en: formData.name_en || formData.name || '',
+                        ru: formData.name_ru || formData.name || '',
+                        uz: formData.name || '', // Primary name is always Uzbek
+                    };
+
+                    if (name_i18n) {
+                        // Update existing translation
+                        await updateTranslation(name_i18n, translationData);
+                    } else {
+                        // Create new translation
+                        const translationResult = await createTranslation(translationData);
+                        name_i18n = translationResult.id;
+                    }
+                }
+
+                const payload = {
+                    name: String(formData.name).trim(),
+                    name_i18n,
+                    phone_number: formData.phone_number || null,
+                    email: formData.email || null,
+                    address: formData.address || null,
+                };
+
                 if (isNew) {
-                    const newSupplier = await createSupplier(formData);
+                    const newSupplier = await createSupplier(payload);
                     // Call callback if provided (for tab component)
                     if (onSupplierCreated) {
                         onSupplierCreated(newSupplier.id);
@@ -79,7 +108,7 @@ export function SupplierEditView({
                     // Update mode
                     const supplierId = urlId || currentSupplierId;
                     if (supplierId) {
-                        await updateSupplier(supplierId, formData);
+                        await updateSupplier(supplierId, payload);
                         if (!skipRedirect) {
                             router.push(paths.warehouse.suppliers.root);
                         }
@@ -94,7 +123,7 @@ export function SupplierEditView({
                 throw error;
             }
         },
-        [isNew, createSupplier, updateSupplier, router, onSupplierCreated, skipRedirect, currentSupplierId, urlId, t]
+        [isNew, createSupplier, updateSupplier, router, onSupplierCreated, skipRedirect, currentSupplierId, urlId, t, createTranslation, updateTranslation]
     );
 
     const BASIC: CardSection = {
@@ -107,6 +136,20 @@ export function SupplierEditView({
                 label: t('warehouse.suppliers.name'),
                 type: 'text',
                 required: true,
+                defaultValue: '',
+            },
+            {
+                key: 'name_en',
+                label: t('warehouse.nameEn', 'Name (English)'),
+                type: 'text',
+                required: false,
+                defaultValue: '',
+            },
+            {
+                key: 'name_ru',
+                label: t('warehouse.nameRu', 'Name (Russian)'),
+                type: 'text',
+                required: false,
                 defaultValue: '',
             },
             {

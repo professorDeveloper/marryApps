@@ -4,23 +4,24 @@ import { useMemo, useState, useEffect, useCallback } from 'react';
 
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import {
-  Box,
-  Table,
-  Button,
-  TableRow,
-  TextField,
-  TableBody,
-  TableCell,
-  TableHead,
-  Typography,
-  ToggleButton,
-  ToggleButtonGroup,
+    Box,
+    Table,
+    Button,
+    TableRow,
+    TextField,
+    TableBody,
+    TableCell,
+    TableHead,
+    Typography,
+    ToggleButton,
+    ToggleButtonGroup,
 } from '@mui/material';
 
 import { useGetHalls } from 'src/actions/halls';
 import { useGetUsersByRole } from 'src/actions/users';
 import { DashboardContent } from 'src/layouts/dashboard';
 import { useGetBills, useGetBillDetails } from 'src/actions/bills';
+import { usePaginationRows } from 'src/hooks/use-pagination-rows';
 
 import { Iconify } from 'src/components/iconify';
 import { NoDataTooltip } from 'src/components/no-data-tooltip';
@@ -101,13 +102,16 @@ export function BillsListView() {
     // Get bill details when modal opens
     const { bill, billLoading } = useGetBillDetails(selectedBillId || '');
 
+    // Get global rows per page
+    const { rowsPerPage: globalRowsPerPage } = usePaginationRows();
+
     // Filter states
     const [filters, setFilters] = useState<BillsListFilters>(initialFilters);
     const [draftFilters, setDraftFilters] = useState<BillsListFilters>(initialFilters);
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
     const [rowCount, setRowCount] = useState(0);
-    const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 20 });
+    const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: globalRowsPerPage });
 
     const [startDate, setStartDate] = useState<dayjs.Dayjs | null>(null);
     const [endDate, setEndDate] = useState<dayjs.Dayjs | null>(null);
@@ -367,6 +371,19 @@ export function BillsListView() {
     const columns = useMemo(
         () => [
             {
+                key: 'bill_no',
+                label: '#',
+                sortable: true,
+                width: '0.4fr',
+                align: 'left' as const,
+                getValue: (row: any) => row?.bill_no ?? '',
+                renderCell: ({ row }: { row: any }) => (
+                    <Box sx={CELL_SX}>
+                        {row?.bill_no || '-'}
+                    </Box>
+                ),
+            },
+            {
                 key: 'opened_at',
                 label: t('bills.opened', 'Opened'),
                 sortable: true,
@@ -375,15 +392,17 @@ export function BillsListView() {
                 renderCell: ({ value }: { value: unknown }) => {
                     const dateObj = dayjs(value as string);
                     if (!dateObj.isValid()) return '';
-                    
+
                     const dateLine = dateObj.format('DD.MM.YYYY');
                     const timeLine = dateObj.format('HH:mm');
-                    
+
                     return (
-                        <div style={{ lineHeight: 1.2, fontSize: '0.85em' }}>
-                            <div>{dateLine}</div>
-                            <div>{timeLine}</div>
-                        </div>
+                        <Box sx={CELL_SX}>
+                            <Box sx={{ lineHeight: 1.2, fontSize: '0.85em' }}>
+                                <Box>{dateLine}</Box>
+                                <Box>{timeLine}</Box>
+                            </Box>
+                        </Box>
                     );
                 },
             },
@@ -396,15 +415,17 @@ export function BillsListView() {
                 renderCell: ({ value }: { value: unknown }) => {
                     const dateObj = dayjs(value as string);
                     if (!dateObj.isValid()) return '';
-                    
+
                     const dateLine = dateObj.format('DD.MM.YYYY');
                     const timeLine = dateObj.format('HH:mm');
-                    
+
                     return (
-                        <div style={{ lineHeight: 1.2, fontSize: '0.85em' }}>
-                            <div>{dateLine}</div>
-                            <div>{timeLine}</div>
-                        </div>
+                        <Box sx={CELL_SX}>
+                            <Box sx={{ lineHeight: 1.2, fontSize: '0.85em' }}>
+                                <Box>{dateLine}</Box>
+                                <Box>{timeLine}</Box>
+                            </Box>
+                        </Box>
                     );
                 },
             },
@@ -432,19 +453,6 @@ export function BillsListView() {
                 renderCell: ({ row }: { row: any }) => (
                     <Box sx={CELL_SX}>
                         {row?.hall_name || '-'}
-                    </Box>
-                ),
-            },
-            {
-                key: 'table_number',
-                label: t('bills.table'),
-                sortable: true,
-                width: '0.7fr',
-                align: 'left' as const,
-                getValue: (row: any) => row?.table_number ?? '',
-                renderCell: ({ row }: { row: any }) => (
-                    <Box sx={CELL_SX}>
-                        {row?.table_number || '-'}
                     </Box>
                 ),
             },
@@ -479,24 +487,7 @@ export function BillsListView() {
                 },
                 total: { aggregation: 'sum' as const },
             },
-            {
-                key: 'grand_total',
-                label: t('bills.total') || 'Total',
-                sortable: true,
-                width: '0.8fr',
-                align: 'left' as const,
-                mono: true,
-                getValue: (row: any) => Number(row?.grand_total || 0),
-                renderCell: ({ value }: { value: unknown }) => {
-                    const amount = Number(value ?? 0);
-                    return (
-                        <Box sx={CELL_SX}>
-                            {amount.toLocaleString()}
-                        </Box>
-                    );
-                },
-                total: { aggregation: 'sum' as const },
-            },
+
             {
                 key: 'payment_type',
                 label: t('bills.paymentType') || 'Payment type',
@@ -545,7 +536,29 @@ export function BillsListView() {
                 getValue: (row: any) => Number(row?.discount_amount || 0),
                 renderCell: ({ value }: { value: unknown }) => {
                     const amount = Number(value ?? 0);
-                    return amount > 0 ? `${amount.toLocaleString()} so'm` : '-';
+                    return (
+                        <Box sx={CELL_SX}>
+                            {amount > 0 ? `${amount.toLocaleString()} so'm` : '-'}
+                        </Box>
+                    );
+                },
+                total: { aggregation: 'sum' as const },
+            },
+            {
+                key: 'grand_total',
+                label: t('bills.total') || 'Total',
+                sortable: true,
+                width: '0.8fr',
+                align: 'left' as const,
+                mono: true,
+                getValue: (row: any) => Number(row?.grand_total || 0),
+                renderCell: ({ value }: { value: unknown }) => {
+                    const amount = Number(value ?? 0);
+                    return (
+                        <Box sx={CELL_SX}>
+                            {amount.toLocaleString()}
+                        </Box>
+                    );
                 },
                 total: { aggregation: 'sum' as const },
             },
@@ -570,19 +583,21 @@ export function BillsListView() {
                         paid: t('bills.paid') || 'Paid',
                     };
                     return (
-                        <span
-                            style={{
-                                color: statusColors[status] || '#000',
-                                fontWeight: 500,
-                            }}
-                        >
-                            {statusLabels[status] || status}
-                        </span>
+                        <Box sx={CELL_SX}>
+                            <Typography
+                                sx={{
+                                    color: statusColors[status] || 'text.primary',
+                                    fontWeight: 500,
+                                }}
+                            >
+                                {statusLabels[status] || status}
+                            </Typography>
+                        </Box>
                     );
                 },
             }
         ],
-        [t, i18n.language, handleViewClick]
+        [t, i18n.language]
     );
 
     // Filter handlers adapted for invoice pattern
@@ -843,94 +858,91 @@ export function BillsListView() {
             </Box>
         </Box>
     );
-    
+
     return (
         <>
             <DashboardContent
-            sx={{
-                flexGrow: 1,
-                display: 'flex',
-                flexDirection: 'column',
-                maxHeight: '100vh',
-                '--layout-dashboard-content-pt': { xs: '0px', md: '0px' },
-                '--layout-dashboard-content-pb': { xs: '0px', md: '0px' },
-            }}
-        >
+                sx={{
+                    flexGrow: 1,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    maxHeight: '100vh',
+                    '--layout-dashboard-content-pt': { xs: '0px', md: '0px' },
+                    '--layout-dashboard-content-pb': { xs: '0px', md: '0px' },
+                }}
+            >
 
-            <DataTable<any>
-                persistKey="reports-bills-list"
-                data={bills || []}
-                getRowId={(row: any) => String(row?.id)}
-                columns={columns}
-                searchValue={searchQuery}
-                onSearchChange={(value: string) => {
-                    setSearchQuery(value);
-                    setPaginationModel((prev) => ({ ...prev, page: 0 }));
-                }}
-                page={paginationModel.page}
-                rowsPerPage={paginationModel.pageSize}
-                totalCount={rowCount}
-                rowsPerPageOptions={[10, 20, 50, 100]}
-                onPageChange={handlePaginationPageChange}
-                onRowsPerPageChange={handlePaginationRowsPerPageChange}
-                showPeriodPicker
-                periodPickerProps={{
-                    startDate: startDate ? startDate.toDate() : null,
-                    endDate: endDate ? endDate.toDate() : null,
-                    onStartDateChange: (date: Date | null) => {
-                        setStartDate(date ? dayjs(date) : null);
-                        setActiveRange('day');
-                    },
-                    onEndDateChange: (date: Date | null) => {
-                        setEndDate(date ? dayjs(date) : null);
-                        setActiveRange('day');
-                    }
-                }}
-                showPeriodButtons
-                periodButtonProps={{
-                    activePeriod: activeRange,
-                    onPeriodChange: (period: 'day' | 'week' | 'month' | 'year') => {
-                        applyRange(period);
-                    }
-                }}
-                defaultConfig={{
-                    order: ['bill_no', 'opened_at', 'closed_at', 'waiter_name', 'hall_name', 'table_number', 'guest_count', 'food_cost', 'grand_total', 'payment_type', 'service_amount', 'discount_amount', 'bill_status', 'actions'],
-                    visibility: {
-                        bill_no: true,
-                        opened_at: true,
-                        closed_at: true,
-                        waiter_name: true,
-                        hall_name: true,
-                        table_number: true,
-                        guest_count: true,
-                        food_cost: true,
-                        grand_total: true,
-                        payment_type: true,
-                        service_amount: true,
-                        discount_amount: true,
-                        bill_status: true,
-                        actions: true,
-                    },
-                    widths: {
-                        bill_no: '0.5fr',
-                        opened_at: '1.2fr',
-                        closed_at: '1fr',
-                        waiter_name: '1.2fr',
-                        hall_name: '0.8fr',
-                        table_number: '0.5fr',
-                        guest_count: '0.5fr',
-                        food_cost: '1fr',
-                        grand_total: '1fr',
-                        payment_type: '0.8fr',
-                        service_amount: '1fr',
-                        discount_amount: '0.8fr',
-                        bill_status: '0.8fr',
-                        actions: '0.7fr',
-                    },
-                }}
-                onReset={handleResetFilters}
-                onRowClick={handleViewClick}
-            />
+                <DataTable<any>
+                    persistKey="reports-bills-list"
+                    data={bills || []}
+                    getRowId={(row: any) => String(row?.id)}
+                    columns={columns}
+                    searchValue={searchQuery}
+                    onSearchChange={(value: string) => {
+                        setSearchQuery(value);
+                        setPaginationModel((prev) => ({ ...prev, page: 0 }));
+                    }}
+                    page={paginationModel.page}
+                    rowsPerPage={paginationModel.pageSize}
+                    totalCount={rowCount}
+                    rowsPerPageOptions={[10, 20, 50, 100]}
+                    onPageChange={handlePaginationPageChange}
+                    onRowsPerPageChange={handlePaginationRowsPerPageChange}
+                    showRowNumbers={false}
+                    showPeriodPicker
+                    periodPickerProps={{
+                        startDate: startDate ? startDate.toDate() : null,
+                        endDate: endDate ? endDate.toDate() : null,
+                        onStartDateChange: (date: Date | null) => {
+                            setStartDate(date ? dayjs(date) : null);
+                            setActiveRange('day');
+                        },
+                        onEndDateChange: (date: Date | null) => {
+                            setEndDate(date ? dayjs(date) : null);
+                            setActiveRange('day');
+                        }
+                    }}
+                    showPeriodButtons
+                    periodButtonProps={{
+                        activePeriod: activeRange,
+                        onPeriodChange: (period: 'day' | 'week' | 'month' | 'year') => {
+                            applyRange(period);
+                        }
+                    }}
+                    defaultConfig={{
+                        order: ['bill_no', 'opened_at', 'closed_at', 'waiter_name', 'hall_name', 'guest_count', 'food_cost', 'grand_total', 'payment_type', 'service_amount', 'discount_amount', 'bill_status'],
+                        visibility: {
+                            bill_no: true,
+                            opened_at: true,
+                            closed_at: true,
+                            waiter_name: true,
+                            hall_name: true,
+                            guest_count: true,
+                            food_cost: true,
+                            grand_total: true,
+                            payment_type: true,
+                            service_amount: true,
+                            discount_amount: true,
+                            bill_status: true,
+                        },
+                        widths: {
+                            bill_no: '0.5fr',
+                            opened_at: '1.2fr',
+                            closed_at: '1fr',
+                            waiter_name: '1.2fr',
+                            hall_name: '0.8fr',
+                            guest_count: '0.5fr',
+                            food_cost: '1fr',
+                            grand_total: '1fr',
+                            payment_type: '0.8fr',
+                            service_amount: '1fr',
+                            discount_amount: '0.8fr',
+                            bill_status: '0.8fr',
+                        },
+                    }}
+                    onReset={handleResetFilters}
+                    onRowClick={handleViewClick}
+                />
             </DashboardContent>
 
             <GenericViewModal

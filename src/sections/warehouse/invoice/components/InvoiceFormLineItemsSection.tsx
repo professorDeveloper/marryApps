@@ -96,7 +96,7 @@ export const InvoiceFormLineItemsSection = React.memo(function InvoiceFormLineIt
                 const ingredient = ingredientsById.get(rowId);
                 if (!ingredient) return null;
 
-                const qty = quantities[rowId] ?? 0;
+                const qty = quantities[rowId];
                 const pricePerUnit = pricesPerUnit[rowId] ?? 0;
                 const totalPrice = prices[rowId] ?? 0;
 
@@ -117,10 +117,10 @@ export const InvoiceFormLineItemsSection = React.memo(function InvoiceFormLineIt
             {
                 key: 'quantity',
                 header: t('warehouse.invoiceDetails.quantity'),
-                width: '80px',
+                width: '120px',
                 editable: true,
                 type: 'number',
-                step: '0.01',
+                step: '1',
                 min: '0',
                 align: 'center',
                 suffix: (item) => item.measurement || '',
@@ -128,10 +128,10 @@ export const InvoiceFormLineItemsSection = React.memo(function InvoiceFormLineIt
             {
                 key: 'price_per_unit',
                 header: t('warehouse.invoiceDetails.pricePerUnit'),
-                width: '100px',
+                width: '110px',
                 editable: true,
                 type: 'number',
-                step: '0.01',
+                step: '1',
                 min: '0',
                 align: 'right',
                 format: (val) => formatPrice(Number(val) || 0),
@@ -139,8 +139,11 @@ export const InvoiceFormLineItemsSection = React.memo(function InvoiceFormLineIt
             {
                 key: 'total',
                 header: t('warehouse.invoiceDetails.totalPrice'),
-                width: '100px',
+                width: '110px',
                 editable: true,
+                type: 'number',
+                step: '1',
+                min: '0',
                 align: 'right',
                 format: (val) => formatPrice(Number(val) || 0),
             },
@@ -176,9 +179,8 @@ export const InvoiceFormLineItemsSection = React.memo(function InvoiceFormLineIt
         (id: string) => {
             if (transferredIdsRef.current.includes(id)) return;
             moveRight([id]);
-            handleQuantityChange(id, '1');
         },
-        [moveRight, handleQuantityChange]
+        [moveRight]
     );
 
     const handleMoveRight = useCallback(
@@ -220,6 +222,64 @@ export const InvoiceFormLineItemsSection = React.memo(function InvoiceFormLineIt
         [handleQuantityChange, handlePricePerUnitChange, handleTotalPriceChange]
     );
 
+    const handleNavigateFocus = useCallback((direction: 'up' | 'down' | 'left' | 'right', currentRowIndex: number, currentColumnKey: string) => {
+        const editableColumns = ['quantity', 'price_per_unit', 'total'];
+        const currentColumnIndex = editableColumns.indexOf(currentColumnKey);
+
+        if (direction === 'left') {
+            // Move to previous editable column in same row
+            if (currentColumnIndex > 0) {
+                const targetColumnKey = editableColumns[currentColumnIndex - 1];
+                const inputs = document.querySelectorAll('input[inputMode="decimal"]') as NodeListOf<HTMLInputElement>;
+                const targetInputs = Array.from(inputs).filter(input =>
+                    input.closest('[data-index]') &&
+                    parseInt(input.closest('[data-index]')?.getAttribute('data-index') || '0') === currentRowIndex
+                );
+                // Find the input for the target column (based on position in the row)
+                const targetInput = targetInputs[currentColumnIndex - 1];
+                if (targetInput) {
+                    targetInput.focus();
+                    targetInput.select();
+                }
+            }
+            return;
+        }
+
+        if (direction === 'right') {
+            // Move to next editable column in same row
+            if (currentColumnIndex < editableColumns.length - 1) {
+                const targetColumnKey = editableColumns[currentColumnIndex + 1];
+                const inputs = document.querySelectorAll('input[inputMode="decimal"]') as NodeListOf<HTMLInputElement>;
+                const targetInputs = Array.from(inputs).filter(input =>
+                    input.closest('[data-index]') &&
+                    parseInt(input.closest('[data-index]')?.getAttribute('data-index') || '0') === currentRowIndex
+                );
+                // Find the input for the target column (based on position in the row)
+                const targetInput = targetInputs[currentColumnIndex + 1];
+                if (targetInput) {
+                    targetInput.focus();
+                    targetInput.select();
+                }
+            }
+            return;
+        }
+
+        // Vertical navigation (up/down)
+        const targetRowIndex = direction === 'down' ? currentRowIndex + 1 : currentRowIndex - 1;
+        const inputs = document.querySelectorAll('input[inputMode="decimal"]') as NodeListOf<HTMLInputElement>;
+        // Find all inputs in the target row
+        const targetRowInputs = Array.from(inputs).filter(input =>
+            input.closest('[data-index]') &&
+            parseInt(input.closest('[data-index]')?.getAttribute('data-index') || '0') === targetRowIndex
+        );
+        // Find the input for the current column in the target row
+        const targetInput = targetRowInputs[currentColumnIndex];
+        if (targetInput) {
+            targetInput.focus();
+            targetInput.select();
+        }
+    }, []);
+
     apiRef.current = {
         getBatchData: () =>
             localBatchData.map((row) => ({
@@ -248,6 +308,7 @@ export const InvoiceFormLineItemsSection = React.memo(function InvoiceFormLineIt
             summaryEntries={summaryEntries}
             totalLabel={t('warehouse.invoiceDetails.totalAmount')}
             totalValue={totalValue}
+            onNavigateFocus={handleNavigateFocus}
             onCancel={onInvoiceCancel}
             onSave={onInvoiceSave}
             cancelDisabled={invoiceCancelDisabled}

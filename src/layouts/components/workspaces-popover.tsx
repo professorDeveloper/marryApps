@@ -1,5 +1,6 @@
 import type { Theme, SxProps } from '@mui/material/styles';
 import type { ButtonBaseProps } from '@mui/material/ButtonBase';
+import type { IBranchFormData } from 'src/types/branches';
 
 import { usePopover } from 'minimal-shared/hooks';
 import { useState, useEffect, useCallback } from 'react';
@@ -10,6 +11,7 @@ import MenuList from '@mui/material/MenuList';
 import MenuItem from '@mui/material/MenuItem';
 import Typography from '@mui/material/Typography';
 import ButtonBase from '@mui/material/ButtonBase';
+import Button from '@mui/material/Button';
 
 import { useTranslate } from 'src/locales/use-locales';
 
@@ -17,6 +19,8 @@ import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
 import { CustomPopover } from 'src/components/custom-popover';
 import { useBranchContext } from 'src/components/contexts/branch-context';
+import { BranchFormDialog } from './BranchFormDialog';
+import { useCreateBranch } from 'src/actions/branches';
 
 // ----------------------------------------------------------------------
 
@@ -37,8 +41,11 @@ export function WorkspacesPopover({ data = [], sx, ...other }: WorkspacesPopover
   const isSuperadmin = String(localStorage.getItem('user_role') || '').toLowerCase() === 'superadmin';
 
   const [workspace, setWorkspace] = useState(data[0]);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { t } = useTranslate('menu');
+  const { createBranch } = useCreateBranch();
 
   // Data change'da workspace'ni sync qilish
   useEffect(() => {
@@ -69,6 +76,31 @@ export function WorkspacesPopover({ data = [], sx, ...other }: WorkspacesPopover
       }
     },
     [isSuperadmin, onClose, selectedBranchId, setSelectedBranchId]
+  );
+
+  const handleOpenDialog = useCallback(() => {
+    onClose();
+    setDialogOpen(true);
+  }, [onClose]);
+
+  const handleCloseDialog = useCallback(() => {
+    setDialogOpen(false);
+  }, []);
+
+  const handleSubmitBranch = useCallback(
+    async (formData: IBranchFormData) => {
+      try {
+        setIsSubmitting(true);
+        await createBranch(formData);
+        handleCloseDialog();
+        // Reload to refresh the branch list
+        window.location.reload();
+      } catch (error) {
+        console.error('Failed to create branch:', error);
+        setIsSubmitting(false);
+      }
+    },
+    [createBranch, handleCloseDialog]
   );
 
   const buttonBg: SxProps<Theme> = {
@@ -166,30 +198,31 @@ export function WorkspacesPopover({ data = [], sx, ...other }: WorkspacesPopover
         </MenuList>
       </Scrollbar>
 
-      {/* <Divider sx={{ my: 0.5, borderStyle: 'dashed' }} /> */}
-
-      {/* <Button
-        fullWidth
-        startIcon={<Iconify width={18} icon="mingcute:add-line" />}
-        onClick={() => {
-          onClose();
-        }}
-        sx={{
-          gap: 2,
-          justifyContent: 'flex-start',
-          fontWeight: 'fontWeightMedium',
-          [`& .${buttonClasses.startIcon}`]: {
-            m: 0,
-            width: 24,
-            height: 24,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          },
-        }}
-      >
-        {t('workspaces.add')}
-      </Button> */}
+      {isSuperadmin && (
+        <Button
+          fullWidth
+          startIcon={<Iconify width={18} icon="mingcute:add-line" />}
+          onClick={handleOpenDialog}
+          sx={{
+            gap: 2,
+            justifyContent: 'flex-start',
+            fontWeight: 'fontWeightMedium',
+            borderTop: '1px dashed',
+            borderColor: 'divider',
+            pt: 1.5,
+            [`& .MuiButton-startIcon`]: {
+              m: 0,
+              width: 24,
+              height: 24,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            },
+          }}
+        >
+          {t('workspaces.add')}
+        </Button>
+      )}
     </CustomPopover>
   );
 
@@ -197,6 +230,12 @@ export function WorkspacesPopover({ data = [], sx, ...other }: WorkspacesPopover
     <>
       {renderButton()}
       {renderMenuList()}
+      <BranchFormDialog
+        open={dialogOpen}
+        onClose={handleCloseDialog}
+        onSubmit={handleSubmitBranch}
+        isSubmitting={isSubmitting}
+      />
     </>
   );
 }

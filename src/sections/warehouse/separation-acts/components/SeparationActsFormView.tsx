@@ -391,8 +391,7 @@ const SeparationActsFormView = React.memo(function SeparationActsFormView({
 
     // ── Render ────────────────────────────────────────────────────────────
     return (
-        <Box sx={{ px: 2, m: 0, alignItems: 'center' }}>
-            <CustomBreadcrumbs heading={heading} links={breadcrumbs} sx={{ my: 2 }} />
+        <Box sx={{ px: 4, m: 0, alignItems: 'center' }}>
 
             <Box sx={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 2 }}>
                 {pageLoading && (

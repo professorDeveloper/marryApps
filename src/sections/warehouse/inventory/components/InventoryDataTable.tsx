@@ -14,6 +14,7 @@ import { Iconify } from 'src/components/iconify';
 import { DataTable } from 'src/sections/warehouse/deduction/components/utility-data-table';
 
 import { useInventory } from '../hooks/use-inventory';
+import { RouterLink } from 'src/routes/components';
 import { 
   InventoryDateCell, 
   InventoryAmountCell, 
@@ -256,6 +257,7 @@ export function InventoryDataTable({
           <Button
             variant="contained"
             startIcon={<Iconify icon="mingcute:add-line" />}
+            component={RouterLink}
             href={paths.menu.inventory.new}
             size="small"
           >

@@ -25,6 +25,7 @@ import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
 import { useCategoryData } from './hooks/useCategoryData';
 import { StorageNameCell } from './components/StorageNameCell';
 import { CategoryGoodsTable } from './components/CategoryGoodsTable';
+import { RouterLink } from 'src/routes/components';
 
 /**
  * Category List View Component
@@ -318,12 +319,14 @@ export function CategoryListView() {
                         <Button
                             variant="contained"
                             startIcon={<Iconify icon="mingcute:add-line" />}
+                            component={RouterLink}
                             href={paths.menu.category.new}
                             size="small"
                         >
                             {t('add')}
                         </Button>
                     }
+                    showTotals={false}
                 />
             </DashboardContent>
 

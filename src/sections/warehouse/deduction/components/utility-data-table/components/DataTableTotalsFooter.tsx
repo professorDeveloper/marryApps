@@ -36,17 +36,17 @@ export function DataTableTotalsFooter<T>({
         height: 44,
         px: 1,
  
-         backgroundColor: 'grey.700',
-         borderBottom: `2px solid ${ACCENT}`,
+         backgroundColor: 'var(--color-surface-1)',
+        borderTop: '1px solid var(--color-border)',
       }}
     >
       {showCheckboxes && <Box />}
       {showRowNumbers && (
         <Typography
           sx={{
-            fontFamily: '"Inter", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif',
-            fontSize: 12,
-            color: 'rgba(255,255,255,0.55)',
+            fontFamily: 'var(--font-mono)',
+            fontSize: 12.5,
+            color: 'var(--color-text)',
             textAlign: 'center',
             fontWeight: 700,
             userSelect: 'none',
@@ -72,10 +72,9 @@ export function DataTableTotalsFooter<T>({
             sx={{
               fontSize: 12.5,
               fontWeight: 700,
-              color: col.total ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.35)',
-              fontFamily: col.mono
-                ? '"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace'
-                : '"Inter", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif',
+              color: col.total ? 'var(--color-text)' : 'var(--color-text-muted)',
+              opacity: col.total ? 1 : 0.5,
+              fontFamily: 'var(--font-mono)',
             }}
           >
             {col.total ? totals[col.key] : ''}

@@ -12,10 +12,12 @@ import {
 import { paths } from 'src/routes/paths';
 
 import { DashboardContent } from 'src/layouts/dashboard';
+import { usePaginationRows } from 'src/hooks/use-pagination-rows';
 
 import { Iconify } from 'src/components/iconify';
 
 import { DataTable } from 'src/sections/warehouse/deduction/components/utility-data-table';
+import { RouterLink } from 'src/routes/components';
 
 // ----------------------------------------------------------------------
 // Types
@@ -141,6 +143,9 @@ export function SalesListView() {
   const { t } = useTranslation('menu');
   const noDataText = t('noDataAvailable', "Tushunarli ma'lumot mavjud emas");
   
+  // Get global rows per page
+  const { rowsPerPage: globalRowsPerPage } = usePaginationRows();
+  
   const [salesData, setSalesData] = useState<SalesReport[]>(mockSalesData);
   const [authors] = useState(mockAuthors);
   const [searchQuery, setSearchQuery] = useState('');
@@ -148,7 +153,7 @@ export function SalesListView() {
   const [filters, setFilters] = useState<SalesReportFilters>(initialFilters);
   const [draftFilters, setDraftFilters] = useState<SalesReportFilters>(initialFilters);
   const [rowCount, setRowCount] = useState(0);
-  const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 20 });
+  const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: globalRowsPerPage });
   const [startDate, setStartDate] = useState<dayjs.Dayjs | null>(null);
   const [endDate, setEndDate] = useState<dayjs.Dayjs | null>(null);
   const [activeRange, setActiveRange] = useState<'day' | 'week' | 'month' | 'year'>('day');
@@ -494,6 +499,7 @@ export function SalesListView() {
           <Button
             variant="contained"
             startIcon={<Iconify icon="mingcute:add-line" />}
+            component={RouterLink}
             href={paths.menu.reports.sales.new}
             size="small"
           >

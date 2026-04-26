@@ -16,6 +16,9 @@ export function useGoodsReportFilters() {
     waiter_id: '',
     hall_id: '',
     table_id: '',
+    good_ids: [],
+    sort_by: '',
+    sort_order: '',
     limit: DEFAULT_PAGE_SIZE,
     offset: 0,
   });
@@ -88,10 +91,26 @@ export function useGoodsReportFilters() {
       waiter_id: '',
       hall_id: '',
       table_id: '',
+      good_ids: [],
+      sort_by: '',
+      sort_order: '',
       limit: DEFAULT_PAGE_SIZE,
       offset: 0,
     }));
     setPaginationModel((prev) => ({ ...prev, page: 0 }));
+  }, []);
+
+  const handleGoodIdsChange = useCallback((goodIds: string[]) => {
+    setFilters((prev) => ({ ...prev, good_ids: goodIds, good_id: '', offset: 0 }));
+    setPaginationModel((prev) => ({ ...prev, page: 0 }));
+  }, []);
+
+  const handleSortChange = useCallback((sort: { key: string | null; dir: string | null }) => {
+    setFilters((prev) => ({
+      ...prev,
+      sort_by: sort.key ?? '',
+      sort_order: sort.dir ?? '',
+    }));
   }, []);
 
   return {
@@ -106,5 +125,7 @@ export function useGoodsReportFilters() {
     handleEndDateChange,
     handlePaginationChange,
     handleReset,
+    handleGoodIdsChange,
+    handleSortChange,
   };
 }

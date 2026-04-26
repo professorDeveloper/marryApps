@@ -1,10 +1,12 @@
 import type { ReactNode } from 'react';
-import type { RowAction, SortState, BatchAction, SortDirection, DataTableColumn, StorageStrategy, DataTableDefaultConfig } from '../types/types';
+import type { RowAction, SortState, BatchAction, SortDirection, DataTableColumn, StorageStrategy, DataTableDefaultConfig, SearchMode, SearchOutput } from '../types/types';
 
 import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
 
 import Card from '@mui/material/Card';
+import { Stack } from '@mui/material';
 
+import { CYBER_TABLE_SX } from 'src/theme/cyber-table-sx';
 import { DataTableBody } from './DataTableBody';
 import { DataTableHeader } from './DataTableHeader';
 import { DataTableToolbar } from './DataTableToolbar';
@@ -16,13 +18,13 @@ import { DataTableFilterPopover } from './DataTableFilterPopover';
 import { isSpecial, formatTotal, computeTotal, buildPersisted } from '../utils/helpers';
 import {
   clamp,
-  BORDER,
   SURFACE_BG,
   mergeConfig,
   getCellValue,
   toComparable,
   buildGridTemplate,
 } from '../utils';
+import { usePaginationRows } from 'src/hooks/use-pagination-rows';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -38,6 +40,7 @@ export type DataTableProps<T> = {
   onReset: () => void;
 
   headerActions?: ReactNode;
+  toolbarActions?: ReactNode;
 
   showPeriodPicker?: boolean;
   periodPickerProps?: {
@@ -52,15 +55,6 @@ export type DataTableProps<T> = {
     onPeriodChange?: (period: 'day' | 'week' | 'month' | 'year') => void;
   };
 
-  showStorageSelector?: boolean;
-  storageSelectorProps?: {
-    storageId: string;
-    storages: Array<{ id: string; name: string }>;
-    onStorageChange: (storageId: string) => void;
-    label?: string;
-    disabled?: boolean;
-  };
-
   showRowNumbers?: boolean;
   batchActions?: Array<BatchAction<T>>;
   rowActions?: Array<RowAction<T>>;
@@ -70,6 +64,11 @@ export type DataTableProps<T> = {
 
   searchValue?: string;
   onSearchChange?: (value: string) => void;
+
+  searchMode?: SearchMode;
+  allowFreeText?: boolean;
+  searchOptions?: { id: string; label: string }[];
+  onSearch?: (data: SearchOutput) => void;
 
   filters?: Record<string, { type: 'text' | 'multi'; value: string | string[] }>;
   onFiltersChange?: (filters: Record<string, { type: 'text' | 'multi'; value: string | string[] }>) => void;
@@ -86,6 +85,7 @@ export type DataTableProps<T> = {
   emptyTitle?: string;
   emptySubtitle?: string;
   onRowClick?: (row: T) => void;
+  showTotals?: boolean;
 };
 
 // ---------------------------------------------------------------------------
@@ -99,12 +99,11 @@ export function DataTable<T>({
   defaultConfig,
   onReset,
   headerActions,
+  toolbarActions,
   showPeriodPicker = false,
   periodPickerProps,
   showPeriodButtons = false,
   periodButtonProps,
-  showStorageSelector = false,
-  storageSelectorProps,
   showRowNumbers = true,
   batchActions = [],
   rowActions = [],
@@ -112,8 +111,12 @@ export function DataTable<T>({
   onCellEdit,
   searchValue = '',
   onSearchChange,
+  searchMode,
+  allowFreeText,
+  searchOptions,
+  onSearch,
   page = 0,
-  rowsPerPage = 20,
+  rowsPerPage: propRowsPerPage,
   totalCount,
   rowsPerPageOptions = [10, 20, 50, 100],
   onPageChange,
@@ -125,10 +128,15 @@ export function DataTable<T>({
   emptyTitle = 'No results',
   emptySubtitle = 'Try adjusting filters or columns.',
   onRowClick,
+  showTotals = true,
 }: DataTableProps<T>) {
   const serverPagination = Boolean(onPageChange);
   const effectiveTotalCount = totalCount ?? data.length;
   const showCheckboxes = batchActions.length > 0;
+
+  // Use global rows per page if not explicitly provided by parent
+  const { rowsPerPage: globalRowsPerPage, setRowsPerPage: setGlobalRowsPerPage } = usePaginationRows();
+  const rowsPerPage = propRowsPerPage !== undefined ? propRowsPerPage : globalRowsPerPage;
 
   // ---- Config persistence ------------------------------------------------
   const persisted = useMemo(() => storageStrategy.load(persistKey), [storageStrategy, persistKey]);
@@ -485,31 +493,36 @@ export function DataTable<T>({
 
   // ---- Render ------------------------------------------------------------
   return (
-    <Card
-      sx={{
-        backgroundColor: SURFACE_BG,
-        border: `1px solid ${BORDER}`,
-        borderRadius: 2,
-        overflow: 'hidden',
-        backdropFilter: 'blur(12px)',
-      }}
-    >
-      <DataTableToolbar<T>
-        searchValue={searchValue}
-        onSearchChange={onSearchChange}
-        showPeriodPicker={showPeriodPicker}
-        periodPickerProps={periodPickerProps}
-        showPeriodButtons={showPeriodButtons}
-        periodButtonProps={periodButtonProps}
-        showStorageSelector={showStorageSelector}
-        storageSelectorProps={storageSelectorProps}
-        showCheckboxes={showCheckboxes}
-        selectedRows={selectedRows}
-        batchActions={batchActions}
-        onOpenColumnMenu={(e) => setColumnMenuAnchor(e.currentTarget)}
-        onReset={reset}
-        headerActions={headerActions}
-      />
+    <Stack gap={2} sx={{ mt: 2, height: 'min(88vh, 880px)', overflow: 'auto' }}>
+      {/* Toolbar Island */}
+      <Card
+        sx={{
+          backgroundColor: 'var(--color-surface-1) !important',
+          borderRadius: 2,
+          overflow: 'hidden',
+          backdropFilter: 'blur(12px)',
+        }}
+      >
+        <DataTableToolbar<T>
+          searchValue={searchValue}
+          onSearchChange={onSearchChange}
+          searchMode={searchMode}
+          allowFreeText={allowFreeText}
+          searchOptions={searchOptions}
+          onSearch={onSearch}
+          showPeriodPicker={showPeriodPicker}
+          periodPickerProps={periodPickerProps}
+          showPeriodButtons={showPeriodButtons}
+          periodButtonProps={periodButtonProps}
+          showCheckboxes={showCheckboxes}
+          selectedRows={selectedRows}
+          batchActions={batchActions}
+          onOpenColumnMenu={(e) => setColumnMenuAnchor(e.currentTarget)}
+          onReset={reset}
+          headerActions={headerActions}
+          toolbarActions={toolbarActions}
+        />
+      </Card>
 
       <DataTableColumnMenu<T>
         anchorEl={columnMenuAnchor}
@@ -519,77 +532,110 @@ export function DataTable<T>({
         onToggleVisibility={toggleColumnVisibility}
       />
 
-      <DataTableHeader<T>
-        gridTemplateColumns={gridTemplateColumns}
-        showCheckboxes={showCheckboxes}
-        showRowNumbers={showRowNumbers}
-        allVisibleSelected={allVisibleSelected}
-        someVisibleSelected={someVisibleSelected}
-        toggleAllVisible={toggleAllVisible}
-        visibleColumns={visibleColumns}
-        sort={sort}
-        onSortChange={handleSortChange}
-        filters={filters ?? {}}
-        onOpenFilter={openFilter}
-        onReorder={reorder}
-        onResizeStart={onResizeStart}
-        onResizeMove={onResizeMove}
-        onResizeEnd={onResizeEnd}
-        headerDragKey={headerDragKey}
-      />
-
-      <DataTableFilterPopover<T>
-        anchorEl={filterAnchor}
-        filterKey={filterKey}
-        columns={columns}
-        filters={filters ?? {}}
-        data={data}
-        onClose={closeFilter}
-        onSetTextFilter={setTextFilter}
-        onSetMultiFilter={setMultiFilter}
-        onClearFilter={clearFilter}
-      />
-
-      <DataTableBody<T>
-        data={sortedData}
-        columns={columns}
-        colOrder={order}
-        visibility={visibility}
-        widths={widths}
-        showRowNumbers={showRowNumbers}
-        showCheckboxes={showCheckboxes}
-        selectedIds={selectedIds}
-        onToggleSelected={toggleSelected}
-        rowActions={rowActions}
-        editing={editing}
-        startEdit={startEdit}
-        commitEdit={commitEdit}
-        cancelEdit={cancelEdit}
-        getRowId={getRowId}
-        scrollRef={scrollRef}
-        emptyTitle={emptyTitle}
-        emptySubtitle={emptySubtitle}
-        onRowClick={onRowClick}
-      />
-
-      <DataTableTotalsFooter<T>
-        gridTemplateColumns={gridTemplateColumns}
-        showCheckboxes={showCheckboxes}
-        showRowNumbers={showRowNumbers}
-        visibleColumns={visibleColumns}
-        totals={totals}
-      />
-
-      {serverPagination && onPageChange && (
-        <DataTablePagination
-          page={page}
-          rowsPerPage={rowsPerPage}
-          totalCount={effectiveTotalCount}
-          rowsPerPageOptions={rowsPerPageOptions}
-          onPageChange={onPageChange}
-          onRowsPerPageChange={onRowsPerPageChange}
+      {/* Main Table Island (Header + Body + Footer) */}
+      <Card
+        sx={{
+          backgroundColor: 'var(--color-surface-0) !important',
+          borderRadius: 2,
+          overflow: 'hidden',
+          backdropFilter: 'blur(12px)',
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          minHeight: 0,
+        }}
+      >
+        <DataTableHeader<T>
+          gridTemplateColumns={gridTemplateColumns}
+          showCheckboxes={showCheckboxes}
+          showRowNumbers={showRowNumbers}
+          allVisibleSelected={allVisibleSelected}
+          someVisibleSelected={someVisibleSelected}
+          toggleAllVisible={toggleAllVisible}
+          visibleColumns={visibleColumns}
+          sort={sort}
+          onSortChange={handleSortChange}
+          filters={filters ?? {}}
+          onOpenFilter={openFilter}
+          onReorder={reorder}
+          onResizeStart={onResizeStart}
+          onResizeMove={onResizeMove}
+          onResizeEnd={onResizeEnd}
+          headerDragKey={headerDragKey}
         />
+
+        <DataTableFilterPopover<T>
+          anchorEl={filterAnchor}
+          filterKey={filterKey}
+          columns={columns}
+          filters={filters ?? {}}
+          data={data}
+          onClose={closeFilter}
+          onSetTextFilter={setTextFilter}
+          onSetMultiFilter={setMultiFilter}
+          onClearFilter={clearFilter}
+        />
+
+        <DataTableBody<T>
+          data={sortedData}
+          columns={columns}
+          colOrder={order}
+          visibility={visibility}
+          widths={widths}
+          showRowNumbers={showRowNumbers}
+          showCheckboxes={showCheckboxes}
+          selectedIds={selectedIds}
+          onToggleSelected={toggleSelected}
+          rowActions={rowActions}
+          editing={editing}
+          startEdit={startEdit}
+          commitEdit={commitEdit}
+          cancelEdit={cancelEdit}
+          getRowId={getRowId}
+          scrollRef={scrollRef}
+          emptyTitle={emptyTitle}
+          emptySubtitle={emptySubtitle}
+          onRowClick={onRowClick}
+        />
+
+        {showTotals && (
+          <DataTableTotalsFooter<T>
+            gridTemplateColumns={gridTemplateColumns}
+            showCheckboxes={showCheckboxes}
+            showRowNumbers={showRowNumbers}
+            visibleColumns={visibleColumns}
+            totals={totals}
+          />
+        )}
+      </Card>
+
+      {/* Pagination Island */}
+      {serverPagination && onPageChange && (
+        <Card
+          sx={{
+            backgroundColor: 'var(--color-surface-1) !important',
+            borderRadius: 2,
+            overflow: 'hidden',
+            backdropFilter: 'blur(12px)',
+            // mb: -2,
+          }}
+        >
+          <DataTablePagination
+            page={page}
+            rowsPerPage={rowsPerPage}
+            totalCount={effectiveTotalCount}
+            rowsPerPageOptions={rowsPerPageOptions}
+            onPageChange={onPageChange}
+            onRowsPerPageChange={(newRowsPerPage) => {
+              // Update global storage if parent is not explicitly controlling rowsPerPage
+              if (propRowsPerPage === undefined) {
+                setGlobalRowsPerPage(newRowsPerPage);
+              }
+              onRowsPerPageChange?.(newRowsPerPage);
+            }}
+          />
+        </Card>
       )}
-    </Card>
+    </Stack>
   );
 }

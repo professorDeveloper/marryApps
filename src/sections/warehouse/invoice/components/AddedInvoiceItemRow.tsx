@@ -12,7 +12,7 @@ const INPUT_STYLE: React.CSSProperties = {
     width: '100%',
     padding: '4px 6px',
     fontSize: '0.8125rem',
-    border: '1px solid var(--palette-divider, rgba(145,158,171,0.32))',
+    border: '1px solid var(--color-border)',
     borderRadius: 6,
     outline: 'none',
     background: 'transparent',

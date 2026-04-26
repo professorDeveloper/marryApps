@@ -28,10 +28,14 @@ export interface IIngredientReportItem {
 }
 
 export interface IIngredientReportsFilterParams {
-    storage_id?: string; // ixtiyoriy (bo'sh string ham yuborilishi mumkin)
-    start: string; // RFC3339 yoki YYYY-MM-DD
-    end: string; // RFC3339 yoki YYYY-MM-DD
-    ingredient_id?: string; // ixtiyoriy
+    storage_id?: string;
+    start: string;
+    end: string;
+    ingredient_id?: string;
+    ingredient_ids?: string[];
+    measurement?: string;
+    sort_by?: string;
+    sort_order?: string;
     limit?: number;
     offset?: number;
 }

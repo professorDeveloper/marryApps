@@ -35,14 +35,14 @@ export function dashboardNavColorVars(
     case 'integrate':
       return {
         layout: {
-          '--layout-nav-bg': palette.background.default,
+          '--layout-nav-bg': 'var(--color-surface-0)',
           '--layout-nav-horizontal-bg': varAlpha(palette.background.defaultChannel, 0.8),
-          '--layout-nav-border-color': varAlpha(palette.grey['500Channel'], 0.12),
+          '--layout-nav-border-color': 'var(--color-border-strong)',
           '--layout-nav-text-primary-color': palette.text.primary,
           '--layout-nav-text-secondary-color': palette.text.secondary,
           '--layout-nav-text-disabled-color': palette.text.disabled,
           ...theme.applyStyles('dark', {
-            '--layout-nav-border-color': varAlpha(palette.grey['500Channel'], 0.08),
+            '--layout-nav-border-color': 'var(--color-border-strong)',
             '--layout-nav-horizontal-bg': varAlpha(palette.background.defaultChannel, 0.96),
           }),
         },

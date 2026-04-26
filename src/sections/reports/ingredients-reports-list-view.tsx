@@ -2,6 +2,8 @@ import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
 import { useMemo, useState, useEffect, useCallback } from 'react';
 
+import type { SearchOutput } from 'src/sections/warehouse/deduction/components/utility-data-table/types/types';
+
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import {
   Box,
@@ -13,22 +15,24 @@ import {
   TableCell,
   TableHead,
   IconButton,
-  Typography, 
+  Typography,
   ToggleButton,
   CircularProgress,
   ToggleButtonGroup,
 } from '@mui/material';
 
-import { useGetStorages } from 'src/actions/departments';
 import { DashboardContent } from 'src/layouts/dashboard';
-import { useGetIngredients } from 'src/actions/ingredients';
 import { useGetIngredientReports, useGetIngredientReportDetail } from 'src/actions/ingredient-reports';
+import { useMetadata } from 'src/hooks/use-metadata';
+import { MetadataEntity } from 'src/types/metadata';
+import { usePaginationRows } from 'src/hooks/use-pagination-rows';
 
 import { Iconify } from 'src/components/iconify';
 import { NoDataTooltip } from 'src/components/no-data-tooltip';
 import { GenericViewModal } from 'src/components/generic-view-view/GenericViewModal';
 
 import { DataTable } from 'src/sections/warehouse/deduction/components/utility-data-table';
+import { StorageFilter } from 'src/sections/warehouse/deduction/components/utility-data-table/components/StorageFilter';
 
 // Helper functions
 const toUtcDayBoundary = (value: dayjs.Dayjs, endOfDay = false): string => {
@@ -63,8 +67,9 @@ interface IngredientReportsFilters {
     start: string;
     end: string;
     ingredient_id: string;
-    status: string; // Adding status field for compatibility
-    q: string; // Adding search field for compatibility
+    ingredient_ids: string[];
+    sort_by: string;
+    sort_order: string;
     limit: number;
     offset: number;
 }
@@ -74,8 +79,9 @@ const initialFilters: IngredientReportsFilters = {
     start: getTodayUtcBoundary(),
     end: getTomorrowUtcBoundary(true),
     ingredient_id: '',
-    status: '',
-    q: '',
+    ingredient_ids: [],
+    sort_by: '',
+    sort_order: '',
     limit: 20,
     offset: 0,
 };
@@ -84,17 +90,17 @@ export function IngredientReportsListView() {
     const { t } = useTranslation('menu');
     const noDataText = t('noDataAvailable', "Tushunarli ma'lumot mavjud emas");
 
-    // Get filter options from APIs
-    const { ingredients } = useGetIngredients();
-    const { storages } = useGetStorages();
+    // Get filter options from metadata endpoint
+    const { data: metadata } = useMetadata([MetadataEntity.INGREDIENTS, MetadataEntity.STORAGES]);
+
+    // Get global rows per page
+    const { rowsPerPage: globalRowsPerPage } = usePaginationRows();
 
     // Filter states
     const [filters, setFilters] = useState<IngredientReportsFilters>(initialFilters);
     const [draftFilters, setDraftFilters] = useState<IngredientReportsFilters>(initialFilters);
-    const [searchQuery, setSearchQuery] = useState('');
-    const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
     const [rowCount, setRowCount] = useState(0);
-    const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 20 });
+    const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: globalRowsPerPage });
 
     const [startDate, setStartDate] = useState<dayjs.Dayjs | null>(null);
     const [endDate, setEndDate] = useState<dayjs.Dayjs | null>(null);
@@ -106,23 +112,6 @@ export function IngredientReportsListView() {
     const [selectedIngredientId, setSelectedIngredientId] = useState<string | null>(null);
     const [openAmountsModal, setOpenAmountsModal] = useState(false);
     const [selectedAmountsData, setSelectedAmountsData] = useState<any | null>(null);
-
-    // Debounced search
-    useEffect(() => {
-        const timeout = setTimeout(() => {
-            setDebouncedSearchQuery(searchQuery);
-        }, 400);
-
-        return () => clearTimeout(timeout);
-    }, [searchQuery]);
-
-    // Update draft filters with search
-    useEffect(() => {
-        setDraftFilters((prev) => ({
-            ...prev,
-            q: debouncedSearchQuery,
-        }));
-    }, [debouncedSearchQuery]);
 
     // Update filters when draft filters change
     useEffect(() => {
@@ -161,7 +150,8 @@ export function IngredientReportsListView() {
         setEndDate(today.endOf('day'));
 
         // Set default storage
-        if (storages && storages.length > 0) {
+        const storages = metadata.storages || [];
+        if (storages.length > 0) {
             const firstStorageId = storages[0].id;
             setSelectedStorageId(firstStorageId);
 
@@ -173,14 +163,17 @@ export function IngredientReportsListView() {
                 end: toUtcDayBoundary(today, true),
             }));
         }
-    }, [storages]);
+    }, [metadata.storages]);
 
     // Get reports with applied filters
     const { reports, reportsLoading, totals, reportsPagination } = useGetIngredientReports({
         storage_id: filters.storage_id,
         start: filters.start,
         end: filters.end,
-        ingredient_id: filters.ingredient_id || undefined,
+        ingredient_ids: filters.ingredient_ids.length > 0 ? filters.ingredient_ids : undefined,
+        ingredient_id: filters.ingredient_ids.length === 0 && filters.ingredient_id ? filters.ingredient_id : undefined,
+        sort_by: filters.sort_by || undefined,
+        sort_order: filters.sort_order || undefined,
         limit: filters.limit,
         offset: filters.offset,
     });
@@ -198,23 +191,45 @@ export function IngredientReportsListView() {
         endDate ? toUtcDayBoundary(endDate, true) : ''
     );
 
-    // Prepare filter options
+    // Prepare filter options from metadata
     const filterOptions = useMemo(
         () => ({
-            ingredient_id: ingredients.map((ingredient) => ({
+            ingredient_id: (metadata.ingredients || []).map((ingredient: any) => ({
                 value: ingredient.id,
                 label: ingredient.name,
             })),
-            storage_id: storages.map((storage: any) => ({
+            storage_id: (metadata.storages || []).map((storage: any) => ({
                 value: storage.id,
                 label: storage.name,
             })),
         }),
-        [ingredients, storages]
+        [metadata]
     );
 
     const isStoragesEmpty = filterOptions.storage_id.length === 0;
     const isIngredientsEmpty = filterOptions.ingredient_id.length === 0;
+
+    const ingredientOptions = useMemo(
+        () => (metadata.ingredients || []).map((ing: any) => ({ id: ing.id, label: ing.name })),
+        [metadata]
+    );
+
+    const handleSearch = useCallback(({ optionIds = [] }: SearchOutput) => {
+        setDraftFilters((prev) => ({
+            ...prev,
+            ingredient_ids: optionIds,
+            ingredient_id: optionIds.length === 1 ? optionIds[0] : '',
+        }));
+        setPaginationModel((prev) => ({ ...prev, page: 0 }));
+    }, []);
+
+    const handleSortChange = useCallback((sort: { key: string | null; dir: string | null }) => {
+        setDraftFilters((prev) => ({
+            ...prev,
+            sort_by: sort.key ?? '',
+            sort_order: sort.dir ?? '',
+        }));
+    }, []);
 
     const handleOpenAmountsModal = useCallback((row: any) => {
         setSelectedAmountsData(row);
@@ -371,26 +386,20 @@ export function IngredientReportsListView() {
         []
     );
 
-    const handleIngredientChange = useCallback(
-        (ingredientId: string) => {
-            setDraftFilters((prev) => ({ ...prev, ingredient_id: ingredientId }));
-        },
-        []
-    );
-
     const handleResetFilters = useCallback(() => {
         setDraftFilters(initialFilters);
         setStartDate(dayjs().startOf('day'));
         setEndDate(dayjs().endOf('day'));
         setActiveRange('day');
-        if (storages && storages.length > 0) {
+        const storages = metadata.storages || [];
+        if (storages.length > 0) {
             setSelectedStorageId(storages[0].id);
             setDraftFilters((prev) => ({
                 ...initialFilters,
                 storage_id: storages[0].id,
             }));
         }
-    }, [storages]);
+    }, [metadata.storages]);
 
     // Date picker values
     const startDateValue = useMemo(() => toPickerDate(draftFilters.start), [draftFilters.start]);
@@ -542,29 +551,6 @@ export function IngredientReportsListView() {
                 </TextField>
             </NoDataTooltip>
 
-            {/* Ingredient - Optional */}
-            <NoDataTooltip enabled={isIngredientsEmpty} title={noDataText}>
-                <TextField
-                    select
-                    label={t('ingredientReports.ingredient') || 'Ingredient'}
-                    value={draftFilters.ingredient_id}
-                    onChange={(e) => handleIngredientChange(e.target.value)}
-                    SelectProps={{ native: true }}
-                    size="small"
-                    fullWidth
-                    InputLabelProps={{ shrink: true }}
-                    disabled={isIngredientsEmpty}
-                >
-                    <option value="">
-                        {t('ingredientReports.all') || 'All'}
-                    </option>
-                    {filterOptions.ingredient_id.map((option) => (
-                        <option key={option.value} value={option.value}>
-                            {option.label}
-                        </option>
-                    ))}
-                </TextField>
-            </NoDataTooltip>
                 </Box>
             </Box>
 
@@ -765,11 +751,11 @@ export function IngredientReportsListView() {
                     data={reports || []}
                     getRowId={(row: any) => String(row?.ingredient_id)}
                     columns={columns}
-                    searchValue={searchQuery}
-                    onSearchChange={(value: string) => {
-                        setSearchQuery(value);
-                        setPaginationModel((prev) => ({ ...prev, page: 0 }));
-                    }}
+                    searchMode="advanced"
+                    allowFreeText={false}
+                    searchOptions={ingredientOptions}
+                    onSearch={handleSearch}
+                    onSortChange={handleSortChange}
                     page={paginationModel.page}
                     rowsPerPage={paginationModel.pageSize}
                     totalCount={rowCount}
@@ -796,14 +782,15 @@ export function IngredientReportsListView() {
                             applyRange(period);
                         }
                     }}
-                    showStorageSelector
-                    storageSelectorProps={{
-                        storageId: selectedStorageId,
-                        storages: storages.map((s: any) => ({ id: s.id, name: s.name })),
-                        onStorageChange: handleStorageChange,
-                        label: t('ingredientReports.storage') || 'Storage',
-                        disabled: isStoragesEmpty,
-                    }}
+                    toolbarActions={
+                      <StorageFilter
+                        storageId={selectedStorageId}
+                        storages={(metadata.storages || []).map((s: any) => ({ id: s.id, name: s.name }))}
+                        onStorageChange={handleStorageChange}
+                        label={t('ingredientReports.storage') || 'Storage'}
+                        disabled={isStoragesEmpty}
+                      />
+                    }
                     defaultConfig={{
                         order: ['ingredient_name', 'measurement', 'begin_quantity', 'in', 'out', 'surplus', 'shortage', 'end_quantity', 'actions'],
                         visibility: {

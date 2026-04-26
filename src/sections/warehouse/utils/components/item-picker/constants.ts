@@ -1,6 +1,7 @@
 import type { ColumnDef } from './types';
 
-export const LIST_MAX_HEIGHT = 'calc(100vh - 460px)';
+export const LIST_MAX_HEIGHT = 'calc(100vh - 200px)';
+export const ADDED_LIST_MAX_HEIGHT = 'calc(100vh - 490px)';
 
 export const ADDED_ROW_ESTIMATE_PX = 50;
 export const AVAILABLE_ROW_ESTIMATE_PX = 52;

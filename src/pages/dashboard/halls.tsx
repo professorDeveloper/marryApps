@@ -269,14 +269,14 @@ export default function HallsPage() {
                                                 width: Math.min(120, (hall.width / hall.height) * 120),
                                                 height: Math.min(120, (hall.height / hall.width) * 120),
                                                 border: '2px dashed',
-                                                borderColor: '#FB6633',
+                                                borderColor: 'primary.main',
                                                 borderRadius: 1,
                                                 opacity: 0.5,
                                             }}
                                         />
                                         <Iconify
                                             icon="solar:copy-bold"
-                                            sx={{ width: 40, height: 40, color: '#FB6633' }}
+                                            sx={{ width: 40, height: 40, color: 'primary.main' }}
                                         />
                                     </Box>
                                 </CardActionArea>
@@ -290,8 +290,8 @@ export default function HallsPage() {
                                     <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
                                         <Button
                                             size="small"
-                                            // variant="contained"
-                                            sx={{ backgroundColor: '#FB6633', color: 'white', ":hover": { backgroundColor: '#FB6633', opacity: 0.8 } }}
+                                            variant="contained"
+                                            color="primary"
                                             startIcon={<Iconify icon="solar:copy-bold" />}
                                             onClick={(e) => {
                                                 e.stopPropagation();
@@ -390,8 +390,8 @@ export default function HallsPage() {
                     <Button onClick={handleCreateDialogClose}>{t('halls.buttons.cancel')}</Button>
                     <Button
                         onClick={handleCreateHall}
-                        // variant="contained"
-                        sx={{ backgroundColor: '#FB6633', '&:hover': { backgroundColor: '#FB6633', opacity: 0.8 } }}
+                        variant="contained"
+                        color="primary"
                         disabled={creating || !formData.name.trim()}
                     >
                         {creating ? t('halls.buttons.creating') : t('halls.buttons.create')}
@@ -469,8 +469,8 @@ export default function HallsPage() {
                     <Button onClick={handleEditDialogClose}>{t('halls.buttons.cancel')}</Button>
                     <Button
                         onClick={handleUpdateHall}
-                        // variant="contained"
-                        sx={{ backgroundColor: '#FB6633', '&:hover': { backgroundColor: '#FB6633', opacity: 0.8 } }}
+                        variant="contained"
+                        color="primary"
                         disabled={updating || !formData.name.trim()}
                     >
                         {updating ? t('halls.buttons.updating') : t('halls.buttons.update')}

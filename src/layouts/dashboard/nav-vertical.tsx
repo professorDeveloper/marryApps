@@ -55,8 +55,7 @@ export const NavVertical = memo(function NavVertical({
   layoutQuery = 'md',
   ...other
 }: NavVerticalProps) {
-  console.log('NavVertical render, isNavMini:', isNavMini);
-  
+
   return (
     <NavRoot
       isNavMini={isNavMini}
@@ -111,7 +110,7 @@ export const NavVertical = memo(function NavVertical({
       >
         {slots?.topArea ?? (
           <Box sx={{ pl: 3.5, pt: 2.5, pb: 1 }}>
-            <Logo isNavMini={false} />
+            <Logo />
           </Box>
         )}
 
@@ -141,8 +140,8 @@ export const NavVertical = memo(function NavVertical({
           }),
         })}
       >
-        <Box sx={{px:3, mt:2, pb:2}}>
-        <AnimatedToggleButton onToggle={onToggleNav} />
+        <Box sx={{ px: 3, mt: 2, pb: 2 }}>
+          <AnimatedToggleButton onToggle={onToggleNav} />
         </Box>
         <NavSectionMini
           data={data}
@@ -152,7 +151,6 @@ export const NavVertical = memo(function NavVertical({
             (theme) => ({
               ...theme.mixins.hideScrollY,
               pb: 2,
-              // pt:7,
               px: 0.5,
               flex: '1 1 auto',
               overflowY: 'auto',

@@ -3,10 +3,11 @@ import type { RouteObject } from 'react-router';
 import { lazy, Suspense } from 'react';
 import { Outlet, Navigate } from 'react-router';
 
+import LinearProgress from '@mui/material/LinearProgress';
+
 import { CONFIG } from 'src/global-config';
 import { DashboardLayout } from 'src/layouts/dashboard';
 
-import { LoadingScreen } from 'src/components/loading-screen';
 import { PageTransition } from 'src/components/animate/page-transition';
 
 import { AuthGuard } from 'src/auth/guard';
@@ -28,9 +29,25 @@ const HallsPage = lazy(() => import('src/pages/dashboard/halls'));
 
 // ----------------------------------------------------------------------
 
+function MainPaneFallback() {
+  return (
+    <LinearProgress
+      color="inherit"
+      sx={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: 2,
+        zIndex: 1200,
+      }}
+    />
+  );
+}
+
 function SuspenseOutlet() {
   return (
-    <Suspense fallback={<LoadingScreen />}>
+    <Suspense fallback={<MainPaneFallback />}>
       <PageTransition>
         <Outlet />
       </PageTransition>

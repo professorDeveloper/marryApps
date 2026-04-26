@@ -74,10 +74,13 @@ function RenderFieldsList({ data, fields }: { data: any; fields: Array<{ key: st
           <Typography
             variant="subtitle2"
             sx={{
-              color: 'text.secondary', // theme.palette o'rniga qisqa yozuv
+              color: 'primary.main',
               mb: 0.5,
               fontWeight: 600,
               fontSize: '0.875rem',
+              fontFamily: 'var(--font-mono)',
+              textTransform: 'uppercase',
+              letterSpacing: 1,
             }}
           >
             {field.label}
@@ -85,8 +88,9 @@ function RenderFieldsList({ data, fields }: { data: any; fields: Array<{ key: st
           <Typography
             variant="body2"
             sx={{
-              color: 'text.primary', // Tuzatildi
+              color: 'text.primary',
               wordBreak: 'break-word',
+              fontFamily: 'var(--font-mono)',
             }}
           >
             {field.render ? field.render(data[field.key]) : String(data[field.key] ?? '-')}
@@ -110,30 +114,23 @@ function RenderListItems({ items }: { items: Array<{ id: string; label: string; 
           <Paper
             sx={{
               p: 1.5,
-              backgroundColor: (theme) =>
-                theme.palette.mode === 'dark'
-                  ? 'rgba(255, 255, 255, 0.05)'
-                  : 'rgba(0, 0, 0, 0.02)',
-              border: `1px solid`,
-              borderColor: 'divider',
-              backdropFilter: 'blur(4px)',
+              backgroundColor: 'var(--color-surface-1)',
+              border: '1px solid var(--color-border)',
+              backdropFilter: 'blur(8px)',
               transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
               '&:hover': {
-                backgroundColor: (theme) =>
-                  theme.palette.mode === 'dark'
-                    ? 'rgba(255, 255, 255, 0.08)'
-                    : 'rgba(0, 0, 0, 0.04)',
-                borderColor: 'primary.main',
+                backgroundColor: 'var(--color-surface-2)',
+                borderColor: 'var(--color-border-strong)',
                 transform: 'translateX(4px)',
               },
             }}
           >
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography variant="body2" sx={{ color: 'text.primary', fontWeight: 500 }}>
+              <Typography variant="body2" sx={{ color: 'text.primary', fontWeight: 500, fontFamily: 'var(--font-mono)' }}>
                 {item.label}
               </Typography>
               {item.value && (
-                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                <Typography variant="caption" sx={{ color: 'text.secondary', fontFamily: 'var(--font-mono)' }}>
                   {item.value}
                 </Typography>
               )}
@@ -267,15 +264,10 @@ export function GenericViewModal({
               : isMobile
                 ? 0
                 : 2,
-          // ASOSIY TUZATISH: faqat background.paper ishlatamiz
-          backgroundColor: 'background.paper',
+          backgroundColor: 'var(--color-surface-0)',
           backdropFilter: 'blur(12px)',
-          boxShadow: (theme) =>
-            theme.palette.mode === 'dark'
-              ? '0 20px 60px rgba(0, 0, 0, 0.8)'
-              : '0 20px 60px rgba(0, 0, 0, 0.08)',
-          border: (theme) =>
-            theme.palette.mode === 'dark' ? `1px solid ${theme.palette.divider}` : 'none',
+          boxShadow: 'var(--shadow-lg)',
+          border: '1px solid var(--color-border)',
           ...paperSx,
         },
       }}
@@ -295,12 +287,8 @@ export function GenericViewModal({
           alignItems: 'center',
           justifyContent: 'space-between',
           pb: 2,
-          borderBottom: `1px solid`,
-          borderColor: 'divider',
-          backgroundColor: (theme) =>
-            theme.palette.mode === 'dark'
-              ? 'rgba(255, 255, 255, 0.05)'
-              : 'rgba(0, 0, 0, 0.04)',
+          borderBottom: '1px solid var(--color-border)',
+          backgroundColor: 'var(--color-surface-1)',
           backdropFilter: 'blur(10px)',
           position: 'sticky',
           top: 0,
@@ -312,8 +300,9 @@ export function GenericViewModal({
             variant="h5"
             sx={{
               fontWeight: 700,
-              color: 'text.primary', // Tuzatildi
+              color: 'primary.main',
               letterSpacing: '-0.5px',
+              fontFamily: 'var(--font-mono)',
             }}
           >
             {title}
@@ -322,17 +311,11 @@ export function GenericViewModal({
         <IconButton
           onClick={handleClose}
           sx={{
-            color: 'text.primary', // Tuzatildi
-            backgroundColor: (theme) =>
-              theme.palette.mode === 'dark'
-                ? 'rgba(255, 255, 255, 0.05)'
-                : 'rgba(0, 0, 0, 0.04)',
+            color: 'text.primary',
+            backgroundColor: 'var(--color-primary-soft)',
             transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
             '&:hover': {
-              backgroundColor: (theme) =>
-                theme.palette.mode === 'dark'
-                  ? 'rgba(255, 255, 255, 0.1)'
-                  : 'rgba(0, 0, 0, 0.08)',
+              backgroundColor: 'var(--color-primary-ring)',
               transform: 'rotate(90deg)',
             },
           }}
@@ -348,29 +331,20 @@ export function GenericViewModal({
           mt: 1,
           flex: 1,
           overflowY: 'auto',
-          // ASOSIY TUZATISH: color inherit o'rniga text.primary
           color: 'text.primary',
+          backgroundColor: 'var(--color-surface-0)',
           '&::-webkit-scrollbar': {
             width: '8px',
           },
           '&::-webkit-scrollbar-track': {
-            backgroundColor: (theme) =>
-              theme.palette.mode === 'dark'
-                ? 'rgba(255, 255, 255, 0.05)'
-                : 'rgba(0, 0, 0, 0.05)',
+            backgroundColor: 'var(--color-surface-1)',
             borderRadius: '4px',
           },
           '&::-webkit-scrollbar-thumb': {
-            backgroundColor: (theme) =>
-              theme.palette.mode === 'dark'
-                ? 'rgba(255, 255, 255, 0.2)'
-                : 'rgba(0, 0, 0, 0.15)',
+            backgroundColor: 'var(--color-primary-ring)',
             borderRadius: '4px',
             '&:hover': {
-              backgroundColor: (theme) =>
-                theme.palette.mode === 'dark'
-                  ? 'rgba(255, 255, 255, 0.3)'
-                  : 'rgba(0, 0, 0, 0.3)',
+              backgroundColor: 'var(--color-primary)',
             },
           },
         }}

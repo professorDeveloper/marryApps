@@ -429,6 +429,7 @@ export const endpoints = {
   ingredientReports: {
     list: '/api/v1/ingredient-reports',
     details: (ingredientId: string) => `/api/v1/ingredient-reports/${ingredientId}`,
+    inventoryStatus: '/api/v1/ingredient-reports/inventory-status',
   },
   goodsReports: {
     list: '/api/v1/reports/goods',
@@ -470,5 +471,16 @@ export const endpoints = {
     create: '/api/v1/modifiers',
     update: (id: string) => `/api/v1/modifiers/${id}`,
     delete: (id: string) => `/api/v1/modifiers/${id}`,
+    withCalculations: (id: string) => `/api/v1/modifiers/${id}/with-calculations`,
+    createWithCalculations: '/api/v1/modifiers/with-calculations',
+    updateWithCalculations: (id: string) => `/api/v1/modifiers/${id}/with-calculations`,
+    calculations: (modifierId: string) =>
+      `/api/v1/modifiers/calculations?modifier_id=${modifierId}`,
+    createCalculation: '/api/v1/modifiers/calculations',
+    updateCalculation: (id: string) => `/api/v1/modifiers/calculations/${id}`,
+    deleteCalculation: (id: string) => `/api/v1/modifiers/calculations/${id}`,
+  },
+  metadata: {
+    list: (include: string) => `/api/v1/metadata?include=${include}`,
   },
 } as const;

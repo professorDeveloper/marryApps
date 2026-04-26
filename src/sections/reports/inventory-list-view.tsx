@@ -26,6 +26,7 @@ import { Iconify } from 'src/components/iconify';
 import { useInventory } from 'src/sections/warehouse/inventory/hooks/use-inventory';
 import { DataTable } from 'src/sections/warehouse/deduction/components/utility-data-table';
 import { CELL_SX } from 'src/sections/warehouse/deduction/components/utility-data-table/utils/constants';
+import { RouterLink } from 'src/routes/components';
 
 const getTodayUtcBoundary = (endOfDay = false): string => {
   const now = dayjs();
@@ -560,6 +561,7 @@ export function InventoryReportsListView() {
             <Button
               variant="contained"
               startIcon={<Iconify icon="mingcute:add-line" />}
+              component={RouterLink}
               href={paths.menu.reports.inventory.new}
               size="small"
             >

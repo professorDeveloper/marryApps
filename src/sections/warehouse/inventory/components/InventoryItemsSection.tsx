@@ -3,7 +3,7 @@ import type { ColumnDef, PickerItem, SummaryEntry } from 'src/sections/warehouse
 
 import React, { useRef, useMemo, useEffect, useCallback, startTransition } from 'react';
 
-import { useGetIngredientStocksByStorage } from 'src/hooks/use-ingredient-stock-api';
+import { useGetInventoryStatus } from 'src/actions/ingredient-reports';
 
 import { useIngredients } from 'src/sections/warehouse/invoice';
 import {
@@ -26,6 +26,7 @@ export const InventoryItemsSection = React.memo(function InventoryItemsSection({
     cancelDisabled,
     saveDisabled,
     isSaving,
+    metaFieldsOpen,
 }: InventoryItemsSectionProps) {
     const { ingredients, loading: ingredientsLoading, refreshIngredients } = useIngredients();
     const {
@@ -39,24 +40,27 @@ export const InventoryItemsSection = React.memo(function InventoryItemsSection({
         getBatchData,
     } = useInventoryItems();
 
-    // Fetch ingredient stocks for current quantities and prices
-    const { stocks } = useGetIngredientStocksByStorage(storageId, {
+    // Fetch inventory status for current quantities and prices
+    const { reports } = useGetInventoryStatus(storageId, {
+        end: date.split('T')[0], // Use only date part, not time
         limit: 1000,
-        sort_by: 'ingredient_name',
-        sort_order: 'asc',
     });
 
     const reportLookup = useMemo<IngredientReportLookup>(() => {
-        if (!stocks || stocks.length === 0) return EMPTY_LOOKUP;
+        if (!reports || reports.length === 0) return EMPTY_LOOKUP;
         const map: IngredientReportLookup = {};
-        stocks.forEach((stock: any) => {
-            map[stock.ingredient_id] = {
-                systemQuantity: parseFloat(stock.quantity) || 0,
-                pricePerUnit: parseFloat(stock.price_per_unit) || 0,
+        reports.forEach((report: any) => {
+            const endQty = parseFloat(report.end_quantity) || 0;
+            const endAmount = parseFloat(report.end_quantity) || 0;
+            const pricePerUnit = endQty > 0 ? endAmount / endQty : 0;
+
+            map[report.ingredient_id] = {
+                systemQuantity: endQty,
+                pricePerUnit,
             };
         });
         return map;
-    }, [stocks]);
+    }, [reports]);
 
     // Ref for stable handleQuickAdd
     const transferredIdsRef = useRef(transferredIds);
@@ -89,7 +93,7 @@ export const InventoryItemsSection = React.memo(function InventoryItemsSection({
     // Also notify on mount if items were restored
     useEffect(() => {
         onHasItemsChange(hasItems);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const ingredientsById = useMemo(() => {
@@ -109,15 +113,16 @@ export const InventoryItemsSection = React.memo(function InventoryItemsSection({
     );
 
     // Build transferredItems with system quantity, counted quantity, difference, and impact
-    const transferredItems: PickerItem[] = useMemo(() => orderedUniqueIds
+    const transferredItems: PickerItem[] = useMemo(() => {
+        const items = orderedUniqueIds
             .map((rowId) => {
                 const ing = ingredientsById.get(rowId);
                 if (!ing) return null;
 
                 const report = reportLookup[rowId];
                 const systemQty = report?.systemQuantity ?? 0;
-                const counted = quantities[rowId] ?? 0;
-                const diff = counted - systemQty;
+                const counted = quantities[rowId];
+                const diff = (counted ?? 0) - systemQty;
                 const pricePerUnit = report?.pricePerUnit ?? 0;
                 const impact = diff * pricePerUnit;
 
@@ -129,9 +134,15 @@ export const InventoryItemsSection = React.memo(function InventoryItemsSection({
                     counted_quantity: counted,
                     difference: diff,
                     impact,
+                    price_per_unit: pricePerUnit,
                 };
             })
-            .filter(Boolean) as PickerItem[], [orderedUniqueIds, ingredientsById, quantities, reportLookup]);
+            .filter(Boolean) as PickerItem[];
+
+        console.log('transferredItems recalculated:', items);
+        console.log('quantities state:', quantities);
+        return items;
+    }, [orderedUniqueIds, ingredientsById, quantities, reportLookup]);
 
     // Define columns for ItemPickerSection
     const columns: ColumnDef[] = useMemo(
@@ -150,9 +161,10 @@ export const InventoryItemsSection = React.memo(function InventoryItemsSection({
                 width: '100px',
                 editable: true,
                 type: 'number',
-                step: '0.01',
+                step: '1',
                 min: '0',
                 align: 'center',
+                suffix: (item) => item.measurement || '',
             },
             {
                 key: 'difference',
@@ -188,28 +200,25 @@ export const InventoryItemsSection = React.memo(function InventoryItemsSection({
         let surplus = 0;
         let remaining = 0;
 
-        const seen = new Set<string>();
-        transferredIds.forEach((id) => {
-            if (seen.has(id)) return;
-            seen.add(id);
-            const report = reportLookup[id];
-            if (!report) return;
-            const counted = quantities[id];
-            if (counted === undefined) return;
-            const diff = counted - report.systemQuantity;
-            const impact = diff * report.pricePerUnit;
-            if (diff > 0) {
-                surplus += impact;
-            } else if (diff < 0) {
-                shortage += Math.abs(impact);
-            }
-            remaining += counted * report.pricePerUnit;
+        console.log('Calculating summary with transferredItems:', transferredItems);
+
+        transferredItems.forEach((item) => {
+            const diff = Number(item.difference) || 0;
+            const impact = Number(item.impact) || 0;
+            const counted = Number(item.counted_quantity) || 0;
+            const pricePerUnit = Number(item.price_per_unit) || 0;
+
+            console.log(`Item ${item.id}: diff=${diff}, impact=${impact}, counted=${counted}, pricePerUnit=${pricePerUnit}`);
+
+            if (diff > 0) surplus += impact;
+            else if (diff < 0) shortage += Math.abs(impact);
+            remaining += counted * pricePerUnit;
         });
 
-        return [
+        const result = [
             {
                 label: 'Products',
-                value: orderedUniqueIds.length,
+                value: transferredItems.length,
             },
             {
                 label: 'Surplus',
@@ -224,15 +233,26 @@ export const InventoryItemsSection = React.memo(function InventoryItemsSection({
                 value: formatPrice(remaining),
             },
         ];
-    }, [orderedUniqueIds.length, transferredIds, reportLookup, quantities]);
+        console.log('Summary result:', result);
+        return result;
+    }, [transferredItems]);
+
+    // Calculate total value for summary panel
+    const totalValue = useMemo(() => {
+        const total = transferredItems.reduce((sum, item) => {
+            const counted = Number(item.counted_quantity) || 0;
+            const pricePerUnit = Number(item.price_per_unit) || 0;
+            return sum + (counted * pricePerUnit);
+        }, 0);
+        return formatPrice(total);
+    }, [transferredItems]);
 
     const handleQuickAdd = useCallback(
         (id: string) => {
             if (transferredIdsRef.current.includes(id)) return;
             moveRight([id]);
-            handleQuantityChange(id, '1');
         },
-        [moveRight, handleQuantityChange]
+        [moveRight]
     );
 
     const handleMoveRight = useCallback(
@@ -267,6 +287,31 @@ export const InventoryItemsSection = React.memo(function InventoryItemsSection({
         [handleQuantityChange]
     );
 
+    const handleNavigateFocus = useCallback((direction: 'up' | 'down' | 'left' | 'right', currentRowIndex: number, currentColumnKey: string) => {
+        // Inventory form only has one editable column, so horizontal navigation is not applicable
+        if (direction === 'left' || direction === 'right') return;
+
+        const targetRowIndex = direction === 'down' ? currentRowIndex + 1 : currentRowIndex - 1;
+        // Find the counted quantity input in the target row
+        const inputs = document.querySelectorAll('input[inputMode="decimal"]') as NodeListOf<HTMLInputElement>;
+        // The counted quantity inputs are the ones with placeholder="0"
+        const countedInputs = Array.from(inputs).filter(input =>
+            input.getAttribute('placeholder') === '0' &&
+            input.closest('[data-index]')
+        );
+        // Sort by data-index to get correct order
+        countedInputs.sort((a, b) => {
+            const indexA = parseInt(a.closest('[data-index]')?.getAttribute('data-index') || '0');
+            const indexB = parseInt(b.closest('[data-index]')?.getAttribute('data-index') || '0');
+            return indexA - indexB;
+        });
+        const targetInput = countedInputs[targetRowIndex];
+        if (targetInput) {
+            targetInput.focus();
+            targetInput.select();
+        }
+    }, []);
+
     // Expose API to parent
     apiRef.current = {
         getBatchData,
@@ -289,12 +334,14 @@ export const InventoryItemsSection = React.memo(function InventoryItemsSection({
             onAddNewItem={onOpenIngredientDialog}
             summaryEntries={summaryEntries}
             totalLabel="Total"
-            totalValue=""
+            totalValue={totalValue}
+            onNavigateFocus={handleNavigateFocus}
             onCancel={onCancel}
             onSave={onSave}
             cancelDisabled={cancelDisabled}
             saveDisabled={saveDisabled}
             saveLabel="Save"
+            metaFieldsOpen={metaFieldsOpen}
         />
     );
 });

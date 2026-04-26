@@ -29,6 +29,8 @@ export interface ColumnDef {
     step?: string;
     /** Min attribute for number inputs */
     min?: string;
+    /** Max attribute for number inputs */
+    max?: string;
     /** Alignment of text / input inside the cell */
     align?: 'left' | 'center' | 'right';
     /** Render a suffix inside the input (e.g. measurement unit) */
@@ -55,12 +57,14 @@ export interface AvailableItemRowProps {
 
 export interface AddedItemRowProps {
     rowIndex: number;
+    totalRows: number;
     item: PickerItem;
     columns: ColumnDef[];
     onValueChange: (id: string, key: string, value: string) => void;
     onRemove: (id: string) => void;
     removeTitle: string;
     gridTemplate: string;
+    onNavigateFocus?: (direction: 'up' | 'down' | 'left' | 'right', currentRowIndex: number, currentColumnKey: string) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -74,6 +78,8 @@ export interface AvailableItemsPanelProps {
     onMoveRight: (ids: string[]) => void;
     onQuickAdd?: (id: string) => void;
     onAddNewItem?: () => void;
+    /** Whether the meta fields accordion is open (affects height calculation) */
+    metaFieldsOpen?: boolean;
 }
 
 export interface AddedItemsPanelProps {
@@ -86,6 +92,22 @@ export interface AddedItemsPanelProps {
     onSearchChange?: (value: string) => void;
     gridTemplate: string;
     itemCount?: number;
+    onNavigateFocus?: (direction: 'up' | 'down' | 'left' | 'right', currentRowIndex: number, currentColumnKey: string) => void;
+    /** Summary entries to display at the bottom of the panel */
+    summaryEntries?: SummaryEntry[];
+    /** Label for the grand-total line */
+    totalLabel?: string;
+    /** Formatted grand-total value */
+    totalValue?: string;
+    /** Cancel button handler */
+    onCancel?: () => void;
+    /** Save button handler */
+    onSave?: () => void | Promise<void>;
+    cancelDisabled?: boolean;
+    saveDisabled?: boolean;
+    saveLabel?: string;
+    /** Whether the meta fields accordion is open (affects height calculation) */
+    metaFieldsOpen?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -153,4 +175,8 @@ export interface ItemPickerSectionProps {
     cancelDisabled?: boolean;
     saveDisabled?: boolean;
     saveLabel?: string;
+    /** Keyboard navigation handler for moving focus between rows and columns */
+    onNavigateFocus?: (direction: 'up' | 'down' | 'left' | 'right', currentRowIndex: number, currentColumnKey: string) => void;
+    /** Whether the meta fields accordion is open (affects height calculation) */
+    metaFieldsOpen?: boolean;
 }

@@ -14,7 +14,12 @@ const CHIP_SX = {
     fontSize: '0.65rem',
     height: 16,
     minWidth: 32,
+    fontFamily: '"Inter", sans-serif',
     '& .MuiChip-label': { px: 0.5 },
+    '&.MuiChip-outlined': {
+        borderColor: 'var(--color-border)',
+        color: 'var(--color-text)',
+    },
 } as const;
 
 export const TypeBadge = React.memo(function TypeBadge({
@@ -26,7 +31,6 @@ export const TypeBadge = React.memo(function TypeBadge({
         <Chip
             size="small"
             label={type === 'ingredient' ? ingredientLabel : compoundLabel}
-            color={type === 'ingredient' ? 'primary' : 'secondary'}
             variant="outlined"
             sx={CHIP_SX}
         />

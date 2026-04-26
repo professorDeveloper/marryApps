@@ -26,7 +26,8 @@ export const FormActionButtons: FC<{
     return (
         <Stack direction="column" spacing={2} sx={{ mt: 3 }}>
             <Button
-                sx={{ backgroundColor: '#FB6633', color: '#FFFFFF' }}
+                variant="contained"
+                color="primary"
                 type="submit"
                 disabled={isLoading || isSubmitting}
                 startIcon={<Iconify icon="solar:check-circle-bold" />}

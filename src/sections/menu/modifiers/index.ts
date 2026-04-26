@@ -11,10 +11,16 @@ export type { ModifierEditViewProps } from './ModifierEditView';
 export type { ModifierFormData, CellRenderParams } from './types';
 
 // Constants
-export { TABLE_COLUMN_WIDTHS, TABLE_COLUMN_ORDER, TABLE_COLUMN_VISIBILITY, MODIFIERS_TABLE_PERSIST_KEY, COLOR_CODES } from './constants';
+export {
+  TABLE_COLUMN_WIDTHS,
+  TABLE_COLUMN_ORDER,
+  TABLE_COLUMN_VISIBILITY,
+  MODIFIERS_TABLE_PERSIST_KEY,
+  COLOR_CODES,
+} from './constants';
 
 // Hooks
-export { useFormLogic } from './hooks/useFormLogic';
+export { useModifierForm } from './hooks/useModifierForm';
 
 // Components
 export {
@@ -23,6 +29,4 @@ export {
   RenderCellIsActive,
   RenderCellCreatedAt,
 } from './components/ModifierTableCells';
-
-// Utilities
-export { buildImageSection, buildBasicInfoSection } from './utils/form-sections';
+export { ModifierGeneralInformation } from './components/ModifierGeneralInformation';

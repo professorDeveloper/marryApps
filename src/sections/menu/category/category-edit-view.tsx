@@ -295,13 +295,6 @@ export function CategoryEditView({ categoryId, isNew = false }: CategoryEditView
     return (
         <Box sx={{ p: 3 }}>
             <Box sx={{ maxWidth: 1400, mx: 'auto' }}>
-                {/* BREADCRUMBS AND TITLE */}
-                <CustomBreadcrumbs
-                    heading={isNew ? t('categories.new') : t('categories.edit')}
-                    links={config.breadcrumbs}
-                    sx={{ mb: 3 }}
-                />
-
                 <GenericEditView
                     config={config}
                     data={category}

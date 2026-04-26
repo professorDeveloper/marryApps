@@ -38,19 +38,21 @@ export const themeConfig: ThemeConfig = {
    * Typography
    *************************************** */
   fontFamily: {
-    primary: 'Public Sans Variable',
-    secondary: 'Barlow',
+    primary: 'JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, monospace',
+    secondary: 'JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, monospace',
   },
   /** **************************************
    * Palette
    *************************************** */
   palette: {
     primary: {
-      lighter: '#C8FAD6',
-      light: '#5BE49B',
-      main: '#00A76F',
-      dark: '#007867',
-      darker: '#004B50',
+      // Mirrors --mary-orange ramp in src/global.css.
+      // Keep these in sync: CSS vars drive plain CSS, these drive MUI sx/theme.
+      lighter: '#FFB284',
+      light: '#FF7A1A',
+      main: '#FF5500',
+      dark: '#E65100',
+      darker: '#7A2E00',
       contrastText: '#FFFFFF',
     },
     secondary: {

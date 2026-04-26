@@ -18,7 +18,6 @@ import {
 } from 'src/actions/ingredient-group';
 
 import { GenericEditView } from 'src/components/generic-edit-view';
-import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 
 const COLOR_CODES = [
   '#FF4842', // Red
@@ -187,12 +186,6 @@ export function IngredientGroupEditView({ isNew = false }: IngredientGroupEditVi
   return (
     <Box sx={{ p: 3 }}>
       <Box sx={{ maxWidth: 1400, mx: 'auto' }}>
-        <CustomBreadcrumbs
-          heading={isNew ? t('ingredientGroups.new') : t('ingredientGroups.edit')}
-          links={config.breadcrumbs}
-          sx={{ mb: 3 }}
-        />
-
         <GenericEditView
           config={config}
           data={ingredientGroup || undefined}

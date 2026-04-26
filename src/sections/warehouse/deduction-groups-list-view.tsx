@@ -24,6 +24,7 @@ import { DashboardContent } from 'src/layouts/dashboard';
 import { Iconify } from 'src/components/iconify';
 
 import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
+import { RouterLink } from 'src/routes/components';
 
 export function DeductionGroupsListView() {
     const { t } = useTranslation('menu');
@@ -163,6 +164,7 @@ export function DeductionGroupsListView() {
                         <Button
                             variant="contained"
                             startIcon={<Iconify icon="mingcute:add-line" />}
+                            component={RouterLink}
                             href={paths.warehouse.deductionGroups.new}
                             size="small"
                         >

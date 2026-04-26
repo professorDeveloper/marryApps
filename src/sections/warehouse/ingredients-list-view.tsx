@@ -21,12 +21,15 @@ import { useRouter } from 'src/routes/hooks';
 
 import { DashboardContent } from 'src/layouts/dashboard';
 import { useGetIngredients, useDeleteIngredient } from 'src/actions/ingredients';
+import { useMetadata } from 'src/hooks/use-metadata';
+import { MetadataEntity } from 'src/types/metadata';
 
 import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
 import { GenericViewModal } from 'src/components/generic-view-view';
 
 import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
+import { RouterLink } from 'src/routes/components';
 
 function RenderCellIngredientName({ row }: { row: any }) {
     const name = row.name || '-';
@@ -76,6 +79,7 @@ export function IngredientListView() {
         }
     );
     const { deleteIngredient } = useDeleteIngredient();
+    const { data: metadata } = useMetadata([MetadataEntity.INGREDIENT_GROUPS]);
     const [viewModalOpen, setViewModalOpen] = useState(false);
     const [selectedIngredient, setSelectedIngredient] = useState<IIngredientItem | null>(null);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -143,20 +147,29 @@ export function IngredientListView() {
                 filter: { type: 'multi' as const },
                 width: '1.2fr',
                 align: 'left' as const,
-                getValue: (row: IIngredientItem) => row?.group_name || '-',
-                renderCell: ({ row }: { row: IIngredientItem }) => (
-                    <Box sx={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        py: 1.5, 
-                        px: 1,
-                        color: 'text.primary',
-                        fontSize: '0.875rem',
-                        fontWeight: 400
-                    }}>
-                        {row?.group_name || '-'}
-                    </Box>
-                ),
+                getValue: (row: IIngredientItem) => {
+                    const ingredientGroups = metadata.ingredient_groups || [];
+                    const group = ingredientGroups.find((g: any) => g.id === row.group_id);
+                    return row?.group_name || group?.name || row?.group_id || '-';
+                },
+                renderCell: ({ row }: { row: IIngredientItem }) => {
+                    const ingredientGroups = metadata.ingredient_groups || [];
+                    const group = ingredientGroups.find((g: any) => g.id === row.group_id);
+                    const groupName = row?.group_name || group?.name || row?.group_id || '-';
+                    return (
+                        <Box sx={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            py: 1.5, 
+                            px: 1,
+                            color: 'text.primary',
+                            fontSize: '0.875rem',
+                            fontWeight: 400
+                        }}>
+                            {groupName}
+                        </Box>
+                    );
+                },
             },
             {
                 key: 'measurement',
@@ -398,12 +411,14 @@ export function IngredientListView() {
                         <Button
                             variant="contained"
                             startIcon={<Iconify icon="mingcute:add-line" />}
+                            component={RouterLink}
                             href={paths.menu.ingredients.new}
                             size="small"
                         >
                             {t('warehouse.add')}
                         </Button>
                     }
+                    showTotals={false}
                 />
             </DashboardContent>
 

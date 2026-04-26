@@ -17,9 +17,10 @@ export interface LogoProps {
   style?: React.CSSProperties;
   disabled?: boolean;
   forceRestart?: boolean;
+  showLabel?:boolean;
 }
 
-const Logo = ({ className = "", size = "25%", style, disabled, forceRestart }: LogoProps) => {
+const Logo = ({ className = "", size = "25%", style, disabled, forceRestart, showLabel=true }: LogoProps) => {
   const [state, setState] = useState<AnimationState>("idle");
 
   useEffect(() => {
@@ -138,7 +139,7 @@ const Logo = ({ className = "", size = "25%", style, disabled, forceRestart }: L
 
   return (
     <div
-      className={`flex items-end gap-2 ${className}`}
+      className={`flex items-center gap-2 ${className}`}
       style={{
         ...(disabled && { pointerEvents: 'none' }),
         ...(style || {}),
@@ -232,23 +233,25 @@ const Logo = ({ className = "", size = "25%", style, disabled, forceRestart }: L
         />
       </svg>
 
-            {/* LABEL - now perfectly bottom-aligned with the icon */}
-      <m.span
-        className="font-mono font-bold text-orange-400 mb-[-4px]"   
+                   {/* LABEL - bottom-aligned + lifted up a little */}
+                   {(showLabel
+                   &&
+(  <span
+        className="font-mono font-bold text-orange-400"
         style={{
           fontSize: typeof size === 'number' ? `${size * 0.4}px` : 'clamp(12px, 4vw, 32px)',
           whiteSpace: 'nowrap',
           lineHeight: 1,
+          position: 'relative',
+          top: '-8px',
         }}
-        variants={labelsVariants}
-        initial="idle"
-        animate={state}
       >
         Mary Ai
-      </m.span>
+      </span>)
+                    )}
+    
     </div>
   );
 };
 
-export default Logo;
 export { Logo };

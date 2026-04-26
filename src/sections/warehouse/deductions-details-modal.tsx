@@ -188,10 +188,29 @@ export function DeductionsDetailsModal({
               </Table>
             </TableContainer> */}
 
-            <TableContainer>
+            <TableContainer
+              sx={{
+                backgroundColor: 'var(--color-surface-1)',
+                border: '1px solid var(--color-border)',
+                borderRadius: 2,
+              }}
+            >
               <Table size="small">
                 <TableHead>
-                  <TableRow>
+                  <TableRow
+                    sx={{
+                      '& .MuiTableCell-head': {
+                        color: 'primary.main',
+                        textTransform: 'uppercase',
+                        letterSpacing: 1.5,
+                        fontWeight: 800,
+                        fontSize: '0.7rem',
+                        borderBottom: '2px solid var(--color-border-strong)',
+                        backgroundColor: 'var(--color-primary-soft)',
+                        fontFamily: 'var(--font-mono)',
+                      },
+                    }}
+                  >
                     <TableCell>#</TableCell>
                     <TableCell>{t('warehouse.ingredient', 'Ingredient')}</TableCell>
                     <TableCell>{t('deductions.quantity', 'Quantity')}</TableCell>
@@ -205,14 +224,26 @@ export function DeductionsDetailsModal({
                   {detailRows.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={7}>
-                        <Typography variant="body2" color="text.secondary">
+                        <Typography variant="body2" color="text.secondary" sx={{ fontFamily: 'var(--font-mono)' }}>
                           {t('deductions.noItemsSelected', 'No items selected')}
                         </Typography>
                       </TableCell>
                     </TableRow>
                   ) : (
                     detailRows.map((row, index) => (
-                      <TableRow key={row.id}>
+                      <TableRow
+                        key={row.id}
+                        sx={{
+                          '&:hover': {
+                            backgroundColor: 'var(--color-primary-soft)',
+                          },
+                          '& .MuiTableCell-root': {
+                            fontFamily: 'var(--font-mono)',
+                            borderBottom: '1px solid var(--color-border)',
+                            color: 'text.primary',
+                          },
+                        }}
+                      >
                         <TableCell>{index + 1}</TableCell>
                         <TableCell>{ingredientsMap[row.ingredientId] || row.ingredientId}</TableCell>
                         <TableCell>{row.quantity}</TableCell>

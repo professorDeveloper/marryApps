@@ -216,14 +216,6 @@ const InvoiceFormView = React.memo(function InvoiceFormView() {
 
     return (
         <Box sx={{ px: 2, m: 0, alignItems: 'center' }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', my: 2 }}>
-                <Typography variant="h4">
-                    {isNew
-                        ? t('warehouse.invoices.addNew', 'Add New Invoice')
-                        : t('warehouse.invoices.edit', 'Edit Invoice')}
-                </Typography>
-            </Box>
-
             <Box sx={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 2 }}>
                 {pageLoading && (
                     <Box

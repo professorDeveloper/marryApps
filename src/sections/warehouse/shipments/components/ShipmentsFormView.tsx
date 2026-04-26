@@ -69,6 +69,7 @@ const ShipmentsFormView = React.memo(function ShipmentsFormView({
     const {
         getShipmentById,
         createShipmentBatch,
+        updateShipment,
         confirmShipment,
         cancelShipment,
         deleteShipment,
@@ -222,7 +223,7 @@ const ShipmentsFormView = React.memo(function ShipmentsFormView({
                     toast.success(t('shipments.created', 'Shipment created successfully'));
                 }
             } else if (effectiveShipmentId) {
-                const result = await getShipmentById(effectiveShipmentId);
+                const result = await updateShipment(effectiveShipmentId, payload);
                 if (result) {
                     setBatchResponse(result);
                     toast.success(t('shipments.updated', 'Shipment updated successfully'));

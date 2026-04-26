@@ -387,9 +387,9 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
                                     saveLabel={saveLabel}
                                     hideActionBar // Hide internal action bar
                                     isVisible={isMealItemsOpen}
+                                    metaFieldsOpen={isInfoOpen}
                                     menuPrice={price}
                                     showProfitMargin
-                                    tableHeight={680}
                                 />
                             </Box>
                         )}

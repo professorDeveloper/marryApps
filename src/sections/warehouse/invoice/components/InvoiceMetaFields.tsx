@@ -84,7 +84,6 @@ export const InvoiceMetaFields = React.memo(function InvoiceMetaFields({
                     disabled={disabled || suppliers.length === 0}
                     sx={{ cursor: suppliers.length === 0 ? 'not-allowed' : 'default' }}
                 >
-                    <option value="" />
                     {suppliers.map((s) => (
                         <option key={s.id} value={s.id}>
                             {s.name}
@@ -101,7 +100,6 @@ export const InvoiceMetaFields = React.memo(function InvoiceMetaFields({
                     disabled={disabled || storages.length === 0}
                     sx={{ cursor: storages.length === 0 ? 'not-allowed' : 'default' }}
                 >
-                    <option value="" />
                     {storages.map((s) => (
                         <option key={s.id} value={s.id}>
                             {s.name}

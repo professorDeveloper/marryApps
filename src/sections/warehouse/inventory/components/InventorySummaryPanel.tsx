@@ -104,9 +104,9 @@ export const InventorySummaryPanel = React.memo<InventorySummaryPanelProps>(({
                 <Button
                     fullWidth
                     variant="contained"
+                    color="primary"
                     onClick={() => void onSave()}
                     disabled={saveDisabled || isSaving}
-                    sx={{ backgroundColor: '#FB6633', color: 'white', '&:hover': { backgroundColor: '#d9534f' } }}
                 >
                     {isSaving ? (
                         <CircularProgress size={18} sx={{ color: 'white' }} />

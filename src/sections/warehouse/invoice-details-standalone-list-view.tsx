@@ -1,5 +1,7 @@
 import type { InvoiceListFilters } from 'src/hooks/use-invoice-details-api';
 
+import type { SearchOutput } from 'src/sections/warehouse/deduction/components/utility-data-table/types/types';
+
 import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
 import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
@@ -30,6 +32,7 @@ import { GenericViewModal } from 'src/components/generic-view-view';
 
 import { DataTable } from 'src/sections/warehouse/deduction/components/utility-data-table';
 import { CELL_SX } from 'src/sections/warehouse/deduction/components/utility-data-table/utils/constants';
+import { RouterLink } from 'src/routes/components';
 
 type DataTableFilterState = Record<string, { type: 'text' | 'multi'; value: string | string[] }>;
 
@@ -100,6 +103,8 @@ const initialFilters: InvoiceListFilters = {
     status: '',
     expand: 'supplier_id,storage_id',
     search: '',
+    ingredient_ids: [],
+    general_search: '',
     limit: 20,
     offset: 0,
 };
@@ -149,8 +154,6 @@ export function InvoiceDetailsStandaloneListView() {
     const [selectedDeleteId, setSelectedDeleteId] = useState<string | null>(null);
     const [selectedDeleteType, setSelectedDeleteType] = useState<'invoice' | 'detail' | null>(null);
     const [selectedInvoice, setSelectedInvoice] = useState<any | null>(null);
-    const [searchQuery, setSearchQuery] = useState('');
-    const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
     const [filters, setFilters] = useState<InvoiceListFilters>(initialFilters);
     const [draftFilters, setDraftFilters] = useState<InvoiceListFilters>(initialFilters);
     const [tableFilters, setTableFilters] = useState<DataTableFilterState>({});
@@ -158,14 +161,6 @@ export function InvoiceDetailsStandaloneListView() {
     const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 20 });
     const [activePeriod, setActivePeriod] = useState<'day' | 'week' | 'month' | 'year' | undefined>(undefined);
     const lastInvoicesKeyRef = useRef('');
-
-    useEffect(() => {
-        const timeout = setTimeout(() => {
-            setDebouncedSearchQuery(searchQuery);
-        }, 400);
-
-        return () => clearTimeout(timeout);
-    }, [searchQuery]);
 
     useEffect(() => {
         const fetchStaticData = async () => {
@@ -276,13 +271,6 @@ export function InvoiceDetailsStandaloneListView() {
     };
 
     useEffect(() => {
-        setDraftFilters((prev) => ({
-            ...prev,
-            search: debouncedSearchQuery,
-        }));
-    }, [debouncedSearchQuery]);
-
-    useEffect(() => {
         setPaginationModel((prev) => ({ ...prev, page: 0 }));
         setFilters((prev) => ({
             ...prev,
@@ -329,6 +317,21 @@ export function InvoiceDetailsStandaloneListView() {
             };
         });
     }, [rawInvoices, suppliers, storages]);
+
+    const ingredientOptions = useMemo(
+        () => ingredients.map((ing: any) => ({ id: ing.id, label: ing.name })),
+        [ingredients]
+    );
+
+    const handleSearch = useCallback(({ optionIds = [], customQueries = [] }: SearchOutput) => {
+        setDraftFilters((prev) => ({
+            ...prev,
+            ingredient_ids: optionIds,
+            general_search: customQueries.join(' '),
+            search: '',
+        }));
+        setPaginationModel((prev) => ({ ...prev, page: 0 }));
+    }, []);
 
     const handleDeleteClick = (id: string, type: 'invoice' | 'detail') => {
         setSelectedDeleteId(id);
@@ -401,7 +404,7 @@ export function InvoiceDetailsStandaloneListView() {
         () => [
             {
                 key: 'supplier',
-                label: t('invoices.name', 'Supplier'),
+                label: t('invoices.supplier', 'Supplier'),
                 sortable: true,
                 filter: {
                     type: 'multi' as const,
@@ -624,7 +627,7 @@ export function InvoiceDetailsStandaloneListView() {
                     flexGrow: 1,
                     display: 'flex',
                     flexDirection: 'column',
-                    maxHeight: '100vh',
+                    // maxHeight: '100%',
                     '--layout-dashboard-content-pt': { xs: '0px', md: '0px' },
                     '--layout-dashboard-content-pb': { xs: '0px', md: '0px' },
                 }}
@@ -635,11 +638,10 @@ export function InvoiceDetailsStandaloneListView() {
                     data={invoices}
                     getRowId={(row: any) => String(row?.id)}
                     columns={columns}
-                    searchValue={searchQuery}
-                    onSearchChange={(value: string) => {
-                        setSearchQuery(value);
-                        setPaginationModel((prev) => ({ ...prev, page: 0 }));
-                    }}
+                    searchMode="advanced"
+                    allowFreeText
+                    searchOptions={ingredientOptions}
+                    onSearch={handleSearch}
                     filters={tableFilters}
                     onFiltersChange={handleFiltersChange}
                     page={paginationModel.page}
@@ -749,6 +751,7 @@ export function InvoiceDetailsStandaloneListView() {
                         <Button
                             variant="contained"
                             startIcon={<Iconify icon="mingcute:add-line" />}
+                            component={RouterLink}
                             href={paths.warehouse.invoices.new}
                             size="small"
                         >

@@ -2,7 +2,7 @@
 
 > **Module:** core  
 > **Base URL:** https://api.maryai.uz/  
-> **Last Updated:** 2026-04-19T02:29:41.393Z
+> **Last Updated:** 2026-04-25T01:35:03.601Z
 
 ---
 
@@ -10276,6 +10276,50 @@
   ```json
 {
   "$ref": "#/definitions/model.ErrorResponse"
+}
+```
+
+
+## /metadata
+
+### GET /metadata 🔒
+
+**Summary:** Get bulk metadata for dropdown options
+
+**Description:** Retrieves {id, name} pairs for multiple entity types in a single request
+
+**Parameters:**
+
+| Name | Location | Type | Required | Description |
+|------|----------|------|----------|-------------|
+| include | query | string | No | Comma-separated entity names (e.g., storages,departments,categories) |
+
+**Responses:**
+
+- **200**: OK
+  ```json
+{
+  "type": "object",
+  "additionalProperties": {
+    "type": "array",
+    "items": {
+      "$ref": "#/definitions/model.MetadataItem"
+    }
+  }
+}
+```
+
+- **400**: Invalid entity in whitelist
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorData"
+}
+```
+
+- **500**: Database error
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorData"
 }
 ```
 

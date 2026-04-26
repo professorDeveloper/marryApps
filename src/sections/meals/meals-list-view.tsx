@@ -22,22 +22,30 @@ import { paths } from 'src/routes/paths';
 import { useGetCompounds } from 'src/hooks/use-compounds';
 import { useGenericViewModal } from 'src/hooks/use-generic-view-modal';
 import { useDeleteMeal, useDeleteMeals, useGetMealsPage, useGetMealWithCalculations } from 'src/hooks/use-meals';
+import { useMetadata } from 'src/hooks/use-metadata';
+import { MetadataEntity } from 'src/types/metadata';
 
 import { DashboardContent } from 'src/layouts/dashboard';
-import { useGetCategories } from 'src/actions/categories';
 import { useGetDepartments, useGetStorages } from 'src/actions/departments';
 import { useGetIngredients } from 'src/actions/ingredients';
+import { usePaginationRows } from 'src/hooks/use-pagination-rows';
 
 import { Iconify } from 'src/components/iconify';
 import { formatPrice } from 'src/components/generic-view-view/modal-formatters';
 import { GenericViewModal, SpecificationsTable } from 'src/components/generic-view-view';
+import TextField from '@mui/material/TextField';
 
 import { DataTable } from 'src/sections/warehouse/deduction/components/utility-data-table';
+import { StorageFilter } from 'src/sections/warehouse/deduction/components/utility-data-table/components/StorageFilter';
+import { DepartmentFilter } from 'src/sections/warehouse/deduction/components/utility-data-table/components/DepartmentFilter';
+import { RouterLink } from 'src/routes/components';
 
 const initialFilters = {
     category_id: '',
     department_id: '',
     storage_id: '',
+    min_price: '',
+    max_price: '',
     query: '',
 };
 
@@ -226,13 +234,14 @@ export function Meals() {
     const theme = useTheme();
     const { t, i18n } = useTranslation('menu');
     const noDataText = t('noDataAvailable', "Tushunarli ma'lumot mavjud emas");
+    const { rowsPerPage: globalRowsPerPage } = usePaginationRows();
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
     const [filters, setFilters] = useState(initialFilters);
     const [draftFilters, setDraftFilters] = useState(initialFilters);
-    const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 20 });
+    const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: globalRowsPerPage });
     const [sortState, setSortState] = useState<{ key: string | null; dir: 'asc' | 'desc' | null }>({ key: null, dir: null });
-    const { categories } = useGetCategories();
+    const { data: metadata } = useMetadata([MetadataEntity.CATEGORIES, MetadataEntity.DEPARTMENTS]);
     const { departments } = useGetDepartments();
     const { storages } = useGetStorages();
 
@@ -283,6 +292,7 @@ export function Meals() {
     const categoryMap = useMemo(() => {
         const map = new Map<string, string>();
         const currentLang = i18n.language || 'uz';
+        const categories = metadata.categories || [];
 
         categories.forEach((category: any) => {
             if (!category?.id) return;
@@ -299,7 +309,7 @@ export function Meals() {
             map.set(category.id, displayName);
         });
         return map;
-    }, [categories, i18n.language]);
+    }, [metadata.categories, i18n.language]);
 
     const departmentMap = useMemo(() => {
         const map = new Map<string, string>();
@@ -363,8 +373,15 @@ export function Meals() {
                 key: 'category_id',
                 label: t('mealsProducts.category'),
                 width: '1fr',
-                sortable: true,
-                getValue: (row) => 
+                sortable: false,
+                filterable: true,
+                filter: {
+                    type: 'multi',
+                    options: categoryOptions.map((opt) => opt.id),
+                    getOptionLabel: (id) => categoryMap.get(id) || id,
+                    maxSelections: 1,
+                },
+                getValue: (row) =>
                     // Use the translated category name from categoryMap
                      categoryMap.get(row.category_id) || row.category?.name || row.category_id || '-',
             },
@@ -513,16 +530,78 @@ export function Meals() {
                     rowsPerPageOptions={[10, 20, 50, 100]}
                     onPageChange={handlePaginationPageChange}
                     onRowsPerPageChange={handlePaginationRowsPerPageChange}
-                    showStorageSelector={true}
-                    storageSelectorProps={{
-                        storageId: filters.storage_id || '',
-                        storages: storages.map((s: any) => ({ id: s.id, name: s.name })),
-                        onStorageChange: (storageId: string) => {
+                    toolbarActions={
+                      <>
+                        <DepartmentFilter
+                          departmentId={filters.department_id || ''}
+                          departments={departmentOptions}
+                          onDepartmentChange={(departmentId: string) => {
+                            setDraftFilters((prev) => ({ ...prev, department_id: departmentId }));
+                            setPaginationModel((prev) => ({ ...prev, page: 0 }));
+                          }}
+                          label={t('common.department', 'Department')}
+                        />
+                        <StorageFilter
+                          storageId={filters.storage_id || ''}
+                          storages={storages.map((s: any) => ({ id: s.id, name: s.name }))}
+                          onStorageChange={(storageId: string) => {
                             setDraftFilters((prev) => ({ ...prev, storage_id: storageId }));
                             setPaginationModel((prev) => ({ ...prev, page: 0 }));
-                        },
-                        label: t('common.storage', 'Storage'),
-                    }}
+                          }}
+                          label={t('common.storage', 'Storage')}
+                        />
+                        <TextField
+                          size="small"
+                          label={t('mealsProducts.minPrice', 'Min Price')}
+                          type="number"
+                          value={filters.min_price}
+                          onChange={(e) => {
+                            setDraftFilters((prev) => ({ ...prev, min_price: e.target.value }));
+                            setPaginationModel((prev) => ({ ...prev, page: 0 }));
+                          }}
+                          sx={{
+                            minWidth: 100,
+                            '& .MuiInputBase-root': {
+                              height: 34,
+                              fontSize: 12.5,
+                              backgroundColor: 'var(--color-surface-0)',
+                              borderRadius: 1,
+                              fontFamily: '"Inter", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif',
+                            },
+                            '& .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--color-border)' },
+                            '& .MuiInputBase-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                              borderColor: 'var(--color-primary)',
+                              boxShadow: '0 0 0 3px var(--glow-md)',
+                            },
+                          }}
+                        />
+                        <TextField
+                          size="small"
+                          label={t('mealsProducts.maxPrice', 'Max Price')}
+                          type="number"
+                          value={filters.max_price}
+                          onChange={(e) => {
+                            setDraftFilters((prev) => ({ ...prev, max_price: e.target.value }));
+                            setPaginationModel((prev) => ({ ...prev, page: 0 }));
+                          }}
+                          sx={{
+                            minWidth: 100,
+                            '& .MuiInputBase-root': {
+                              height: 34,
+                              fontSize: 12.5,
+                              backgroundColor: 'var(--color-surface-0)',
+                              borderRadius: 1,
+                              fontFamily: '"Inter", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif',
+                            },
+                            '& .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--color-border)' },
+                            '& .MuiInputBase-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                              borderColor: 'var(--color-primary)',
+                              boxShadow: '0 0 0 3px var(--glow-md)',
+                            },
+                          }}
+                        />
+                      </>
+                    }
                     defaultConfig={{
                         order: ['name', 'category_id', 'price', 'cost_price', 'cook_time', 'actions'],
                         visibility: {
@@ -551,12 +630,14 @@ export function Meals() {
                         <Button
                             variant="contained"
                             startIcon={<Iconify icon="mingcute:add-line" />}
+                            component={RouterLink}
                             href={paths.menu.meals.new}
                             size="small"
                         >
                             {t('mealsProducts.add')}
                         </Button>
                     }
+                    showTotals={false}
                     rowActions={[
                         {
                             label: t('mealsProducts.view'),

@@ -15,3 +15,5 @@ export * from './animate-count-up';
 export * from './motion-container';
 
 export * from './back-to-top-button';
+
+export * from './background-patterns';

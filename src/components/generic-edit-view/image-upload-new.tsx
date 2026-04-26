@@ -139,7 +139,7 @@ const ImageUploadComponent: FC<ImageUploadFieldProps> = ({
                             sx={{
                                 position: 'relative',
                                 width: 120,
-                                height: 100,
+                                height: height,
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
@@ -164,7 +164,7 @@ const ImageUploadComponent: FC<ImageUploadFieldProps> = ({
                             sx={{
                                 position: 'relative',
                                 width: 120,
-                                height: 100,
+                                height: height,
                                 bgcolor: displayUrl ? 'transparent' : 'action.hover',
                                 borderTopRightRadius: 1,
                                 borderBottomRightRadius: 1,

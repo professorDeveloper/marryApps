@@ -40,6 +40,7 @@ interface AvailableTableProps {
     ingredientLabel: string;
     compoundLabel: string;
     tableHeight?: string | number;
+    metaFieldsOpen?: boolean;
 }
 
 export const AvailableTable = React.memo(function AvailableTable({
@@ -59,6 +60,7 @@ export const AvailableTable = React.memo(function AvailableTable({
     ingredientLabel,
     compoundLabel,
     tableHeight,
+    metaFieldsOpen,
 }: AvailableTableProps) {
     const { t } = useTranslation('menu');
     const scrollRef = React.useRef<HTMLDivElement>(null);
@@ -70,16 +72,20 @@ export const AvailableTable = React.memo(function AvailableTable({
         overscan: 10,
     });
 
+    const calculatedHeight = metaFieldsOpen !== undefined 
+        ? (metaFieldsOpen ? 'calc(100vh - 320px)' : 'calc(100vh - 200px)')
+        : tableHeight;
+
     return (
-        <Paper variant="outlined" sx={{ p: 2, position: 'relative', display: 'flex', flexDirection: 'column', height: tableHeight }}>
+        <Paper variant="outlined" sx={{ p: 2, position: 'relative', display: 'flex', flexDirection: 'column', height: calculatedHeight, borderColor: 'var(--color-border)', bgcolor: 'var(--color-surface-0)', fontFamily: '"Inter", sans-serif' }}>
             <Stack
                 direction={{ xs: 'column' }}
                 spacing={1}
                 justifyContent="space-between"
                 alignItems={{ xs: 'stretch' }}
-                sx={{ mb: 2, flexShrink: 0 }}
+                sx={{ mb: 2, flexShrink: 1 }}
             >
-                <Typography variant="h6">
+                <Typography variant="h6" sx={{ fontFamily: '"Inter", sans-serif' }}>
                     {t('mealsProducts.availableItems', 'Available Items')}
                 </Typography>
                 {/* <Stack direction="row" spacing={1} alignItems="center" justifyContent="flex-end"> */}
@@ -106,6 +112,11 @@ export const AvailableTable = React.memo(function AvailableTable({
                     placeholder={t('search', 'Search')}
                     value={search}
                     onChange={(e) => onSearchChange(e.target.value)}
+                    sx={{
+                        '& .MuiOutlinedInput-root': {
+                            bgcolor: 'var(--color-surface-1)',
+                        },
+                    }}
                     InputProps={{
                         startAdornment: (
                             <InputAdornment position="start">
@@ -126,7 +137,7 @@ export const AvailableTable = React.memo(function AvailableTable({
                     </Box>
                 ) : rows.length === 0 ? (
                     <Box sx={{ py: 6, textAlign: 'center', opacity: 0.6 }}>
-                        <Typography variant="body2" color="text.secondary">
+                        <Typography variant="body2" color="text.secondary" sx={{ fontFamily: '"Inter", sans-serif' }}>
                             —
                         </Typography>
                     </Box>

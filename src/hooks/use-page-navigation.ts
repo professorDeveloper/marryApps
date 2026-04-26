@@ -41,7 +41,11 @@ export function usePageNavigation() {
       const title = tMenu('overview.menu.meals', 'Meals');
       return isNew ? `New ${title.toLowerCase()}` : title;
     }
-    
+    if (pathname.includes('/menu/modifiers')) {
+      const title = tMenu('overview.menu.modifiers', 'Modifiers');
+      return isNew ? `New ${title.toLowerCase()}` : title;
+    }
+
     // Warehouse
     if (pathname.includes('/warehouse/storage')) {
       const title = tMenu('overview.warehouse.storage', 'Storage');
@@ -254,7 +258,10 @@ export function usePageNavigation() {
     if (pathname.includes('/menu/meals')) {
       links.push({ name: tMenu('overview.menu.meals', 'Meals'), href: '/menu/meals' });
     }
-    
+    if (pathname.includes('/menu/modifiers')) {
+      links.push({ name: tMenu('overview.menu.modifiers', 'Modifiers'), href: '/menu/modifiers' });
+    }
+
     // Warehouse
     if (pathname.includes('/warehouse')) {
       console.log('Adding Warehouse breadcrumb');

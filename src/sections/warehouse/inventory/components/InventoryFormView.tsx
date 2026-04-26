@@ -37,7 +37,7 @@ const InventoryFormView = React.memo(function InventoryFormView() {
     } = useInventoryAPI();
     
     // Meta fields
-    const [date, setDate] = useState(dayjs().format('YYYY-MM-DD'));
+    const [date, setDate] = useState(dayjs().format('YYYY-MM-DDTHH:mm:ss'));
     const [storageId, setStorageId] = useState('');
     const [status, setStatus] = useState('draft');
     const [description, setDescription] = useState('');
@@ -97,7 +97,7 @@ const InventoryFormView = React.memo(function InventoryFormView() {
                     router.push(paths.menu.inventory.root);
                     return;
                 }
-                setDate(dayjs(inventory.date).format('YYYY-MM-DD'));
+                setDate(dayjs(inventory.date).format('YYYY-MM-DDTHH:mm:ss'));
                 setStorageId(inventory.storage_id || '');
                 setStatus(inventory.status || 'draft');
                 setDescription(inventory.description || '');
@@ -169,6 +169,7 @@ const InventoryFormView = React.memo(function InventoryFormView() {
             }
 
             toast.success(isNew ? t('success.created') : t('success.updated'));
+            router.push(paths.menu.inventory.root);
         } catch {
             toast.error(t('error.saveFailed'));
         } finally {
@@ -185,12 +186,8 @@ const InventoryFormView = React.memo(function InventoryFormView() {
     }, [router]);
 
     return (
-        <Box sx={{ px: 2, m: 0 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', my: 2 }}>
-                <Typography variant="h4">
-                    {isNew ? t('inventory.create', 'Create Inventory') : t('inventory.edit', 'Edit Inventory')}
-                </Typography>
-            </Box>
+        <Box sx={{ px: 4, m: 0 }}>
+           
 
             <Box sx={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 2 }}>
                 {pageLoading && (
@@ -202,7 +199,7 @@ const InventoryFormView = React.memo(function InventoryFormView() {
                             alignItems: 'center',
                             justifyContent: 'center',
                             zIndex: 2,
-                            bgcolor: (theme) => theme.palette.background.paper,
+                            bgcolor: 'var(--color-surface-0)',
                             opacity: 0.85,
                         }}
                     >
@@ -237,6 +234,7 @@ const InventoryFormView = React.memo(function InventoryFormView() {
                     cancelDisabled={ingredientsLoading || pageLoading}
                     saveDisabled={submitting || ingredientsLoading || pageLoading || !hasItems}
                     isSaving={submitting}
+                    metaFieldsOpen={isInfoOpen}
                 />
 
             </Box>

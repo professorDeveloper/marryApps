@@ -2,7 +2,7 @@
 
 > **Module:** reports  
 > **Base URL:** https://api.maryai.uz/  
-> **Last Updated:** 2026-04-19T02:29:41.396Z
+> **Last Updated:** 2026-04-25T01:35:03.605Z
 
 ---
 
@@ -14,7 +14,7 @@
 
 **Summary:** Goods sales report
 
-**Description:** Paginated report: qty sold, selling price, cost price, markup per dish. Only paid orders. Filters by date range, department, category, dish, waiter, hall, table.
+**Description:** Paginated report: qty sold, selling price, cost price, markup per dish. Only paid orders. Filters by date range, department, category, dish, waiter, hall, table, good IDs. Sortable by total_qty, avg_sell_price, total_sell, avg_cost_price, total_cost, avg_markup, total_markup, name.
 
 **Parameters:**
 
@@ -28,6 +28,9 @@
 | waiter_id | query | string | No | Filter by waiter UUID |
 | hall_id | query | string | No | Filter by hall UUID |
 | table_id | query | string | No | Filter by table UUID |
+| good_ids | query | string | No | Comma-separated good UUIDs to filter |
+| sort_by | query | string | No | Sort by field |
+| sort_order | query | string | No | Sort order |
 | limit | query | integer | No | Limit |
 | offset | query | integer | No | Offset |
 | expand | query | string | No | Expand related fields |

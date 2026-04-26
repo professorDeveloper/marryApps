@@ -67,9 +67,9 @@ export function DataTableBody<T>({
       ref={scrollRef}
       sx={{
         position: 'relative',
-        height: 'min(70vh, 720px)',
+        flex: 1,
         overflow: 'auto',
-        backgroundColor: SURFACE_BG,
+        backgroundColor: 'var(--color-surface-0)',
       }}
     >
       {data.length === 0 ? (
@@ -81,8 +81,8 @@ export function DataTableBody<T>({
             alignItems: 'center',
             justifyContent: 'center',
             gap: 1,
-            color: 'rgba(255,255,255,0.75)',
-            backgroundColor:'var(--mui-palette-background-level2)',
+            color: 'var(--color-text-muted)',
+            backgroundColor: 'var(--color-surface-0)',
           }}
         >
           <Box
@@ -92,14 +92,14 @@ export function DataTableBody<T>({
               borderRadius: 2,
               display: 'grid',
               placeItems: 'center',
-              border: `1px solid ${BORDER}`,
-              backgroundColor: 'rgba(24,24,27,0.7)',
+              border: '1px solid var(--color-border)',
+              backgroundColor: 'var(--color-surface-0)',
             }}
           >
             <Iconify icon="solar:inbox-in-bold-duotone" width={26} />
           </Box>
           <Typography sx={{ fontSize: 14, fontWeight: 700, textAlign: 'center' }}>{emptyTitle}</Typography>
-          <Typography sx={{ fontSize: 12.5, color: 'rgba(255,255,255,0.55)', textAlign: 'center' }}>
+          <Typography sx={{ fontSize: 12.5, color: 'var(--color-text-subtle)', textAlign: 'center' }}>
             {emptySubtitle}
           </Typography>
         </Box>

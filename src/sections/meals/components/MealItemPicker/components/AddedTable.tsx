@@ -46,6 +46,8 @@ interface AddedTableProps {
     menuPrice?: string;
     showProfitMargin?: boolean;
     tableHeight?: string | number;
+    onNavigateFocus?: (direction: 'up' | 'down' | 'left' | 'right', currentRowIndex: number, currentColumnKey: string) => void;
+    metaFieldsOpen?: boolean;
 }
 
 export const AddedTable = React.memo(function AddedTable({
@@ -72,6 +74,8 @@ export const AddedTable = React.memo(function AddedTable({
     menuPrice,
     showProfitMargin = false,
     tableHeight,
+    onNavigateFocus,
+    metaFieldsOpen,
 }: AddedTableProps) {
     const { t } = useTranslation('menu');
     const scrollRef = React.useRef<HTMLDivElement>(null);
@@ -86,6 +90,10 @@ export const AddedTable = React.memo(function AddedTable({
         return { profit, margin };
     }, [showProfitMargin, menuPrice, totalCost]);
 
+    const calculatedHeight = metaFieldsOpen !== undefined
+        ? (metaFieldsOpen ? 'calc(100vh - 400px)' : 'calc(100vh - 200px)')
+        : tableHeight;
+
     const virtualizer = useVirtualizer({
         count: rows.length,
         getScrollElement: () => scrollRef.current,
@@ -94,7 +102,7 @@ export const AddedTable = React.memo(function AddedTable({
     });
 
     return (
-        <Paper variant="outlined" sx={{ p: 1.5, display: 'flex', flexDirection: 'column', height: tableHeight }}>
+        <Paper variant="outlined" sx={{ p: 1.5, display: 'flex', flexDirection: 'column', height: calculatedHeight, borderColor: 'var(--color-border)', bgcolor: 'var(--color-surface-0)', fontFamily: '"Inter", sans-serif' }}>
             <Stack
                 direction="row"
                 spacing={1}
@@ -102,11 +110,11 @@ export const AddedTable = React.memo(function AddedTable({
                 alignItems="center"
                 sx={{ mb: 2, flexShrink: 0 }}
             >
-                <Typography variant="h6">
+                <Typography variant="h6" sx={{ fontFamily: '"Inter", sans-serif' }}>
                     {t('mealsProducts.addedItems', 'Added Items')}
                 </Typography>
                 <Stack direction="row" spacing={1} alignItems="center" justifyContent="flex-end">
-                   {/* <Box sx={{minWidth=}}> */}
+                    {/* <Box sx={{minWidth=}}> */}
                     <TypeFilterToggle
                         value={filter}
                         onChange={onFilterChange}
@@ -115,23 +123,24 @@ export const AddedTable = React.memo(function AddedTable({
                     />
                     {/* </Box> */}
                     <Button
-                        variant="outlined"
+                        variant="contained"
                         size="small"
-                        color="error"
+                        // color="error"
                         onClick={onRemoveSelected}
                         disabled={selectedKeys.size === 0}
+                        sx={{
+                            minWidth: 160,
+                            backgroundColor: 'var(--color-error)',
+                            color: '#fff',
+                            '&:hover': {
+                                backgroundColor: 'var(--color-error)',
+                                opacity: 0.9,
+                            },
+                        }}
                     >
                         {t('mealsProducts.removeSelected', 'Remove Selected')}
                     </Button>
-                    <Button
-                        variant="outlined"
-                        size="small"
-                        color="error"
-                        onClick={onRemoveAll}
-                        disabled={isEmpty}
-                    >
-                        {t('mealsProducts.removeAll', 'Remove All')}
-                    </Button>
+
                 </Stack>
             </Stack>
 
@@ -143,6 +152,9 @@ export const AddedTable = React.memo(function AddedTable({
                 onChange={(e) => onSearchChange(e.target.value)}
                 sx={{ mb: 2, flexShrink: 0 }}
                 InputProps={{
+                    sx: {
+                        bgcolor: 'var(--color-surface-1)',
+                    },
                     startAdornment: (
                         <InputAdornment position="start">
                             <SearchIcon fontSize="small" />
@@ -161,8 +173,8 @@ export const AddedTable = React.memo(function AddedTable({
                     px: 1,
                     py: 1,
                     borderBottom: 1,
-                    borderColor: 'divider',
-                    bgcolor: 'action.hover',
+                    borderColor: 'var(--color-border)',
+                    bgcolor: 'var(--color-primary-soft)',
                     flexShrink: 0,
                 }}
             >
@@ -175,16 +187,16 @@ export const AddedTable = React.memo(function AddedTable({
                         slotProps={{ input: { 'aria-label': 'select all added' } }}
                     />
                 </Box>
-                <Typography variant="caption" sx={{ fontWeight: 700 }}>
+                <Typography variant="caption" sx={{ fontWeight: 700, fontFamily: '"Inter", sans-serif' }}>
                     {t('mealsProducts.name', 'Name')}
                 </Typography>
-                <Typography variant="caption" sx={{ fontWeight: 700, textAlign: 'center' }}>
+                <Typography variant="caption" sx={{ fontWeight: 700, textAlign: 'center', fontFamily: '"Inter", sans-serif' }}>
                     {t('calculation.quantity', 'Quantity')}
                 </Typography>
-                <Typography variant="caption" sx={{ fontWeight: 700, textAlign: 'right' }}>
+                <Typography variant="caption" sx={{ fontWeight: 700, textAlign: 'right', fontFamily: '"Inter", sans-serif' }}>
                     {t('mealsProducts.pricePerUnit', 'Price/Unit')}
                 </Typography>
-                <Typography variant="caption" sx={{ fontWeight: 700, textAlign: 'right' }}>
+                <Typography variant="caption" sx={{ fontWeight: 700, textAlign: 'right', fontFamily: '"Inter", sans-serif' }}>
                     {t('mealsProducts.totalPrice', 'Total')}
                 </Typography>
                 <Box />
@@ -197,7 +209,7 @@ export const AddedTable = React.memo(function AddedTable({
             >
                 {rows.length === 0 ? (
                     <Box sx={{ py: 6, textAlign: 'center', opacity: 0.6 }}>
-                        <Typography variant="body2" color="text.secondary">
+                        <Typography variant="body2" color="text.secondary" sx={{ fontFamily: '"Inter", sans-serif' }}>
                             —
                         </Typography>
                     </Box>
@@ -233,6 +245,9 @@ export const AddedTable = React.memo(function AddedTable({
                                         pricePerUnit={priceByKey.get(key) ?? 0}
                                         ingredientLabel={ingredientLabel}
                                         compoundLabel={compoundLabel}
+                                        rowIndex={vi.index}
+                                        totalRows={rows.length}
+                                        onNavigateFocus={onNavigateFocus}
                                     />
                                 </Box>
                             );
@@ -249,19 +264,19 @@ export const AddedTable = React.memo(function AddedTable({
                 alignItems={{ xs: 'stretch', sm: 'center' }}
                 sx={{ margin: 0, flexShrink: 0 }}
             >
-                <Typography variant="body2" color="text.secondary">
+                <Typography variant="body2" color="text.secondary" sx={{ fontFamily: '"Inter", sans-serif' }}>
                     {t('mealsProducts.summaryItems', 'Items')}: {totalItemsCount}
                 </Typography>
                 <Stack direction="row" spacing={5} alignItems="flex-end">
-                    <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
+                    <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem', fontFamily: '"Inter", sans-serif' }}>
                         Cost: {totalCost.toFixed(2)}
                     </Typography>
                     {showProfitMargin && profitMargin && (
                         <>
-                            <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
+                            <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem', fontFamily: '"Inter", sans-serif' }}>
                                 Price: {parseFloat(menuPrice || '0').toFixed(2)}
                             </Typography>
-                            <Typography variant="body2" color="success.main" sx={{ fontSize: '0.875rem', fontWeight: 500 }}>
+                            <Typography variant="body2" color="success.main" sx={{ fontSize: '0.875rem', fontWeight: 500, fontFamily: '"Inter", sans-serif' }}>
                                 Profit: {profitMargin.profit.toFixed(2)} ({profitMargin.margin.toFixed(1)}%)
                             </Typography>
                         </>

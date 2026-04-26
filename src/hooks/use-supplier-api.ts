@@ -4,10 +4,14 @@ import { toast } from 'sonner';
 import { useCallback } from 'react';
 
 import { poster, putter, deleter, fetcher, endpoints } from 'src/lib/axios';
+import { useTranslationsAPI } from 'src/hooks/use-translations-api';
 
 export interface Supplier {
     id: string;
     name: string;
+    name_i18n?: string | null;
+    name_en?: string;
+    name_ru?: string;
     phone_number?: string | null;
     email?: string | null;
     address?: string | null;
@@ -66,9 +70,10 @@ export function useSupplierAPI() {
 
     const createSupplier = useCallback(async (data: Partial<Supplier>): Promise<Supplier> => {
         try {
-            // The API expects name and phone_number
+            // The API expects name, phone_number, email, address, and optionally name_i18n
             const payload = {
                 name: data.name,
+                name_i18n: data.name_i18n || null,
                 phone_number: data.phone_number || null,
                 email: data.email || null,
                 address: data.address || null,
@@ -90,6 +95,7 @@ export function useSupplierAPI() {
         try {
             const payload = {
                 name: data.name,
+                name_i18n: data.name_i18n || null,
                 phone_number: data.phone_number || null,
                 email: data.email || null,
                 address: data.address || null,

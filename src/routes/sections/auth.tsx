@@ -3,8 +3,6 @@ import type { RouteObject } from 'react-router';
 import { Outlet } from 'react-router';
 import { lazy, Suspense } from 'react';
 
-import { AuthSplitLayout } from 'src/layouts/auth-split';
-
 import { SplashScreen } from 'src/components/loading-screen';
 
 import { GuestGuard } from 'src/auth/guard';
@@ -26,11 +24,7 @@ const authJwt = {
       path: 'sign-in',
       element: (
         <GuestGuard>
-          <AuthSplitLayout
-           
-          >
-            <Jwt.SignInPage />
-          </AuthSplitLayout>
+          <Jwt.SignInPage />
         </GuestGuard>
       ),
     },
@@ -38,9 +32,7 @@ const authJwt = {
       path: 'sign-up',
       element: (
         <GuestGuard>
-          <AuthSplitLayout>
-            <Jwt.SignUpPage />
-          </AuthSplitLayout>
+          <Jwt.SignUpPage />
         </GuestGuard>
       ),
     },

@@ -358,7 +358,11 @@
     "cancel": "Bekor qilish",
     "confirm": "Tasdiqlash",
     "noData": "Modifikatorlar topilmadi",
-    "noDataSubtitle": "Qidirish yoki filtrlarni o'zgartirishga urinib ko'ring"
+    "noDataSubtitle": "Qidirish yoki filtrlarni o'zgartirishga urinib ko'ring",
+    "generalInfo": "Umumiy ma'lumot",
+    "ingredients": "Ingredientlar",
+    "compounds": "Yarim tayyor mahsulotlar",
+    "quantity": "Miqdor"
   },
   "overview": {
     "subheader": "Umumiy",

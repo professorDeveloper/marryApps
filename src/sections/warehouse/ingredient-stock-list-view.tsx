@@ -18,10 +18,12 @@ import {
 } from 'src/actions/ingredient-stock';
 
 import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
+import { usePaginationRows } from 'src/hooks/use-pagination-rows';
 
 function IngredientStockListView() {
     const { t } = useTranslation('menu');
-    const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 20 });
+    const { rowsPerPage: globalRowsPerPage } = usePaginationRows();
+    const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: globalRowsPerPage });
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
     const [storageFilter, setStorageFilter] = useState('');
@@ -249,7 +251,7 @@ function IngredientStockListView() {
                         setSearchQuery('');
                         setStorageFilter('');
                         setSortState({ key: null, dir: null });
-                        setPaginationModel({ page: 0, pageSize: 20 });
+                        setPaginationModel({ page: 0, pageSize: globalRowsPerPage });
                     }}
                     defaultConfig={{
                         order: ['ingredient_name', 'quantity', 'measurement', 'price_per_unit', 'storage_name', 'created_at'],

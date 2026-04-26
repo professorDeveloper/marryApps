@@ -35,6 +35,7 @@ import { Iconify } from 'src/components/iconify';
 import { GenericViewModal } from 'src/components/generic-view-view';
 
 import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
+import { RouterLink } from 'src/routes/components';
 
 const getTodayUtcBoundary = (endOfDay = false): string => {
   const now = dayjs();
@@ -309,7 +310,7 @@ export function ShipmentsListView() {
       },
       {
         key: 'supplier_id',
-        label: t('invoices.name', 'Supplier'),
+        label: t('invoices.supplier', 'Supplier'),
         sortable: true,
         filter: { type: 'multi' as const, options: Object.values(suppliersMap) },
         width: '1.2fr',
@@ -607,6 +608,7 @@ export function ShipmentsListView() {
             <Button
               variant="contained"
               startIcon={<Iconify icon="mingcute:add-line" />}
+              component={RouterLink}
               href={paths.warehouse.shipments.new}
               size="small"
             >
@@ -667,7 +669,7 @@ export function ShipmentsListView() {
                       <TableCell>{t('deductions.date', 'Date')}</TableCell>
                       <TableCell>{t('deductions.status', 'Status')}</TableCell>
                       <TableCell>{t('deductions.storage', 'Storage')}</TableCell>
-                      <TableCell>{t('invoices.name', 'Supplier')}</TableCell>
+                      <TableCell>{t('invoices.supplier', 'Supplier')}</TableCell>
                       <TableCell>{t('deductions.description', 'Description')}</TableCell>
                     </TableRow>
                   </TableHead>

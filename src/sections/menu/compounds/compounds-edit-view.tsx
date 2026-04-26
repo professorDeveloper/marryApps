@@ -108,36 +108,13 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
         setActiveTab(newValue);
     }, []);
 
-    // Toggle accordion behavior - ensure at least one stays open
     const handleInfoToggle = useCallback(() => {
-        setIsInfoOpen((prev) => {
-            const newOpen = !prev;
-            // Only close meal items if we're opening info AND meal items is currently open
-            if (newOpen && isMealItemsOpen) {
-                setIsMealItemsOpen(false);
-            }
-            // Don't allow closing both - if trying to close info and meal items is also closed, keep info open
-            if (!newOpen && !isMealItemsOpen) {
-                return true; // Keep info open
-            }
-            return newOpen;
-        });
-    }, [isMealItemsOpen]);
+        setIsInfoOpen((prev) => !prev);
+    }, []);
 
     const handleMealItemsToggle = useCallback(() => {
-        setIsMealItemsOpen((prev) => {
-            const newOpen = !prev;
-            // Only close info if we're opening meal items AND info is currently open
-            if (newOpen && isInfoOpen) {
-                setIsInfoOpen(false);
-            }
-            // Don't allow closing both - if trying to close meal items and info is also closed, keep meal items open
-            if (!newOpen && !isInfoOpen) {
-                return true; // Keep meal items open
-            }
-            return newOpen;
-        });
-    }, [isInfoOpen]);
+        setIsMealItemsOpen((prev) => !prev);
+    }, []);
 
     const handleCancel = useCallback(() => {
         router.push(paths.menu.semifinished.root);
@@ -201,7 +178,7 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
     }, [mealItemsApiRef.current]);
 
     return (
-        <Box sx={{ px: 2, m: 0 }}>
+        <Box sx={{ px: 4, m: 0 }}>
             <Box
                 sx={{
                     position: 'relative',

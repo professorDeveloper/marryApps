@@ -345,7 +345,7 @@ export const FloorPlanSidebar = ({
                     <IconButton
                         size="small"
                         onClick={() => navigate('/settings/halls')}
-                        sx={{ color: '#FB6633' }}
+                        sx={{ color: 'primary.main' }}
                     >
                         <Iconify icon="eva:arrow-ios-back-fill" width={20} />
                     </IconButton>
@@ -368,17 +368,18 @@ export const FloorPlanSidebar = ({
 
                 {/* Save changes button */}
                 {changedTablesCount > 0 && (
-                    <Box sx={{ mt: 2, p: 1.5, borderRadius: 1, border: `1px solid #FB6633` }}>
-                        <Typography variant="caption" sx={{ display: 'block', mb: 1, fontWeight: 'bold', color: '#FB6633' }}>
+                    <Box sx={{ mt: 2, p: 1.5, borderRadius: 1, border: (t) => `1px solid ${t.palette.primary.main}` }}>
+                        <Typography variant="caption" sx={{ display: 'block', mb: 1, fontWeight: 'bold', color: 'primary.main' }}>
                             {changedTablesCount} {changedTablesCount > 1 ? t('floorPlan.tablesChanged') : t('floorPlan.tableChanged')}
                         </Typography>
                         <Button
                             fullWidth
-                            // variant="contained"
+                            variant="contained"
+                            color="primary"
                             size="small"
                             onClick={handleSaveTableChanges}
                             disabled={savingChanges}
-                            sx={{ textTransform: 'none', fontWeight: 'bold', backgroundColor: '#FB6633', '&:hover': { backgroundColor: '#FB6633', opacity: 0.8 } }}
+                            sx={{ textTransform: 'none', fontWeight: 'bold' }}
                         >
                             {savingChanges ? t('floorPlan.savingChanges') : t('floorPlan.saveChanges')}
                         </Button>
@@ -421,7 +422,7 @@ export const FloorPlanSidebar = ({
                                     <IconButton
                                         size="small"
                                         onClick={() => handleEditOpen(selectedTable)}
-                                        sx={{ color: '#FB6633' }}
+                                        sx={{ color: 'primary.main' }}
                                     >
                                         <Iconify icon="solar:pen-bold" width={16} />
                                     </IconButton>
@@ -463,7 +464,7 @@ export const FloorPlanSidebar = ({
                         {t('floorPlan.tablesCount')} ({tables.length})
                     </Typography>
                     {hallId && (
-                        <Button size="small" sx={{ backgroundColor: '#FB6633', color: 'white', ":hover": { backgroundColor: '#FB6633', opacity: 0.8 } }} onClick={handleCreateTableDialogOpen} >
+                        <Button size="small" variant="contained" color="primary" onClick={handleCreateTableDialogOpen} >
                             {t('floorPlan.addTable')}
                         </Button>
                     )}
@@ -698,9 +699,8 @@ export const FloorPlanSidebar = ({
                     <Button onClick={handleCreateTableDialogClose}>{t('floorPlan.createTableDialog.cancel')}</Button>
                     <Button
                         onClick={handleCreateTableSubmit}
-                        // variant="contained"
-                        // color="primary"
-                        sx={{ backgroundColor: '#FB6633', color: 'white', ":hover": { backgroundColor: '#FB6633', opacity: 0.8 } }}
+                        variant="contained"
+                        color="primary"
                         disabled={creatingTable}
                     >
                         {creatingTable ? t('floorPlan.createTableDialog.creating') : t('floorPlan.createTableDialog.create')}
@@ -814,9 +814,8 @@ export const FloorPlanSidebar = ({
                     <Button onClick={handleEditClose}>{t('floorPlan.editTableDialog.cancel')}</Button>
                     <Button
                         onClick={handleEditSave}
-                        // variant="contained"
-                        // color="primary"
-                        sx={{ backgroundColor: '#FB6633', color: 'white', ":hover": { backgroundColor: '#FB6633', opacity: 0.8 } }}
+                        variant="contained"
+                        color="primary"
                         disabled={updatingTable}
                     >
                         {updatingTable ? t('floorPlan.editTableDialog.saving') : t('floorPlan.editTableDialog.save')}

@@ -21,10 +21,10 @@ import { RouterLink } from 'src/routes/components';
 import { Iconify } from 'src/components/iconify';
 import { Form, Field } from 'src/components/hook-form';
 
-import { signUp } from '../../context/jwt';
-import { useAuthContext } from '../../hooks';
-import { getErrorMessageKey } from '../../utils';
-import { SignUpTerms } from '../../components/sign-up-terms';
+import { signUp } from 'src/auth/context/jwt';
+import { useAuthContext } from 'src/auth/hooks';
+import { getErrorMessageKey } from 'src/auth/utils';
+import { SignUpTerms } from 'src/auth/components/sign-up-terms';
 
 // ----------------------------------------------------------------------
 
@@ -47,7 +47,18 @@ export const SignUpSchema = z.object({
 
 // ----------------------------------------------------------------------
 
-export function JwtSignUpView() {
+const orangeFieldSx = {
+  '& .MuiOutlinedInput-root': {
+    '& fieldset': { borderColor: 'var(--color-border)' },
+    '&:hover fieldset': { borderColor: 'var(--color-border-strong)' },
+    '&.Mui-focused fieldset': { borderColor: 'var(--color-primary)', borderWidth: '1px' },
+  },
+  '& .MuiInputLabel-root.Mui-focused': { color: 'var(--color-primary)' },
+};
+
+// ----------------------------------------------------------------------
+
+export function SignUpForm() {
   const router = useRouter();
   const { t } = useTranslation('messages');
 
@@ -92,7 +103,6 @@ export function JwtSignUpView() {
     } catch (error) {
       console.error(error);
       const { key, fallback } = getErrorMessageKey(error);
-      // Try to get translated message, fallback to default message if translation not available
       const translatedMessage = t(key, fallback);
       setErrorMessage(translatedMessage);
     }
@@ -104,6 +114,7 @@ export function JwtSignUpView() {
         name="fullName"
         label="To'liq ism"
         placeholder="Sami"
+        sx={orangeFieldSx}
         slotProps={{ inputLabel: { shrink: true } }}
       />
 
@@ -111,6 +122,7 @@ export function JwtSignUpView() {
         name="username"
         label="Foydalanuvchi nomi"
         placeholder="sami"
+        sx={orangeFieldSx}
         slotProps={{ inputLabel: { shrink: true } }}
       />
 
@@ -118,6 +130,7 @@ export function JwtSignUpView() {
         name="phoneNumber"
         label="Telefon raqami"
         placeholder="+998 95 774 91 22"
+        sx={orangeFieldSx}
         slotProps={{ inputLabel: { shrink: true } }}
       />
 
@@ -128,11 +141,11 @@ export function JwtSignUpView() {
           </Typography>
         </Box>
 
-
         <Field.Text
           name="password"
           placeholder="Kamida 6 ta belgi"
           type={showPassword.value ? 'text' : 'password'}
+          sx={orangeFieldSx}
           slotProps={{
             inputLabel: { shrink: true },
             input: {
@@ -156,13 +169,14 @@ export function JwtSignUpView() {
         label="PIN kod"
         placeholder="XXXX"
         type="password"
+        sx={orangeFieldSx}
         slotProps={{
           inputLabel: { shrink: true },
           input: {
             inputProps: {
               maxLength: 4,
-            }
-          }
+            },
+          },
         }}
       />
 
@@ -201,10 +215,10 @@ export function JwtSignUpView() {
             alignItems: 'center',
             justifyContent: 'center',
             borderRadius: '50%',
-            bgcolor: 'rgba(79, 172, 254, 0.1)',
+            bgcolor: 'var(--color-primary-soft)',
           }}
         >
-          <Typography variant="h3" sx={{ color: '#4facfe' }}>
+          <Typography variant="h3" sx={{ color: 'primary.main' }}>
             M
           </Typography>
         </Box>
@@ -218,7 +232,7 @@ export function JwtSignUpView() {
           <Link
             component={RouterLink}
             href={paths.auth.jwt.signIn}
-            sx={{ color: '#4facfe', textDecoration: 'none', fontWeight: 600 }}
+            sx={{ color: 'primary.main', textDecoration: 'none', fontWeight: 600 }}
           >
             Kirish
           </Link>

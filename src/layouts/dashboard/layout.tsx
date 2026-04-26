@@ -22,6 +22,7 @@ import { _notifications } from 'src/_mock';
 import { Logo } from 'src/components/logo';
 import { useSettingsContext } from 'src/components/settings';
 import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
+import { NeuralGrid, StarPattern } from 'src/components/animate/background-patterns';
 
 import { useAuthContext } from 'src/auth/hooks';
 
@@ -188,13 +189,7 @@ export function DashboardLayout({
 
           {/** @slot Logo */}
           {isNavHorizontal && (
-            <Logo
-              isNavMini={isNavMini}
-              sx={{
-                display: 'none',
-                [theme.breakpoints.up(layoutQuery)]: { display: 'inline-flex' },
-              }}
-            />
+            <Logo />
           )}
 
           {/** @slot Divider */}
@@ -268,7 +263,31 @@ export function DashboardLayout({
 
   const renderFooter = () => null;
 
-  const renderMain = () => <MainSection {...slotProps?.main}>{children}</MainSection>;
+  const renderMain = () => (
+    <MainSection
+      {...slotProps?.main}
+      sx={[
+        {
+          position: 'relative',
+          overflow: 'hidden',
+          '& > .cyber-bg-layer': {
+            position: 'absolute',
+            inset: 0,
+            pointerEvents: 'none',
+            zIndex: 0,
+          },
+          '& > *:not(.cyber-bg-layer)': { position: 'relative', zIndex: 1 },
+        },
+        ...(Array.isArray(slotProps?.main?.sx) ? slotProps.main.sx : [slotProps?.main?.sx]),
+      ]}
+    >
+      <Box className="cyber-bg-layer">
+        <NeuralGrid />
+        <StarPattern />
+      </Box>
+      {children}
+    </MainSection>
+  );
 
   return (
     <LayoutSection

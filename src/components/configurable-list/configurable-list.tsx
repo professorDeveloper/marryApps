@@ -316,7 +316,7 @@ function ConfigurableListInner<R extends Record<string, any>>(
           gap: 2,
           px: 2,
           py: 1,
-          borderTop: '1px solid rgba(145, 158, 171, 0.24)',
+          borderTop: '1px solid var(--color-border)',
           overflow: 'hidden',
           '& .MuiDataGrid-footerContainer': { borderTop: 'none', minHeight: 'unset' },
           '& .MuiTablePagination-root': { overflow: 'hidden' },
@@ -509,7 +509,7 @@ function ConfigurableListInner<R extends Record<string, any>>(
               '& .MuiTablePagination-input': {
                 marginLeft: '8px',
                 marginRight: '8px',
-                border: '1px solid rgba(145, 158, 171, 0.24)',
+                border: '1px solid var(--color-border)',
                 borderRadius: '8px',
                 height: '36px',
                 minWidth: '100px',

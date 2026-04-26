@@ -28,6 +28,7 @@ import { useEmployeeApi } from '../hooks/useEmployeeApi';
 import { EmployeeStatusCell } from './EmployeeStatusCell';
 import { EmployeeDeleteDialog } from './EmployeeDeleteDialog';
 import { ROLE_COLORS, STATUS_COLORS, DEFAULT_DATATABLE_CONFIG, EMPLOYEE_DATATABLE_PERSIST_KEY } from '../constants';
+import { RouterLink } from 'src/routes/components';
 
 export function EmployeeListView({ role, useStaffApi = false, branchId }: EmployeeListProps) {
     const { t } = useTranslation('menu');
@@ -212,6 +213,7 @@ export function EmployeeListView({ role, useStaffApi = false, branchId }: Employ
         <Button
             variant="contained"
             startIcon={<Iconify icon="solar:add-circle-bold" />}
+            component={RouterLink}
             href={paths.settings.usersNew}
         >
             {t('users.add')}

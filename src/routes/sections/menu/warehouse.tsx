@@ -169,6 +169,8 @@ const OrdersCreateView = lazy(() =>
 export const warehouseRoutes: RouteObject[] = [
   // Warehouse Storage
   { path: 'warehouse/storage', element: <WarehouseStorageListView /> },
+  { path: 'warehouse/storage/new', element: <WarehouseEditView isNew /> },
+  { path: 'warehouse/storage/:id/edit', element: <WarehouseEditView /> },
   { path: 'warehouse/stocks/new', element: <StocksEditView isNew /> },
   { path: 'warehouse/stocks/:id/edit', element: <StocksEditView /> },
   { path: 'warehouse/transfers', element: <TransfersListView /> },
@@ -184,7 +186,7 @@ export const warehouseRoutes: RouteObject[] = [
   { path: 'warehouse/expenses-invoices/new', element: <OutgoingInvoiceFormView /> },
   { path: 'warehouse/expenses-invoices/:id/edit', element: <OutgoingInvoiceFormView /> },
   { path: 'warehouse/separations-acts', element: <SeparationActsListView /> },
-  { path: 'warehouse/separations-acts/new', element: <SeparationActsFormView /> },
+  { path: 'warehouse/separations-acts/new', element: <SeparationActsFormView isNew /> },
   { path: 'warehouse/separations-acts/:id/edit', element: <SeparationActsFormView /> },
   { path: 'warehouse/locations', element: <LocationsListView /> },
   { path: 'warehouse/locations/new', element: <LocationsEditView isNew /> },

@@ -2,7 +2,7 @@
 
 > **Module:** warehouse  
 > **Base URL:** https://api.maryai.uz/  
-> **Last Updated:** 2026-04-19T02:29:41.396Z
+> **Last Updated:** 2026-04-25T01:35:03.604Z
 
 ---
 
@@ -2332,7 +2332,7 @@
 
 **Summary:** Get ingredient report
 
-**Description:** Retrieve ingredient report for a storage within a date range
+**Description:** Retrieve ingredient report for a storage within a date range. Supports sorting by numeric fields and filtering by measurement and ingredient IDs.
 
 **Parameters:**
 
@@ -2342,6 +2342,10 @@
 | start | query | string | No | Start datetime (RFC3339) or date (YYYY-MM-DD) |
 | end | query | string | No | End datetime (RFC3339) or date (YYYY-MM-DD) |
 | ingredient_id | query | string | No | Ingredient ID (optional filter) |
+| measurement | query | string | No | Filter by exact measurement/unit |
+| ingredient_ids | query | string | No | Comma-separated ingredient UUIDs to filter |
+| sort_by | query | string | No | Sort by field |
+| sort_order | query | string | No | Sort order |
 | limit | query | integer | No | Limit |
 | offset | query | integer | No | Offset |
 | expand | query | string | No | Expand related fields |
@@ -2355,6 +2359,56 @@
   "items": {
     "$ref": "#/definitions/model.IngredientReportItem"
   }
+}
+```
+
+- **400**: Invalid request parameters
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorResponse"
+}
+```
+
+- **401**: Unauthorized
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorResponse"
+}
+```
+
+- **500**: Internal server error
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorResponse"
+}
+```
+
+
+## /api/v1/ingredient-reports/inventory-status
+
+### GET /api/v1/ingredient-reports/inventory-status 🔒
+
+**Summary:** Get ingredient inventory status report
+
+**Description:** Retrieve ingredient report where begin_qty is anchored at the most recent inventory count event. For each ingredient, the report finds the latest inventory_surplus_in or inventory_shortage_out event and uses its stock_after as begin_qty. Subsequent movements are summed normally. If an ingredient has no inventory event, begin_qty defaults to 0 and all movements are included.
+
+**Parameters:**
+
+| Name | Location | Type | Required | Description |
+|------|----------|------|----------|-------------|
+| storage_id | query | string | Yes | Storage ID (UUID) |
+| end | query | string | No | End datetime (RFC3339 or YYYY-MM-DD format). Defaults to current time |
+| ingredient_id | query | string | No | Optional filter: return only this ingredient (UUID) |
+| limit | query | integer | No | Pagination: items per page (default: 20) |
+| offset | query | integer | No | Pagination: offset from start (default: 0) |
+| expand | query | string | No | Expand related fields (comma-separated) |
+
+**Responses:**
+
+- **200**: Inventory status report retrieved successfully
+  ```json
+{
+  "$ref": "#/definitions/model.IngredientReportPaginatedResponse"
 }
 ```
 

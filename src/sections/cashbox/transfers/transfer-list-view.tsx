@@ -158,7 +158,7 @@ export function TransactionsListView() {
             key="delete"
             icon={<Iconify icon="solar:trash-bin-trash-bold" />}
             label={t('common.delete', 'Delete')}
-            style={{ color: '#FB6633' }}
+            style={{ color: 'var(--color-primary)' }}
             onClick={() => {
               setDeleteId(params.row.id);
               setOpenConfirm(true);

@@ -89,6 +89,7 @@ import { Iconify } from 'src/components/iconify';
 import { GenericViewModal } from 'src/components/generic-view-view';
 
 import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
+import { RouterLink } from 'src/routes/components';
 
 function RenderCellStatus({ status }: { status: string }) {
     const statusConfig: Record<string, { label: string; color: string }> = {
@@ -646,6 +647,7 @@ export function InventoryListView() {
                         <Button
                             variant="contained"
                             startIcon={<Iconify icon="mingcute:add-line" />}
+                            component={RouterLink}
                             href={paths.menu.inventory.new}
                             size="small"
                         >

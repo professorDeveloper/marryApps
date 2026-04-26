@@ -4,6 +4,8 @@ import type { Theme } from '@mui/material/styles';
 // ----------------------------------------------------------------------
 
 export const bulletColor = { dark: '#282F37', light: '#EDEFF2' };
+// export const bulletColor = { dark: 'var(--color-primary)', light: 'var(--color-primary)' };
+
 
 function colorVars(theme: Theme, variant?: 'vertical' | 'mini' | 'horizontal') {
   const {
@@ -17,8 +19,8 @@ function colorVars(theme: Theme, variant?: 'vertical' | 'mini' | 'horizontal') {
     // root
     '--nav-item-root-active-color': palette.common.white,
     '--nav-item-root-active-color-on-dark': palette.common.white,
-    '--nav-item-root-active-bg': '#FB6633',
-    '--nav-item-root-active-hover-bg': '#FB6633',
+    '--nav-item-root-active-bg': 'var(--color-primary)',
+    '--nav-item-root-active-hover-bg': 'var(--color-primary-hover)',
     '--nav-item-root-open-color': palette.text.primary,
     '--nav-item-root-open-bg': palette.action.hover,
     // sub

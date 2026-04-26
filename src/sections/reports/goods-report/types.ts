@@ -10,6 +10,9 @@ export interface GoodsReportFilters {
   waiter_id: string;
   hall_id: string;
   table_id: string;
+  good_ids: string[];
+  sort_by: string;
+  sort_order: string;
   limit: number;
   offset: number;
 }

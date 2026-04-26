@@ -9,10 +9,12 @@ import { Box, Button } from '@mui/material';
 import { paths } from 'src/routes/paths';
 
 import { DashboardContent } from 'src/layouts/dashboard';
+import { usePaginationRows } from 'src/hooks/use-pagination-rows';
 
 import { Iconify } from 'src/components/iconify';
 
 import { DataTable } from 'src/sections/warehouse/deduction/components/utility-data-table';
+import { RouterLink } from 'src/routes/components';
 
 interface CustomReport {
   id: string;
@@ -86,6 +88,9 @@ export function CustomReportsListView() {
   const { t } = useTranslation('menu');
   const noDataText = t('noDataAvailable', "Tushunarli ma'lumot mavjud emas");
   
+  // Get global rows per page
+  const { rowsPerPage: globalRowsPerPage } = usePaginationRows();
+  
   // State management
   const [rawData, setRawData] = useState<CustomReport[]>([
     {
@@ -120,7 +125,7 @@ export function CustomReportsListView() {
   const [filters, setFilters] = useState(initialFilters);
   const [draftFilters, setDraftFilters] = useState(initialFilters);
   const [rowCount, setRowCount] = useState(3);
-  const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 20 });
+  const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: globalRowsPerPage });
   const [startDate, setStartDate] = useState<dayjs.Dayjs | null>(null);
   const [endDate, setEndDate] = useState<dayjs.Dayjs | null>(null);
   const [activeRange, setActiveRange] = useState<'day' | 'week' | 'month' | 'year'>('day');
@@ -394,6 +399,7 @@ export function CustomReportsListView() {
           <Button
             variant="contained"
             startIcon={<Iconify icon="mingcute:add-line" />}
+            component={RouterLink}
             href={paths.menu.reports.custom.new}
             size="small"
           >

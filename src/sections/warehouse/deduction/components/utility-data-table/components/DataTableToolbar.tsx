@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
-import type { BatchAction } from '../types/types';
+import type { BatchAction, SearchMode, SearchOutput } from '../types/types';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
@@ -10,16 +10,20 @@ import Tooltip from '@mui/material/Tooltip';
 import TextField from '@mui/material/TextField';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
-import InputAdornment from '@mui/material/InputAdornment';
 
 import { Iconify } from 'src/components/iconify';
-import { NoDataTooltip } from 'src/components/no-data-tooltip';
+import { ToolbarSearch } from './ToolbarSearch';
 
 import { ACCENT, BORDER } from '../utils';
 
 export type DataTableToolbarProps<T> = {
   searchValue?: string;
   onSearchChange?: (value: string) => void;
+
+  searchMode?: SearchMode;
+  allowFreeText?: boolean;
+  searchOptions?: { id: string; label: string }[];
+  onSearch?: (data: SearchOutput) => void;
 
   showPeriodPicker?: boolean;
   periodPickerProps?: {
@@ -34,15 +38,6 @@ export type DataTableToolbarProps<T> = {
     onPeriodChange?: (period: 'day' | 'week' | 'month' | 'year') => void;
   };
 
-  showStorageSelector?: boolean;
-  storageSelectorProps?: {
-    storageId: string;
-    storages: Array<{ id: string; name: string }>;
-    onStorageChange: (storageId: string) => void;
-    label?: string;
-    disabled?: boolean;
-  };
-
   showCheckboxes: boolean;
   selectedRows: T[];
   batchActions: Array<BatchAction<T>>;
@@ -50,101 +45,57 @@ export type DataTableToolbarProps<T> = {
   onOpenColumnMenu: (e: React.MouseEvent<HTMLElement>) => void;
   onReset: () => void;
   headerActions?: ReactNode;
+  toolbarActions?: ReactNode;
 };
 
 export function DataTableToolbar<T>({
   searchValue,
   onSearchChange,
+  searchMode,
+  allowFreeText,
+  searchOptions,
+  onSearch,
   showPeriodPicker = false,
   periodPickerProps,
   showPeriodButtons = false,
   periodButtonProps,
-  showStorageSelector = false,
-  storageSelectorProps,
   showCheckboxes,
   selectedRows,
   batchActions,
   onOpenColumnMenu,
   onReset,
   headerActions,
+  toolbarActions,
 }: DataTableToolbarProps<T>) {
-  const [localSearchValue, setLocalSearchValue] = useState(searchValue || '');
+  const handleSearch = useCallback(
+    (data: SearchOutput) => {
+      if (onSearch) {
+        onSearch(data);
+      } else if (data.query !== undefined && onSearchChange) {
+        onSearchChange(data.query);
+      }
+    },
+    [onSearch, onSearchChange],
+  );
 
-  const handleSearchSubmit = useCallback((value: string) => {
-    onSearchChange?.(value);
-  }, [onSearchChange]);
-
-  const handleSearchChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = event.target.value;
-    setLocalSearchValue(newValue);
-
-    // Trigger search when local value becomes empty
-    // but only if parent state wasn't already empty (avoid redundant searches)
-    if (newValue === '' && searchValue && searchValue !== '') {
-      handleSearchSubmit('');
-    }
-  }, [searchValue, handleSearchSubmit]);
-
-  const handleKeyDown = useCallback((event: React.KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === 'Enter') {
-      handleSearchSubmit(localSearchValue);
-    }
-  }, [localSearchValue, handleSearchSubmit]);
-
-  // Sync local search value with prop changes (useEffect to avoid render issues)
-  useEffect(() => {
- if (searchValue !== localSearchValue && searchValue !== undefined) {
-      setLocalSearchValue(searchValue);
-    }
-  }, [searchValue]);
   return (
     <Box
       sx={{
-        backgroundColor: 'grey.700',
-        borderBottom: `2px solid ${ACCENT}`,
+        backgroundColor: 'var(--color-surface-1)',
+        borderBottom: `1px solid var(--color-border)`,
         px: 1.5,
         py: 1,
       }}
     >
       <Stack direction="row" alignItems="center" justifyContent="space-between" gap={1}>
         <Stack direction="row" alignItems="center" gap={1} sx={{ flex: 1 }}>
-          {onSearchChange && (
-            <TextField
-              size="small"
-              placeholder="Search cases..."
-              value={localSearchValue}
-              onChange={handleSearchChange}
-              onKeyDown={handleKeyDown}
-              slotProps={{
-                input: {
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Iconify
-                        icon="eva:search-fill"
-                        width={18}
-                        sx={{ color: 'rgba(255,255,255,0.45)' }}
-                      />
-                    </InputAdornment>
-                  ),
-                  endAdornment: null,
-                },
-              }}
-              sx={{
-                minWidth: 200,
-                maxWidth: 320,
-                '& .MuiInputBase-root': {
-                  height: 34,
-                  fontSize: 12.5,
-                  backgroundColor: 'rgba(9,9,11,0.7)',
-                  borderRadius: 1,
-                  fontFamily: '"Inter", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif',
-                },
-                '& .MuiOutlinedInput-notchedOutline': { borderColor: BORDER },
-                '& .MuiInputBase-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                  borderColor: ACCENT,
-                  boxShadow: `0 0 0 3px rgba(245, 158, 11, 0.15)`,
-                },
-              }}
+          {(onSearchChange || onSearch) && (
+            <ToolbarSearch
+              mode={searchMode}
+              allowFreeText={allowFreeText}
+              options={searchOptions}
+              onSearch={handleSearch}
+              value={searchValue}
             />
           )}
 
@@ -162,23 +113,23 @@ export function DataTableToolbar<T>({
                         ? periodPickerProps.startDate.toISOString().split('T')[0]
                         : ''
                     }
-                    onChange={(e) => {
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                       const date = e.target.value ? new Date(e.target.value) : null;
                       periodPickerProps?.onStartDateChange?.(date);
                     }}
-                    sx={{ 
+                    sx={{
                       minWidth: 120,
                       '& .MuiInputBase-root': {
                         height: 34,
                         fontSize: 12.5,
-                        backgroundColor: 'rgba(9,9,11,0.7)',
+                        backgroundColor: 'var(--color-surface-0)',
                         borderRadius: 1,
                         fontFamily: '"Inter", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif',
                       },
-                      '& .MuiOutlinedInput-notchedOutline': { borderColor: BORDER },
+                      '& .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--color-border)' },
                       '& .MuiInputBase-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                        borderColor: ACCENT,
-                        boxShadow: `0 0 0 3px rgba(245, 158, 11, 0.15)`,
+                        borderColor: 'var(--color-primary)',
+                        boxShadow: '0 0 0 3px var(--glow-md)',
                       },
                     }}
                   />
@@ -191,23 +142,23 @@ export function DataTableToolbar<T>({
                         ? periodPickerProps.endDate.toISOString().split('T')[0]
                         : ''
                     }
-                    onChange={(e) => {
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                       const date = e.target.value ? new Date(e.target.value) : null;
                       periodPickerProps?.onEndDateChange?.(date);
                     }}
-                    sx={{ 
+                    sx={{
                       minWidth: 120,
                       '& .MuiInputBase-root': {
                         height: 34,
                         fontSize: 12.5,
-                        backgroundColor: 'rgba(9,9,11,0.7)',
+                        backgroundColor: 'var(--color-surface-0)',
                         borderRadius: 1,
                         fontFamily: '"Inter", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif',
                       },
-                      '& .MuiOutlinedInput-notchedOutline': { borderColor: BORDER },
+                      '& .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--color-border)' },
                       '& .MuiInputBase-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                        borderColor: ACCENT,
-                        boxShadow: `0 0 0 3px rgba(245, 158, 11, 0.15)`,
+                        borderColor: 'var(--color-primary)',
+                        boxShadow: '0 0 0 3px var(--glow-md)',
                       },
                     }}
                   />
@@ -222,8 +173,8 @@ export function DataTableToolbar<T>({
                       size="small"
                       variant={periodButtonProps?.activePeriod === period ? 'contained' : 'outlined'}
                       onClick={() => periodButtonProps?.onPeriodChange?.(period)}
-                      sx={{ 
-                        minWidth: 32, 
+                      sx={{
+                        minWidth: 32,
                         px: 1,
                         height: 34,
                         fontSize: 12.5,
@@ -235,52 +186,16 @@ export function DataTableToolbar<T>({
                   ))}
                 </Stack>
               )}
-
-              {showStorageSelector && (
-                <NoDataTooltip enabled={storageSelectorProps?.storages.length === 0} title="No storages available">
-                  <TextField
-                    select
-                    size="small"
-                    label={storageSelectorProps?.label || 'Storage'}
-                    value={storageSelectorProps?.storageId || ''}
-                    onChange={(e) => storageSelectorProps?.onStorageChange?.(e.target.value)}
-                    SelectProps={{ native: true }}
-                    disabled={storageSelectorProps?.disabled || storageSelectorProps?.storages.length === 0}
-                    sx={{
-                      minWidth: 150,
-                      '& .MuiInputBase-root': {
-                        height: 34,
-                        fontSize: 12.5,
-                        backgroundColor: 'rgba(9,9,11,0.7)',
-                        borderRadius: 1,
-                        fontFamily: '"Inter", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif',
-                      },
-                      '& .MuiOutlinedInput-notchedOutline': { borderColor: BORDER },
-                      '& .MuiInputBase-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                        borderColor: ACCENT,
-                        boxShadow: `0 0 0 3px rgba(245, 158, 11, 0.15)`,
-                      },
-                    }}
-                  >
-                    <option value="" disabled hidden>
-                      Select Storage
-                    </option>
-                    {storageSelectorProps?.storages.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name}
-                      </option>
-                    ))}
-                  </TextField>
-                </NoDataTooltip>
-              )}
             </Stack>
           )}
+
+          {toolbarActions}
 
           {showCheckboxes && selectedRows.length > 0 ? (
             <Typography
               sx={{
                 fontSize: 12.5,
-                color: 'rgba(255,255,255,0.8)',
+                color: 'var(--color-text-muted)',
                 fontFamily: '"Inter", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif',
               }}
             >
@@ -299,12 +214,9 @@ export function DataTableToolbar<T>({
                 startIcon={a.icon}
                 sx={{
                   height: 34,
-                  borderColor: 'rgba(245, 158, 11, 0.35)',
-                  color: 'rgba(255,255,255,0.9)',
-                  '&:hover': {
-                    borderColor: ACCENT,
-                    backgroundColor: 'rgba(245, 158, 11, 0.08)',
-                  },
+                  borderColor: 'var(--color-primary)',
+                  color: 'var(--color-text-muted)',
+                  '&:hover': { color: 'var(--color-primary)', backgroundColor: 'var(--glow-sm)', boxShadow: 'var(--glow-shadow-md)' },
                   textTransform: 'none',
                   fontSize: 12.5,
                   fontFamily: '"Inter", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif',

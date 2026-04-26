@@ -16,6 +16,7 @@ import { DataTable } from 'src/sections/warehouse/deduction/components/utility-d
 
 import { useEmployeeApi } from '../../user/employee/hooks/useEmployeeApi';
 import { DEFAULT_DATATABLE_CONFIG, EMPLOYEE_DATATABLE_PERSIST_KEY } from '../../user/employee/constants';
+import { RouterLink } from 'src/routes/components';
 
 export function UserManagementView() {
   const { t } = useTranslation('menu');
@@ -258,6 +259,7 @@ export function UserManagementView() {
           <Button
             variant="contained"
             startIcon={<Iconify icon="mingcute:add-line" />}
+            component={RouterLink}
             href={paths.settings.usersNew}
             size="small"
           >

@@ -9,11 +9,11 @@ export const themeOverrides: ThemeOptions = {
     light: {
       palette: {
         primary: createPaletteChannel({
-          lighter: '#E4DCFD',
-          light: '#A996F8',
-          main: '#6950E8',
-          dark: '#3828A7',
-          darker: '#180F6F',
+          lighter: '#FFE1CC',
+          light: '#FF9340',
+          main: '#FF6B00',
+          dark: '#E65100',
+          darker: '#7A2E00',
           contrastText: '#FFFFFF',
         }),
       },
@@ -21,13 +21,17 @@ export const themeOverrides: ThemeOptions = {
     dark: {
       palette: {
         primary: createPaletteChannel({
-          lighter: '#E4DCFD',
-          light: '#A996F8',
-          main: '#6950E8',
-          dark: '#3828A7',
-          darker: '#180F6F',
+          lighter: '#FFE1CC',
+          light: '#FF9340',
+          main: '#FF6B00',
+          dark: '#E65100',
+          darker: '#7A2E00',
           contrastText: '#FFFFFF',
         }),
+        background: {
+          default: '#110C08',
+          paper: '#1A130E',
+        },
       },
     },
   },

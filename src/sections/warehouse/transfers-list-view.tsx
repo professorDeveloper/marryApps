@@ -24,6 +24,7 @@ import { DashboardContent } from 'src/layouts/dashboard';
 import { Iconify } from 'src/components/iconify';
 
 import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
+import { RouterLink } from 'src/routes/components';
 
 interface Branch {
   id: string;
@@ -910,6 +911,7 @@ export function TransfersListView() {
             <Button
               variant="contained"
               startIcon={<Iconify icon="mingcute:add-line" />}
+              component={RouterLink}
               href={paths.warehouse.transfers.new}
               size="small"
             >

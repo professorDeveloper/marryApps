@@ -86,11 +86,12 @@ export const DataTableRow = memo(function DataTableRow<T>({
         alignItems: 'center',
         px: 1,
         height: 44,
-        borderBottom: `1px solid ${BORDER}`,
+        borderBottom: '1px solid var(--color-border)',
         position: 'relative',
         cursor: onRowClick ? 'pointer' : 'default',
+        backgroundColor: index % 2 === 0 ? 'var(--color-surface-0)' : 'var(--color-surface-2)',
         '&:hover': {
-          backgroundColor: 'rgba(245, 158, 11, 0.06)',
+          backgroundColor: 'var(--color-surface-2)',
         },
         '&:hover .utilityDtMore': { opacity: 1 },
       }}
@@ -103,8 +104,12 @@ export const DataTableRow = memo(function DataTableRow<T>({
             onClick={(e) => e.stopPropagation()}
             size="small"
             sx={{
-              color: 'rgba(255,255,255,0.35)',
-              '&.Mui-checked': { color: ACCENT },
+              color: 'var(--color-text)',
+              '&.Mui-checked': { color: 'var(--color-primary)' },
+              '&:hover': {
+                backgroundColor: 'var(--glow-sm)',
+                boxShadow: 'var(--glow-shadow-md)',
+              },
             }}
           />
         </Box>
@@ -113,9 +118,9 @@ export const DataTableRow = memo(function DataTableRow<T>({
       {showRowNumbers && (
         <Typography
           sx={{
-            fontFamily: '"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace',
+            fontFamily: 'var(--font-mono)',
             fontSize: 12,
-            color: 'rgba(255,255,255,0.6)',
+            color: 'text.secondary',
             textAlign: 'center',
             userSelect: 'none',
           }}
@@ -137,6 +142,7 @@ export const DataTableRow = memo(function DataTableRow<T>({
               display: 'flex',
               justifyContent:
                 col.align === 'right' ? 'flex-end' : col.align === 'center' ? 'center' : 'flex-start',
+              backgroundColor: 'transparent',
             }}
             onDoubleClick={() => {
               if (col.editable) startEdit(rowId, col.key);
@@ -166,16 +172,14 @@ export const DataTableRow = memo(function DataTableRow<T>({
                     '& .MuiInputBase-root': {
                       height: 32,
                       fontSize: 12,
-                      backgroundColor: 'rgba(9,9,11,0.7)',
+                      backgroundColor: 'var(--color-surface-0)',
                       borderRadius: 1,
-                      fontFamily: col.mono
-                        ? '"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace'
-                        : '"Inter", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif',
+                      fontFamily: 'var(--font-mono)',
                     },
-                    '& .MuiOutlinedInput-notchedOutline': { borderColor: BORDER },
+                    '& .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--color-border)' },
                     '& .MuiInputBase-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                      borderColor: ACCENT,
-                      boxShadow: `0 0 0 3px rgba(245, 158, 11, 0.15)`,
+                      borderColor: 'var(--color-primary)',
+                      boxShadow: '0 0 0 3px var(--glow-md)',
                     },
                   }}
                 />
@@ -188,12 +192,11 @@ export const DataTableRow = memo(function DataTableRow<T>({
                 sx={{
                   width: 1,
                   fontSize: 12.5,
-                  color: 'rgba(255,255,255,0.86)',
+                  color: 'var(--color-text)',
                   textAlign: col.align || 'left',
-                  fontFamily: col.mono
-                    ? '"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace'
-                    : '"Inter", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif',
+                  fontFamily: 'var(--font-mono)',
                   textOverflow: 'ellipsis',
+                  backgroundColor: 'transparent',
                 }}
               >
                 {value == null ? '' : String(value)}

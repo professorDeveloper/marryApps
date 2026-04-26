@@ -51,8 +51,8 @@ export function DataTablePagination({
         px: 2,
         py: 1,
    
-        backgroundColor: 'grey.700',
-        borderBottom: `2px solid ${ACCENT}`,
+        backgroundColor: 'var(--color-surface-1)',
+        borderTop: '1px solid var(--color-border)',
         gap: 2,
         flexWrap: 'wrap',
       }}
@@ -62,7 +62,7 @@ export function DataTablePagination({
         <Typography
           sx={{
             fontSize: 12.5,
-            color: 'rgba(255,255,255,0.65)',
+            color: 'var(--color-text-muted)',
             fontFamily: '"Inter", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif',
             whiteSpace: 'nowrap',
           }}
@@ -80,13 +80,13 @@ export function DataTablePagination({
           sx={{
             height: 30,
             fontSize: 12.5,
-            color: 'rgba(255,255,255,0.86)',
+            color: 'var(--color-text)',
             fontFamily: '"Inter", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif',
-            backgroundColor: 'rgba(9,9,11,0.7)',
+            backgroundColor: 'var(--color-surface-0)',
             borderRadius: 1,
-            '& .MuiOutlinedInput-notchedOutline': { borderColor: BORDER },
-            '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: ACCENT },
-            '& .MuiSelect-icon': { color: 'rgba(255,255,255,0.45)' },
+            '& .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--color-border)' },
+            '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--color-primary)' },
+            '& .MuiSelect-icon': { color: 'var(--color-text-muted)' },
           }}
         >
           {rowsPerPageOptions.map((opt) => (
@@ -120,9 +120,9 @@ export function DataTablePagination({
           sx={{
             width: 28,
             height: 28,
-            color: 'rgba(255,255,255,0.65)',
-            '&:hover': { color: ACCENT, backgroundColor: 'rgba(245, 158, 11, 0.10)' },
-            '&.Mui-disabled': { color: 'rgba(255,255,255,0.2)' },
+            color: 'var(--color-text-muted)',
+            '&:hover': { color: 'var(--color-primary)', backgroundColor: 'var(--glow-sm)', boxShadow: 'var(--glow-shadow-md)' },
+            '&.Mui-disabled': { color: 'var(--color-text-subtle)' },
           }}
         >
           <Iconify icon="carbon:chevron-left" width={16} />
@@ -134,7 +134,7 @@ export function DataTablePagination({
               key={`ellipsis-${idx}`}
               sx={{
                 fontSize: 12,
-                color: 'rgba(255,255,255,0.4)',
+                color: 'var(--color-text-subtle)',
                 px: 0.5,
                 userSelect: 'none',
               }}
@@ -154,11 +154,12 @@ export function DataTablePagination({
                 fontSize: 12,
                 fontWeight: p === page ? 700 : 400,
                 fontFamily: '"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace',
-                color: p === page ? '#000' : 'rgba(255,255,255,0.65)',
-                backgroundColor: p === page ? ACCENT : 'transparent',
+                color: p === page ? '#000' : 'var(--color-text-muted)',
+                backgroundColor: p === page ? 'var(--color-primary)' : 'transparent',
                 '&:hover': {
-                  backgroundColor: p === page ? ACCENT : 'rgba(245, 158, 11, 0.10)',
-                  color: p === page ? '#000' : ACCENT,
+                  backgroundColor: p === page ? 'var(--color-primary)' : 'var(--glow-sm)',
+                  color: p === page ? '#000' : 'var(--color-primary)',
+                  boxShadow: 'var(--glow-shadow-md)',
                 },
               }}
             >
@@ -174,9 +175,9 @@ export function DataTablePagination({
           sx={{
             width: 28,
             height: 28,
-            color: 'rgba(255,255,255,0.65)',
-            '&:hover': { color: ACCENT, backgroundColor: 'rgba(245, 158, 11, 0.10)' },
-            '&.Mui-disabled': { color: 'rgba(255,255,255,0.2)' },
+            color: 'var(--color-text-muted)',
+            '&:hover': { color: 'var(--color-primary)', backgroundColor: 'var(--glow-sm)', boxShadow: 'var(--glow-shadow-md)' },
+            '&.Mui-disabled': { color: 'var(--color-text-subtle)' },
           }}
         >
           <Iconify icon="carbon:chevron-right" width={16} />

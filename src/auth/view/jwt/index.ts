@@ -1,3 +1,1 @@
-export * from './jwt-sign-in-view';
-
-export * from './jwt-sign-up-view';
+// Legacy exports removed - use SignInForm and SignUpForm from src/sections/auth/components instead

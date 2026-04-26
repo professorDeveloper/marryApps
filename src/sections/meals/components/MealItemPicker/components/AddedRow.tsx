@@ -18,19 +18,22 @@ interface AddedRowProps {
     pricePerUnit: number;
     ingredientLabel: string;
     compoundLabel: string;
+    rowIndex: number;
+    totalRows: number;
+    onNavigateFocus?: (direction: 'up' | 'down' | 'left' | 'right', currentRowIndex: number, currentColumnKey: string) => void;
 }
 
 const INPUT_STYLE: React.CSSProperties = {
     width: '100%',
     padding: '6px 8px',
     fontSize: '0.8125rem',
-    border: '1px solid var(--palette-divider, rgba(145,158,171,0.32))',
+    border: '1px solid var(--color-border)',
     borderRadius: 8,
     outline: 'none',
-    background: 'transparent',
+    background: 'var(--color-surface-0)',
     color: 'inherit',
     boxSizing: 'border-box',
-    fontFamily: 'inherit',
+    fontFamily: '"Inter", sans-serif',
 };
 const INPUT_WITH_UNIT: React.CSSProperties = { ...INPUT_STYLE, paddingRight: 52 };
 const INPUT_NO_UNIT: React.CSSProperties = { ...INPUT_STYLE, paddingRight: 8 };
@@ -43,20 +46,21 @@ const ROW_BASE_SX = {
     px: 1,
     py: 0.5,
     borderBottom: 1,
-    borderColor: 'divider',
+    borderColor: 'var(--color-border)',
     boxSizing: 'border-box',
+    fontFamily: '"Inter", sans-serif',
 } as const;
 
 const ROW_SELECTED_SX = {
     ...ROW_BASE_SX,
-    bgcolor: 'action.selected',
-    '&:hover': { bgcolor: 'action.selected' },
+    bgcolor: 'var(--color-primary-soft)',
+    '&:hover': { bgcolor: 'var(--color-primary-ring)' },
 } as const;
 
 const ROW_UNSELECTED_SX = {
     ...ROW_BASE_SX,
-    bgcolor: 'background.paper',
-    '&:hover': { bgcolor: 'action.hover' },
+    bgcolor: 'var(--color-surface-0)',
+    '&:hover': { bgcolor: 'var(--color-primary-soft)' },
 } as const;
 
 const CELL_CENTER_SX = { display: 'flex', justifyContent: 'center' } as const;
@@ -70,9 +74,11 @@ const UNIT_STYLE: React.CSSProperties = {
     right: 10,
     top: '50%',
     transform: 'translateY(-50%)',
-    color: 'gray',
+    color: 'var(--color-text)',
+    opacity: 0.6,
     pointerEvents: 'none',
     fontSize: '0.75rem',
+    fontFamily: '"Inter", sans-serif',
     whiteSpace: 'nowrap',
 };
 
@@ -85,21 +91,123 @@ export const AddedRow = React.memo(function AddedRow({
     pricePerUnit,
     ingredientLabel,
     compoundLabel,
+    rowIndex,
+    totalRows,
+    onNavigateFocus,
 }: AddedRowProps) {
     const totalPrice = pricePerUnit * (row.quantity ?? 0);
     const key = compositeKey(row.type, row.id);
+
+    const [isFocused, setIsFocused] = React.useState(false);
+    const [localValue, setLocalValue] = React.useState<string>('');
+
+    // Sync local value with prop value when not focused
+    React.useEffect(() => {
+        if (!isFocused) {
+            setLocalValue(String(row.quantity ?? 0));
+        }
+    }, [row.quantity, isFocused]);
+
+    // Format number with spaces for display
+    const formatNumberWithSpaces = (num: number | string | undefined | null): string => {
+        if (num === undefined || num === null || num === 0) return '';
+        const stringValue = String(num);
+
+        const numericValue = parseFloat(stringValue);
+        if (isNaN(numericValue)) return stringValue;
+
+        // Check if the value has decimal places
+        const hasDecimals = numericValue % 1 !== 0;
+
+        return new Intl.NumberFormat('en-US', {
+            useGrouping: true,
+            minimumFractionDigits: hasDecimals ? 2 : 0,
+            maximumFractionDigits: hasDecimals ? 2 : 0,
+        }).format(numericValue).replace(/,/g, ' ');
+    };
+
+    const displayValue = isFocused ? localValue : formatNumberWithSpaces(localValue);
 
     const handleSelect = React.useCallback(
         (_: unknown, checked: boolean) => onSelect(key, checked),
         [onSelect, key]
     );
+
     const handleQty = React.useCallback(
-        (e: React.ChangeEvent<HTMLInputElement>) => onQtyChange(row.type, row.id, e.target.value),
+        (e: React.ChangeEvent<HTMLInputElement>) => {
+            const newValue = e.target.value;
+
+            // Validate: only allow numbers and at most one dot
+            const dotCount = (newValue.match(/\./g) || []).length;
+            const hasInvalidChars = /[^0-9.]/.test(newValue);
+
+            if (hasInvalidChars || dotCount > 1) {
+                // Filter out invalid characters and extra dots
+                const firstDotIndex = newValue.indexOf('.');
+                let filtered = newValue.replace(/[^0-9.]/g, '');
+                if (firstDotIndex !== -1) {
+                    const parts = filtered.split('.');
+                    filtered = parts[0] + (parts.length > 1 ? '.' + parts.slice(1).join('') : '');
+                }
+                setLocalValue(filtered);
+                onQtyChange(row.type, row.id, filtered);
+            } else {
+                setLocalValue(newValue);
+                onQtyChange(row.type, row.id, newValue);
+            }
+        },
         [onQtyChange, row.type, row.id]
     );
+
     const handleRemove = React.useCallback(
         () => onRemove(row.type, row.id),
         [onRemove, row.type, row.id]
+    );
+
+    const handleFocus = React.useCallback(() => {
+        setIsFocused(true);
+        setLocalValue(String(row.quantity ?? 0));
+    }, [row.quantity]);
+
+    const handleBlur = React.useCallback(() => {
+        setIsFocused(false);
+    }, []);
+
+    const handleKeyDown = React.useCallback(
+        (e: React.KeyboardEvent<HTMLInputElement>) => {
+            if (e.key === 'ArrowDown' && onNavigateFocus) {
+                e.preventDefault();
+                if (rowIndex < totalRows - 1) {
+                    onNavigateFocus('down', rowIndex, 'quantity');
+                }
+            } else if (e.key === 'ArrowUp' && onNavigateFocus) {
+                e.preventDefault();
+                if (rowIndex > 0) {
+                    onNavigateFocus('up', rowIndex, 'quantity');
+                }
+            } else if (e.key === 'ArrowLeft' && onNavigateFocus) {
+                const input = e.currentTarget;
+                const cursorPosition = input.selectionStart;
+                const valueLength = input.value.length;
+
+                // Only switch columns if cursor is at the start of the value
+                if (cursorPosition === 0) {
+                    e.preventDefault();
+                    onNavigateFocus('left', rowIndex, 'quantity');
+                }
+            } else if (e.key === 'ArrowRight' && onNavigateFocus) {
+                const input = e.currentTarget;
+                const cursorPosition = input.selectionStart;
+                const valueLength = input.value.length;
+
+                // Only switch columns if cursor is at the end of the value
+                if (cursorPosition === valueLength) {
+                    e.preventDefault();
+                    onNavigateFocus('right', rowIndex, 'quantity');
+                }
+            }
+        },
+        [rowIndex, totalRows, onNavigateFocus]
     );
 
     return (
@@ -115,7 +223,7 @@ export const AddedRow = React.memo(function AddedRow({
 
             <Box sx={NAME_CELL_SX}>
                 <Stack direction="row" spacing={1} alignItems="center" sx={NAME_STACK_SX}>
-                    <Typography variant="body2" noWrap sx={NAME_TEXT_SX}>
+                    <Typography variant="body2" noWrap sx={NAME_TEXT_SX} fontFamily='"Inter", sans-serif'>
                         {row.name}
                     </Typography>
                     <TypeBadge
@@ -124,7 +232,7 @@ export const AddedRow = React.memo(function AddedRow({
                         compoundLabel={compoundLabel}
                     />
                 </Stack>
-                <Typography variant="caption" color="text.secondary" noWrap>
+                <Typography variant="caption" color="text.secondary" noWrap sx={{ fontFamily: '"Inter", sans-serif' }}>
                     {row.measurement || '—'}
                 </Typography>
             </Box>
@@ -132,21 +240,24 @@ export const AddedRow = React.memo(function AddedRow({
             <Box sx={CELL_CENTER_SX}>
                 <div style={QTY_WRAPPER_STYLE}>
                     <input
-                        type="number"
-                        value={row.quantity ?? 0}
+                        type="text"
+                        value={displayValue}
                         onChange={handleQty}
-                        step="0.01"
-                        min="0"
+                        onKeyDown={handleKeyDown}
+                        onFocus={handleFocus}
+                        onBlur={handleBlur}
+                        inputMode="decimal"
+                        placeholder="0"
                         style={row.measurement ? INPUT_WITH_UNIT : INPUT_NO_UNIT}
                     />
                     {row.measurement ? <span style={UNIT_STYLE}>{row.measurement}</span> : null}
                 </div>
             </Box>
 
-            <Typography variant="body2" sx={RIGHT_SX}>
+            <Typography variant="body2" sx={{ ...RIGHT_SX, fontFamily: '"Inter", sans-serif' }}>
                 {pricePerUnit.toFixed(2)}
             </Typography>
-            <Typography variant="body2" sx={RIGHT_SX}>
+            <Typography variant="body2" sx={{ ...RIGHT_SX, fontFamily: '"Inter", sans-serif' }}>
                 {totalPrice.toFixed(2)}
             </Typography>
 

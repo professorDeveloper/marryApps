@@ -6,7 +6,7 @@ import { varAlpha } from 'minimal-shared/utils';
 
 import { styled } from '@mui/material/styles';
 
-import Logo from '../logo/logo';
+import {Logo} from '../logo/logo';
 
 // ----------------------------------------------------------------------
 

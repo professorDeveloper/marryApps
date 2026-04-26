@@ -22,6 +22,7 @@ import { DashboardContent } from 'src/layouts/dashboard';
 import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
 
 import { TABLE_COLUMN_ORDER, TABLE_COLUMN_VISIBILITY, TABLE_COLUMN_WIDTHS, MODIFIERS_TABLE_PERSIST_KEY } from './constants';
+import { RouterLink } from 'src/routes/components';
 import {
   RenderCellModifierName,
   RenderCellModifierCode,
@@ -231,6 +232,7 @@ export function ModifierListView() {
             <Button
               variant="contained"
               startIcon={<Iconify icon="mingcute:add-line" />}
+              component={RouterLink}
               href={paths.menu.modifiers.new}
               size="small"
             >
@@ -239,6 +241,7 @@ export function ModifierListView() {
           }
           emptyTitle={t('modifiers.noData', 'No modifiers found')}
           emptySubtitle={t('modifiers.noDataSubtitle', 'Try adjusting your search or filters')}
+          showTotals={false}
         />
       </DashboardContent>
 

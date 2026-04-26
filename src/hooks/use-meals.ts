@@ -66,6 +66,8 @@ export interface MealsFilters {
     category_id?: string;
     department_id?: string;
     storage_id?: string;
+    min_price?: string;
+    max_price?: string;
     limit?: number;
     offset?: number;
     expand?: string;
@@ -394,12 +396,13 @@ export function useGetMealsPage(filters?: MealsFilters) {
     if (filters?.category_id) params.category_id = filters.category_id;
     if (filters?.department_id) params.department_id = filters.department_id;
     if (filters?.storage_id) params.storage_id = filters.storage_id;
+    if (filters?.min_price) params.min_price = filters.min_price;
+    if (filters?.max_price) params.max_price = filters.max_price;
     if (filters?.sort_by) params.sort_by = filters.sort_by;
     if (filters?.sort_order) params.sort_order = filters.sort_order;
+    if (normalizedQuery) params.search = normalizedQuery;
 
-    const swrKey = normalizedQuery
-        ? [endpoints.meals.search, { params: { ...params, query: normalizedQuery } }]
-        : [endpoints.meals.list, { params }];
+    const swrKey = [endpoints.meals.list, { params }];
 
     const { data, isLoading, error, isValidating, mutate: mutateMeals } = useSWR<
         BackendResponse<IMealAPIResponse[]> | IMealAPIResponse[]

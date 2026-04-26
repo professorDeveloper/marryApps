@@ -1,6 +1,6 @@
 import { CONFIG } from 'src/global-config';
 
-import { JwtSignUpView } from 'src/auth/view/jwt';
+import { AuthVisualLayout, SignUpForm } from 'src/sections/auth/components';
 
 // ----------------------------------------------------------------------
 
@@ -11,7 +11,9 @@ export default function Page() {
     <>
       <title>{metadata.title}</title>
 
-      <JwtSignUpView />
+      <AuthVisualLayout>
+        <SignUpForm />
+      </AuthVisualLayout>
     </>
   );
 }

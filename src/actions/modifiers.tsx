@@ -1,5 +1,10 @@
 import type { SWRConfiguration } from 'swr';
-import type { IModifierItem, IModifierFormData } from 'src/types/modifiers';
+import type {
+  IModifierItem,
+  IModifierFormData,
+  IModifierRecipePayload,
+  IModifierWithCalculations,
+} from 'src/types/modifiers';
 
 import useSWR, { mutate } from 'swr';
 import { useMemo, useCallback } from 'react';
@@ -256,4 +261,95 @@ export function useDeleteModifier() {
   );
 
   return { deleteModifier };
+}
+
+// ============================================================================
+// MODIFIERS — RECIPE (with-calculations) HOOKS
+// ============================================================================
+
+/**
+ * Get modifier with embedded ingredient + compound calculations.
+ */
+export function useGetModifierWithCalculations(modifierId: string | undefined) {
+  const url = modifierId ? endpoints.modifier.withCalculations(modifierId) : '';
+
+  const { data, isLoading, error, isValidating, mutate: mutateModifier } = useSWR<
+    BackendResponse<IModifierWithCalculations> | IModifierWithCalculations
+  >(url || null, fetcher, { ...swrOptions });
+
+  const modifierWithCalculations = useMemo<IModifierWithCalculations | undefined>(() => {
+    if (!data) return undefined;
+    if ('id' in data && 'calculations' in data) {
+      return data as IModifierWithCalculations;
+    }
+    if ((data as BackendResponse<IModifierWithCalculations>)?.data) {
+      return (data as BackendResponse<IModifierWithCalculations>).data;
+    }
+    return undefined;
+  }, [data]);
+
+  return useMemo(
+    () => ({
+      modifierWithCalculations,
+      modifierWithCalculationsLoading: isLoading,
+      modifierWithCalculationsError: error,
+      modifierWithCalculationsValidating: isValidating,
+      mutateModifierWithCalculations: mutateModifier,
+    }),
+    [modifierWithCalculations, isLoading, error, isValidating, mutateModifier]
+  );
+}
+
+/**
+ * Create modifier + calculations atomically.
+ */
+export function useCreateModifierWithCalculations() {
+  const createModifierWithCalculations = useCallback(
+    async (payload: IModifierRecipePayload) => {
+      try {
+        const response = await poster<BackendResponse<IModifierWithCalculations>>(
+          endpoints.modifier.createWithCalculations,
+          payload
+        );
+
+        await mutate(endpoints.modifier.list);
+
+        return response?.data ?? response;
+      } catch (error) {
+        console.error('Failed to create modifier with calculations:', error);
+        throw error;
+      }
+    },
+    []
+  );
+
+  return { createModifierWithCalculations };
+}
+
+/**
+ * Update modifier + calculations atomically.
+ */
+export function useUpdateModifierWithCalculations() {
+  const updateModifierWithCalculations = useCallback(
+    async (modifierId: string, payload: IModifierRecipePayload) => {
+      try {
+        const response = await putter<BackendResponse<IModifierWithCalculations>>(
+          endpoints.modifier.updateWithCalculations(modifierId),
+          payload
+        );
+
+        await mutate(endpoints.modifier.list);
+        await mutate(endpoints.modifier.details(modifierId));
+        await mutate(endpoints.modifier.withCalculations(modifierId));
+
+        return response?.data ?? response;
+      } catch (error) {
+        console.error('Failed to update modifier with calculations:', error);
+        throw error;
+      }
+    },
+    []
+  );
+
+  return { updateModifierWithCalculations };
 }

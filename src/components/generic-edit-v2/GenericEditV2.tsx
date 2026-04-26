@@ -165,7 +165,8 @@ const ActionButtons = memo<ActionButtonsProps>(({
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mt: 3 }}>
             <LoadingButton
-                sx={{ backgroundColor: '#FB6633', color: '#FFFFFF' }}
+                variant="contained"
+                color="primary"
                 loading={loading}
                 onClick={onSubmit}
                 startIcon={<Iconify icon="solar:check-circle-bold" />}

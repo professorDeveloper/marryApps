@@ -21,7 +21,6 @@ export interface IGoodsReportsTotals {
 }
 
 export interface IGoodsReportsFilterParams {
-  // APIda required, lekin initial state uchun optional qoldirilgan.
   start_date?: string;
   end_date?: string;
   department_id?: string;
@@ -30,6 +29,9 @@ export interface IGoodsReportsFilterParams {
   waiter_id?: string;
   hall_id?: string;
   table_id?: string;
+  good_ids?: string[];
+  sort_by?: string;
+  sort_order?: string;
   limit?: number;
   offset?: number;
 }

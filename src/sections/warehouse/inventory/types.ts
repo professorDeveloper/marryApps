@@ -114,4 +114,5 @@ export type InventoryItemsSectionProps = {
     cancelDisabled: boolean;
     saveDisabled: boolean;
     isSaving: boolean;
+    metaFieldsOpen?: boolean;
 };

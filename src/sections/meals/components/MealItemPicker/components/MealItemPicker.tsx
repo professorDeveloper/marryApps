@@ -45,6 +45,8 @@ export interface MealItemPickerProps {
     showProfitMargin?: boolean;
     tableHeight?: string | number;
     cacheKey?: string;
+    onNavigateFocus?: (direction: 'up' | 'down' | 'left' | 'right', currentRowIndex: number, currentColumnKey: string) => void;
+    metaFieldsOpen?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -86,6 +88,8 @@ export const MealItemPicker = React.memo(function MealItemPicker({
     showProfitMargin = false,
     tableHeight = 700,
     cacheKey,
+    onNavigateFocus,
+    metaFieldsOpen,
 }: MealItemPickerProps) {
     const { t } = useTranslation('menu');
     // Only fetch meal items when this tab is visible to avoid unnecessary requests
@@ -464,11 +468,11 @@ export const MealItemPicker = React.memo(function MealItemPicker({
 
     // ── Render ──────────────────────────────────────────────────────────
     return (
-        <Stack spacing={2} sx={{ height: '100%' }}>
+        <Stack spacing={2} sx={{ height: '100%', fontFamily: '"Inter", sans-serif' }}>
             <Box
                 sx={{
                     display: 'grid',
-                    gridTemplateColumns: { xs: '1fr', md: '1fr 4fr' },
+                    gridTemplateColumns: { xs: '1fr', md: '1.5fr 4fr' },
                     gap: 2,
                     flex: 1,
                     minHeight: 0,
@@ -492,6 +496,7 @@ export const MealItemPicker = React.memo(function MealItemPicker({
                     ingredientLabel={ingredientLabel}
                     compoundLabel={compoundLabel}
                     tableHeight={tableHeight}
+                    metaFieldsOpen={metaFieldsOpen}
                 />
 
                 {/* ADDED TABLE */}
@@ -519,6 +524,8 @@ export const MealItemPicker = React.memo(function MealItemPicker({
                     menuPrice={menuPrice}
                     showProfitMargin={showProfitMargin}
                     tableHeight={tableHeight}
+                    onNavigateFocus={onNavigateFocus}
+                    metaFieldsOpen={metaFieldsOpen}
                 />
             </Box>
 

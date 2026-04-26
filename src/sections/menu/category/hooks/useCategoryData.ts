@@ -6,8 +6,9 @@ import { useMemo, useState, useCallback } from 'react';
 
 import { paths } from 'src/routes/paths';
 
-import { useGetStorages, useGetDepartments } from 'src/actions/departments';
 import { useDeleteCategory, useGetCategoriesPage } from 'src/actions/categories';
+import { useMetadata } from 'src/hooks/use-metadata';
+import { MetadataEntity } from 'src/types/metadata';
 
 /**
  * Hook for managing category data with filtering, pagination, and CRUD operations
@@ -30,27 +31,25 @@ export function useCategoryData() {
         sort_order: sortState.dir || undefined,
     });
     const { deleteCategory } = useDeleteCategory();
-    const { storages } = useGetStorages();
-    const { departments } = useGetDepartments();
+    const { data: metadata } = useMetadata([MetadataEntity.STORAGES, MetadataEntity.DEPARTMENTS]);
 
     // Extract total count from pagination
     const totalCount = pagination?.total || 0;
 
+    const storages = metadata.storages || [];
+    const departments = metadata.departments || [];
+
     // Enrich categories with storage and department names
     const enrichedCategories = useMemo(() => {
-        const departmentMap = new Map(departments?.map((dept: any) => [dept.id, 
-            { "deparment_id": dept.id, "department_name": dept.name,
-                "storage_id":dept._expand.storage_id.id, "storage_name":dept._expand.storage_id.name
-            
-             }
-        ]) || []);
+        const storageMap = new Map(storages?.map((storage: any) => [storage.id, storage.name]) || []);
+        const departmentMap = new Map(departments?.map((dept: any) => [dept.id, dept.name]) || []);
 
         return categories.map((category: ICategory) => ({
             ...category,
-            storage_name: departmentMap.get(category.department_id || '')?.storage_name || category.storage_name || '-',
-            department_name: departmentMap.get(category.department_id || '')?.department_name || category.department_name || '-',
+            storage_name: storageMap.get(category.storage_id) || category.storage_name || '-',
+            department_name: departmentMap.get(category.department_id) || category.department_name || '-',
         }));
-    }, [categories, departments]);
+    }, [categories, storages, departments]);
 
     // Handle search
     const handleSearch = useCallback((query: string) => {
@@ -120,8 +119,8 @@ export function useCategoryData() {
         categories: enrichedCategories,
         loading: categoriesLoading,
         totalCount,
-        storages: storages || [],
-        departments: departments || [],
+        storages,
+        departments,
         selectedCategory,
         goodsModalOpen,
         searchQuery,

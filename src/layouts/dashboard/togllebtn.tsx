@@ -4,7 +4,7 @@ import { Box } from '@mui/material';
 import WidgetsIcon from '@mui/icons-material/Widgets';
 import { styled, useTheme } from '@mui/material/styles';
 
-import Logo from 'src/components/logo/logo';
+import {Logo} from 'src/components/logo/logo';
 
 const AnimatedButtonContainer = styled(Box)(({ theme }) => ({
   position: 'relative',
@@ -201,7 +201,7 @@ export const AnimatedToggleButton = ({ onToggle }: { onToggle: () => void }) => 
             zIndex: 10,
           }}
         >
-          <Logo size={40} forceRestart={showLogo} />
+          <Logo size={40} forceRestart={showLogo} showLabel={false}/>
         </Box>
       )}
       

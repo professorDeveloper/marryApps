@@ -23,10 +23,16 @@ const buildQueryString = (params: IGoodsReportsFilterParams): string => {
   if (params.end_date) queryParams.append('end_date', params.end_date);
   if (params.department_id) queryParams.append('department_id', params.department_id);
   if (params.category_id) queryParams.append('category_id', params.category_id);
-  if (params.good_id) queryParams.append('good_id', params.good_id);
+  if (params.good_ids && params.good_ids.length > 0) {
+    queryParams.append('good_ids', params.good_ids.join(','));
+  } else if (params.good_id) {
+    queryParams.append('good_id', params.good_id);
+  }
   if (params.waiter_id) queryParams.append('waiter_id', params.waiter_id);
   if (params.hall_id) queryParams.append('hall_id', params.hall_id);
   if (params.table_id) queryParams.append('table_id', params.table_id);
+  if (params.sort_by) queryParams.append('sort_by', params.sort_by);
+  if (params.sort_order) queryParams.append('sort_order', params.sort_order);
 
   queryParams.append('limit', String(params.limit ?? 500));
   queryParams.append('offset', String(params.offset ?? 0));

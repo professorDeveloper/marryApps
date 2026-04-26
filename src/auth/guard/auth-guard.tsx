@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, startTransition } from 'react';
 
 import { paths } from 'src/routes/paths';
 import { useRouter, usePathname } from 'src/routes/hooks';
@@ -27,40 +27,28 @@ export function AuthGuard({ children }: AuthGuardProps) {
   const router = useRouter();
   const pathname = usePathname();
 
-  const { authenticated, loading } = useAuthContext();
-
-  const [isChecking, setIsChecking] = useState(true);
-
-  const createRedirectPath = (currentPath: string) => {
-    const queryString = new URLSearchParams({ returnTo: pathname }).toString();
-    return `${currentPath}?${queryString}`;
-  };
-
-  const checkPermissions = async (): Promise<void> => {
-    if (loading) {
-      return;
-    }
-
-    if (!authenticated) {
-      const { method } = CONFIG.auth;
-
-      const signInPath = signInPaths[method];
-      const redirectPath = createRedirectPath(signInPath);
-
-      router.replace(redirectPath);
-
-      return;
-    }
-
-    setIsChecking(false);
-  };
+  const { authenticated, hasBootstrapped } = useAuthContext();
 
   useEffect(() => {
-    checkPermissions();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authenticated, loading]);
+    if (!hasBootstrapped || authenticated) {
+      return;
+    }
 
-  if (isChecking) {
+    const { method } = CONFIG.auth;
+    const signInPath = signInPaths[method];
+    const queryString = new URLSearchParams({ returnTo: pathname }).toString();
+    const redirectPath = `${signInPath}?${queryString}`;
+
+    startTransition(() => {
+      router.replace(redirectPath);
+    });
+  }, [hasBootstrapped, authenticated, pathname, router]);
+
+  if (!hasBootstrapped) {
+    return <SplashScreen />;
+  }
+
+  if (!authenticated) {
     return <SplashScreen />;
   }
 

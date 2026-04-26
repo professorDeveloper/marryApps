@@ -62,13 +62,9 @@ export const SummaryPanel = React.memo<SummaryPanelProps>(
                         <Button
                             fullWidth
                             variant="contained"
+                            color="primary"
                             onClick={() => void onSave()}
                             disabled={saveDisabled}
-                            sx={{
-                                backgroundColor: '#FB6633',
-                                color: 'white',
-                                '&:hover': { backgroundColor: '#d9534f' },
-                            }}
                         >
                             {saveLabel ?? t('common.save', 'Save')}
                         </Button>
