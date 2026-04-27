@@ -56,9 +56,10 @@ func (h *Handler) Login(c echo.Context) error {
 	))
 }
 
-// LoginWithPincode handles POS staff login using brand_id + pos_password + pincode(for kitchen, terminals, cashiers)
+// LoginWithPincode handles POS staff login using brand_id + role password + pincode (for kitchen, terminals, cashiers).
+// The supplied password must match one of the configured role passwords (superadmin / admin / manager) for the brand.
 // @Summary POS staff login with pincode
-// @Description Authenticate POS staff using brand_id, pos_password, and pincode
+// @Description Authenticate POS staff using brand_id, a role password (superadmin/admin/manager), and pincode
 // @Tags auth
 // @Accept json
 // @Produce json
@@ -78,9 +79,14 @@ func (h *Handler) LoginWithPincode(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("brand_id is required", "see logs for details", http.StatusBadRequest))
 	}
 
-	if req.PosPassword == "" {
-		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("pos_password is required", "see logs for details", http.StatusBadRequest))
+	password := req.Password
+	if password == "" {
+		password = req.PosPassword
 	}
+	if password == "" {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("password is required (password, password_, or pos_password)", "see logs for details", http.StatusBadRequest))
+	}
+	req.Password = password
 
 	if req.Pincode == nil || *req.Pincode == "" {
 		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("pincode is required", "see logs for details", http.StatusBadRequest))

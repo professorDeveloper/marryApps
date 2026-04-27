@@ -1055,13 +1055,6 @@ type OutgoingInvoiceItem struct {
 	DeletedAt         *int64             `json:"deleted_at"`
 }
 
-type PosAuthSetting struct {
-	ID              int16     `json:"id"`
-	PosPasswordHash string    `json:"pos_password_hash"`
-	CreatedAt       time.Time `json:"created_at"`
-	UpdatedAt       time.Time `json:"updated_at"`
-}
-
 type PriceForPlan struct {
 	ID        uuid.UUID          `json:"id"`
 	Name      string             `json:"name"`

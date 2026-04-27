@@ -23,20 +23,22 @@ RETURNING *;
 
 -- name: UpdateUser :one
 UPDATE users SET
-    full_name = COALESCE($2, full_name),
-    username = COALESCE($3, username),
-    role = COALESCE($4, role),
-    email = COALESCE($5, email),
-    shift_id = COALESCE($6, shift_id),
-    pincode = COALESCE($7, pincode),
-    hash_password = COALESCE($8, hash_password),
-    brand_id = COALESCE($9, brand_id),
-    phone_number = COALESCE($10, phone_number),
-    is_active = COALESCE($11, is_active),
-    branch_id = COALESCE(
-        (SELECT branch_id FROM shifts WHERE id = COALESCE($6, shift_id)),
-        branch_id
-    )
+    full_name        = COALESCE($2, full_name),
+    username         = COALESCE($3, username),
+    role             = COALESCE($4, role),
+    email            = COALESCE($5, email),
+    shift_id         = COALESCE($6, shift_id),
+    pincode          = COALESCE($7, pincode),
+    hash_password    = COALESCE($8, hash_password),
+    brand_id         = COALESCE($9, brand_id),
+    phone_number     = COALESCE($10, phone_number),
+    is_active        = COALESCE(sqlc.narg('is_active'), is_active),
+    branch_id        = COALESCE(
+                          sqlc.narg('branch_id')::uuid,
+                          (SELECT branch_id FROM shifts WHERE id = COALESCE($6, shift_id)),
+                          branch_id
+                       ),
+    cash_register_id = COALESCE(sqlc.narg('cash_register_id')::uuid, cash_register_id)
 WHERE users.id = $1 AND deleted_at = 0
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 RETURNING *;

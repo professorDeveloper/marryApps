@@ -33,8 +33,6 @@ type AuthI interface {
 	DeleteUser(ctx context.Context, userID string) error
 	RestoreUser(ctx context.Context, userID string) error
 	SearchUsers(ctx context.Context, query string, limit, offset int32) ([]model.UserResponse, error)
-	UpdatePOSPassword(ctx context.Context, brandID, currentPassword, newPassword string) error
-	GetPOSPasswordStatus(ctx context.Context, brandID string) (bool, error)
 }
 
 type MinioI interface {
@@ -246,7 +244,7 @@ type CafeTableI interface {
 	GetAvailableTablesByHall(ctx context.Context, hallID string) ([]model.CafeTableResponse, error)
 	GetAvailableTablesByCapacity(ctx context.Context, capacity, limit, offset int32) ([]model.CafeTableResponse, error)
 	GetAvailableTablesByHallAndCapacity(ctx context.Context, hallID string, capacity int32) ([]model.CafeTableResponse, error)
-	UpdateCafeTable(ctx context.Context, tableID string, hallID *string, number *int32, capacity *int32, status *string, posX, posY *float64, width, height, rotation *int32, pricePerHour *string, tableType *string, shape *string) (*model.CafeTableResponse, error)
+	UpdateCafeTable(ctx context.Context, tableID string, hallID *string, number *int32, capacity *int32, status *string, posX, posY *float64, width, height, rotation *int32, pricePerHour *int64, tableType *string, shape *string) (*model.CafeTableResponse, error)
 	UpdateCafeTableStatus(ctx context.Context, tableID string, status string) (*model.CafeTableResponse, error)
 	SetTableFree(ctx context.Context, tableID string) (*model.CafeTableResponse, error)
 	SetTableBusy(ctx context.Context, tableID string) (*model.CafeTableResponse, error)

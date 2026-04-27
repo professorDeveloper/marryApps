@@ -43,8 +43,6 @@ func (h *Handler) Register(router *echo.Echo) {
 
 		settings := api.Group("/settings", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
 		{
-			settings.PUT("/pos-password", h.UpdatePOSPassword, mw.CheckLanguage(), mw.RequireRoles(mw.RolesAdminOnly...))
-			settings.GET("/pos-password/status", h.GetPOSPasswordStatus, mw.CheckLanguage(), mw.RequireRoles(mw.RolesAdminOnly...))
 			printerSettings := settings.Group("/printer-settings")
 			printerSettings.POST("", h.CreatePrinterSetting, mw.CheckLanguage(), mw.RequireRoles(mw.RolesAdminOnly...))
 			printerSettings.GET("", h.ListPrinterSettings, mw.CheckLanguage())

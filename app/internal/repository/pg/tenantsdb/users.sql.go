@@ -2244,37 +2244,41 @@ func (q *Queries) UpdateShift(ctx context.Context, arg UpdateShiftParams) (Shift
 
 const updateUser = `-- name: UpdateUser :one
 UPDATE users SET
-    full_name = COALESCE($2, full_name),
-    username = COALESCE($3, username),
-    role = COALESCE($4, role),
-    email = COALESCE($5, email),
-    shift_id = COALESCE($6, shift_id),
-    pincode = COALESCE($7, pincode),
-    hash_password = COALESCE($8, hash_password),
-    brand_id = COALESCE($9, brand_id),
-    phone_number = COALESCE($10, phone_number),
-    is_active = COALESCE($11, is_active),
-    branch_id = COALESCE(
-        (SELECT branch_id FROM shifts WHERE id = COALESCE($6, shift_id)),
-        branch_id
-    )
+    full_name        = COALESCE($2, full_name),
+    username         = COALESCE($3, username),
+    role             = COALESCE($4, role),
+    email            = COALESCE($5, email),
+    shift_id         = COALESCE($6, shift_id),
+    pincode          = COALESCE($7, pincode),
+    hash_password    = COALESCE($8, hash_password),
+    brand_id         = COALESCE($9, brand_id),
+    phone_number     = COALESCE($10, phone_number),
+    is_active        = COALESCE($11, is_active),
+    branch_id        = COALESCE(
+                          $12::uuid,
+                          (SELECT branch_id FROM shifts WHERE id = COALESCE($6, shift_id)),
+                          branch_id
+                       ),
+    cash_register_id = COALESCE($13::uuid, cash_register_id)
 WHERE users.id = $1 AND deleted_at = 0
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 RETURNING id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, branch_id, phone_number, fcm_token, is_active, created_at, updated_at, deleted_at, cash_register_id
 `
 
 type UpdateUserParams struct {
-	ID           uuid.UUID   `json:"id"`
-	FullName     *string     `json:"full_name"`
-	Username     *string     `json:"username"`
-	Role         string      `json:"role"`
-	Email        *string     `json:"email"`
-	ShiftID      pgtype.UUID `json:"shift_id"`
-	Pincode      *string     `json:"pincode"`
-	HashPassword *string     `json:"hash_password"`
-	BrandID      pgtype.UUID `json:"brand_id"`
-	PhoneNumber  *string     `json:"phone_number"`
-	IsActive     bool        `json:"is_active"`
+	ID             uuid.UUID   `json:"id"`
+	FullName       *string     `json:"full_name"`
+	Username       *string     `json:"username"`
+	Role           string      `json:"role"`
+	Email          *string     `json:"email"`
+	ShiftID        pgtype.UUID `json:"shift_id"`
+	Pincode        *string     `json:"pincode"`
+	HashPassword   *string     `json:"hash_password"`
+	BrandID        pgtype.UUID `json:"brand_id"`
+	PhoneNumber    *string     `json:"phone_number"`
+	IsActive       *bool       `json:"is_active"`
+	BranchID       pgtype.UUID `json:"branch_id"`
+	CashRegisterID pgtype.UUID `json:"cash_register_id"`
 }
 
 func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error) {
@@ -2290,6 +2294,8 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		arg.BrandID,
 		arg.PhoneNumber,
 		arg.IsActive,
+		arg.BranchID,
+		arg.CashRegisterID,
 	)
 	var i User
 	err := row.Scan(

@@ -513,7 +513,7 @@ func (s *CafeTableS) UpdateCafeTable(
 	status *string,
 	posX, posY *float64,
 	width, height, rotation *int32,
-	pricePerHour *string,
+	pricePerHour *int64,
 	tableType *string,
 	shape *string,
 ) (*model.CafeTableResponse, error) {
@@ -606,7 +606,7 @@ func (s *CafeTableS) UpdateCafeTable(
 
 	updatedPricePerHour := currentTable.PricePerHour
 	if pricePerHour != nil {
-		updatedPricePerHour = stringToNumeric(*pricePerHour)
+		updatedPricePerHour = intToNumeric(*pricePerHour)
 	}
 
 	updatedTableType := currentTable.TableType
