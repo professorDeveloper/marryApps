@@ -152,14 +152,23 @@ func calcAmount(totalSec int64, pricePerHour pgtype.Numeric) *string {
 }
 
 func toTableTimerResponse(ctxRow pg.OrderTimerContextRow, session *pg.TableTimeSessionRow, now time.Time) *model.TableTimerResponse {
+	return toTableTimerResponseWithHistory(ctxRow, session, now, nil)
+}
+
+func toTableTimerResponseWithHistory(ctxRow pg.OrderTimerContextRow, session *pg.TableTimeSessionRow, now time.Time, tableHistory []model.TableSegment) *model.TableTimerResponse {
 	resp := &model.TableTimerResponse{
-		OrderID:   ctxRow.OrderID.String(),
-		TableType: ctxRow.TableType,
-		State:     model.TableTimerStateNone,
+		OrderID:      ctxRow.OrderID.String(),
+		TableType:    ctxRow.TableType,
+		State:        model.TableTimerStateNone,
+		TableHistory: []model.TableSegment{},
 	}
+
 	if ctxRow.TableID.Valid {
-		resp.TableID = uuid.UUID(ctxRow.TableID.Bytes).String()
+		tableID := uuid.UUID(ctxRow.TableID.Bytes).String()
+		resp.TableID = tableID
+		resp.CurrentTableID = tableID
 	}
+
 	if ctxRow.PricePerHour.Valid {
 		v := numericToStr(ctxRow.PricePerHour)
 		resp.PricePerHour = &v
@@ -169,23 +178,32 @@ func toTableTimerResponse(ctxRow pg.OrderTimerContextRow, session *pg.TableTimeS
 		return resp
 	}
 
+	resp.SessionID = session.ID.String()
+	resp.TableID = session.TableID.String()
+	resp.CurrentTableID = session.TableID.String()
+
 	resp.State = model.TableTimerState(session.State)
 	resp.StartedAt = &session.StartedAt
+
 	if session.ActiveStartedAt.Valid {
 		t := session.ActiveStartedAt.Time
 		resp.ActiveStartedAt = &t
 	}
+
 	if session.EndedAt.Valid {
 		t := session.EndedAt.Time
 		resp.EndedAt = &t
 	}
+
 	resp.AccumulatedActiveSec = session.AccumulatedActiveSec
 	resp.TotalActiveSec = calcTotalActiveSec(*session, now)
 	resp.CurrentActiveSec = resp.TotalActiveSec - resp.AccumulatedActiveSec
 	if resp.CurrentActiveSec < 0 {
 		resp.CurrentActiveSec = 0
 	}
+
 	resp.CurrentAmount = calcAmount(resp.TotalActiveSec, ctxRow.PricePerHour)
+
 	if session.FinalAmount.Valid {
 		v := numericToStr(session.FinalAmount)
 		resp.FinalAmount = &v
@@ -194,7 +212,189 @@ func toTableTimerResponse(ctxRow pg.OrderTimerContextRow, session *pg.TableTimeS
 	resp.IsRunning = session.State == string(model.TableTimerStateRunning)
 	resp.IsPaused = session.State == string(model.TableTimerStatePaused)
 	resp.IsClosed = session.State == string(model.TableTimerStateClosed)
+
+	if tableHistory != nil {
+		resp.TableHistory = tableHistory
+	}
+
 	return resp
+}
+
+func maxTime(a, b time.Time) time.Time {
+	if a.After(b) {
+		return a
+	}
+	return b
+}
+
+func minTime(a, b time.Time) time.Time {
+	if a.Before(b) {
+		return a
+	}
+	return b
+}
+
+func derivePauseIntervalsFromEventRows(
+	events []pg.ListTableTimeEventsBySessionIDRow,
+	segmentStart time.Time,
+	segmentEnd time.Time,
+) []model.PauseInterval {
+	if !segmentEnd.After(segmentStart) {
+		return []model.PauseInterval{}
+	}
+
+	var intervals []model.PauseInterval
+
+	var pauseID string
+	var pauseStart *time.Time
+
+	for _, event := range events {
+		switch event.EventType {
+		case "paused":
+			if pauseStart == nil {
+				t := event.CreatedAt
+				pauseStart = &t
+				pauseID = event.ID.String()
+			}
+
+		case "resumed":
+			if pauseStart == nil {
+				continue
+			}
+
+			start := maxTime(*pauseStart, segmentStart)
+			end := minTime(event.CreatedAt, segmentEnd)
+
+			if end.After(start) {
+				resumedAt := event.CreatedAt
+				intervals = append(intervals, model.PauseInterval{
+					ID:        pauseID,
+					PausedAt:  start,
+					ResumedAt: &resumedAt,
+					Seconds:   end.Unix() - start.Unix(),
+				})
+			}
+
+			pauseStart = nil
+			pauseID = ""
+		}
+	}
+
+	if pauseStart != nil {
+		start := maxTime(*pauseStart, segmentStart)
+		end := segmentEnd
+
+		if end.After(start) {
+			intervals = append(intervals, model.PauseInterval{
+				ID:        pauseID,
+				PausedAt:  start,
+				ResumedAt: nil,
+				Seconds:   end.Unix() - start.Unix(),
+			})
+		}
+	}
+
+	return intervals
+}
+
+func sumPauseIntervalSeconds(intervals []model.PauseInterval) int64 {
+	var total int64
+	for _, interval := range intervals {
+		if interval.Seconds > 0 {
+			total += interval.Seconds
+		}
+	}
+	return total
+}
+
+func (s *TableTimerS) calculatePausedSecondsFromEvents(
+	ctx context.Context,
+	q *pg.Queries,
+	sessionID uuid.UUID,
+	segmentStart time.Time,
+	segmentEnd time.Time,
+) (int64, error) {
+	events, err := q.ListTableTimeEventsBySessionID(ctx, sessionID)
+	if err != nil {
+		return 0, fmt.Errorf("failed to list timer events: %w", err)
+	}
+
+	intervals := derivePauseIntervalsFromEventRows(events, segmentStart, segmentEnd)
+	return sumPauseIntervalSeconds(intervals), nil
+}
+
+func buildTableHistory(ctx context.Context, q *pg.Queries, sessionID uuid.UUID, now time.Time) ([]model.TableSegment, error) {
+	segments, err := q.ListSegmentsBySessionID(ctx, sessionID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list session segments: %w", err)
+	}
+
+	if len(segments) == 0 {
+		return []model.TableSegment{}, nil
+	}
+
+	events, err := q.ListTableTimeEventsBySessionID(ctx, sessionID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list timer events: %w", err)
+	}
+
+	history := make([]model.TableSegment, 0, len(segments))
+
+	for _, seg := range segments {
+		effectiveEnd := now
+		var leftAt *time.Time
+
+		if seg.EndedAt.Valid {
+			effectiveEnd = seg.EndedAt.Time
+			t := seg.EndedAt.Time
+			leftAt = &t
+		}
+
+		pauseIntervals := derivePauseIntervalsFromEventRows(events, seg.StartedAt, effectiveEnd)
+		if pauseIntervals == nil {
+			pauseIntervals = []model.PauseInterval{}
+		}
+		activeSeconds := seg.ActiveSeconds
+		pausedSeconds := seg.PausedSeconds
+
+		if !seg.EndedAt.Valid {
+			pausedSeconds = sumPauseIntervalSeconds(pauseIntervals)
+
+			duration := effectiveEnd.Unix() - seg.StartedAt.Unix()
+			activeSeconds = duration - pausedSeconds
+			if activeSeconds < 0 {
+				activeSeconds = 0
+			}
+		}
+
+		var movedFromTableID *string
+		if seg.MovedFromTableID.Valid {
+			v := uuid.UUID(seg.MovedFromTableID.Bytes).String()
+			movedFromTableID = &v
+		}
+
+		var movedToTableID *string
+		if seg.MovedToTableID.Valid {
+			v := uuid.UUID(seg.MovedToTableID.Bytes).String()
+			movedToTableID = &v
+		}
+
+		history = append(history, model.TableSegment{
+			SegmentID:        seg.ID.String(),
+			TableID:          seg.TableID.String(),
+			EnteredAt:        seg.StartedAt,
+			LeftAt:           leftAt,
+			ActiveSeconds:    activeSeconds,
+			PausedSeconds:    pausedSeconds,
+			MoveInReason:     seg.MoveInReason,
+			MoveOutReason:    seg.MoveOutReason,
+			MovedFromTableID: movedFromTableID,
+			MovedToTableID:   movedToTableID,
+			PauseIntervals:   pauseIntervals,
+		})
+	}
+
+	return history, nil
 }
 
 func (s *TableTimerS) StartTableTimerIfNeeded(ctx context.Context, orderID string, actorUserID string, actorRole string) (*model.TableTimerResponse, error) {
@@ -271,6 +471,23 @@ func (s *TableTimerS) StartTableTimerIfNeeded(ctx context.Context, orderID strin
 		return nil, fmt.Errorf("failed to create timer session: %w", err)
 	}
 
+	// Create initial segment for the session
+	_, err = q.CreateTableTimeSessionSegment(txCtx, pg.CreateTableTimeSessionSegmentParams{
+		ID:               uuid.New(),
+		SessionID:        session.ID,
+		OrderID:          session.OrderID,
+		TableID:          session.TableID,
+		StartedAt:        now,
+		MoveInReason:     "start",
+		MovedFromTableID: pgtype.UUID{Valid: false},
+	})
+	if err != nil {
+		if ownsTx {
+			tx.Rollback(ctx)
+		}
+		return nil, fmt.Errorf("failed to create initial session segment: %w", err)
+	}
+
 	if err := q.CreateTableTimeEvent(txCtx, pg.CreateTableTimeEventParams{
 		ID:          uuid.New(),
 		SessionID:   session.ID,
@@ -308,10 +525,17 @@ func (s *TableTimerS) GetTableTimerState(ctx context.Context, orderID string) (*
 
 	var session *pg.TableTimeSessionRow
 	var sessionErr error
+	var tableHistory []model.TableSegment
 	err = withTenantRead(ctx, s.repo, func(tenantCtx context.Context, q *pg.Queries) error {
 		s, err := q.GetOpenTableTimeSessionByOrderID(tenantCtx, oID)
 		if err == nil {
 			session = &s
+			// Build table history for the session
+			history, err := buildTableHistory(tenantCtx, q, session.ID, time.Now())
+			if err != nil {
+				return fmt.Errorf("failed to build table history: %w", err)
+			}
+			tableHistory = history
 			return nil
 		}
 		if err != pgx.ErrNoRows {
@@ -323,6 +547,12 @@ func (s *TableTimerS) GetTableTimerState(ctx context.Context, orderID string) (*
 		openByTable, err := q.GetOpenTableTimeSessionByTableID(tenantCtx, uuid.UUID(ctxRow.TableID.Bytes))
 		if err == nil {
 			session = &openByTable
+			// Build table history for the session
+			history, err := buildTableHistory(tenantCtx, q, session.ID, time.Now())
+			if err != nil {
+				return fmt.Errorf("failed to build table history: %w", err)
+			}
+			tableHistory = history
 			return nil
 		}
 		if err != pgx.ErrNoRows {
@@ -339,7 +569,7 @@ func (s *TableTimerS) GetTableTimerState(ctx context.Context, orderID string) (*
 	}
 
 	// No session exists, return empty state
-	return toTableTimerResponse(ctxRow, session, time.Now()), nil
+	return toTableTimerResponseWithHistory(ctxRow, session, time.Now(), tableHistory), nil
 }
 
 func (s *TableTimerS) PauseTableTimer(ctx context.Context, orderID string, actorUserID string, actorRole string) (*model.TableTimerResponse, error) {
@@ -460,6 +690,7 @@ func (s *TableTimerS) ResumeTableTimer(ctx context.Context, orderID string, acto
 	}
 
 	now := time.Now()
+
 	updated, err := q.UpdateTableTimeSessionResume(txCtx, pg.UpdateTableTimeSessionResumeParams{
 		ID:              session.ID,
 		ActiveStartedAt: pgtype.Timestamptz{Time: now, Valid: true},
@@ -535,6 +766,43 @@ func (s *TableTimerS) CloseTableTimer(ctx context.Context, orderID string, actor
 	now := time.Now()
 	total := calcTotalActiveSec(session, now)
 
+	// Get active segment to close it
+	activeSegment, err := q.GetActiveSegmentBySessionID(txCtx, session.ID)
+	if err == nil {
+		// Calculate paused seconds from pause/resume events in segment time range
+		pausedSeconds, err := s.calculatePausedSecondsFromEvents(txCtx, q, session.ID, activeSegment.StartedAt, now)
+		if err != nil {
+			if ownsTx {
+				tx.Rollback(ctx)
+			}
+			return nil, fmt.Errorf("failed to calculate paused seconds from events: %w", err)
+		}
+
+		// Calculate active seconds for the segment
+		segmentDuration := now.Unix() - activeSegment.StartedAt.Unix()
+		activeSeconds := segmentDuration - pausedSeconds
+		if activeSeconds < 0 {
+			activeSeconds = 0
+		}
+
+		// Close the segment
+		_, err = q.UpdateTableTimeSessionSegmentClose(txCtx, pg.UpdateTableTimeSessionSegmentCloseParams{
+			ID:             activeSegment.ID,
+			EndedAt:        pgtype.Timestamptz{Time: now, Valid: true},
+			ActiveSeconds:  activeSeconds,
+			PausedSeconds:  pausedSeconds,
+			MoveOutReason:  "close",
+			MovedToTableID: pgtype.UUID{Valid: false},
+		})
+		if err != nil {
+			if ownsTx {
+				tx.Rollback(ctx)
+			}
+			return nil, fmt.Errorf("failed to close segment: %w", err)
+		}
+	}
+	// If no segment exists (backward compatibility), just close the session
+
 	finalAmount := pgtype.Numeric{}
 	if amount := calcAmount(total, ctxRow.PricePerHour); amount != nil {
 		_ = finalAmount.Scan(*amount)
@@ -576,6 +844,162 @@ func (s *TableTimerS) CloseTableTimer(ctx context.Context, orderID string, actor
 	}
 
 	return toTableTimerResponse(ctxRow, &updated, now), nil
+}
+
+func (s *TableTimerS) TransferTableTimer(ctx context.Context, sessionID string, toTableID string, reason string, actorUserID string, actorRole string) (*model.TableTimerResponse, error) {
+	sID, err := uuid.Parse(sessionID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid session id: %w", err)
+	}
+
+	tID, err := uuid.Parse(toTableID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid target table id: %w", err)
+	}
+
+	actorUUID, err := parseActorUUID(actorUserID)
+	if err != nil {
+		return nil, err
+	}
+
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	session, err := q.GetOpenTableTimeSessionByIDForUpdate(txCtx, sID)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, fmt.Errorf("active timer session not found")
+		}
+		return nil, fmt.Errorf("failed to lock timer session: %w", err)
+	}
+
+	if session.State != string(model.TableTimerStateRunning) {
+		return nil, fmt.Errorf("session must be running to transfer")
+	}
+
+	activeSegment, err := q.GetActiveSegmentBySessionID(txCtx, session.ID)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, fmt.Errorf("active segment not found")
+		}
+		return nil, fmt.Errorf("failed to lock active segment: %w", err)
+	}
+
+	oldTableID := activeSegment.TableID
+
+	if oldTableID == tID {
+		return nil, fmt.Errorf("target table is the same as current table")
+	}
+
+	targetTable, err := q.GetCafeTableByID(txCtx, tID)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, fmt.Errorf("target table not found")
+		}
+		return nil, fmt.Errorf("failed to get target table: %w", err)
+	}
+
+	if targetTable.TableType != string(model.TableTypeTimeBased) {
+		return nil, fmt.Errorf("target table must be time_based")
+	}
+
+	if string(targetTable.Status) != "free" {
+		return nil, fmt.Errorf("target table is already busy")
+	}
+
+	targetBusySession, err := q.GetOpenTableTimeSessionByTableID(txCtx, tID)
+	if err == nil && targetBusySession.ID != session.ID {
+		return nil, fmt.Errorf("target table is already busy")
+	}
+	if err != nil && err != pgx.ErrNoRows {
+		return nil, fmt.Errorf("failed to check target table session: %w", err)
+	}
+
+	now := time.Now()
+
+	pausedSeconds, err := s.calculatePausedSecondsFromEvents(txCtx, q, session.ID, activeSegment.StartedAt, now)
+	if err != nil {
+		return nil, fmt.Errorf("failed to calculate paused seconds: %w", err)
+	}
+
+	segmentDuration := now.Unix() - activeSegment.StartedAt.Unix()
+	activeSeconds := segmentDuration - pausedSeconds
+	if activeSeconds < 0 {
+		activeSeconds = 0
+	}
+
+	_, err = q.UpdateTableTimeSessionSegmentClose(txCtx, pg.UpdateTableTimeSessionSegmentCloseParams{
+		ID:             activeSegment.ID,
+		EndedAt:        pgtype.Timestamptz{Time: now, Valid: true},
+		ActiveSeconds:  activeSeconds,
+		PausedSeconds:  pausedSeconds,
+		MoveOutReason:  "transfer",
+		MovedToTableID: pgtype.UUID{Bytes: tID, Valid: true},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to close current segment: %w", err)
+	}
+
+	_, err = q.CreateTableTimeSessionSegment(txCtx, pg.CreateTableTimeSessionSegmentParams{
+		ID:               uuid.New(),
+		SessionID:        session.ID,
+		OrderID:          session.OrderID,
+		TableID:          tID,
+		StartedAt:        now,
+		MoveInReason:     "transfer",
+		MovedFromTableID: pgtype.UUID{Bytes: oldTableID, Valid: true},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create new segment: %w", err)
+	}
+
+	updatedSession, err := q.UpdateTableTimeSessionTableIDForTransfer(txCtx, pg.UpdateTableTimeSessionTableIDForTransferParams{
+		ID:        session.ID,
+		TableID:   tID,
+		UpdatedBy: actorUUID,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to update session table_id: %w", err)
+	}
+
+	if _, err := q.UpdateOrderTableIDForTimerTransfer(txCtx, session.OrderID, tID); err != nil {
+		return nil, fmt.Errorf("failed to update order table_id: %w", err)
+	}
+
+	if _, err := q.SetTableFree(txCtx, oldTableID); err != nil {
+		return nil, fmt.Errorf("failed to set old table free: %w", err)
+	}
+
+	if _, err := q.SetTableBusy(txCtx, tID); err != nil {
+		return nil, fmt.Errorf("failed to set new table busy: %w", err)
+	}
+
+	ctxRow, err := q.GetOrderTimerContext(txCtx, updatedSession.OrderID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get updated timer context: %w", err)
+	}
+
+	tableHistory, err := buildTableHistory(txCtx, q, updatedSession.ID, now)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build table history: %w", err)
+	}
+
+	resp := toTableTimerResponseWithHistory(ctxRow, &updatedSession, now, tableHistory)
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
+	_ = reason
+
+	return resp, nil
 }
 
 func (s *TableTimerS) GetTableTimerByTableID(ctx context.Context, tableID string) (*model.TableTimerResponse, error) {

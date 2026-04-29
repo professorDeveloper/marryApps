@@ -247,13 +247,11 @@ func (s *AuthS) Register(ctx context.Context, req model.RegisterRequest) error {
 	log.Printf("Starting registration for phone: %s", req.PhoneNumber)
 
 	role := strings.TrimSpace(strings.ToLower(req.Role))
-	if role != "superadmin" {
-		if req.BrandID == nil || strings.TrimSpace(*req.BrandID) == "" {
-			return fmt.Errorf("brand_id is required for non-superadmin users")
-		}
-		if req.BranchID == nil || strings.TrimSpace(*req.BranchID) == "" {
-			return fmt.Errorf("branch_id is required for non-superadmin users")
-		}
+	if req.BrandID == nil || strings.TrimSpace(*req.BrandID) == "" {
+		return fmt.Errorf("brand_id is required")
+	}
+	if req.BranchID == nil || strings.TrimSpace(*req.BranchID) == "" {
+		return fmt.Errorf("branch_id is required")
 	}
 
 	var tenantBrandUUID uuid.UUID
@@ -261,106 +259,74 @@ func (s *AuthS) Register(ctx context.Context, req model.RegisterRequest) error {
 	var brandIDSlug string
 	var branchUUID pgtype.UUID
 
-	if role != "superadmin" {
-		branchStr := strings.TrimSpace(*req.BranchID)
-		bID, err := uuid.Parse(branchStr)
-		if err != nil {
-			return fmt.Errorf("invalid branch_id: %w", err)
-		}
-		branchUUID = pgtype.UUID{Bytes: bID, Valid: true}
+	branchStr := strings.TrimSpace(*req.BranchID)
+	bID, err := uuid.Parse(branchStr)
+	if err != nil {
+		return fmt.Errorf("invalid branch_id: %w", err)
+	}
+	branchUUID = pgtype.UUID{Bytes: bID, Valid: true}
+
+	brandIDSlug = strings.TrimSpace(*req.BrandID)
+	tenantResolver = NewTenantResolver(s.repo)
+	tenantCfg, err := tenantResolver.ResolveTenantByBrandID(ctx, brandIDSlug)
+	if err != nil {
+		return fmt.Errorf("failed to resolve tenant: %w", err)
+	}
+	tenantBrandUUID = tenantCfg.BrandUUID
+
+	schemaName := fmt.Sprintf("tenant_%s", brandIDSlug)
+	log.Printf("Setting schema to: %s for user registration", schemaName)
+
+	tx, err := s.repo.PgRepo.TenantPool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
 
-	if role != "superadmin" {
-		brandIDSlug = strings.TrimSpace(*req.BrandID)
-		tenantResolver = NewTenantResolver(s.repo)
-		tenantCfg, err := tenantResolver.ResolveTenantByBrandID(ctx, brandIDSlug)
-		if err != nil {
-			return fmt.Errorf("failed to resolve tenant: %w", err)
-		}
-		tenantBrandUUID = tenantCfg.BrandUUID
-
-		schemaName := fmt.Sprintf("tenant_%s", brandIDSlug)
-		log.Printf("Setting schema to: %s for user registration", schemaName)
-
-		tx, err := s.repo.PgRepo.TenantPool.Begin(ctx)
-		if err != nil {
-			return fmt.Errorf("failed to begin transaction: %w", err)
-		}
-
-		if _, err := tx.Exec(ctx, fmt.Sprintf("SET LOCAL search_path TO \"%s\", public", schemaName)); err != nil {
-			tx.Rollback(ctx)
-			return fmt.Errorf("failed to set schema: %w", err)
-		}
-
-		var existingID string
-		checkPhoneErr := tx.QueryRow(ctx,
-			"SELECT id FROM users WHERE phone_number = $1 AND deleted_at = 0 LIMIT 1",
-			&req.PhoneNumber).Scan(&existingID)
-
-		if branchUUID.Valid {
-			var branchID string
-			checkBranchErr := tx.QueryRow(ctx,
-				"SELECT id FROM branches WHERE id = $1 AND deleted_at = 0 LIMIT 1",
-				branchUUID).Scan(&branchID)
-			if checkBranchErr != nil {
-				tx.Rollback(ctx)
-				log.Printf("  ⚠️  Branch validation failed: branch_id=%s, schema=%s, error=%v", branchUUID.String(), schemaName, checkBranchErr)
-				return fmt.Errorf("invalid branch_id: branch not found in schema")
-			}
-			log.Printf("  ✓ Branch validated: %s", branchID)
-		}
-
+	if _, err := tx.Exec(ctx, fmt.Sprintf("SET LOCAL search_path TO \"%s\", public", schemaName)); err != nil {
 		tx.Rollback(ctx)
-
-		if checkPhoneErr == nil {
-			return fmt.Errorf("user with this phone number already exists")
-		}
-		if !errors.Is(checkPhoneErr, pgx.ErrNoRows) {
-			return fmt.Errorf("failed to check user existence: %w", checkPhoneErr)
-		}
-	} else {
-		_, err := s.repo.Tenant(ctx).GetUserByPhoneNumber(ctx, &req.PhoneNumber)
-		if err == nil {
-			return fmt.Errorf("user with this phone number already exists")
-		}
-		if !errors.Is(err, pgx.ErrNoRows) {
-			return fmt.Errorf("failed to check user existence: %w", err)
-		}
-	}
-	validRoles := map[string]string{
-		"admin":      "admin",
-		"user":       "user",
-		"cashier":    "cashier",
-		"superadmin": "superadmin",
-		"kitchen":    "kitchen",
-		"waiter":     "waiter",
-		"manager":    "manager",
+		return fmt.Errorf("failed to set schema: %w", err)
 	}
 
-	userRole, validRole := validRoles[role]
+	var existingID string
+	checkPhoneErr := tx.QueryRow(ctx,
+		"SELECT id FROM users WHERE phone_number = $1 AND deleted_at = 0 LIMIT 1",
+		&req.PhoneNumber).Scan(&existingID)
+
+	if branchUUID.Valid {
+		var branchID string
+		checkBranchErr := tx.QueryRow(ctx,
+			"SELECT id FROM branches WHERE id = $1 AND deleted_at = 0 LIMIT 1",
+			branchUUID).Scan(&branchID)
+		if checkBranchErr != nil {
+			tx.Rollback(ctx)
+			log.Printf("  ⚠️  Branch validation failed: branch_id=%s, schema=%s, error=%v", branchUUID.String(), schemaName, checkBranchErr)
+			return fmt.Errorf("invalid branch_id: branch not found in schema")
+		}
+		log.Printf("  ✓ Branch validated: %s", branchID)
+	}
+
+	tx.Rollback(ctx)
+
+	if checkPhoneErr == nil {
+		return fmt.Errorf("user with this phone number already exists")
+	}
+	if !errors.Is(checkPhoneErr, pgx.ErrNoRows) {
+		return fmt.Errorf("failed to check user existence: %w", checkPhoneErr)
+	}
+	// Public register endpoint only allows 'user' role for security.
+	// Staff roles (admin, manager, cashier, kitchen, waiter) must be created by admin via internal user management.
+	publicRegisterRoles := map[string]string{
+		"user": "user",
+	}
+
+	userRole, validRole := publicRegisterRoles[role]
 	if !validRole {
-		userRole = "user"
-		log.Printf("Using default role: %s", userRole)
+		return fmt.Errorf("invalid role for public registration. Only 'user' role is allowed via public endpoint. Staff roles must be created by admin")
 	}
+	log.Printf("Public registration with role: %s", userRole)
 
-	// role bo‘yicha credential policy
-	switch userRole {
-	case "superadmin":
-		if strings.TrimSpace(req.Password) == "" {
-			return fmt.Errorf("password is required for role %s", userRole)
-		}
-
-	case "admin", "manager":
-		if strings.TrimSpace(req.Password) == "" && strings.TrimSpace(req.Pincode) == "" {
-			return fmt.Errorf("password or pincode is required for role %s", userRole)
-		}
-
-	case "cashier", "waiter", "kitchen":
-		if strings.TrimSpace(req.Pincode) == "" {
-			return fmt.Errorf("pincode is required for role %s", userRole)
-		}
-	}
-
+	// For public 'user' registration, password is optional (can be set later)
+	// Pincode is not used for regular users
 	var hashPassword *string
 	if strings.TrimSpace(req.Password) != "" {
 		h, err := utils.HashPassword(req.Password)
@@ -375,30 +341,22 @@ func (s *AuthS) Register(ctx context.Context, req model.RegisterRequest) error {
 	if username == "" {
 		username = strings.TrimSpace(req.PhoneNumber)
 	}
-	pincode := strings.TrimSpace(req.Pincode)
-	var pincodePtr *string
-	if pincode != "" {
-		pincodePtr = &pincode
-	}
+
+	// Public users don't use pincode - only staff roles (created by admin) use pincode
+	// Ignore pincode from request body for security
+	var pincodePtr *string // nil for public users
 
 	brandID := pgtype.UUID{}
 
-	if role == "superadmin" {
-		log.Printf("User is superadmin, no brand_id required")
-	} else if brandIDSlug != "" && tenantBrandUUID != uuid.Nil {
+	// Public register is always tenant-scoped (user role)
+	if brandIDSlug != "" && tenantBrandUUID != uuid.Nil {
 		brandID = pgtype.UUID{Bytes: tenantBrandUUID, Valid: true}
 		log.Printf("User will be created with brand_id: %s", tenantBrandUUID.String())
 	}
 
-	cashRegUUID := pgtype.UUID{}
-	if req.CashRegisterID != nil && *req.CashRegisterID != "" {
-		if id, err := uuid.Parse(*req.CashRegisterID); err == nil {
-			cashRegUUID = pgtype.UUID{Bytes: id, Valid: true}
-		}
-	}
-	if role == "cashier" && !cashRegUUID.Valid {
-		return fmt.Errorf("cash_register_id is required for cashier role")
-	}
+	// Public users don't use cash register - only staff roles (created by admin) use cash register
+	// Ignore cash_register_id from request body for security
+	var cashRegUUID pgtype.UUID // nil for public users
 
 	userParams := pg.CreateUserParams{
 		ID:             uuid.New(),
@@ -415,48 +373,22 @@ func (s *AuthS) Register(ctx context.Context, req model.RegisterRequest) error {
 		CashRegisterID: cashRegUUID,
 	}
 
-	if role != "superadmin" && brandIDSlug != "" {
-		schemaName := fmt.Sprintf("tenant_%s", brandIDSlug)
-		tx, err := s.repo.PgRepo.TenantPool.Begin(ctx)
-		if err != nil {
-			return fmt.Errorf("failed to begin transaction: %w", err)
-		}
-
-		if _, err := tx.Exec(ctx, fmt.Sprintf("SET LOCAL search_path TO \"%s\", public", schemaName)); err != nil {
-			tx.Rollback(ctx)
-			return fmt.Errorf("failed to set schema: %w", err)
-		}
-
-		q := s.repo.Tenant(ctx).WithTx(tx)
-		user, err := q.CreateUser(ctx, userParams)
-		if err != nil {
-			log.Printf("Error creating user in schema %s: %v", schemaName, err)
-			tx.Rollback(ctx)
-			if pqErr, ok := err.(interface {
-				Get(k string) (interface{}, bool)
-			}); ok {
-				if constraint, ok := pqErr.Get("constraint"); ok {
-					log.Printf("Database constraint violation: %v", constraint)
-				}
-				if detail, ok := pqErr.Get("detail"); ok {
-					log.Printf("Error details: %v", detail)
-				}
-			}
-			return fmt.Errorf("failed to create user: %w", err)
-		}
-
-		if err := tx.Commit(ctx); err != nil {
-			log.Printf("Failed to commit transaction: %v", err)
-			return fmt.Errorf("failed to commit transaction: %w", err)
-		}
-
-		log.Printf("Successfully created user with ID: %s in schema: %s", user.ID.String(), schemaName)
-		return nil
+	// Public register always goes to tenant schema
+	tx, err = s.repo.PgRepo.TenantPool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
 
-	user, err := s.repo.Tenant(ctx).CreateUser(ctx, userParams)
+	if _, err := tx.Exec(ctx, fmt.Sprintf("SET LOCAL search_path TO \"%s\", public", schemaName)); err != nil {
+		tx.Rollback(ctx)
+		return fmt.Errorf("failed to set schema: %w", err)
+	}
+
+	q := pg.New(tx)
+	user, err := q.CreateUser(ctx, userParams)
 	if err != nil {
-		log.Printf("Error creating user: %v", err)
+		log.Printf("Error creating user in schema %s: %v", schemaName, err)
+		tx.Rollback(ctx)
 		if pqErr, ok := err.(interface {
 			Get(k string) (interface{}, bool)
 		}); ok {
@@ -470,7 +402,12 @@ func (s *AuthS) Register(ctx context.Context, req model.RegisterRequest) error {
 		return fmt.Errorf("failed to create user: %w", err)
 	}
 
-	log.Printf("Successfully created user with ID: %s", user.ID.String())
+	if err := tx.Commit(ctx); err != nil {
+		log.Printf("Failed to commit transaction: %v", err)
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	log.Printf("Successfully created user with ID: %s in schema: %s", user.ID.String(), schemaName)
 	return nil
 }
 
@@ -501,7 +438,7 @@ func (s *AuthS) Login(ctx context.Context, req model.LoginRequest, jwtCfg *confi
 		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
 	}
 
-	q := s.repo.Tenant(ctx).WithTx(tx)
+	q := pg.New(tx)
 
 	user, err := q.GetUserByUsername(ctx, &username)
 	if err != nil {
@@ -571,7 +508,7 @@ func (s *AuthS) LoginWithPincode(ctx context.Context, req model.PincodeLoginRequ
 		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
 	}
 
-	q := s.repo.Tenant(ctx).WithTx(tx)
+	q := pg.New(tx)
 
 	ok, err := s.verifyRolePassword(ctx, tx, password)
 	if err != nil {
@@ -799,7 +736,7 @@ func (s *AuthS) Refresh(ctx context.Context, req model.RefreshRequest, jwtCfg *c
 		}
 	}
 
-	q := s.repo.Tenant(ctx).WithTx(tx)
+	q := pg.New(tx)
 
 	user, gErr := q.GetUserByID(ctx, claims.UserID)
 	if gErr != nil {
@@ -1344,4 +1281,3 @@ func (s *AuthS) SearchUsers(ctx context.Context, query string, limit, offset int
 	}
 	return responses, nil
 }
-

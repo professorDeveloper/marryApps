@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"gitlab.yurtal.tech/company/maryai/back/internal/model"
 	"gitlab.yurtal.tech/company/maryai/back/internal/repository"
@@ -18,6 +19,26 @@ type CashRegisterShiftS struct {
 
 func NewCashRegisterShiftS(repo *repository.Repository) *CashRegisterShiftS {
 	return &CashRegisterShiftS{repo: repo}
+}
+
+func (s *CashRegisterShiftS) getTenantMutationQueries(ctx context.Context) (*pg.Queries, context.Context, pgx.Tx, bool, error) {
+	if existingTx, ok := repository.TenantTxFromContext(ctx); ok && existingTx != nil {
+		if q, ok := repository.TenantQueriesFromContext(ctx); ok && q != nil {
+			return q, ctx, existingTx, false, nil
+		}
+		q := pg.New(existingTx)
+		txCtx := repository.WithTenantQueries(ctx, q)
+		return q, txCtx, existingTx, false, nil
+	}
+
+	tx, err := s.repo.PgRepo.TenantPool.Begin(ctx)
+	if err != nil {
+		return nil, ctx, nil, false, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+
+	q := pg.New(tx)
+	txCtx := repository.WithTenantQueries(ctx, q)
+	return q, txCtx, tx, true, nil
 }
 
 func (s *CashRegisterShiftS) OpenShift(ctx context.Context, req model.OpenCashRegisterShiftRequest) (*model.CashRegisterShiftResponse, error) {
@@ -42,7 +63,15 @@ func (s *CashRegisterShiftS) OpenShift(ctx context.Context, req model.OpenCashRe
 		}
 	}
 
-	row, err := s.repo.Tenant(ctx).OpenCashRegisterShift(ctx, pg.OpenCashRegisterShiftParams{
+	q, txCtx, tx, shouldCommit, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if shouldCommit {
+		defer tx.Rollback(ctx)
+	}
+
+	row, err := q.OpenCashRegisterShift(txCtx, pg.OpenCashRegisterShiftParams{
 		CashRegisterID: cashRegisterID,
 		CashierID:      cashierID,
 		OpeningCash:    openingCash,
@@ -53,6 +82,12 @@ func (s *CashRegisterShiftS) OpenShift(ctx context.Context, req model.OpenCashRe
 			return nil, fmt.Errorf("cash register already has an open shift")
 		}
 		return nil, fmt.Errorf("failed to open shift: %w", err)
+	}
+
+	if shouldCommit {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return toCashRegisterShiftResponse(row), nil
@@ -76,7 +111,15 @@ func (s *CashRegisterShiftS) CloseShift(ctx context.Context, id string, req mode
 		}
 	}
 
-	row, err := s.repo.Tenant(ctx).CloseCashRegisterShift(ctx, pg.CloseCashRegisterShiftParams{
+	q, txCtx, tx, shouldCommit, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if shouldCommit {
+		defer tx.Rollback(ctx)
+	}
+
+	row, err := q.CloseCashRegisterShift(txCtx, pg.CloseCashRegisterShiftParams{
 		ID:          shiftID,
 		ClosingCash: closingCash,
 		ClosingCard: closingCard,
@@ -84,6 +127,12 @@ func (s *CashRegisterShiftS) CloseShift(ctx context.Context, id string, req mode
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to close shift: %w", err)
+	}
+
+	if shouldCommit {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return toCashRegisterShiftResponse(row), nil
@@ -95,7 +144,12 @@ func (s *CashRegisterShiftS) GetShift(ctx context.Context, id string) (*model.Ca
 		return nil, fmt.Errorf("invalid shift id: %w", err)
 	}
 
-	row, err := s.repo.Tenant(ctx).GetCashRegisterShiftByID(ctx, shiftID)
+	var row pg.CashRegisterShift
+	err = withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		row, err = q.GetCashRegisterShiftByID(ctx, shiftID)
+		return err
+	})
 	if err != nil {
 		return nil, fmt.Errorf("shift not found: %w", err)
 	}
@@ -109,7 +163,12 @@ func (s *CashRegisterShiftS) GetActiveShift(ctx context.Context, cashRegisterID 
 		return nil, fmt.Errorf("invalid cash_register_id: %w", err)
 	}
 
-	row, err := s.repo.Tenant(ctx).GetActiveShiftByCashRegister(ctx, id)
+	var row pg.CashRegisterShift
+	err = withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		row, err = q.GetActiveShiftByCashRegister(ctx, id)
+		return err
+	})
 	if err != nil {
 		return nil, fmt.Errorf("no active shift found: %w", err)
 	}
@@ -131,24 +190,30 @@ func (s *CashRegisterShiftS) ListShifts(ctx context.Context, cashRegisterID, cas
 		st = *status
 	}
 
-	count, err := s.repo.Tenant(ctx).CountCashRegisterShifts(ctx, pg.CountCashRegisterShiftsParams{
-		Column1: crID,
-		Column2: cID,
-		Column3: st,
-	})
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to count shifts: %w", err)
-	}
+	var count int64
+	var rows []pg.CashRegisterShift
+	err := withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		count, err = q.CountCashRegisterShifts(ctx, pg.CountCashRegisterShiftsParams{
+			Column1: crID,
+			Column2: cID,
+			Column3: st,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to count shifts: %w", err)
+		}
 
-	rows, err := s.repo.Tenant(ctx).ListCashRegisterShifts(ctx, pg.ListCashRegisterShiftsParams{
-		Column1: crID,
-		Column2: cID,
-		Column3: st,
-		Limit:   limit,
-		Offset:  offset,
+		rows, err = q.ListCashRegisterShifts(ctx, pg.ListCashRegisterShiftsParams{
+			Column1: crID,
+			Column2: cID,
+			Column3: st,
+			Limit:   limit,
+			Offset:  offset,
+		})
+		return err
 	})
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to list shifts: %w", err)
+		return nil, 0, err
 	}
 
 	result := make([]*model.CashRegisterShiftResponse, 0, len(rows))
@@ -165,8 +230,22 @@ func (s *CashRegisterShiftS) DeleteShift(ctx context.Context, id string) error {
 		return fmt.Errorf("invalid shift id: %w", err)
 	}
 
-	if err := s.repo.Tenant(ctx).DeleteCashRegisterShift(ctx, shiftID); err != nil {
+	q, txCtx, tx, shouldCommit, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return err
+	}
+	if shouldCommit {
+		defer tx.Rollback(ctx)
+	}
+
+	if err := q.DeleteCashRegisterShift(txCtx, shiftID); err != nil {
 		return fmt.Errorf("failed to delete shift: %w", err)
+	}
+
+	if shouldCommit {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return nil

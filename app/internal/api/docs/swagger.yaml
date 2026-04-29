@@ -185,6 +185,8 @@ definitions:
         type: integer
       created_at:
         type: string
+      current_amount:
+        type: string
       hall_id:
         example: a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5
         type: string
@@ -3243,25 +3245,6 @@ definitions:
           $ref: '#/definitions/model.OutgoingInvoiceItemResponse'
         type: array
     type: object
-  model.POSPasswordStatusResponse:
-    properties:
-      isConfigured:
-        type: boolean
-    type: object
-  model.POSPasswordStatusSwaggerResponse:
-    properties:
-      code:
-        example: 200
-        type: integer
-      data:
-        $ref: '#/definitions/model.POSPasswordStatusResponse'
-      message:
-        example: POS password holati olindi
-        type: string
-      status:
-        example: success
-        type: string
-    type: object
   model.PaginatedCafeTablesResponse:
     properties:
       code:
@@ -3520,6 +3503,17 @@ definitions:
       total_pages:
         type: integer
     type: object
+  model.PauseInterval:
+    properties:
+      id:
+        type: string
+      paused_at:
+        type: string
+      resumed_at:
+        type: string
+      seconds:
+        type: integer
+    type: object
   model.PincodeLoginRequest:
     properties:
       brand_id:
@@ -3528,11 +3522,14 @@ definitions:
       fcm_token:
         example: eP8...firebase...token
         type: string
+      password:
+        example: superSecret123
+        type: string
       pincode:
         example: "1234"
         type: string
       pos_password:
-        example: "123456"
+        example: superSecret123
         type: string
     type: object
   model.PreviewCalculationsRequest:
@@ -3600,13 +3597,15 @@ definitions:
       cash_register_id:
         example: 123e4567-e89b-12d3-a456-426614174000
         type: string
-      fullName:
+      full_name:
         example: Javohir Khasanov
         type: string
+      is_active:
+        type: boolean
       password:
         example: Password:Javohir
         type: string
-      phoneNumber:
+      phone_number:
         example: "+998957749110"
         type: string
       pincode:
@@ -3985,6 +3984,33 @@ definitions:
       total_price:
         type: string
     type: object
+  model.TableSegment:
+    properties:
+      active_seconds:
+        type: integer
+      entered_at:
+        type: string
+      left_at:
+        type: string
+      move_in_reason:
+        type: string
+      move_out_reason:
+        type: string
+      moved_from_table_id:
+        type: string
+      moved_to_table_id:
+        type: string
+      pause_intervals:
+        items:
+          $ref: '#/definitions/model.PauseInterval'
+        type: array
+      paused_seconds:
+        type: integer
+      segment_id:
+        type: string
+      table_id:
+        type: string
+    type: object
   model.TableStatus:
     enum:
     - free
@@ -4003,6 +4029,8 @@ definitions:
         type: integer
       current_amount:
         type: string
+      current_table_id:
+        type: string
       ended_at:
         type: string
       final_amount:
@@ -4017,10 +4045,16 @@ definitions:
         type: string
       price_per_hour:
         type: string
+      session_id:
+        type: string
       started_at:
         type: string
       state:
         $ref: '#/definitions/model.TableTimerState'
+      table_history:
+        items:
+          $ref: '#/definitions/model.TableSegment'
+        type: array
       table_id:
         type: string
       table_type:
@@ -4228,8 +4262,8 @@ definitions:
         example: 0
         type: number
       price_per_hour:
-        example: "50000"
-        type: string
+        example: 50000
+        type: integer
       rotation:
         example: 0
         type: integer
@@ -4741,35 +4775,6 @@ definitions:
         example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
         type: string
     type: object
-  model.UpdatePOSPasswordRequest:
-    properties:
-      currentPassword:
-        example: "111111"
-        type: string
-      newPassword:
-        example: "222222"
-        type: string
-    type: object
-  model.UpdatePOSPasswordResponse:
-    properties:
-      message:
-        example: updated
-        type: string
-    type: object
-  model.UpdatePOSPasswordSwaggerResponse:
-    properties:
-      code:
-        example: 200
-        type: integer
-      data:
-        $ref: '#/definitions/model.UpdatePOSPasswordResponse'
-      message:
-        example: POS password muvaffaqiyatli yangilandi
-        type: string
-      status:
-        example: success
-        type: string
-    type: object
   model.UpdatePasswordRequest:
     properties:
       currentPassword:
@@ -4925,6 +4930,10 @@ definitions:
     type: object
   model.UpdateUserRequest:
     properties:
+      branch_id:
+        type: string
+      cash_register_id:
+        type: string
       email:
         type: string
       full_name:
@@ -4934,6 +4943,8 @@ definitions:
       phone_number:
         type: string
       pincode:
+        type: string
+      role:
         type: string
       username:
         type: string
@@ -5639,7 +5650,8 @@ paths:
     post:
       consumes:
       - application/json
-      description: Authenticate POS staff using brand_id, pos_password, and pincode
+      description: Authenticate POS staff using brand_id, a role password (superadmin/admin/manager),
+        and pincode
       parameters:
       - description: POS login credentials
         in: body
@@ -14151,6 +14163,14 @@ paths:
           description: Unauthorized
           schema:
             $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Inventory not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "409":
+          description: Inventory already deleted or not the latest
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
         "500":
           description: Internal server error
           schema:
@@ -14517,6 +14537,14 @@ paths:
             $ref: '#/definitions/model.ErrorResponse'
         "401":
           description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Inventory not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "409":
+          description: Inventory already deleted or not the latest
           schema:
             $ref: '#/definitions/model.ErrorResponse'
         "500":
@@ -17817,6 +17845,59 @@ paths:
       summary: Start order table timer
       tags:
       - order-table-timer
+  /api/v1/orders/{id}/table-timer/transfer:
+    post:
+      description: Transfers the active table timer session to a different table
+      parameters:
+      - description: Session ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Transfer request
+        in: body
+        name: request
+        required: true
+        schema:
+          properties:
+            reason:
+              type: string
+            to_table_id:
+              type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.TableTimerResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Transfer order table timer to another table
+      tags:
+      - order-table-timer
   /api/v1/orders/batch:
     post:
       consumes:
@@ -19025,68 +19106,6 @@ paths:
       summary: Create separation act with items (batch)
       tags:
       - SeparationActs
-  /api/v1/settings/pos-password:
-    put:
-      consumes:
-      - application/json
-      description: Update POS password for current tenant. Only admin/manager/superadmin
-        can do this.
-      parameters:
-      - description: POS password update payload
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/model.UpdatePOSPasswordRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/model.UpdatePOSPasswordSwaggerResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/model.ErrorData'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/model.ErrorData'
-        "403":
-          description: Forbidden
-          schema:
-            $ref: '#/definitions/model.ErrorData'
-      security:
-      - BearerAuth: []
-      summary: Update POS password
-      tags:
-      - settings
-  /api/v1/settings/pos-password/status:
-    get:
-      consumes:
-      - application/json
-      description: Returns whether POS password is configured for current tenant
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/model.POSPasswordStatusSwaggerResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/model.ErrorData'
-        "403":
-          description: Forbidden
-          schema:
-            $ref: '#/definitions/model.ErrorData'
-      security:
-      - BearerAuth: []
-      summary: Get POS password status
-      tags:
-      - settings
   /api/v1/settings/printer-settings:
     get:
       consumes:

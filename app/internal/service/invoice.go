@@ -69,7 +69,16 @@ func (s *InvoiceS) CreateInvoice(ctx context.Context, req *model.CreateInvoiceRe
 		}
 		date = pgtype.Timestamp{Time: parsed, Valid: true}
 	}
-	if err := assertCanMutateInvoiceTarget(ctx, s.repo.Tenant(ctx), storageID, date, "invoice"); err != nil {
+
+	q, txCtx, tx, shouldCommit, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if shouldCommit {
+		defer tx.Rollback(ctx)
+	}
+
+	if err := assertCanMutateInvoiceTarget(txCtx, q, storageID, date, "invoice"); err != nil {
 		return nil, err
 	}
 
@@ -82,9 +91,15 @@ func (s *InvoiceS) CreateInvoice(ctx context.Context, req *model.CreateInvoiceRe
 		Date:        date,
 	}
 
-	invoice, err := s.repo.Tenant(ctx).CreateInvoice(ctx, params)
+	invoice, err := q.CreateInvoice(txCtx, params)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create invoice: %w", err)
+	}
+
+	if shouldCommit {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return toInvoiceResponse(invoice), nil
@@ -97,7 +112,12 @@ func (s *InvoiceS) GetInvoiceByID(ctx context.Context, id string) (*model.Invoic
 		return nil, fmt.Errorf("invalid invoice id: %w", err)
 	}
 
-	invoice, err := s.repo.Tenant(ctx).GetInvoiceByID(ctx, invoiceID)
+	var invoice pg.Invoice
+	err = withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		invoice, err = q.GetInvoiceByID(ctx, invoiceID)
+		return err
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get invoice: %w", err)
 	}
@@ -369,7 +389,7 @@ func (s *InvoiceS) UpdateInvoice(ctx context.Context, id string, req *model.Upda
 				}); err != nil {
 					return nil, fmt.Errorf("failed to update ingredient price_per_unit: %w", err)
 				}
-				triggerPriceRecalculation(txCtx, s.repo, d.IngredientID)
+				triggerPriceRecalculation(txCtx, q, d.IngredientID)
 				if err := q.EnsureIngredientVisibilityForCurrentBranch(txCtx, d.IngredientID); err != nil {
 					return nil, fmt.Errorf("failed to ensure ingredient visibility: %w", err)
 				}
@@ -588,7 +608,12 @@ func (s *InvoiceS) DeleteInvoicesBatch(ctx context.Context, req *model.DeleteInv
 		if err != nil {
 			return fmt.Errorf("invalid invoice id %s: %w", id, err)
 		}
-		inv, err := s.repo.Tenant(ctx).GetInvoiceByID(ctx, invoiceID)
+		var inv pg.Invoice
+		err = withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
+			var err error
+			inv, err = q.GetInvoiceByID(ctx, invoiceID)
+			return err
+		})
 		if err != nil {
 			return fmt.Errorf("invoice %s not found: %w", id, err)
 		}
@@ -631,11 +656,25 @@ func (s *InvoiceS) CancelInvoice(ctx context.Context, id string) (*model.Invoice
 		return nil, fmt.Errorf("invalid invoice id: %w", err)
 	}
 
-	inv, err := s.repo.Tenant(ctx).GetInvoiceByID(ctx, invoiceID)
+	var inv pg.Invoice
+	err = withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		inv, err = q.GetInvoiceByID(ctx, invoiceID)
+		return err
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get invoice: %w", err)
 	}
-	if err := assertCanMutateInvoiceCurrent(ctx, s.repo.Tenant(ctx), inv, "invoice"); err != nil {
+
+	q, txCtx, tx, shouldCommit, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if shouldCommit {
+		defer tx.Rollback(ctx)
+	}
+
+	if err := assertCanMutateInvoiceCurrent(txCtx, q, inv, "invoice"); err != nil {
 		return nil, err
 	}
 
@@ -643,9 +682,15 @@ func (s *InvoiceS) CancelInvoice(ctx context.Context, id string) (*model.Invoice
 		return nil, fmt.Errorf("only pending invoices can be cancelled")
 	}
 
-	result, err := s.repo.Tenant(ctx).CancelInvoice(ctx, invoiceID)
+	result, err := q.CancelInvoice(txCtx, invoiceID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to cancel invoice: %w", err)
+	}
+
+	if shouldCommit {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return toInvoiceResponse(result), nil
@@ -659,7 +704,12 @@ func (s *InvoiceS) ArriveInvoice(ctx context.Context, id string) (*model.Invoice
 		return nil, fmt.Errorf("invalid invoice id: %w", err)
 	}
 
-	inv, err := s.repo.Tenant(ctx).GetInvoiceByID(ctx, invoiceID)
+	var inv pg.Invoice
+	err = withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		inv, err = q.GetInvoiceByID(ctx, invoiceID)
+		return err
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get invoice: %w", err)
 	}
@@ -679,8 +729,23 @@ func (s *InvoiceS) RestoreInvoice(ctx context.Context, id string) error {
 		return fmt.Errorf("invalid invoice id: %w", err)
 	}
 
-	if err := s.repo.Tenant(ctx).RestoreInvoice(ctx, invoiceID); err != nil {
+	q, txCtx, tx, shouldCommit, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return err
+	}
+	if shouldCommit {
+		defer tx.Rollback(ctx)
+	}
+
+	err = q.RestoreInvoice(txCtx, invoiceID)
+	if err != nil {
 		return fmt.Errorf("failed to restore invoice: %w", err)
+	}
+
+	if shouldCommit {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return nil
@@ -693,7 +758,12 @@ func (s *InvoiceS) GetInvoiceWithDetails(ctx context.Context, id string) (*model
 		return nil, fmt.Errorf("invalid invoice id: %w", err)
 	}
 
-	invoice, err := s.repo.Tenant(ctx).GetInvoiceWithDetails(ctx, invoiceID)
+	var invoice pg.GetInvoiceWithDetailsRow
+	err = withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		invoice, err = q.GetInvoiceWithDetails(ctx, invoiceID)
+		return err
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get invoice with details: %w", err)
 	}
@@ -772,7 +842,7 @@ func (s *InvoiceS) CreateInvoiceDetail(ctx context.Context, invoiceID string, re
 			return nil, fmt.Errorf("failed to update ingredient price_per_unit: %w", err)
 		}
 
-		triggerPriceRecalculation(txCtx, s.repo, ingredientUUID)
+		triggerPriceRecalculation(txCtx, q, ingredientUUID)
 
 		if err := q.EnsureIngredientVisibilityForCurrentBranch(txCtx, ingredientUUID); err != nil {
 			return nil, fmt.Errorf("failed to ensure ingredient visibility: %w", err)
@@ -905,7 +975,7 @@ func (s *InvoiceS) CreateInvoiceDetailsBatch(ctx context.Context, invoiceID stri
 				return nil, fmt.Errorf("item %d: failed to update ingredient price_per_unit: %w", i+1, err)
 			}
 
-			triggerPriceRecalculation(txCtx, s.repo, ingredientUUID)
+			triggerPriceRecalculation(txCtx, q, ingredientUUID)
 
 			if err := q.EnsureIngredientVisibilityForCurrentBranch(txCtx, ingredientUUID); err != nil {
 				return nil, fmt.Errorf("item %d: failed to ensure ingredient visibility: %w", i+1, err)
@@ -947,7 +1017,12 @@ func (s *InvoiceS) GetInvoiceDetailByID(ctx context.Context, id string) (*model.
 		return nil, fmt.Errorf("invalid detail id: %w", err)
 	}
 
-	detail, err := s.repo.Tenant(ctx).GetInvoiceDetailByID(ctx, detailID)
+	var detail pg.InvoiceDetailed
+	err = withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		detail, err = q.GetInvoiceDetailByID(ctx, detailID)
+		return err
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get invoice detail: %w", err)
 	}
@@ -957,17 +1032,23 @@ func (s *InvoiceS) GetInvoiceDetailByID(ctx context.Context, id string) (*model.
 
 // GetAllInvoiceDetails retrieves all invoice details with pagination
 func (s *InvoiceS) GetAllInvoiceDetails(ctx context.Context, limit, offset int32) ([]*model.InvoiceDetailResponse, int64, error) {
-	total, err := s.repo.Tenant(ctx).CountInvoiceDetails(ctx)
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to count invoice details: %w", err)
-	}
+	var total int64
+	var details []pg.InvoiceDetailed
+	err := withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		total, err = q.CountInvoiceDetails(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to count invoice details: %w", err)
+		}
 
-	details, err := s.repo.Tenant(ctx).GetAllInvoiceDetails(ctx, pg.GetAllInvoiceDetailsParams{
-		Limit:  limit,
-		Offset: offset,
+		details, err = q.GetAllInvoiceDetails(ctx, pg.GetAllInvoiceDetailsParams{
+			Limit:  limit,
+			Offset: offset,
+		})
+		return err
 	})
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to get invoice details: %w", err)
+		return nil, 0, err
 	}
 
 	var responses []*model.InvoiceDetailResponse
@@ -985,18 +1066,24 @@ func (s *InvoiceS) GetInvoiceDetailsByInvoiceID(ctx context.Context, invoiceID s
 		return nil, 0, fmt.Errorf("invalid invoice id: %w", err)
 	}
 
-	total, err := s.repo.Tenant(ctx).CountInvoiceDetailsByInvoice(ctx, invUUID)
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to count invoice details by invoice id: %w", err)
-	}
+	var total int64
+	var details []pg.InvoiceDetailed
+	err = withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		total, err = q.CountInvoiceDetailsByInvoice(ctx, invUUID)
+		if err != nil {
+			return fmt.Errorf("failed to count invoice details by invoice id: %w", err)
+		}
 
-	details, err := s.repo.Tenant(ctx).GetInvoiceDetailsByInvoiceID(ctx, pg.GetInvoiceDetailsByInvoiceIDParams{
-		InvoiceID: invUUID,
-		Limit:     limit,
-		Offset:    offset,
+		details, err = q.GetInvoiceDetailsByInvoiceID(ctx, pg.GetInvoiceDetailsByInvoiceIDParams{
+			InvoiceID: invUUID,
+			Limit:     limit,
+			Offset:    offset,
+		})
+		return err
 	})
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to get invoice details by invoice id: %w", err)
+		return nil, 0, err
 	}
 
 	var responses []*model.InvoiceDetailResponse
@@ -1014,18 +1101,24 @@ func (s *InvoiceS) GetInvoiceDetailsByIngredientID(ctx context.Context, ingredie
 		return nil, 0, fmt.Errorf("invalid ingredient id: %w", err)
 	}
 
-	total, err := s.repo.Tenant(ctx).CountInvoiceDetailsByIngredient(ctx, ingUUID)
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to count invoice details by ingredient id: %w", err)
-	}
+	var total int64
+	var details []pg.InvoiceDetailed
+	err = withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		total, err = q.CountInvoiceDetailsByIngredient(ctx, ingUUID)
+		if err != nil {
+			return fmt.Errorf("failed to count invoice details by ingredient id: %w", err)
+		}
 
-	details, err := s.repo.Tenant(ctx).GetInvoiceDetailsByIngredientID(ctx, pg.GetInvoiceDetailsByIngredientIDParams{
-		IngredientID: ingUUID,
-		Limit:        limit,
-		Offset:       offset,
+		details, err = q.GetInvoiceDetailsByIngredientID(ctx, pg.GetInvoiceDetailsByIngredientIDParams{
+			IngredientID: ingUUID,
+			Limit:        limit,
+			Offset:       offset,
+		})
+		return err
 	})
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to get invoice details by ingredient id: %w", err)
+		return nil, 0, err
 	}
 
 	var responses []*model.InvoiceDetailResponse
@@ -1150,7 +1243,7 @@ func (s *InvoiceS) UpdateInvoiceDetail(ctx context.Context, id string, req *mode
 		}); err != nil {
 			return nil, fmt.Errorf("failed to update ingredient price_per_unit: %w", err)
 		}
-		triggerPriceRecalculation(txCtx, s.repo, updateIngredientID)
+		triggerPriceRecalculation(txCtx, q, updateIngredientID)
 	}
 
 	if appliesStock {
@@ -1751,7 +1844,7 @@ func (s *InvoiceS) UpsertInvoiceDetails(ctx context.Context, invoiceID string, r
 				return nil, fmt.Errorf("item %d: failed to update ingredient price_per_unit: %w", i+1, err)
 			}
 
-			triggerPriceRecalculation(txCtx, s.repo, ingredientUUID)
+			triggerPriceRecalculation(txCtx, q, ingredientUUID)
 
 			if err := q.EnsureIngredientVisibilityForCurrentBranch(txCtx, ingredientUUID); err != nil {
 				return nil, fmt.Errorf("item %d: failed to ensure ingredient visibility: %w", i+1, err)
@@ -1792,17 +1885,37 @@ func (s *InvoiceS) DeleteInvoiceDetailsByInvoiceID(ctx context.Context, invoiceI
 	if err != nil {
 		return fmt.Errorf("invalid invoice id: %w", err)
 	}
-	inv, err := s.repo.Tenant(ctx).GetInvoiceByID(ctx, invUUID)
+
+	var inv pg.Invoice
+	err = withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		inv, err = q.GetInvoiceByID(ctx, invUUID)
+		return err
+	})
 	if err != nil {
 		return fmt.Errorf("failed to get invoice: %w", err)
 	}
 
-	if err := assertCanMutateInvoiceCurrent(ctx, s.repo.Tenant(ctx), inv, "invoice details"); err != nil {
+	q, txCtx, tx, shouldCommit, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return err
+	}
+	if shouldCommit {
+		defer tx.Rollback(ctx)
+	}
+
+	if err := assertCanMutateInvoiceCurrent(txCtx, q, inv, "invoice details"); err != nil {
 		return err
 	}
 
-	if err := s.repo.Tenant(ctx).DeleteInvoiceDetailsByInvoiceID(ctx, invUUID); err != nil {
+	if err := q.DeleteInvoiceDetailsByInvoiceID(txCtx, invUUID); err != nil {
 		return fmt.Errorf("failed to delete invoice details by invoice id: %w", err)
+	}
+
+	if shouldCommit {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return nil
@@ -1810,7 +1923,12 @@ func (s *InvoiceS) DeleteInvoiceDetailsByInvoiceID(ctx context.Context, invoiceI
 
 // CountInvoiceDetails counts all invoice details
 func (s *InvoiceS) CountInvoiceDetails(ctx context.Context) (int64, error) {
-	count, err := s.repo.Tenant(ctx).CountInvoiceDetails(ctx)
+	var count int64
+	err := withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		count, err = q.CountInvoiceDetails(ctx)
+		return err
+	})
 	if err != nil {
 		return 0, fmt.Errorf("failed to count invoice details: %w", err)
 	}
@@ -1825,7 +1943,12 @@ func (s *InvoiceS) CountInvoiceDetailsByInvoice(ctx context.Context, invoiceID s
 		return 0, fmt.Errorf("invalid invoice id: %w", err)
 	}
 
-	count, err := s.repo.Tenant(ctx).CountInvoiceDetailsByInvoice(ctx, invUUID)
+	var count int64
+	err = withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		count, err = q.CountInvoiceDetailsByInvoice(ctx, invUUID)
+		return err
+	})
 	if err != nil {
 		return 0, fmt.Errorf("failed to count invoice details by invoice: %w", err)
 	}
@@ -1840,7 +1963,12 @@ func (s *InvoiceS) GetInvoiceDetailWithIngredient(ctx context.Context, id string
 		return nil, fmt.Errorf("invalid detail id: %w", err)
 	}
 
-	detail, err := s.repo.Tenant(ctx).GetInvoiceDetailWithIngredient(ctx, detailID)
+	var detail pg.GetInvoiceDetailWithIngredientRow
+	err = withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		detail, err = q.GetInvoiceDetailWithIngredient(ctx, detailID)
+		return err
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get invoice detail with ingredient: %w", err)
 	}
@@ -2208,7 +2336,7 @@ func (s *InvoiceS) CreateInvoiceWithDetails(ctx context.Context, req *model.Crea
 				return nil, fmt.Errorf("item %d: failed to update ingredient price_per_unit: %w", i+1, err)
 			}
 
-			triggerPriceRecalculation(txCtx, s.repo, ingredientUUID)
+			triggerPriceRecalculation(txCtx, q, ingredientUUID)
 
 			if err := q.EnsureIngredientVisibilityForCurrentBranch(txCtx, ingredientUUID); err != nil {
 				return nil, fmt.Errorf("item %d: failed to ensure ingredient visibility: %w", i+1, err)

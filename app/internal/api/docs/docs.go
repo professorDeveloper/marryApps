@@ -601,7 +601,7 @@ const docTemplate = `{
         },
         "/api/v1/auth/login-pincode": {
             "post": {
-                "description": "Authenticate POS staff using brand_id, pos_password, and pincode",
+                "description": "Authenticate POS staff using brand_id, a role password (superadmin/admin/manager), and pincode",
                 "consumes": [
                     "application/json"
                 ],
@@ -13631,6 +13631,18 @@ const docTemplate = `{
                             "$ref": "#/definitions/model.ErrorResponse"
                         }
                     },
+                    "404": {
+                        "description": "Inventory not found",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Inventory already deleted or not the latest",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
@@ -13809,6 +13821,18 @@ const docTemplate = `{
                     },
                     "401": {
                         "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Inventory not found",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Inventory already deleted or not the latest",
                         "schema": {
                             "$ref": "#/definitions/model.ErrorResponse"
                         }
@@ -19597,6 +19621,93 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/orders/{id}/table-timer/transfer": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Transfers the active table timer session to a different table",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "order-table-timer"
+                ],
+                "summary": "Transfer order table timer to another table",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Session ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Transfer request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "reason": {
+                                    "type": "string"
+                                },
+                                "to_table_id": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/model.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/model.TableTimerResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/outgoing-invoices": {
             "get": {
                 "security": [
@@ -21059,103 +21170,6 @@ const docTemplate = `{
                         "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/settings/pos-password": {
-            "put": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Update POS password for current tenant. Only admin/manager/superadmin can do this.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "settings"
-                ],
-                "summary": "Update POS password",
-                "parameters": [
-                    {
-                        "description": "POS password update payload",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/model.UpdatePOSPasswordRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/model.UpdatePOSPasswordSwaggerResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorData"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorData"
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorData"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/settings/pos-password/status": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Returns whether POS password is configured for current tenant",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "settings"
-                ],
-                "summary": "Get POS password status",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/model.POSPasswordStatusSwaggerResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorData"
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorData"
                         }
                     }
                 }
@@ -25725,6 +25739,9 @@ const docTemplate = `{
                 "created_at": {
                     "type": "string"
                 },
+                "current_amount": {
+                    "type": "string"
+                },
                 "hall_id": {
                     "type": "string",
                     "example": "a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"
@@ -30076,34 +30093,6 @@ const docTemplate = `{
                 }
             }
         },
-        "model.POSPasswordStatusResponse": {
-            "type": "object",
-            "properties": {
-                "isConfigured": {
-                    "type": "boolean"
-                }
-            }
-        },
-        "model.POSPasswordStatusSwaggerResponse": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "integer",
-                    "example": 200
-                },
-                "data": {
-                    "$ref": "#/definitions/model.POSPasswordStatusResponse"
-                },
-                "message": {
-                    "type": "string",
-                    "example": "POS password holati olindi"
-                },
-                "status": {
-                    "type": "string",
-                    "example": "success"
-                }
-            }
-        },
         "model.PaginatedCafeTablesResponse": {
             "type": "object",
             "properties": {
@@ -30481,6 +30470,23 @@ const docTemplate = `{
                 }
             }
         },
+        "model.PauseInterval": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "paused_at": {
+                    "type": "string"
+                },
+                "resumed_at": {
+                    "type": "string"
+                },
+                "seconds": {
+                    "type": "integer"
+                }
+            }
+        },
         "model.PincodeLoginRequest": {
             "type": "object",
             "properties": {
@@ -30492,13 +30498,17 @@ const docTemplate = `{
                     "type": "string",
                     "example": "eP8...firebase...token"
                 },
+                "password": {
+                    "type": "string",
+                    "example": "superSecret123"
+                },
                 "pincode": {
                     "type": "string",
                     "example": "1234"
                 },
                 "pos_password": {
                     "type": "string",
-                    "example": "123456"
+                    "example": "superSecret123"
                 }
             }
         },
@@ -30599,15 +30609,18 @@ const docTemplate = `{
                     "type": "string",
                     "example": "123e4567-e89b-12d3-a456-426614174000"
                 },
-                "fullName": {
+                "full_name": {
                     "type": "string",
                     "example": "Javohir Khasanov"
+                },
+                "is_active": {
+                    "type": "boolean"
                 },
                 "password": {
                     "type": "string",
                     "example": "Password:Javohir"
                 },
-                "phoneNumber": {
+                "phone_number": {
                     "type": "string",
                     "example": "+998957749110"
                 },
@@ -31168,6 +31181,47 @@ const docTemplate = `{
                 }
             }
         },
+        "model.TableSegment": {
+            "type": "object",
+            "properties": {
+                "active_seconds": {
+                    "type": "integer"
+                },
+                "entered_at": {
+                    "type": "string"
+                },
+                "left_at": {
+                    "type": "string"
+                },
+                "move_in_reason": {
+                    "type": "string"
+                },
+                "move_out_reason": {
+                    "type": "string"
+                },
+                "moved_from_table_id": {
+                    "type": "string"
+                },
+                "moved_to_table_id": {
+                    "type": "string"
+                },
+                "pause_intervals": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.PauseInterval"
+                    }
+                },
+                "paused_seconds": {
+                    "type": "integer"
+                },
+                "segment_id": {
+                    "type": "string"
+                },
+                "table_id": {
+                    "type": "string"
+                }
+            }
+        },
         "model.TableStatus": {
             "type": "string",
             "enum": [
@@ -31194,6 +31248,9 @@ const docTemplate = `{
                 "current_amount": {
                     "type": "string"
                 },
+                "current_table_id": {
+                    "type": "string"
+                },
                 "ended_at": {
                     "type": "string"
                 },
@@ -31215,11 +31272,20 @@ const docTemplate = `{
                 "price_per_hour": {
                     "type": "string"
                 },
+                "session_id": {
+                    "type": "string"
+                },
                 "started_at": {
                     "type": "string"
                 },
                 "state": {
                     "$ref": "#/definitions/model.TableTimerState"
+                },
+                "table_history": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.TableSegment"
+                    }
                 },
                 "table_id": {
                     "type": "string"
@@ -31519,8 +31585,8 @@ const docTemplate = `{
                     "example": 0
                 },
                 "price_per_hour": {
-                    "type": "string",
-                    "example": "50000"
+                    "type": "integer",
+                    "example": 50000
                 },
                 "rotation": {
                     "type": "integer",
@@ -32249,48 +32315,6 @@ const docTemplate = `{
                 }
             }
         },
-        "model.UpdatePOSPasswordRequest": {
-            "type": "object",
-            "properties": {
-                "currentPassword": {
-                    "type": "string",
-                    "example": "111111"
-                },
-                "newPassword": {
-                    "type": "string",
-                    "example": "222222"
-                }
-            }
-        },
-        "model.UpdatePOSPasswordResponse": {
-            "type": "object",
-            "properties": {
-                "message": {
-                    "type": "string",
-                    "example": "updated"
-                }
-            }
-        },
-        "model.UpdatePOSPasswordSwaggerResponse": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "integer",
-                    "example": 200
-                },
-                "data": {
-                    "$ref": "#/definitions/model.UpdatePOSPasswordResponse"
-                },
-                "message": {
-                    "type": "string",
-                    "example": "POS password muvaffaqiyatli yangilandi"
-                },
-                "status": {
-                    "type": "string",
-                    "example": "success"
-                }
-            }
-        },
         "model.UpdatePasswordRequest": {
             "type": "object",
             "properties": {
@@ -32513,6 +32537,12 @@ const docTemplate = `{
         "model.UpdateUserRequest": {
             "type": "object",
             "properties": {
+                "branch_id": {
+                    "type": "string"
+                },
+                "cash_register_id": {
+                    "type": "string"
+                },
                 "email": {
                     "type": "string"
                 },
@@ -32526,6 +32556,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "pincode": {
+                    "type": "string"
+                },
+                "role": {
                     "type": "string"
                 },
                 "username": {
