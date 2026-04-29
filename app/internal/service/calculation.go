@@ -138,28 +138,28 @@ func pgTypeUUIDToString(u pgtype.UUID) *string {
 }
 
 // getDynamicCompoundCost computes compound price from live ingredient prices + child compound prices.
-func getDynamicCompoundCost(ctx context.Context, repo *repository.Repository, compoundID pgtype.UUID) float64 {
-	ingRaw, _ := repo.Tenant(ctx).GetDynamicCompoundCostFromIngredients(ctx, compoundID)
-	childRaw, _ := repo.Tenant(ctx).GetDynamicCompoundCostFromChildCompounds(ctx, compoundID)
+func getDynamicCompoundCost(ctx context.Context, q *pg.Queries, compoundID pgtype.UUID) float64 {
+	ingRaw, _ := q.GetDynamicCompoundCostFromIngredients(ctx, compoundID)
+	childRaw, _ := q.GetDynamicCompoundCostFromChildCompounds(ctx, compoundID)
 	ingF, _ := strconv.ParseFloat(anyNumericToStr(ingRaw), 64)
 	childF, _ := strconv.ParseFloat(anyNumericToStr(childRaw), 64)
 	return ingF + childF
 }
 
 // getDynamicGoodCost computes good total cost from live ingredient prices + child compound prices.
-func getDynamicGoodCost(ctx context.Context, repo *repository.Repository, goodID pgtype.UUID) float64 {
-	ingRaw, _ := repo.Tenant(ctx).GetDynamicGoodCostFromIngredients(ctx, goodID)
-	childRaw, _ := repo.Tenant(ctx).GetDynamicGoodCostFromChildCompounds(ctx, goodID)
+func getDynamicGoodCost(ctx context.Context, q *pg.Queries, goodID pgtype.UUID) float64 {
+	ingRaw, _ := q.GetDynamicGoodCostFromIngredients(ctx, goodID)
+	childRaw, _ := q.GetDynamicGoodCostFromChildCompounds(ctx, goodID)
 	ingF, _ := strconv.ParseFloat(anyNumericToStr(ingRaw), 64)
 	childF, _ := strconv.ParseFloat(anyNumericToStr(childRaw), 64)
 	return ingF + childF
 }
 
 // recalcCompoundDynamic recalculates and saves a compound's price from live ingredient prices.
-func recalcCompoundDynamic(ctx context.Context, repo *repository.Repository, compoundID pgtype.UUID) {
-	total := getDynamicCompoundCost(ctx, repo, compoundID)
+func recalcCompoundDynamic(ctx context.Context, q *pg.Queries, compoundID pgtype.UUID) {
+	total := getDynamicCompoundCost(ctx, q, compoundID)
 	id := uuid.UUID(compoundID.Bytes)
-	_, err := repo.Tenant(ctx).UpdateCompoundPrice(ctx, pg.UpdateCompoundPriceParams{
+	_, err := q.UpdateCompoundPrice(ctx, pg.UpdateCompoundPriceParams{
 		ID:    id,
 		Price: stringToNumeric(fmt.Sprintf("%.2f", total)),
 	})
@@ -169,20 +169,20 @@ func recalcCompoundDynamic(ctx context.Context, repo *repository.Repository, com
 }
 
 // recalcGoodDynamic recalculates and saves a good's cost_price, profit, profit_margin from live ingredient prices.
-func recalcGoodDynamic(ctx context.Context, repo *repository.Repository, goodID pgtype.UUID) {
+func recalcGoodDynamic(ctx context.Context, q *pg.Queries, goodID pgtype.UUID) {
 	id := uuid.UUID(goodID.Bytes)
-	good, err := repo.Tenant(ctx).GetGoodByID(ctx, id)
+	good, err := q.GetGoodByID(ctx, id)
 	if err != nil {
 		return
 	}
-	totalCost := getDynamicGoodCost(ctx, repo, goodID)
+	totalCost := getDynamicGoodCost(ctx, q, goodID)
 	sellingPrice, _ := strconv.ParseFloat(numericToStr(good.Price), 64)
 	profit := sellingPrice - totalCost
 	var profitMargin float64
 	if totalCost > 0 {
 		profitMargin = (profit / totalCost) * 100
 	}
-	_, err = repo.Tenant(ctx).UpdateGoodCostFields(ctx, pg.UpdateGoodCostFieldsParams{
+	_, err = q.UpdateGoodCostFields(ctx, pg.UpdateGoodCostFieldsParams{
 		ID:           id,
 		CostPrice:    stringToNumeric(fmt.Sprintf("%.2f", totalCost)),
 		Profit:       stringToNumeric(fmt.Sprintf("%.2f", profit)),
@@ -196,30 +196,30 @@ func recalcGoodDynamic(ctx context.Context, repo *repository.Repository, goodID 
 // triggerPriceRecalculation is called after an invoice updates an ingredient's price.
 // It updates all calculation rows for the ingredient, then recalculates compound/good
 // prices that depend on it — including one cascade level for compound-of-compound.
-func triggerPriceRecalculation(ctx context.Context, repo *repository.Repository, ingredientID uuid.UUID) {
+func triggerPriceRecalculation(ctx context.Context, q *pg.Queries, ingredientID uuid.UUID) {
 	igUUID := pgtype.UUID{Bytes: ingredientID, Valid: true}
 
 	// Fetch current ingredient price_per_unit to use for calculation row updates
-	ing, err := repo.Tenant(ctx).GetIngredientByID(ctx, ingredientID)
+	ing, err := q.GetIngredientByID(ctx, ingredientID)
 	if err != nil {
 		log.Printf("triggerPriceRecalculation: GetIngredientByID failed: %v", err)
 		return
 	}
 
 	// 1. Update all calculation rows for this ingredient with the new price
-	_ = repo.Tenant(ctx).UpdateCalculationsByIngredientPrice(ctx, pg.UpdateCalculationsByIngredientPriceParams{
+	_ = q.UpdateCalculationsByIngredientPrice(ctx, pg.UpdateCalculationsByIngredientPriceParams{
 		IngredientID: igUUID,
 		PricePerUnit: ing.PricePerUnit,
 	})
 
 	// 2. Compounds directly using this ingredient → recalculate compound.price
-	compoundIDs, err := repo.Tenant(ctx).GetCompoundIDsByIngredient(ctx, igUUID)
+	compoundIDs, err := q.GetCompoundIDsByIngredient(ctx, igUUID)
 	if err != nil {
 		log.Printf("triggerPriceRecalculation: GetCompoundIDsByIngredient failed: %v", err)
 	}
 	for _, cID := range compoundIDs {
 		if cID.Valid {
-			recalcCompoundDynamic(ctx, repo, cID)
+			recalcCompoundDynamic(ctx, q, cID)
 		}
 	}
 
@@ -229,37 +229,37 @@ func triggerPriceRecalculation(ctx context.Context, repo *repository.Repository,
 			continue
 		}
 		// Get the updated child compound price
-		childPrice := getDynamicCompoundCost(ctx, repo, cID)
+		childPrice := getDynamicCompoundCost(ctx, q, cID)
 		childPriceNumeric := stringToNumeric(fmt.Sprintf("%.2f", childPrice))
 
 		// Update calculation rows in parent compounds/goods that reference this child
-		_ = repo.Tenant(ctx).UpdateCalculationsByChildCompoundPrice(ctx, pg.UpdateCalculationsByChildCompoundPriceParams{
+		_ = q.UpdateCalculationsByChildCompoundPrice(ctx, pg.UpdateCalculationsByChildCompoundPriceParams{
 			ComponentCompoundID: cID,
 			PricePerUnit:        childPriceNumeric,
 		})
 
-		parentIDs, _ := repo.Tenant(ctx).GetParentCompoundIDsByChildCompound(ctx, cID)
+		parentIDs, _ := q.GetParentCompoundIDsByChildCompound(ctx, cID)
 		for _, pID := range parentIDs {
 			if pID.Valid {
-				recalcCompoundDynamic(ctx, repo, pID)
+				recalcCompoundDynamic(ctx, q, pID)
 			}
 		}
-		goodIDsViaCompound, _ := repo.Tenant(ctx).GetParentGoodIDsByChildCompound(ctx, cID)
+		goodIDsViaCompound, _ := q.GetParentGoodIDsByChildCompound(ctx, cID)
 		for _, gID := range goodIDsViaCompound {
 			if gID.Valid {
-				recalcGoodDynamic(ctx, repo, gID)
+				recalcGoodDynamic(ctx, q, gID)
 			}
 		}
 	}
 
 	// 4. Goods directly using this ingredient
-	goodIDs, err := repo.Tenant(ctx).GetGoodIDsByIngredient(ctx, igUUID)
+	goodIDs, err := q.GetGoodIDsByIngredient(ctx, igUUID)
 	if err != nil {
 		log.Printf("triggerPriceRecalculation: GetGoodIDsByIngredient failed: %v", err)
 	}
 	for _, gID := range goodIDs {
 		if gID.Valid {
-			recalcGoodDynamic(ctx, repo, gID)
+			recalcGoodDynamic(ctx, q, gID)
 		}
 	}
 }

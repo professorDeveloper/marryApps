@@ -274,6 +274,7 @@ func (h *Handler) Register(router *echo.Echo) {
 			orders.GET("/:id/table-timer", h.GetOrderTableTimer, mw.CheckLanguage(), mw.RequireRoles(mw.RolesCanControlTableTimer...))
 			orders.POST("/:id/table-timer/pause", h.PauseOrderTableTimer, mw.CheckLanguage(), mw.RequireRoles(mw.RolesCanControlTableTimer...))
 			orders.POST("/:id/table-timer/resume", h.ResumeOrderTableTimer, mw.CheckLanguage(), mw.RequireRoles(mw.RolesCanControlTableTimer...))
+			orders.POST("/:id/transfer", h.TransferOrderTableTimer, mw.CheckLanguage(), mw.RequireRoles(mw.RolesCanControlTableTimer...))
 			orders.POST("/:id/cancel", h.CancelOrder, mw.CheckLanguage(), mw.RequireRoles(mw.RolesCanCreateOrder...))
 			orders.POST("/:id/cooking", h.MarkOrderCooking, mw.CheckLanguage(), mw.RequireRoles(mw.RolesCanManageKitchen...))
 			orders.POST("/:id/ready", h.MarkOrderReady, mw.CheckLanguage(), mw.RequireRoles(mw.RolesCanManageKitchen...))

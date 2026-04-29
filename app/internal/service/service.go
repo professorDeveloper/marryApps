@@ -388,6 +388,7 @@ type TableTimerI interface {
 	PauseTableTimer(ctx context.Context, orderID string, actorUserID string, actorRole string) (*model.TableTimerResponse, error)
 	ResumeTableTimer(ctx context.Context, orderID string, actorUserID string, actorRole string) (*model.TableTimerResponse, error)
 	CloseTableTimer(ctx context.Context, orderID string, actorUserID string, actorRole string) (*model.TableTimerResponse, error)
+	TransferTableTimer(ctx context.Context, sessionID string, toTableID string, reason string, actorUserID string, actorRole string) (*model.TableTimerResponse, error)
 }
 
 type CalculationI interface {

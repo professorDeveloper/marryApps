@@ -3,6 +3,7 @@ package handler
 import (
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
@@ -197,6 +198,106 @@ func (h *Handler) ResumeOrderTableTimer(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, model.NewSuccessResponse(
 		"Table timer resumed successfully",
+		resp,
+		http.StatusOK,
+	))
+}
+
+// TransferOrderTableTimer godoc
+// @Summary Transfer order table timer to another table
+// @Description Transfers the active table timer session to a different table
+// @Tags order-table-timer
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "Session ID"
+// @Param request body object{to_table_id=string,reason=string} true "Transfer request"
+// @Success 200 {object} model.SuccessResponse{data=model.TableTimerResponse}
+// @Failure 400 {object} model.ErrorResponse
+// @Failure 401 {object} model.ErrorResponse
+// @Failure 403 {object} model.ErrorResponse
+// @Failure 409 {object} model.ErrorResponse
+// @Router /api/v1/orders/{id}/table-timer/transfer [post]
+func (h *Handler) TransferOrderTableTimer(c echo.Context) error {
+	sessionID := c.Param("id")
+	if sessionID == "" {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"session id is required",
+			"missing path parameter: id",
+			http.StatusBadRequest,
+		))
+	}
+	if _, err := uuid.Parse(sessionID); err != nil {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"invalid session id format",
+			err.Error(),
+			http.StatusBadRequest,
+		))
+	}
+
+	var req struct {
+		ToTableID string `json:"to_table_id" validate:"required"`
+		Reason    string `json:"reason"`
+	}
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"invalid request body",
+			err.Error(),
+			http.StatusBadRequest,
+		))
+	}
+
+	if req.ToTableID == "" {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"to_table_id is required",
+			"missing required field: to_table_id",
+			http.StatusBadRequest,
+		))
+	}
+	if _, err := uuid.Parse(req.ToTableID); err != nil {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"invalid to_table_id format",
+			err.Error(),
+			http.StatusBadRequest,
+		))
+	}
+
+	userID, _ := c.Get("user_id").(string)
+	role, _ := c.Get("role").(string)
+
+	resp, err := h.service.TableTimer().TransferTableTimer(c.Request().Context(), sessionID, req.ToTableID, req.Reason, userID, role)
+	if err != nil {
+		log.Printf("TransferOrderTableTimer failed for session %s: %v", sessionID, err)
+
+		errText := err.Error()
+
+		if strings.Contains(errText, "not found") {
+			return c.JSON(http.StatusNotFound, model.NewErrorResponse(
+				"timer session not found",
+				errText,
+				http.StatusNotFound,
+			))
+		}
+
+		if strings.Contains(errText, "already busy") ||
+			strings.Contains(errText, "must be running to transfer") ||
+			strings.Contains(errText, "same as current") ||
+			strings.Contains(errText, "active segment not found") {
+			return c.JSON(http.StatusConflict, model.NewErrorResponse(
+				"transfer conflict",
+				errText,
+				http.StatusConflict,
+			))
+		}
+
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"failed to transfer table timer",
+			errText,
+			http.StatusBadRequest,
+		))
+	}
+
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Table timer transferred successfully",
 		resp,
 		http.StatusOK,
 	))

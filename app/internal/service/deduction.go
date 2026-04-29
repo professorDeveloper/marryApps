@@ -207,12 +207,26 @@ func (s *DeductionS) CreateDeductionActGroup(ctx context.Context, req *model.Cre
 		return nil, fmt.Errorf("name is required")
 	}
 
-	row, err := s.repo.Tenant(ctx).CreateDeductionActGroup(ctx, pg.CreateDeductionActGroupParams{
+	q, txCtx, tx, shouldCommit, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if shouldCommit {
+		defer tx.Rollback(ctx)
+	}
+
+	row, err := q.CreateDeductionActGroup(txCtx, pg.CreateDeductionActGroupParams{
 		ID:   uuid.New(),
 		Name: req.Name,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create deduction act group: %w", err)
+	}
+
+	if shouldCommit {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return &model.DeductionActGroupResponse{
@@ -826,7 +840,11 @@ func (s *DeductionS) CreateDeduction(ctx context.Context, req *model.CreateDeduc
 		return nil, fmt.Errorf("invalid storage_id: %w", err)
 	}
 	storagePg := pgtype.UUID{Bytes: storageUUID, Valid: true}
-	if err := assertCanMutateDeductionTarget(ctx, s.repo.Tenant(ctx), storageUUID, pgtype.Date{Time: date, Valid: true}, "deduction"); err != nil {
+
+	err = withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
+		return assertCanMutateDeductionTarget(ctx, q, storageUUID, pgtype.Date{Time: date, Valid: true}, "deduction")
+	})
+	if err != nil {
 		return nil, err
 	}
 
@@ -970,22 +988,36 @@ func (s *DeductionS) GetDeductionByID(ctx context.Context, id string) (*model.De
 		return nil, fmt.Errorf("invalid id: %w", err)
 	}
 
-	d, err := s.repo.Tenant(ctx).GetDeductionByID(ctx, u)
-	if err != nil {
-		if err == pgx.ErrNoRows {
-			return nil, nil
+	var d pg.Deduction
+	var items []pg.DeductionItem
+	err = withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		d, err = q.GetDeductionByID(ctx, u)
+		if err != nil {
+			if err == pgx.ErrNoRows {
+				return nil
+			}
+			return fmt.Errorf("failed to get deduction: %w", err)
 		}
-		return nil, fmt.Errorf("failed to get deduction: %w", err)
-	}
 
-	items, err := s.repo.Tenant(ctx).GetDeductionItemsByDeductionID(ctx, u)
+		items, err = q.GetDeductionItemsByDeductionID(ctx, u)
+		if err != nil {
+			return fmt.Errorf("failed to get deduction items: %w", err)
+		}
+		return nil
+	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get deduction items: %w", err)
+		return nil, err
 	}
 
 	itemResp := make([]model.DeductionItemResponse, 0, len(items))
 	for _, it := range items {
-		breakdowns, err := s.repo.Tenant(ctx).GetDeductionItemIngredientsByDeductionItemID(ctx, it.ID)
+		var breakdowns []pg.DeductionItemIngredient
+		err = withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
+			var err error
+			breakdowns, err = q.GetDeductionItemIngredientsByDeductionItemID(ctx, it.ID)
+			return err
+		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to get deduction item ingredients: %w", err)
 		}
@@ -1020,9 +1052,14 @@ func (s *DeductionS) GetDeductionByID(ctx context.Context, id string) (*model.De
 			compoundIDStr = &s
 		}
 
-		compBreakdowns := make([]model.DeductionItemCompoundResponse, 0)
+		var compBreakdowns []model.DeductionItemCompoundResponse
 		if it.CompoundID.Valid {
-			comps, err := s.expandCompoundToDirectCompounds(ctx, s.repo.Tenant(ctx), it.CompoundID.Bytes, it.Quantity)
+			var comps []compoundUsage
+			err = withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
+				var err error
+				comps, err = s.expandCompoundToDirectCompounds(ctx, q, it.CompoundID.Bytes, it.Quantity)
+				return err
+			})
 			if err != nil {
 				return nil, err
 			}
@@ -1034,7 +1071,12 @@ func (s *DeductionS) GetDeductionByID(ctx context.Context, id string) (*model.De
 			}
 		}
 		if it.GoodID.Valid {
-			comps, err := s.expandGoodToDirectCompounds(ctx, s.repo.Tenant(ctx), it.GoodID.Bytes, it.Quantity)
+			var comps []compoundUsage
+			err = withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
+				var err error
+				comps, err = s.expandGoodToDirectCompounds(ctx, q, it.GoodID.Bytes, it.Quantity)
+				return err
+			})
 			if err != nil {
 				return nil, err
 			}
@@ -1439,9 +1481,23 @@ func (s *DeductionS) RestoreDeduction(ctx context.Context, id string) (*model.De
 		return nil, fmt.Errorf("invalid id: %w", err)
 	}
 
-	_, err = s.repo.Tenant(ctx).RestoreDeduction(ctx, deductionID)
+	q, txCtx, tx, shouldCommit, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if shouldCommit {
+		defer tx.Rollback(ctx)
+	}
+
+	_, err = q.RestoreDeduction(txCtx, deductionID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to restore deduction: %w", err)
+	}
+
+	if shouldCommit {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	return s.GetDeductionByID(ctx, id)
@@ -1668,67 +1724,74 @@ func (s *DeductionS) PreviewDeductionCost(ctx context.Context, req *model.Create
 		return "0", nil
 	}
 
-	q := s.repo.Tenant(ctx)
-
 	var total *big.Rat = big.NewRat(0, 1)
-	for _, it := range req.Items {
-		qtyNum := pgtype.Numeric{}
-		if err := qtyNum.Scan(it.Quantity); err != nil {
-			return "", fmt.Errorf("invalid item quantity: %w", err)
-		}
+	var err error
+	err = withTenantRead(ctx, s.repo, func(ctx context.Context, q *pg.Queries) error {
+		for _, it := range req.Items {
+			qtyNum := pgtype.Numeric{}
+			if e := qtyNum.Scan(it.Quantity); e != nil {
+				return fmt.Errorf("invalid item quantity: %w", e)
+			}
 
-		var usages []ingredientUsage
-		var err error
-		switch {
-		case it.IngredientID != nil && *it.IngredientID != "":
-			u, err := uuid.Parse(*it.IngredientID)
-			if err != nil {
-				return "", fmt.Errorf("invalid ingredient_id: %w", err)
-			}
-			usages = []ingredientUsage{{ingredientID: u, quantity: qtyNum}}
-		case it.GoodID != nil && *it.GoodID != "":
-			u, err := uuid.Parse(*it.GoodID)
-			if err != nil {
-				return "", fmt.Errorf("invalid good_id: %w", err)
-			}
-			usages, err = s.expandGoodToIngredients(ctx, q, u, qtyNum)
-		case it.CompoundID != nil && *it.CompoundID != "":
-			u, err := uuid.Parse(*it.CompoundID)
-			if err != nil {
-				return "", fmt.Errorf("invalid compound_id: %w", err)
-			}
-			usages, err = s.expandCompoundToIngredients(ctx, q, u, qtyNum, map[uuid.UUID]bool{})
-		default:
-			return "", fmt.Errorf("each item must have ingredient_id or good_id or compound_id")
-		}
-		if err != nil {
-			return "", err
-		}
-
-		for _, u := range usages {
-			ing, err := q.GetIngredientByID(ctx, u.ingredientID)
-			if err != nil {
-				if err == pgx.ErrNoRows {
-					return "", fmt.Errorf("ingredient not found")
+			var usages []ingredientUsage
+			switch {
+			case it.IngredientID != nil && *it.IngredientID != "":
+				u, e := uuid.Parse(*it.IngredientID)
+				if e != nil {
+					return fmt.Errorf("invalid ingredient_id: %w", e)
 				}
-				return "", fmt.Errorf("failed to fetch ingredient: %w", err)
-			}
-			if !ing.PricePerUnit.Valid {
-				return "", fmt.Errorf("ingredient has no price")
+				usages = []ingredientUsage{{ingredientID: u, quantity: qtyNum}}
+			case it.GoodID != nil && *it.GoodID != "":
+				u, e := uuid.Parse(*it.GoodID)
+				if e != nil {
+					return fmt.Errorf("invalid good_id: %w", e)
+				}
+				usages, e = s.expandGoodToIngredients(ctx, q, u, qtyNum)
+				if e != nil {
+					return e
+				}
+			case it.CompoundID != nil && *it.CompoundID != "":
+				u, e := uuid.Parse(*it.CompoundID)
+				if e != nil {
+					return fmt.Errorf("invalid compound_id: %w", e)
+				}
+				usages, e = s.expandCompoundToIngredients(ctx, q, u, qtyNum, map[uuid.UUID]bool{})
+				if e != nil {
+					return e
+				}
+			default:
+				return fmt.Errorf("each item must have ingredient_id or good_id or compound_id")
 			}
 
-			qRat, err := numericToRat(u.quantity)
-			if err != nil {
-				return "", err
-			}
-			pRat, err := numericToRat(ing.PricePerUnit)
-			if err != nil {
-				return "", err
-			}
+			for _, u := range usages {
+				ing, e := q.GetIngredientByID(ctx, u.ingredientID)
+				if e != nil {
+					if e == pgx.ErrNoRows {
+						return fmt.Errorf("ingredient not found")
+					}
+					return fmt.Errorf("failed to fetch ingredient: %w", e)
+				}
+				if !ing.PricePerUnit.Valid {
+					return fmt.Errorf("ingredient has no price")
+				}
 
-			line := new(big.Rat).Mul(qRat, pRat)
-			total = new(big.Rat).Add(total, line)
+				qRat, e := numericToRat(u.quantity)
+				if e != nil {
+					return e
+				}
+				pRat, e := numericToRat(ing.PricePerUnit)
+				if e != nil {
+					return e
+				}
+
+				line := new(big.Rat).Mul(qRat, pRat)
+				total = new(big.Rat).Add(total, line)
+			}
 		}
+		return nil
+	})
+	if err != nil {
+		return "", err
 	}
 
 	return total.FloatString(2), nil

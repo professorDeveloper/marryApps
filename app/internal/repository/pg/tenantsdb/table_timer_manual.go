@@ -565,3 +565,365 @@ func (q *Queries) GetLatestTableTimeSessionByOrderID(ctx context.Context, orderI
 	)
 	return i, err
 }
+
+// Session Segment queries
+
+type TableTimeSessionSegmentRow struct {
+	ID               uuid.UUID          `json:"id"`
+	SessionID        uuid.UUID          `json:"session_id"`
+	OrderID          uuid.UUID          `json:"order_id"`
+	TableID          uuid.UUID          `json:"table_id"`
+	StartedAt        time.Time          `json:"started_at"`
+	EndedAt          pgtype.Timestamptz `json:"ended_at"`
+	ActiveSeconds    int64              `json:"active_seconds"`
+	PausedSeconds    int64              `json:"paused_seconds"`
+	MoveInReason     string             `json:"move_in_reason"`
+	MoveOutReason    *string            `json:"move_out_reason"`
+	MovedFromTableID pgtype.UUID        `json:"moved_from_table_id"`
+	MovedToTableID   pgtype.UUID        `json:"moved_to_table_id"`
+	CreatedAt        time.Time          `json:"created_at"`
+}
+
+type CreateTableTimeSessionSegmentParams struct {
+	ID               uuid.UUID
+	SessionID        uuid.UUID
+	OrderID          uuid.UUID
+	TableID          uuid.UUID
+	StartedAt        time.Time
+	MoveInReason     string
+	MovedFromTableID pgtype.UUID
+}
+
+const createTableTimeSessionSegment = `
+INSERT INTO table_time_session_segments (
+    id,
+    session_id,
+    order_id,
+    table_id,
+    started_at,
+    move_in_reason,
+    moved_from_table_id
+)
+VALUES ($1,$2,$3,$4,$5,$6,$7)
+RETURNING
+    id,
+    session_id,
+    order_id,
+    table_id,
+    started_at,
+    ended_at,
+    active_seconds,
+    paused_seconds,
+    move_in_reason,
+    move_out_reason,
+    moved_from_table_id,
+    moved_to_table_id,
+    created_at
+`
+
+func (q *Queries) CreateTableTimeSessionSegment(ctx context.Context, arg CreateTableTimeSessionSegmentParams) (TableTimeSessionSegmentRow, error) {
+	row := q.db.QueryRow(ctx, createTableTimeSessionSegment,
+		arg.ID,
+		arg.SessionID,
+		arg.OrderID,
+		arg.TableID,
+		arg.StartedAt,
+		arg.MoveInReason,
+		arg.MovedFromTableID,
+	)
+	var i TableTimeSessionSegmentRow
+	err := row.Scan(
+		&i.ID,
+		&i.SessionID,
+		&i.OrderID,
+		&i.TableID,
+		&i.StartedAt,
+		&i.EndedAt,
+		&i.ActiveSeconds,
+		&i.PausedSeconds,
+		&i.MoveInReason,
+		&i.MoveOutReason,
+		&i.MovedFromTableID,
+		&i.MovedToTableID,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getActiveSegmentBySessionID = `
+SELECT
+    id,
+    session_id,
+    order_id,
+    table_id,
+    started_at,
+    ended_at,
+    active_seconds,
+    paused_seconds,
+    move_in_reason,
+    move_out_reason,
+    moved_from_table_id,
+    moved_to_table_id,
+    created_at
+FROM table_time_session_segments
+WHERE session_id = $1
+  AND COALESCE(deleted_at, 0) = 0
+  AND ended_at IS NULL
+LIMIT 1
+FOR UPDATE
+`
+
+func (q *Queries) GetActiveSegmentBySessionID(ctx context.Context, sessionID uuid.UUID) (TableTimeSessionSegmentRow, error) {
+	row := q.db.QueryRow(ctx, getActiveSegmentBySessionID, sessionID)
+	var i TableTimeSessionSegmentRow
+	err := row.Scan(
+		&i.ID,
+		&i.SessionID,
+		&i.OrderID,
+		&i.TableID,
+		&i.StartedAt,
+		&i.EndedAt,
+		&i.ActiveSeconds,
+		&i.PausedSeconds,
+		&i.MoveInReason,
+		&i.MoveOutReason,
+		&i.MovedFromTableID,
+		&i.MovedToTableID,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+type UpdateTableTimeSessionSegmentCloseParams struct {
+	ID             uuid.UUID
+	EndedAt        pgtype.Timestamptz
+	ActiveSeconds  int64
+	PausedSeconds  int64
+	MoveOutReason  string
+	MovedToTableID pgtype.UUID
+}
+
+const updateTableTimeSessionSegmentClose = `
+UPDATE table_time_session_segments
+SET
+    ended_at = $2,
+    active_seconds = $3,
+    paused_seconds = $4,
+    move_out_reason = $5,
+    moved_to_table_id = $6
+WHERE id = $1
+RETURNING
+    id,
+    session_id,
+    order_id,
+    table_id,
+    started_at,
+    ended_at,
+    active_seconds,
+    paused_seconds,
+    move_in_reason,
+    move_out_reason,
+    moved_from_table_id,
+    moved_to_table_id,
+    created_at
+`
+
+func (q *Queries) UpdateTableTimeSessionSegmentClose(ctx context.Context, arg UpdateTableTimeSessionSegmentCloseParams) (TableTimeSessionSegmentRow, error) {
+	row := q.db.QueryRow(ctx, updateTableTimeSessionSegmentClose,
+		arg.ID,
+		arg.EndedAt,
+		arg.ActiveSeconds,
+		arg.PausedSeconds,
+		arg.MoveOutReason,
+		arg.MovedToTableID,
+	)
+	var i TableTimeSessionSegmentRow
+	err := row.Scan(
+		&i.ID,
+		&i.SessionID,
+		&i.OrderID,
+		&i.TableID,
+		&i.StartedAt,
+		&i.EndedAt,
+		&i.ActiveSeconds,
+		&i.PausedSeconds,
+		&i.MoveInReason,
+		&i.MoveOutReason,
+		&i.MovedFromTableID,
+		&i.MovedToTableID,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const listSegmentsBySessionID = `
+SELECT
+    id,
+    session_id,
+    order_id,
+    table_id,
+    started_at,
+    ended_at,
+    active_seconds,
+    paused_seconds,
+    move_in_reason,
+    move_out_reason,
+    moved_from_table_id,
+    moved_to_table_id,
+    created_at
+FROM table_time_session_segments
+WHERE session_id = $1
+  AND COALESCE(deleted_at, 0) = 0
+ORDER BY started_at ASC
+`
+
+func (q *Queries) ListSegmentsBySessionID(ctx context.Context, sessionID uuid.UUID) ([]TableTimeSessionSegmentRow, error) {
+	rows, err := q.db.Query(ctx, listSegmentsBySessionID, sessionID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var items []TableTimeSessionSegmentRow
+	for rows.Next() {
+		var i TableTimeSessionSegmentRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.SessionID,
+			&i.OrderID,
+			&i.TableID,
+			&i.StartedAt,
+			&i.EndedAt,
+			&i.ActiveSeconds,
+			&i.PausedSeconds,
+			&i.MoveInReason,
+			&i.MoveOutReason,
+			&i.MovedFromTableID,
+			&i.MovedToTableID,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return items, nil
+}
+
+const getOpenTableTimeSessionByIDForUpdate = `
+SELECT
+    id,
+    order_id,
+    table_id,
+    state,
+    started_at,
+    active_started_at,
+    accumulated_active_sec,
+    ended_at,
+    final_amount,
+    created_by,
+    updated_by,
+    created_at,
+    updated_at
+FROM table_time_sessions
+WHERE id = $1
+  AND COALESCE(deleted_at, 0) = 0
+  AND ended_at IS NULL
+LIMIT 1
+FOR UPDATE
+`
+
+func (q *Queries) GetOpenTableTimeSessionByIDForUpdate(ctx context.Context, sessionID uuid.UUID) (TableTimeSessionRow, error) {
+	row := q.db.QueryRow(ctx, getOpenTableTimeSessionByIDForUpdate, sessionID)
+	var i TableTimeSessionRow
+	err := row.Scan(
+		&i.ID,
+		&i.OrderID,
+		&i.TableID,
+		&i.State,
+		&i.StartedAt,
+		&i.ActiveStartedAt,
+		&i.AccumulatedActiveSec,
+		&i.EndedAt,
+		&i.FinalAmount,
+		&i.CreatedBy,
+		&i.UpdatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+type UpdateTableTimeSessionTableIDForTransferParams struct {
+	ID        uuid.UUID
+	TableID   uuid.UUID
+	UpdatedBy pgtype.UUID
+}
+
+const updateTableTimeSessionTableIDForTransfer = `
+UPDATE table_time_sessions
+SET
+    table_id = $2,
+    updated_by = $3,
+    updated_at = NOW()
+WHERE id = $1
+  AND COALESCE(deleted_at, 0) = 0
+  AND ended_at IS NULL
+RETURNING
+    id,
+    order_id,
+    table_id,
+    state,
+    started_at,
+    active_started_at,
+    accumulated_active_sec,
+    ended_at,
+    final_amount,
+    created_by,
+    updated_by,
+    created_at,
+    updated_at
+`
+
+func (q *Queries) UpdateTableTimeSessionTableIDForTransfer(ctx context.Context, arg UpdateTableTimeSessionTableIDForTransferParams) (TableTimeSessionRow, error) {
+	row := q.db.QueryRow(ctx, updateTableTimeSessionTableIDForTransfer, arg.ID, arg.TableID, arg.UpdatedBy)
+	var i TableTimeSessionRow
+	err := row.Scan(
+		&i.ID,
+		&i.OrderID,
+		&i.TableID,
+		&i.State,
+		&i.StartedAt,
+		&i.ActiveStartedAt,
+		&i.AccumulatedActiveSec,
+		&i.EndedAt,
+		&i.FinalAmount,
+		&i.CreatedBy,
+		&i.UpdatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateOrderTableIDForTimerTransfer = `
+UPDATE orders
+SET
+    table_id = $2,
+    updated_at = NOW()
+WHERE id = $1
+  AND COALESCE(deleted_at, 0) = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+RETURNING id
+`
+
+func (q *Queries) UpdateOrderTableIDForTimerTransfer(ctx context.Context, orderID uuid.UUID, tableID uuid.UUID) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, updateOrderTableIDForTimerTransfer, orderID, tableID)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
+}
