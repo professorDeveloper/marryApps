@@ -205,7 +205,7 @@ func (s *CafeTableS) CreateCafeTable(
 		}
 	}
 
-	return toCafeTableResponse(table, nil), nil
+	return toCafeTableResponse(table, nil, nil), nil
 }
 
 func (s *CafeTableS) GetCafeTableByID(ctx context.Context, tableID string) (*model.CafeTableResponse, error) {
@@ -228,15 +228,19 @@ func (s *CafeTableS) GetCafeTableByID(ctx context.Context, tableID string) (*mod
 	}
 
 	var currentAmount *string
-	if table.TableType == string(model.TableTypeTimeBased) {
+	var timer *model.TableTimerResponse
+	if table.TableType == string(model.TableTypeTimeBased) && table.Status == "busy" {
 		timerS := NewTableTimerS(s.repo)
-		timer, err := timerS.GetTableTimerByTableID(ctx, tableID)
-		if err == nil && timer != nil && timer.CurrentAmount != nil {
-			currentAmount = timer.CurrentAmount
+		t, err := timerS.GetTableTimerByTableID(ctx, tableID)
+		if err == nil && t != nil {
+			timer = t
+			if t.CurrentAmount != nil {
+				currentAmount = t.CurrentAmount
+			}
 		}
 	}
 
-	return toCafeTableResponse(table, currentAmount), nil
+	return toCafeTableResponse(table, currentAmount, timer), nil
 }
 
 func (s *CafeTableS) GetAllCafeTables(ctx context.Context, filter model.CafeTableListFilter, limit, offset int32) ([]*model.CafeTableResponse, int64, error) {
@@ -287,7 +291,23 @@ func (s *CafeTableS) GetAllCafeTables(ctx context.Context, filter model.CafeTabl
 
 	resp := make([]*model.CafeTableResponse, 0, len(rows))
 	for _, row := range rows {
-		resp = append(resp, toCafeTableResponse(row, nil))
+		var timer *model.TableTimerResponse
+		var currentAmount *string
+
+		// Only fetch timer for time-based busy tables to avoid N+1 queries
+		if row.TableType == string(model.TableTypeTimeBased) && string(row.Status) == "busy" {
+			tableID := row.ID.String()
+			timerS := NewTableTimerS(s.repo)
+			t, err := timerS.GetTableTimerByTableID(ctx, tableID)
+			if err == nil && t != nil {
+				timer = t
+				if t.CurrentAmount != nil {
+					currentAmount = t.CurrentAmount
+				}
+			}
+		}
+
+		resp = append(resp, toCafeTableResponse(row, currentAmount, timer))
 	}
 
 	return resp, total, nil
@@ -329,7 +349,23 @@ func (s *CafeTableS) GetCafeTablesByHallID(ctx context.Context, hallID string, l
 
 	var responses []model.CafeTableResponse
 	for _, t := range tables[start:end] {
-		responses = append(responses, *toCafeTableResponse(t, nil))
+		var timer *model.TableTimerResponse
+		var currentAmount *string
+
+		// Only fetch timer for time-based busy tables to avoid N+1 queries
+		if t.TableType == string(model.TableTypeTimeBased) && string(t.Status) == "busy" {
+			tableID := t.ID.String()
+			timerS := NewTableTimerS(s.repo)
+			t, err := timerS.GetTableTimerByTableID(ctx, tableID)
+			if err == nil && t != nil {
+				timer = t
+				if t.CurrentAmount != nil {
+					currentAmount = t.CurrentAmount
+				}
+			}
+		}
+
+		responses = append(responses, *toCafeTableResponse(t, currentAmount, timer))
 	}
 
 	return responses, total, nil
@@ -371,7 +407,7 @@ func (s *CafeTableS) GetCafeTablesByStatus(ctx context.Context, status string, l
 
 	var responses []model.CafeTableResponse
 	for _, t := range tables {
-		responses = append(responses, *toCafeTableResponse(t, nil))
+		responses = append(responses, *toCafeTableResponse(t, nil, nil))
 	}
 
 	return responses, total, nil
@@ -407,7 +443,7 @@ func (s *CafeTableS) GetCafeTablesByHallAndStatus(ctx context.Context, hallID, s
 
 	var responses []model.CafeTableResponse
 	for _, t := range tables {
-		responses = append(responses, *toCafeTableResponse(t, nil))
+		responses = append(responses, *toCafeTableResponse(t, nil, nil))
 	}
 
 	return responses, nil
@@ -435,7 +471,7 @@ func (s *CafeTableS) GetAvailableTablesByHall(ctx context.Context, hallID string
 
 	var responses []model.CafeTableResponse
 	for _, t := range tables {
-		responses = append(responses, *toCafeTableResponse(t, nil))
+		responses = append(responses, *toCafeTableResponse(t, nil, nil))
 	}
 
 	return responses, nil
@@ -466,7 +502,7 @@ func (s *CafeTableS) GetAvailableTablesByCapacity(ctx context.Context, capacity,
 
 	var responses []model.CafeTableResponse
 	for _, t := range tables {
-		responses = append(responses, *toCafeTableResponse(t, nil))
+		responses = append(responses, *toCafeTableResponse(t, nil, nil))
 	}
 
 	return responses, nil
@@ -497,7 +533,7 @@ func (s *CafeTableS) GetAvailableTablesByHallAndCapacity(ctx context.Context, ha
 
 	var responses []model.CafeTableResponse
 	for _, t := range tables {
-		responses = append(responses, *toCafeTableResponse(t, nil))
+		responses = append(responses, *toCafeTableResponse(t, nil, nil))
 	}
 
 	return responses, nil
@@ -654,7 +690,7 @@ func (s *CafeTableS) UpdateCafeTable(
 		}
 	}
 
-	return toCafeTableResponse(table, nil), nil
+	return toCafeTableResponse(table, nil, nil), nil
 }
 
 // UpdateCafeTableStatus updates only the status of a cafe table
@@ -699,7 +735,7 @@ func (s *CafeTableS) UpdateCafeTableStatus(ctx context.Context, tableID string, 
 		}
 	}
 
-	return toCafeTableResponse(table, nil), nil
+	return toCafeTableResponse(table, nil, nil), nil
 }
 
 // SetTableFree marks a table as free
@@ -725,7 +761,7 @@ func (s *CafeTableS) SetTableFree(ctx context.Context, tableID string) (*model.C
 				return nil, fmt.Errorf("failed to commit transaction: %w", err)
 			}
 		}
-		return toCafeTableResponse(existing, nil), nil
+		return toCafeTableResponse(existing, nil, nil), nil
 	}
 
 	table, err := q.SetTableFree(txCtx, id)
@@ -739,7 +775,7 @@ func (s *CafeTableS) SetTableFree(ctx context.Context, tableID string) (*model.C
 		}
 	}
 
-	return toCafeTableResponse(table, nil), nil
+	return toCafeTableResponse(table, nil, nil), nil
 }
 
 // SetTableBusy marks a table as busy
@@ -765,7 +801,7 @@ func (s *CafeTableS) SetTableBusy(ctx context.Context, tableID string) (*model.C
 				return nil, fmt.Errorf("failed to commit transaction: %w", err)
 			}
 		}
-		return toCafeTableResponse(existing, nil), nil
+		return toCafeTableResponse(existing, nil, nil), nil
 	}
 
 	table, err := q.SetTableBusy(txCtx, id)
@@ -779,7 +815,7 @@ func (s *CafeTableS) SetTableBusy(ctx context.Context, tableID string) (*model.C
 		}
 	}
 
-	return toCafeTableResponse(table, nil), nil
+	return toCafeTableResponse(table, nil, nil), nil
 }
 
 // DeleteCafeTable soft deletes a cafe table
@@ -865,7 +901,7 @@ func (s *CafeTableS) GetTableOccupancyStats(ctx context.Context) (*model.TableOc
 }
 
 // Helper function to convert database model to response model
-func toCafeTableResponse(table any, currentAmount *string) *model.CafeTableResponse {
+func toCafeTableResponse(table any, currentAmount *string, timer *model.TableTimerResponse) *model.CafeTableResponse {
 	extract := func(
 		id uuid.UUID,
 		hallID uuid.UUID,
@@ -930,6 +966,7 @@ func toCafeTableResponse(table any, currentAmount *string) *model.CafeTableRespo
 			Rotation:      rotation,
 			PricePerHour:  pph,
 			CurrentAmount: currentAmount,
+			Timer:         timer,
 			CreatedAt:     ca,
 			UpdatedAt:     ua,
 		}
