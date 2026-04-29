@@ -219,6 +219,8 @@ definitions:
         example: free
       table_type:
         type: string
+      timer:
+        $ref: '#/definitions/model.TableTimerResponse'
       updated_at:
         type: string
       width:
@@ -1707,6 +1709,146 @@ definitions:
         type: string
       uz:
         example: Salom
+        type: string
+    type: object
+  model.DashboardDishSales:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/model.DashboardDishSalesItem'
+        type: array
+      metric:
+        type: string
+      sort:
+        type: string
+    type: object
+  model.DashboardDishSalesItem:
+    properties:
+      good_id:
+        type: string
+      good_name:
+        type: string
+      quantity:
+        type: string
+      revenue:
+        type: string
+    type: object
+  model.DashboardGroupBy:
+    enum:
+    - day
+    - week
+    - month
+    type: string
+    x-enum-varnames:
+    - DashboardGroupByDay
+    - DashboardGroupByWeek
+    - DashboardGroupByMonth
+  model.DashboardKPIValue:
+    properties:
+      change_percent:
+        type: string
+      previous_value:
+        type: string
+      trend:
+        description: up, down, same
+        type: string
+      value:
+        type: string
+    type: object
+  model.DashboardKPIs:
+    properties:
+      average_check:
+        $ref: '#/definitions/model.DashboardKPIValue'
+      checks_count:
+        $ref: '#/definitions/model.DashboardKPIValue'
+      discounts_amount:
+        $ref: '#/definitions/model.DashboardKPIValue'
+      returns_count:
+        $ref: '#/definitions/model.DashboardKPIValue'
+      revenue:
+        $ref: '#/definitions/model.DashboardKPIValue'
+      vat_amount:
+        $ref: '#/definitions/model.DashboardKPIValue'
+    type: object
+  model.DashboardOverviewResponse:
+    properties:
+      dish_sales:
+        $ref: '#/definitions/model.DashboardDishSales'
+      kpis:
+        $ref: '#/definitions/model.DashboardKPIs'
+      period:
+        $ref: '#/definitions/model.DashboardPeriod'
+      revenue_by_categories:
+        $ref: '#/definitions/model.DashboardRevenueByCategories'
+      revenue_by_payment_types:
+        $ref: '#/definitions/model.DashboardRevenueByPaymentTypes'
+      sales_dynamics:
+        items:
+          $ref: '#/definitions/model.DashboardSalesDynamicsItem'
+        type: array
+    type: object
+  model.DashboardPeriod:
+    properties:
+      end:
+        type: string
+      group_by:
+        $ref: '#/definitions/model.DashboardGroupBy'
+      previous_end:
+        type: string
+      previous_start:
+        type: string
+      start:
+        type: string
+    type: object
+  model.DashboardRevenueByCategories:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/model.DashboardRevenueByCategoryItem'
+        type: array
+      total:
+        type: string
+    type: object
+  model.DashboardRevenueByCategoryItem:
+    properties:
+      category_id:
+        type: string
+      category_name:
+        type: string
+      percent:
+        type: string
+      revenue:
+        type: string
+    type: object
+  model.DashboardRevenueByPaymentTypeItem:
+    properties:
+      payment_type:
+        type: string
+      percent:
+        type: string
+      revenue:
+        type: string
+    type: object
+  model.DashboardRevenueByPaymentTypes:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/model.DashboardRevenueByPaymentTypeItem'
+        type: array
+      total:
+        type: string
+    type: object
+  model.DashboardSalesDynamicsItem:
+    properties:
+      average_check:
+        type: string
+      checks_count:
+        type: integer
+      label:
+        type: string
+      period:
+        type: string
+      revenue:
         type: string
     type: object
   model.DeductionActGroupResponse:
@@ -9483,6 +9625,91 @@ paths:
         Save)
       tags:
       - compounds
+  /api/v1/dashboard/overview:
+    get:
+      consumes:
+      - application/json
+      description: Returns aggregated dashboard data including KPIs, sales dynamics,
+        revenue by payment types, revenue by categories, and dish sales
+      parameters:
+      - description: Start date (RFC3339 format)
+        example: '"2026-01-01T00:00:00Z"'
+        in: query
+        name: start
+        required: true
+        type: string
+      - description: End date (RFC3339 format)
+        example: '"2026-12-31T23:59:59Z"'
+        in: query
+        name: end
+        required: true
+        type: string
+      - default: day
+        description: Group by (day, week, month)
+        enum:
+        - day
+        - week
+        - month
+        in: query
+        name: group_by
+        type: string
+      - default: revenue
+        description: Dish metric (revenue, quantity)
+        enum:
+        - revenue
+        - quantity
+        in: query
+        name: dish_metric
+        type: string
+      - default: desc
+        description: Dish sort (asc, desc)
+        enum:
+        - asc
+        - desc
+        in: query
+        name: dish_sort
+        type: string
+      - default: 10
+        description: Limit for dish sales
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.DashboardOverviewResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get dashboard overview
+      tags:
+      - Dashboard
   /api/v1/deductions:
     get:
       consumes:
