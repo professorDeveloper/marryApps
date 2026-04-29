@@ -644,13 +644,25 @@ func (s *TableTimerS) PauseTableTimer(ctx context.Context, orderID string, actor
 		return nil, fmt.Errorf("failed to write timer pause event: %w", err)
 	}
 
+	historyNow := time.Now()
+
+	tableHistory, err := buildTableHistory(txCtx, q, updated.ID, historyNow)
+	if err != nil {
+		if ownsTx {
+			tx.Rollback(ctx)
+		}
+		return nil, fmt.Errorf("failed to build table history: %w", err)
+	}
+
+	resp := toTableTimerResponseWithHistory(ctxRow, &updated, historyNow, tableHistory)
+
 	if ownsTx {
 		if err := tx.Commit(ctx); err != nil {
 			return nil, fmt.Errorf("failed to commit transaction: %w", err)
 		}
 	}
 
-	return toTableTimerResponse(ctxRow, &updated, now), nil
+	return resp, nil
 }
 
 func (s *TableTimerS) ResumeTableTimer(ctx context.Context, orderID string, actorUserID string, actorRole string) (*model.TableTimerResponse, error) {
@@ -718,13 +730,25 @@ func (s *TableTimerS) ResumeTableTimer(ctx context.Context, orderID string, acto
 		return nil, fmt.Errorf("failed to write timer resume event: %w", err)
 	}
 
+	historyNow := time.Now()
+
+	tableHistory, err := buildTableHistory(txCtx, q, updated.ID, historyNow)
+	if err != nil {
+		if ownsTx {
+			tx.Rollback(ctx)
+		}
+		return nil, fmt.Errorf("failed to build table history: %w", err)
+	}
+
+	resp := toTableTimerResponseWithHistory(ctxRow, &updated, historyNow, tableHistory)
+
 	if ownsTx {
 		if err := tx.Commit(ctx); err != nil {
 			return nil, fmt.Errorf("failed to commit transaction: %w", err)
 		}
 	}
 
-	return toTableTimerResponse(ctxRow, &updated, now), nil
+	return resp, nil
 }
 
 func (s *TableTimerS) CloseTableTimer(ctx context.Context, orderID string, actorUserID string, actorRole string) (*model.TableTimerResponse, error) {
@@ -1010,6 +1034,7 @@ func (s *TableTimerS) GetTableTimerByTableID(ctx context.Context, tableID string
 
 	var session *pg.TableTimeSessionRow
 	var sessionErr error
+	var tableHistory []model.TableSegment
 	err = withTenantRead(ctx, s.repo, func(tenantCtx context.Context, q *pg.Queries) error {
 		s, err := q.GetOpenTableTimeSessionByTableID(tenantCtx, tID)
 		if err == pgx.ErrNoRows {
@@ -1020,6 +1045,12 @@ func (s *TableTimerS) GetTableTimerByTableID(ctx context.Context, tableID string
 			return sessionErr
 		}
 		session = &s
+		// Build table history for the session
+		history, err := buildTableHistory(tenantCtx, q, session.ID, time.Now())
+		if err != nil {
+			return fmt.Errorf("failed to build table history: %w", err)
+		}
+		tableHistory = history
 		return nil
 	})
 	if sessionErr != nil {
@@ -1045,5 +1076,5 @@ func (s *TableTimerS) GetTableTimerByTableID(ctx context.Context, tableID string
 		return nil, err
 	}
 
-	return toTableTimerResponse(ctxRow, session, time.Now()), nil
+	return toTableTimerResponseWithHistory(ctxRow, session, time.Now(), tableHistory), nil
 }
