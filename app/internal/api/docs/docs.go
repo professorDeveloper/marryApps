@@ -6467,6 +6467,132 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/dashboard/overview": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns aggregated dashboard data including KPIs, sales dynamics, revenue by payment types, revenue by categories, and dish sales",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Get dashboard overview",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"2026-01-01T00:00:00Z\"",
+                        "description": "Start date (RFC3339 format)",
+                        "name": "start",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "\"2026-12-31T23:59:59Z\"",
+                        "description": "End date (RFC3339 format)",
+                        "name": "end",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "enum": [
+                            "day",
+                            "week",
+                            "month"
+                        ],
+                        "type": "string",
+                        "default": "day",
+                        "description": "Group by (day, week, month)",
+                        "name": "group_by",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "revenue",
+                            "quantity"
+                        ],
+                        "type": "string",
+                        "default": "revenue",
+                        "description": "Dish metric (revenue, quantity)",
+                        "name": "dish_metric",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "asc",
+                            "desc"
+                        ],
+                        "type": "string",
+                        "default": "desc",
+                        "description": "Dish sort (asc, desc)",
+                        "name": "dish_sort",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 10,
+                        "description": "Limit for dish sales",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "default": "uz",
+                        "description": "Language (uz, ru, en)",
+                        "name": "lang",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/model.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/model.DashboardOverviewResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/deductions": {
             "get": {
                 "security": [
@@ -25788,6 +25914,9 @@ const docTemplate = `{
                 "table_type": {
                     "type": "string"
                 },
+                "timer": {
+                    "$ref": "#/definitions/model.TableTimerResponse"
+                },
                 "updated_at": {
                     "type": "string"
                 },
@@ -27892,6 +28021,219 @@ const docTemplate = `{
                 "uz": {
                     "type": "string",
                     "example": "Salom"
+                }
+            }
+        },
+        "model.DashboardDishSales": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.DashboardDishSalesItem"
+                    }
+                },
+                "metric": {
+                    "type": "string"
+                },
+                "sort": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.DashboardDishSalesItem": {
+            "type": "object",
+            "properties": {
+                "good_id": {
+                    "type": "string"
+                },
+                "good_name": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "string"
+                },
+                "revenue": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.DashboardGroupBy": {
+            "type": "string",
+            "enum": [
+                "day",
+                "week",
+                "month"
+            ],
+            "x-enum-varnames": [
+                "DashboardGroupByDay",
+                "DashboardGroupByWeek",
+                "DashboardGroupByMonth"
+            ]
+        },
+        "model.DashboardKPIValue": {
+            "type": "object",
+            "properties": {
+                "change_percent": {
+                    "type": "string"
+                },
+                "previous_value": {
+                    "type": "string"
+                },
+                "trend": {
+                    "description": "up, down, same",
+                    "type": "string"
+                },
+                "value": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.DashboardKPIs": {
+            "type": "object",
+            "properties": {
+                "average_check": {
+                    "$ref": "#/definitions/model.DashboardKPIValue"
+                },
+                "checks_count": {
+                    "$ref": "#/definitions/model.DashboardKPIValue"
+                },
+                "discounts_amount": {
+                    "$ref": "#/definitions/model.DashboardKPIValue"
+                },
+                "returns_count": {
+                    "$ref": "#/definitions/model.DashboardKPIValue"
+                },
+                "revenue": {
+                    "$ref": "#/definitions/model.DashboardKPIValue"
+                },
+                "vat_amount": {
+                    "$ref": "#/definitions/model.DashboardKPIValue"
+                }
+            }
+        },
+        "model.DashboardOverviewResponse": {
+            "type": "object",
+            "properties": {
+                "dish_sales": {
+                    "$ref": "#/definitions/model.DashboardDishSales"
+                },
+                "kpis": {
+                    "$ref": "#/definitions/model.DashboardKPIs"
+                },
+                "period": {
+                    "$ref": "#/definitions/model.DashboardPeriod"
+                },
+                "revenue_by_categories": {
+                    "$ref": "#/definitions/model.DashboardRevenueByCategories"
+                },
+                "revenue_by_payment_types": {
+                    "$ref": "#/definitions/model.DashboardRevenueByPaymentTypes"
+                },
+                "sales_dynamics": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.DashboardSalesDynamicsItem"
+                    }
+                }
+            }
+        },
+        "model.DashboardPeriod": {
+            "type": "object",
+            "properties": {
+                "end": {
+                    "type": "string"
+                },
+                "group_by": {
+                    "$ref": "#/definitions/model.DashboardGroupBy"
+                },
+                "previous_end": {
+                    "type": "string"
+                },
+                "previous_start": {
+                    "type": "string"
+                },
+                "start": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.DashboardRevenueByCategories": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.DashboardRevenueByCategoryItem"
+                    }
+                },
+                "total": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.DashboardRevenueByCategoryItem": {
+            "type": "object",
+            "properties": {
+                "category_id": {
+                    "type": "string"
+                },
+                "category_name": {
+                    "type": "string"
+                },
+                "percent": {
+                    "type": "string"
+                },
+                "revenue": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.DashboardRevenueByPaymentTypeItem": {
+            "type": "object",
+            "properties": {
+                "payment_type": {
+                    "type": "string"
+                },
+                "percent": {
+                    "type": "string"
+                },
+                "revenue": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.DashboardRevenueByPaymentTypes": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.DashboardRevenueByPaymentTypeItem"
+                    }
+                },
+                "total": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.DashboardSalesDynamicsItem": {
+            "type": "object",
+            "properties": {
+                "average_check": {
+                    "type": "string"
+                },
+                "checks_count": {
+                    "type": "integer"
+                },
+                "label": {
+                    "type": "string"
+                },
+                "period": {
+                    "type": "string"
+                },
+                "revenue": {
+                    "type": "string"
                 }
             }
         },

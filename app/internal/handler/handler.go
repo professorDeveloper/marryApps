@@ -63,6 +63,11 @@ func (h *Handler) Register(router *echo.Echo) {
 			metadata.GET("", h.GetMetadata, mw.CheckLanguage())
 		}
 
+		dashboard := api.Group("/dashboard", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
+		{
+			dashboard.GET("/overview", h.GetDashboardOverview, mw.CheckLanguage())
+		}
+
 		sync := api.Group("/sync", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
 		{
 			sync.POST("/pull", h.SyncPull, mw.CheckLanguage())

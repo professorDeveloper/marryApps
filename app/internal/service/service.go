@@ -533,6 +533,7 @@ type I interface {
 	GoodsModifier() GoodsModifierI
 	Settings() SettingsI
 	Metadata() MetadataI
+	Dashboard() *DashboardS
 }
 
 type Service struct {
@@ -572,6 +573,7 @@ type Service struct {
 	goodsModifier     GoodsModifierI
 	settings          SettingsI
 	metadata          MetadataI
+	dashboard         *DashboardS
 }
 
 func New(cfg *config.Config, repo *repository.Repository, clickClient *paymentClick.Client, paymeClient *paymentPayme.Client, minioClient *minio.Minio) *Service {
@@ -612,6 +614,7 @@ func New(cfg *config.Config, repo *repository.Repository, clickClient *paymentCl
 		goodsModifier:     NewGoodsModifierS(repo),
 		settings:          NewSettingsS(repo),
 		metadata:          NewMetadataS(repo),
+		dashboard:         NewDashboardS(repo),
 	}
 }
 
@@ -756,4 +759,8 @@ func (s *Service) Settings() SettingsI {
 
 func (s *Service) Metadata() MetadataI {
 	return s.metadata
+}
+
+func (s *Service) Dashboard() *DashboardS {
+	return s.dashboard
 }
