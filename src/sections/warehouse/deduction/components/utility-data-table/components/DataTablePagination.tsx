@@ -101,7 +101,7 @@ export function DataTablePagination({
       <Typography
         sx={{
           fontSize: 12.5,
-          color: 'rgba(255,255,255,0.65)',
+          color: 'var(--color-text-muted)',
           fontFamily: 'var(--font-sans)',
           whiteSpace: 'nowrap',
         }}
@@ -154,11 +154,11 @@ export function DataTablePagination({
                 fontSize: 12,
                 fontWeight: p === page ? 700 : 400,
                 fontFamily: 'var(--font-sans)',
-                color: p === page ? '#000' : 'var(--color-text-muted)',
+                color: p === page ? 'var(--color-text-on-primary)' : 'var(--color-text-muted)',
                 backgroundColor: p === page ? 'var(--color-primary)' : 'transparent',
                 '&:hover': {
                   backgroundColor: p === page ? 'var(--color-primary)' : 'var(--glow-sm)',
-                  color: p === page ? '#000' : 'var(--color-primary)',
+                  color: p === page ? 'var(--color-text-on-primary)' : 'var(--color-primary)',
                   boxShadow: 'var(--glow-shadow-md)',
                 },
               }}

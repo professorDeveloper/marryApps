@@ -191,8 +191,8 @@ function CategoriesTable({ departmentId }: { departmentId: string }) {
                     sx={{
                       width: 40,
                       height: 40,
-                      bgcolor: imageUrls[category.id] ? undefined : (category.color_code || '#ccc'),
-                      color: '#fff',
+                      bgcolor: imageUrls[category.id] ? undefined : (category.color_code || 'var(--color-border)'),
+                      color: 'var(--color-text-on-primary)',
                       fontWeight: 'bold',
                       borderRadius: '8px',
                     }}

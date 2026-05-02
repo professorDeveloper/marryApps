@@ -95,12 +95,12 @@ export function SalesDynamicsChart({ data }: SalesDynamicsChartProps) {
                 <stop offset="100%" stopColor="var(--color-primary)" stopOpacity="0" />
               </linearGradient>
               <linearGradient id="checksGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stopColor="#FF9F1C" stopOpacity="0.3" />
-                <stop offset="100%" stopColor="#FF9F1C" stopOpacity="0" />
+                <stop offset="0%" stopColor="var(--color-warning-500)" stopOpacity="0.3" />
+                <stop offset="100%" stopColor="var(--color-warning-500)" stopOpacity="0" />
               </linearGradient>
               <linearGradient id="avgGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stopColor="#E71D36" stopOpacity="0.3" />
-                <stop offset="100%" stopColor="#E71D36" stopOpacity="0" />
+                <stop offset="0%" stopColor="var(--color-danger-600)" stopOpacity="0.3" />
+                <stop offset="100%" stopColor="var(--color-danger-600)" stopOpacity="0" />
               </linearGradient>
             </defs>
 
@@ -148,8 +148,8 @@ export function SalesDynamicsChart({ data }: SalesDynamicsChartProps) {
 
             {/* Lines */}
             <path d={revenuePath} fill="none" stroke="var(--color-primary)" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
-            <path d={checksPath} fill="none" stroke="#FF9F1C" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" strokeDasharray="6,4" />
-            <path d={avgPath} fill="none" stroke="#E71D36" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" strokeDasharray="12,6" />
+            <path d={checksPath} fill="none" stroke="var(--color-warning-500)" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" strokeDasharray="6,4" />
+            <path d={avgPath} fill="none" stroke="var(--color-danger-600)" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" strokeDasharray="12,6" />
 
             {/* Data points - Revenue */}
             {data.map((item, i) => (
@@ -180,7 +180,7 @@ export function SalesDynamicsChart({ data }: SalesDynamicsChartProps) {
                 cx={getX(i)}
                 cy={getYChecks(item.checks_count)}
                 r={5}
-                fill="#FF9F1C"
+                fill="var(--color-warning-500)"
                 stroke="var(--color-surface-1)"
                 strokeWidth={2}
               />
@@ -193,7 +193,7 @@ export function SalesDynamicsChart({ data }: SalesDynamicsChartProps) {
                 cx={getX(i)}
                 cy={getYAvg(parseFloat(item.average_check))}
                 r={5}
-                fill="#E71D36"
+                fill="var(--color-danger-600)"
                 stroke="var(--color-surface-1)"
                 strokeWidth={2}
               />
@@ -224,13 +224,13 @@ export function SalesDynamicsChart({ data }: SalesDynamicsChartProps) {
             </Typography>
           </Stack>
           <Stack direction="row" alignItems="center" spacing={1.5}>
-            <Box sx={{ width: 32, height: 4, bgcolor: '#FF9F1C', borderRadius: 2 }} />
+            <Box sx={{ width: 32, height: 4, bgcolor: 'var(--color-warning-500)', borderRadius: 2 }} />
             <Typography variant="body2" sx={{ color: 'var(--color-text-primary)', fontWeight: 600 }}>
               Checks
             </Typography>
           </Stack>
           <Stack direction="row" alignItems="center" spacing={1.5}>
-            <Box sx={{ width: 32, height: 4, bgcolor: '#E71D36', borderRadius: 2 }} />
+            <Box sx={{ width: 32, height: 4, bgcolor: 'var(--color-danger-600)', borderRadius: 2 }} />
             <Typography variant="body2" sx={{ color: 'var(--color-text-primary)', fontWeight: 600 }}>
               Avg Check
             </Typography>

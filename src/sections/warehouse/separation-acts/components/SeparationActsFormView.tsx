@@ -545,7 +545,7 @@ const SeparationActsFormView = React.memo(function SeparationActsFormView({
                                         onClick={handleConfirm}
                                     >
                                         {actionLoading === 'confirm' ? (
-                                            <CircularProgress size={18} sx={{ color: '#fff' }} />
+                                            <CircularProgress size={18} sx={{ color: 'var(--color-text-on-primary)' }} />
                                         ) : (
                                             t('common.confirm', 'Confirm')
                                         )}
@@ -562,7 +562,7 @@ const SeparationActsFormView = React.memo(function SeparationActsFormView({
                                         }}
                                     >
                                         {actionLoading === 'delete' ? (
-                                            <CircularProgress size={18} sx={{ color: '#fff' }} />
+                                            <CircularProgress size={18} sx={{ color: 'var(--color-text-on-primary)' }} />
                                         ) : (
                                             t('common.delete', 'Delete')
                                         )}
@@ -577,7 +577,7 @@ const SeparationActsFormView = React.memo(function SeparationActsFormView({
                                     onClick={handleCancelAct}
                                 >
                                     {actionLoading === 'cancel' ? (
-                                        <CircularProgress size={18} sx={{ color: '#fff' }} />
+                                        <CircularProgress size={18} sx={{ color: 'var(--color-text-on-primary)' }} />
                                     ) : (
                                         t('common.cancel', 'Cancel')
                                     )}

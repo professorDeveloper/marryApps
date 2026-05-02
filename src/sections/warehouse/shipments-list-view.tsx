@@ -344,10 +344,10 @@ export function ShipmentsListView() {
         getValue: (row: Shipment) => row?.status || '',
         renderCell: ({ value }: { value: unknown }) => {
           const status = String(value ?? '').toLowerCase();
-          let bgColor = '#E2E3E5';
-          let textColor = '#383D41';
-          if (status === 'active') { bgColor = '#D4EDDA'; textColor = '#155724'; }
-          if (status === 'deleted') { bgColor = '#F8D7DA'; textColor = '#721C24'; }
+          let bgColor = 'var(--color-surface-2)';
+          let textColor = 'var(--color-text-secondary)';
+          if (status === 'active') { bgColor = 'var(--color-success-50)'; textColor = 'var(--color-success-600)'; }
+          if (status === 'deleted') { bgColor = 'var(--color-danger-50)'; textColor = 'var(--color-danger-600)'; }
           return (
             <Box sx={{ 
               display: 'flex', 

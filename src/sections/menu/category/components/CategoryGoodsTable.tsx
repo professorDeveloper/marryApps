@@ -71,8 +71,8 @@ export function CategoryGoodsTable({ categoryId }: CategoryGoodsTableProps) {
                         sx={{
                             width: 40,
                             height: 40,
-                            bgcolor: imageUrls[params.row.id] ? undefined : '#ccc',
-                            color: '#fff',
+                            bgcolor: imageUrls[params.row.id] ? undefined : 'var(--color-border)',
+                            color: 'var(--color-text-on-primary)',
                             fontWeight: 'bold',
                             borderRadius: '8px',
                         }}
@@ -153,10 +153,10 @@ export function CategoryGoodsTable({ categoryId }: CategoryGoodsTableProps) {
                         border: 'none',
                     },
                     '& .MuiDataGrid-columnHeaders': {
-                        borderBottom: '2px solid #f0f0f0',
+                        borderBottom: '2px solid var(--color-border-light)',
                     },
                     '& .MuiDataGrid-cell': {
-                        borderBottom: '1px solid #f0f0f0',
+                        borderBottom: '1px solid var(--color-border-light)',
                     },
                 }}
             />

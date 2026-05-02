@@ -34,7 +34,7 @@ export const baseTheme: ThemeOptions = {
   mixins,
   components,
   typography,
-  shape: { borderRadius: 14 },
+  shape: { borderRadius: 12 }, // Base radius; components override with 16px for cards, 10px for nav items
   direction: themeConfig.direction,
   cssVariables: themeConfig.cssVariables,
 };

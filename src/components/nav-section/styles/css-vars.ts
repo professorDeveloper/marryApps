@@ -3,7 +3,7 @@ import type { Theme } from '@mui/material/styles';
 
 // ----------------------------------------------------------------------
 
-export const bulletColor = { dark: '#282F37', light: '#EDEFF2' };
+export const bulletColor = { dark: 'var(--color-surface-1)', light: 'var(--color-border-light)' };
 // export const bulletColor = { dark: 'var(--color-primary)', light: 'var(--color-primary)' };
 
 

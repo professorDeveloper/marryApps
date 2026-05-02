@@ -490,7 +490,7 @@ const ShipmentsFormView = React.memo(function ShipmentsFormView({
                                         onClick={handleConfirm}
                                     >
                                         {actionLoading === 'confirm' ? (
-                                            <CircularProgress size={18} sx={{ color: '#fff' }} />
+                                            <CircularProgress size={18} sx={{ color: 'var(--color-text-on-primary)' }} />
                                         ) : (
                                             t('common.confirm', 'Confirm')
                                         )}
@@ -507,7 +507,7 @@ const ShipmentsFormView = React.memo(function ShipmentsFormView({
                                         }}
                                     >
                                         {actionLoading === 'delete' ? (
-                                            <CircularProgress size={18} sx={{ color: '#fff' }} />
+                                            <CircularProgress size={18} sx={{ color: 'var(--color-text-on-primary)' }} />
                                         ) : (
                                             t('common.delete', 'Delete')
                                         )}
@@ -522,7 +522,7 @@ const ShipmentsFormView = React.memo(function ShipmentsFormView({
                                     onClick={handleCancelShipment}
                                 >
                                     {actionLoading === 'cancel' ? (
-                                        <CircularProgress size={18} sx={{ color: '#fff' }} />
+                                        <CircularProgress size={18} sx={{ color: 'var(--color-text-on-primary)' }} />
                                     ) : (
                                         t('common.cancel', 'Cancel')
                                     )}

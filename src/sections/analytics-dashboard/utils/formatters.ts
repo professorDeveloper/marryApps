@@ -31,13 +31,13 @@ export const formatQuantity = (value: string | number): string => {
 export const getTrendColor = (trend: 'up' | 'down' | 'same'): string => {
   switch (trend) {
     case 'up':
-      return '#4CAF50';
+      return 'var(--color-success-500)';
     case 'down':
-      return '#F44336';
+      return 'var(--color-danger-500)';
     case 'same':
-      return '#9E9E9E';
+      return 'var(--color-text-muted)';
     default:
-      return '#9E9E9E';
+      return 'var(--color-text-muted)';
   }
 };
 
@@ -55,7 +55,7 @@ export const getTrendIcon = (trend: 'up' | 'down' | 'same'): string => {
 };
 
 export const getUtilizationColor = (utilization: number): string => {
-  if (utilization >= 80) return '#4CAF50';
-  if (utilization >= 50) return '#FF9800';
-  return '#F44336';
+  if (utilization >= 80) return 'var(--color-success-500)';
+  if (utilization >= 50) return 'var(--color-warning-500)';
+  return 'var(--color-danger-500)';
 };

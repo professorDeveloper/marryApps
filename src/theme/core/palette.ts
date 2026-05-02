@@ -97,15 +97,15 @@ export const grey = createPaletteChannel(themeConfig.palette.grey);
  * ➤
  */
 export const text = {
-  // `primary: '#1A1410'` mirrors --color-text in src/global.css (light scheme).
-  light: createPaletteChannel({ primary: '#1A1410', secondary: '#5B4A40', disabled: '#8C7A6E' }),
-  dark: createPaletteChannel({ primary: '#FFF7EF', secondary: '#C8B8A8', disabled: '#8C7F72' }),
+  // Mirrors --color-text-* in src/global.css
+  light: createPaletteChannel({ primary: '#141414', secondary: '#5c5c5c', disabled: '#9b9b9b' }),
+  dark: createPaletteChannel({ primary: '#f1f5f9', secondary: '#94a3b8', disabled: '#64748b' }),
 };
 
 export const background = {
   // Mirrors --color-bg / --color-surface-* in src/global.css.
-  light: createPaletteChannel({ paper: '#FFFDFA', default: '#FFF8F1', neutral: '#FFE8D9' }),
-  dark: createPaletteChannel({ paper: '#1A130E', default: '#110C08', neutral: '#221913' }),
+  light: createPaletteChannel({ paper: '#FFFFFF', default: '#f4f5f7', neutral: '#f2f1ef' }),
+  dark: createPaletteChannel({ paper: '#1a1d2e', default: '#141626', neutral: '#0f111a' }),
 };
 
 export const action = (mode: 'light' | 'dark'): Partial<TypeAction> => ({

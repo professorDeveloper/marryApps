@@ -23,9 +23,37 @@ function createShadows(colorChannel: string): Shadows {
 }
 
 /* **********************************************************************
- * 📦 Final
+ * 📦 Custom shadows matching reference design
  * **********************************************************************/
+const lightShadows: Shadows = [
+  'none',
+  '0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.03)', // Level 1
+  '0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06)',
+  '0 4px 12px rgba(0,0,0,0.08)',
+  '0 6px 20px rgba(0,0,0,0.12)',
+  '0 8px 28px rgba(0,0,0,0.10)',
+  '0 12px 32px rgba(0,0,0,0.12)',
+  '0 16px 40px rgba(0,0,0,0.14)',
+  '0 20px 48px rgba(0,0,0,0.16)',
+  '0 24px 56px rgba(0,0,0,0.18)',
+  ...Array(16).fill('0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.03)'),
+] as unknown as Shadows;
+
+const darkShadows: Shadows = [
+  'none',
+  '0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2)', // Level 1
+  '0 1px 3px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.3)',
+  '0 4px 12px rgba(0,0,0,0.4)',
+  '0 6px 20px rgba(0,0,0,0.5)',
+  '0 8px 28px rgba(0,0,0,0.55)',
+  '0 12px 32px rgba(0,0,0,0.6)',
+  '0 16px 40px rgba(0,0,0,0.65)',
+  '0 20px 48px rgba(0,0,0,0.7)',
+  '0 24px 56px rgba(0,0,0,0.75)',
+  ...Array(16).fill('0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2)'),
+] as unknown as Shadows;
+
 export const shadows: SchemesRecord<Shadows> = {
-  light: createShadows(grey['500Channel']),
-  dark: createShadows(common.blackChannel),
+  light: lightShadows,
+  dark: darkShadows,
 };

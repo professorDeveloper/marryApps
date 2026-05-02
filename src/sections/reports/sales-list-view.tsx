@@ -384,11 +384,11 @@ export function SalesListView() {
         getValue: (row: SalesReport) => row?.status || '',
         renderCell: ({ value }: { value: unknown }) => {
           const status = String(value ?? '').toLowerCase();
-          let bgColor = '#E2E3E5';
-          let textColor = '#383D41';
-          if (status === 'pending') { bgColor = '#FFF3CD'; textColor = '#856404'; }
-          if (status === 'completed') { bgColor = '#D1ECF1'; textColor = '#0C5460'; }
-          if (status === 'cancelled') { bgColor = '#F8D7DA'; textColor = '#721C24'; }
+          let bgColor = 'var(--color-surface-2)';
+          let textColor = 'var(--color-text-secondary)';
+          if (status === 'pending') { bgColor = 'var(--color-warning-50)'; textColor = 'var(--color-warning-600)'; }
+          if (status === 'completed') { bgColor = 'var(--color-info-50)'; textColor = 'var(--color-info-600)'; }
+          if (status === 'cancelled') { bgColor = 'var(--color-danger-50)'; textColor = 'var(--color-danger-600)'; }
           return (
             <span
               style={{

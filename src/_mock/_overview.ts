@@ -146,9 +146,9 @@ export const _ecommerceBestSalesman = Array.from({ length: 5 }, (_, index) => {
 });
 
 export const _ecommerceLatestProducts = Array.from({ length: 5 }, (_, index) => {
-  const colors = (index === 0 && ['#2EC4B6', '#E71D36', '#FF9F1C', '#011627']) ||
-    (index === 1 && ['#92140C', '#FFCF99']) ||
-    (index === 2 && ['#0CECDD', '#FFF338', '#FF67E7', '#C400FF', '#52006A', '#046582']) ||
+  const colors = (index === 0 && ['#2e90fa', '#d92d20', '#f79009', '#ff4d1a']) ||
+    (index === 1 && ['#12b76a', '#f79009']) ||
+    (index === 2 && ['#2e90fa', '#f79009', '#ff4d1a', '#d92d20', '#12b76a', '#f04438']) ||
     (index === 3 && ['#845EC2', '#E4007C', '#2A1A5E']) || ['#090088'];
 
   return {

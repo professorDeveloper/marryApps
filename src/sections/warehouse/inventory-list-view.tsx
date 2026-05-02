@@ -93,9 +93,9 @@ import { RouterLink } from 'src/routes/components';
 
 function RenderCellStatus({ status }: { status: string }) {
     const statusConfig: Record<string, { label: string; color: string }> = {
-        active: { label: 'Active', color: '#22c55e' },
-        draft: { label: 'Draft', color: '#f59e0b' },
-        deleted: { label: 'Deleted', color: '#ef4444' },
+        active: { label: 'Active', color: 'var(--color-success-500)' },
+        draft: { label: 'Draft', color: 'var(--color-warning-500)' },
+        deleted: { label: 'Deleted', color: 'var(--color-danger-500)' },
     };
 
     const config = statusConfig[status] || statusConfig.draft;

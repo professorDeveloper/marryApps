@@ -56,7 +56,7 @@ export function OutletLeakage({ data = MOCK_LEAKAGE_DATA }: OutletLeakageProps) 
                   <Typography variant="body2" sx={{ color: 'var(--color-text-primary)', fontWeight: 500 }}>
                     {item.outletName}
                   </Typography>
-                  <Typography variant="body2" sx={{ color: '#E71D36', fontWeight: 600 }}>
+                  <Typography variant="body2" sx={{ color: 'var(--color-danger-600)', fontWeight: 600 }}>
                     {formatCurrency(value)} ({formatPercentage(parseFloat(item.percent), false)})
                   </Typography>
                 </Stack>
@@ -72,7 +72,7 @@ export function OutletLeakage({ data = MOCK_LEAKAGE_DATA }: OutletLeakageProps) 
                     sx={{
                       height: '100%',
                       width: `${percent}%`,
-                      bgcolor: '#E71D36',
+                      bgcolor: 'var(--color-danger-600)',
                       borderRadius: 3,
                       transition: 'width 0.3s ease',
                     }}
@@ -88,7 +88,7 @@ export function OutletLeakage({ data = MOCK_LEAKAGE_DATA }: OutletLeakageProps) 
             <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>
               Total Leakage
             </Typography>
-            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#E71D36' }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'var(--color-danger-600)' }}>
               {formatCurrency(parseFloat(data.totalLeakage))}
             </Typography>
           </Stack>

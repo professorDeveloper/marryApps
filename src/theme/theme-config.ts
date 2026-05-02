@@ -38,21 +38,19 @@ export const themeConfig: ThemeConfig = {
    * Typography
    *************************************** */
   fontFamily: {
-    primary: 'JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, monospace',
-    secondary: 'JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, monospace',
+    primary: 'Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    secondary: 'Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
   },
   /** **************************************
    * Palette
    *************************************** */
   palette: {
     primary: {
-      // Mirrors --mary-orange ramp in src/global.css.
-      // Keep these in sync: CSS vars drive plain CSS, these drive MUI sx/theme.
-      lighter: '#FFB284',
-      light: '#FF7A1A',
-      main: '#FF5500',
-      dark: '#E65100',
-      darker: '#7A2E00',
+      lighter: '#fff2ec',
+      light: '#ff6d3d',
+      main: '#ff4d1a',
+      dark: '#c12e05',
+      darker: '#7a1e08',
       contrastText: '#FFFFFF',
     },
     secondary: {
@@ -64,35 +62,35 @@ export const themeConfig: ThemeConfig = {
       contrastText: '#FFFFFF',
     },
     info: {
-      lighter: '#CAFDF5',
-      light: '#61F3F3',
-      main: '#00B8D9',
-      dark: '#006C9C',
-      darker: '#003768',
+      lighter: '#eff8ff',
+      light: '#d1e9ff',
+      main: '#2e90fa',
+      dark: '#1570ef',
+      darker: '#0043cc',
       contrastText: '#FFFFFF',
     },
     success: {
-      lighter: '#D3FCD2',
-      light: '#77ED8B',
-      main: '#22C55E',
-      dark: '#118D57',
-      darker: '#065E49',
+      lighter: '#edfff5',
+      light: '#d5f5e3',
+      main: '#12b76a',
+      dark: '#039855',
+      darker: '#0b3d2c',
       contrastText: '#ffffff',
     },
     warning: {
-      lighter: '#FFF5CC',
-      light: '#FFD666',
-      main: '#FFAB00',
-      dark: '#B76E00',
-      darker: '#7A4100',
+      lighter: '#fffaeb',
+      light: '#fef0c7',
+      main: '#f79009',
+      dark: '#dc6803',
+      darker: '#914100',
       contrastText: '#1C252E',
     },
     error: {
-      lighter: '#FFE9D5',
-      light: '#FFAC82',
-      main: '#FF5630',
-      dark: '#B71D18',
-      darker: '#7A0916',
+      lighter: '#fff1f0',
+      light: '#ffe0de',
+      main: '#f04438',
+      dark: '#d92d20',
+      darker: '#79290c',
       contrastText: '#FFFFFF',
     },
     grey: {

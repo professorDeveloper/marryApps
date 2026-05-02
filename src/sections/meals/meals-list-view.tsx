@@ -118,7 +118,7 @@ function MealCalculationsTable({ mealId }: { mealId: string }) {
         <Box sx={{ width: '100%' }}>
             <TableContainer component={Paper} sx={{ mb: 2 }}>
                 <Table size="small">
-                    <TableHead sx={{ bgcolor: '#f5f5f5' }}>
+                    <TableHead sx={{ bgcolor: 'var(--color-surface-secondary)' }}>
                         <TableRow>
                             <TableCell align="left">
                                 {t('common.name')}

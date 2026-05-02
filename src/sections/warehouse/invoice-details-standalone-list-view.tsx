@@ -485,10 +485,10 @@ export function InvoiceDetailsStandaloneListView() {
                 getValue: (row: any) => row?.status || '',
                 renderCell: ({ value }: { value: unknown }) => {
                     const status = String(value ?? '').toLowerCase();
-                    let bgColor = '#E2E3E5';
-                    let textColor = '#383D41';
-                    if (status === 'pending') { bgColor = '#FFF3CD'; textColor = '#856404'; }
-                    if (status === 'deleted') { bgColor = '#F8D7DA'; textColor = '#721C24'; }
+                    let bgColor = 'var(--color-surface-2)';
+                    let textColor = 'var(--color-text-secondary)';
+                    if (status === 'pending') { bgColor = 'var(--color-warning-50)'; textColor = 'var(--color-warning-600)'; }
+                    if (status === 'deleted') { bgColor = 'var(--color-danger-50)'; textColor = 'var(--color-danger-600)'; }
                     return (
                         <Box sx={{ 
                             display: 'flex', 

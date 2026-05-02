@@ -216,7 +216,7 @@ function buildBasicInfoSection(): CardSection {
                 label: 'departments.color',
                 type: 'color',
                 required: true,
-                defaultValue: '#FF4842',
+                defaultValue: '#f04438',
                 colors: COLOR_CODES,
             },
         ],

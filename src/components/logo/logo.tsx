@@ -4,8 +4,8 @@ import { m, Variants } from 'framer-motion';
 const LOGO_PATH = "M904.64,589.1c-23.7,93.51-33.32,101.46-40.94,0l-16.38-179.31c-8.19-72.02-49.34-68.66-73.07-3.15-23.73,65.51-57.11,155.16-57.11,155.16-8.61,23.52-19.32,19.95-24.57,1.47s-12.53-68.34-28.98-105.82c-24.57-33.17-73.28-5.25-88.19,34.85-14.91,40.1-56.27,149.08-59.42,165.45-3.15,16.38,23.32,31.68,45.77,22.26-2.1-34.64,10.38-78.47,36.53-132.49,8.68-11.43,11.76-14.91,15.75,0s32.12,104.56,32.12,104.56c14.49,61.1,65.09,53.33,83.15,0,18.06-53.33,52.7-161.88,52.7-161.88,15.54-40.31,26.55-47.56,26.04,0l-2.73,238.94c0,78.32,80.21,124.72,120.1,7.35,39.89-117.37,141.73-439.25,141.73-439.25,17.57-36.79,31.26-37.47,57.11-31.28-22.37-41.74-41.61-57.31-72.44-61.52-76.73,9.11-98.52,169.84-147.19,384.66Z";
 
 const COLORS = {
-  primary: "#FF3030", // Red
-  accent: "#FFAB00",  // Orange/Yellow
+  primary: "#ff4d1a", // Primary orange from new design
+  accent: "#f79009",  // Warning orange from new design
   core: "#FFFFFF"     // Pure white for the energy core
 };
 
@@ -237,8 +237,10 @@ const Logo = ({ className = "", size = "25%", style, disabled, forceRestart, sho
                    {(showLabel
                    &&
 (  <span
-        className="font-mono font-bold text-orange-400"
         style={{
+          color: 'var(--color-primary-500)',
+          fontFamily: 'var(--font-sans)',
+          fontWeight: 700,
           fontSize: typeof size === 'number' ? `${size * 0.4}px` : 'clamp(12px, 4vw, 32px)',
           whiteSpace: 'nowrap',
           lineHeight: 1,

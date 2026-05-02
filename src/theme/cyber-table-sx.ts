@@ -1,55 +1,49 @@
 import type { SxProps, Theme } from '@mui/material/styles';
 
 export const CYBER_TABLE_SX: SxProps<Theme> = {
-  borderRadius: 'var(--radius-md)',
+  borderRadius: 'var(--radius-lg)',
   border: '1px solid var(--color-border)',
   boxShadow: 'var(--shadow-md)',
   position: 'relative',
-  '&::before': {
-    content: '""',
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundImage: 'radial-gradient(circle at 2px 2px, var(--color-primary-soft) 1px, transparent 0)',
-    backgroundSize: '24px 24px',
-    pointerEvents: 'none',
-    borderRadius: 'var(--radius-md)',
-  },
+  backgroundColor: 'transparent',
   '& .MuiTableCell-head': {
-    color: 'primary.main',
+    color: 'var(--color-text-secondary)',
+    backgroundColor: 'var(--color-surface-secondary)',
     textTransform: 'uppercase',
-    letterSpacing: '1.5px',
-    fontWeight: 800,
+    letterSpacing: '0.12em',
+    fontWeight: 700,
     fontSize: '0.7rem',
-    borderBottom: '2px solid var(--color-border-strong)',
-    py: 2.5,
+    borderBottom: '1px solid var(--color-border)',
+    padding: '8px 14px',
   },
   '& .MuiTableRow-root': {
+    backgroundColor: 'transparent',
+    transition: 'background-color 0.15s ease',
     '&:hover': {
-      backgroundColor: 'var(--color-primary-soft)',
+      backgroundColor: 'var(--color-surface-secondary)',
     },
-    transition: '0.2s',
   },
   '& .MuiTableCell-root': {
     fontFamily: 'var(--font-sans)',
     borderBottom: '1px solid var(--color-border)',
+    fontSize: '0.875rem',
+    padding: '10px 14px',
   },
   '& .MuiTableFooter-root': {
-    backgroundColor: 'var(--color-primary-soft)',
-    borderTop: '1px solid var(--color-border-strong)',
+    backgroundColor: 'transparent',
+    borderTop: '1px solid var(--color-border)',
   },
   '& .MuiTablePagination-root': {
-    borderTop: '1px solid var(--color-border-strong)',
+    borderTop: '1px solid var(--color-border)',
   },
   '& .MuiTablePagination-select, & .MuiTablePagination-selectIcon': {
     color: 'text.primary',
   },
   '& .MuiTablePagination-actions button': {
     color: 'text.primary',
+    transition: 'all 0.15s ease',
     '&:hover': {
-      backgroundColor: 'var(--color-primary-soft)',
+      backgroundColor: 'var(--color-surface-secondary)',
     },
   },
   '& .MuiTablePagination-displayedRows': {

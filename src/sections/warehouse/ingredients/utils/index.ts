@@ -30,14 +30,14 @@ export const getIngredientInitials = (name: string): string => name
 
 export const getIngredientAvatarColor = (name: string): string => {
   const colors = [
-    '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FECA57',
-    '#FF9FF3', '#54A0FF', '#48DBFB', '#1DD1A1', '#FFC048'
+    '#ff4d1a', '#12b76a', '#2e90fa', '#f79009', '#8E33FF',
+    '#f04438', '#d92d20', '#fda29b', '#84caff', '#e83a06'
   ];
-  
+
   let hash = 0;
   for (let i = 0; i < name.length; i++) {
     hash = name.charCodeAt(i) + ((hash << 5) - hash);
   }
-  
+
   return colors[Math.abs(hash) % colors.length];
 };

@@ -490,7 +490,7 @@ const BatchResponseView = React.memo(function BatchResponseView({
                     onClick={onConfirm}
                 >
                     {actionLoading === 'confirm' ? (
-                        <CircularProgress size={18} sx={{ color: '#fff' }} />
+                        <CircularProgress size={18} sx={{ color: 'var(--color-text-on-primary)' }} />
                     ) : (
                         t('common.confirm', 'Confirm')
                     )}
@@ -502,7 +502,7 @@ const BatchResponseView = React.memo(function BatchResponseView({
                     onClick={onCancelInvoice}
                 >
                     {actionLoading === 'cancel' ? (
-                        <CircularProgress size={18} sx={{ color: '#fff' }} />
+                        <CircularProgress size={18} sx={{ color: 'var(--color-text-on-primary)' }} />
                     ) : (
                         t('common.cancel', 'Cancel')
                     )}
@@ -514,7 +514,7 @@ const BatchResponseView = React.memo(function BatchResponseView({
                     onClick={onDelete}
                 >
                     {actionLoading === 'delete' ? (
-                        <CircularProgress size={18} sx={{ color: '#fff' }} />
+                        <CircularProgress size={18} sx={{ color: 'var(--color-text-on-primary)' }} />
                     ) : (
                         t('common.delete', 'Delete')
                     )}

@@ -3,16 +3,16 @@ import type { CardSection } from 'src/components/generic-edit-view/types';
 
 // Color palette used across edit views
 export const COLOR_CODES = [
-    '#FF4842', // Red
-    '#1890FF', // Blue
-    '#00AB55', // Green
-    '#FFC107', // Yellow
-    '#7F00FF', // Violet
-    '#FF6B35', // Orange
-    '#FF1493', // Deep Pink
-    '#00CED1', // Dark Turquoise
-    '#FFD700', // Gold
-    '#8B4513', // Saddle Brown
+    '#f04438', // Error/Red
+    '#2e90fa', // Info/Blue
+    '#12b76a', // Success/Green
+    '#f79009', // Warning/Yellow
+    '#8E33FF', // Secondary/Violet
+    '#ff4d1a', // Primary/Orange
+    '#fda29b', // Light Error
+    '#d92d20', // Danger/Dark Red
+    '#84caff', // Light Info
+    '#f79009', // Warning
     '#000000', // Black
     '#FFFFFF', // White
 ];

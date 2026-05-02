@@ -46,7 +46,7 @@ export const FloorPlanCanvas = ({
 
     // Theme-aware colors
     const isDark = colorScheme === 'dark';
-    const canvasBgColor = isDark ? '#333' : '#ffffff';
+    const canvasBgColor = isDark ? 'var(--color-surface-2)' : 'var(--color-bg)';
     const canvasBgOuterColor = isDark ? theme.vars.palette.background.paper : theme.vars.palette.grey[100];
     const borderColor = isDark ? theme.palette.divider : theme.palette.grey[300];
     const textColor = theme.palette.text.secondary;

@@ -154,13 +154,13 @@ const EditFormFieldComponent: FC<EditFormFieldProps> = ({ field, value, onChange
                                 transition: 'transform 0.15s ease, box-shadow 0.15s ease',
                                 boxShadow:
                                     selectedColor === color
-                                        ? '0 0 0 2px #fff, 0 0 0 4px #111827'
+                                        ? '0 0 0 2px var(--color-bg), 0 0 0 4px var(--color-text-primary)'
                                         : '0 0 0 1px rgba(17, 24, 39, 0.2)',
                                 '&:hover': {
                                     transform: 'translateY(-1px)',
                                 },
                                 '&:focus-visible': {
-                                    outline: '2px solid #111827',
+                                    outline: '2px solid var(--color-text-primary)',
                                     outlineOffset: 2,
                                 },
                             }}
@@ -174,7 +174,7 @@ const EditFormFieldComponent: FC<EditFormFieldProps> = ({ field, value, onChange
                                         left: '50%',
                                         transform: 'translate(-50%, -50%)',
                                         fontSize: 18,
-                                        color: '#fff',
+                                        color: 'var(--color-text-on-primary)',
                                         filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.45))',
                                     }}
                                 />

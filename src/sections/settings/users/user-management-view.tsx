@@ -95,15 +95,15 @@ export function UserManagementView() {
         getValue: (row) => row.status || '',
         renderCell: ({ value }) => {
           const status = String(value || '').toLowerCase();
-          let bgColor = '#E2E3E5';
-          let textColor = '#383D41';
-          if (status === 'active') { 
-            bgColor = '#D1ECF1'; 
-            textColor = '#0C5460'; 
+          let bgColor = 'var(--color-surface-2)';
+          let textColor = 'var(--color-text-secondary)';
+          if (status === 'active') {
+            bgColor = 'var(--color-info-50)';
+            textColor = 'var(--color-info-600)';
           }
-          if (status === 'inactive') { 
-            bgColor = '#F8D7DA'; 
-            textColor = '#721C24'; 
+          if (status === 'inactive') {
+            bgColor = 'var(--color-danger-50)';
+            textColor = 'var(--color-danger-600)';
           }
           return (
             <span

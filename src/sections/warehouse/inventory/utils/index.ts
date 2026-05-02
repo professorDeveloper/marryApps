@@ -16,9 +16,9 @@ export const formatInventoryAmount = (amount: number): string => {
 
 export const getInventoryStatusConfig = (status: string) => {
   const statusConfig: Record<string, { label: string; color: string }> = {
-    active: { label: 'Active', color: '#22c55e' },
-    draft: { label: 'Draft', color: '#f59e0b' },
-    deleted: { label: 'Deleted', color: '#ef4444' },
+    active: { label: 'Active', color: '#12b76a' },
+    draft: { label: 'Draft', color: '#f79009' },
+    deleted: { label: 'Deleted', color: '#f04438' },
   };
 
   return statusConfig[status] || statusConfig.draft;

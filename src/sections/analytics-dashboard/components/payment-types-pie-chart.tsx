@@ -14,7 +14,14 @@ export function PaymentTypesPieChart({ data }: PaymentTypesPieChartProps) {
   const centerX = chartSize / 2;
   const centerY = chartSize / 2;
 
-  const colors = ['#2EC4B6', '#FF9F1C', '#E71D36', '#011627', '#4CAF50', '#9C27B0'];
+  const colors = [
+    'var(--color-info-500)',
+    'var(--color-warning-500)',
+    'var(--color-danger-600)',
+    'var(--color-primary-500)',
+    'var(--color-success-500)',
+    'var(--color-secondary-500)',
+  ];
 
   function getSliceColor(angle: number) {
     const index = Math.floor((angle / 360) * colors.length);

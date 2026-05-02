@@ -124,18 +124,12 @@ export const AddedTable = React.memo(function AddedTable({
                     {/* </Box> */}
                     <Button
                         variant="contained"
+                        color="error"
                         size="small"
-                        // color="error"
                         onClick={onRemoveSelected}
                         disabled={selectedKeys.size === 0}
                         sx={{
                             minWidth: 160,
-                            backgroundColor: 'var(--color-error)',
-                            color: '#fff',
-                            '&:hover': {
-                                backgroundColor: 'var(--color-error)',
-                                opacity: 0.9,
-                            },
                         }}
                     >
                         {t('mealsProducts.removeSelected', 'Remove Selected')}

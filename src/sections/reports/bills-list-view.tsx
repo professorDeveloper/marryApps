@@ -256,10 +256,10 @@ export function BillsListView() {
                                 fontWeight: 700,
                                 color:
                                     billData.bill_status === 'opened'
-                                        ? '#FFA726'
+                                        ? 'var(--color-warning-500)'
                                         : billData.bill_status === 'closed'
-                                            ? '#66BB6A'
-                                            : '#42A5F5',
+                                            ? 'var(--color-success-500)'
+                                            : 'var(--color-info-500)',
                             }}
                         >
                             {billData.bill_status === 'opened'
@@ -335,7 +335,7 @@ export function BillsListView() {
                         </Box>
                     )}
                     {Number(billData.discount_amount) > 0 && (
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.75, color: '#66BB6A' }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.75, color: 'var(--color-success-500)' }}>
                             <Typography variant="body2">{t('bills.discount') || 'Discount'}:</Typography>
                             <Typography variant="body2">-{Number(billData.discount_amount).toLocaleString()}</Typography>
                         </Box>
@@ -573,9 +573,9 @@ export function BillsListView() {
                 renderCell: ({ value }: { value: unknown }) => {
                     const status = String(value ?? '').toLowerCase();
                     const statusColors: Record<string, string> = {
-                        opened: '#FFA726',
-                        closed: '#66BB6A',
-                        paid: '#42A5F5',
+                        opened: 'var(--color-warning-500)',
+                        closed: 'var(--color-success-500)',
+                        paid: 'var(--color-info-500)',
                     };
                     const statusLabels: Record<string, string> = {
                         opened: t('bills.opened') || 'Opened',

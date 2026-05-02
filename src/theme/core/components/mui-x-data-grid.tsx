@@ -360,6 +360,11 @@ const MuiDataGrid: Components<Theme>['MuiDataGrid'] = {
       minHeight: 'auto',
       borderBottom: 'none',
       padding: theme.spacing(2),
+      backgroundColor: theme.vars.palette.background.paper,
+      color: theme.vars.palette.text.primary,
+      [`& .${iconButtonClasses.root}`]: {
+        color: theme.vars.palette.text.primary,
+      },
     }),
     toolbarDivider: {
       display: 'none',

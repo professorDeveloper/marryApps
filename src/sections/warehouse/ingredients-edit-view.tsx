@@ -19,7 +19,7 @@ const COLOR_CODES = [
     '#00AB55', // Green
     '#FFC107', // Yellow
     '#7F00FF', // Violet
-    '#FF6B35', // Orange
+    '#ff4d1a', // Orange
     '#FF1493', // Deep Pink
     '#00CED1', // Dark Turquoise
     '#FFD700', // Gold

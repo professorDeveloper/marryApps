@@ -156,7 +156,7 @@ export const DraggableTable = ({
                 <Rect
                     width={table.width}
                     height={table.height}
-                    fill="#f0f0f0"
+                    fill="var(--color-surface-tertiary)"
                     stroke={borderColor}
                     strokeWidth={isSelected ? 2 : 1}
                     cornerRadius={4}

@@ -361,12 +361,12 @@ export function InventoryReportsListView() {
         getValue: (row: any) => row?.status || '',
         renderCell: ({ value }: { value: unknown }) => {
           const status = String(value ?? '').toLowerCase();
-          let bgColor = '#E2E3E5';
-          let textColor = '#383D41';
-          if (status === 'active') { bgColor = '#D4EDDA'; textColor = '#155724'; }
-          if (status === 'completed') { bgColor = '#CCE5FF'; textColor = '#004085'; }
-          if (status === 'draft') { bgColor = '#FFF3CD'; textColor = '#856404'; }
-          if (status === 'cancelled') { bgColor = '#F8D7DA'; textColor = '#721C24'; }
+          let bgColor = 'var(--color-surface-secondary)';
+          let textColor = 'var(--color-text-secondary)';
+          if (status === 'active') { bgColor = 'var(--color-success-50)'; textColor = 'var(--color-success-600)'; }
+          if (status === 'completed') { bgColor = 'var(--color-info-50)'; textColor = 'var(--color-info-600)'; }
+          if (status === 'draft') { bgColor = 'var(--color-warning-50)'; textColor = 'var(--color-warning-600)'; }
+          if (status === 'cancelled') { bgColor = 'var(--color-danger-50)'; textColor = 'var(--color-danger-600)'; }
           return (
             <Box sx={{ 
               display: 'flex', 

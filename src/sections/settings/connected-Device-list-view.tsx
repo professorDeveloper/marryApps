@@ -116,9 +116,9 @@ export function ConnectedDeviceListView() {
                   borderRadius: '4px',
                   fontSize: '0.875rem',
                   fontWeight: 600,
-                  backgroundColor: '#E3F2FD',
-                  color: '#1565C0',
-                  border: '1px solid #90CAF9',
+                  backgroundColor: 'var(--color-info-50)',
+                  color: 'var(--color-info-600)',
+                  border: '1px solid var(--color-info-100)',
                 }}
               >
                 {displayLabel}
@@ -150,9 +150,9 @@ export function ConnectedDeviceListView() {
                   borderRadius: '4px',
                   fontSize: '0.875rem',
                   fontWeight: 600,
-                  backgroundColor: '#E8F5E8',
-                  color: '#2E7D32',
-                  border: '1px solid #A5D6A7',
+                  backgroundColor: 'var(--color-success-50)',
+                  color: 'var(--color-success-600)',
+                  border: '1px solid var(--color-success-100)',
                 }}
               >
                 {displayLabel}

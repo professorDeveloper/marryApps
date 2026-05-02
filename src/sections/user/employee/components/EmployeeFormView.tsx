@@ -168,8 +168,8 @@ export const EmployeeFormView = React.memo(function EmployeeFormView({ isNew = f
                     sx={{
                         p: 3,
                         mb: 3,
-                        backgroundColor: '#1A1D29',
-                        border: '1px solid #2D3139',
+                        backgroundColor: 'var(--color-surface-0)',
+                        border: '1px solid var(--color-border)',
                         flex: 1,
                         display: 'flex',
                         flexDirection: 'column',
@@ -182,13 +182,13 @@ export const EmployeeFormView = React.memo(function EmployeeFormView({ isNew = f
                                     width: 40,
                                     height: 40,
                                     borderRadius: 1,
-                                    backgroundColor: 'rgba(255, 107, 53, 0.1)',
+                                    backgroundColor: 'var(--color-primary-soft)',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
                                 }}
                             >
-                                <Iconify icon="solar:user-id-bold" sx={{ color: '#FF6B35' }} />
+                                <Iconify icon="solar:user-id-bold" sx={{ color: 'var(--color-primary-500)' }} />
                             </Box>
                             <Box>
                                 <Typography variant="h6" sx={{ fontWeight: 600 }}>
@@ -219,20 +219,20 @@ export const EmployeeFormView = React.memo(function EmployeeFormView({ isNew = f
                                     size="small"
                                     sx={{
                                         '& .MuiOutlinedInput-root': {
-                                            backgroundColor: '#242733',
-                                            color: '#FFFFFF',
+                                            backgroundColor: 'var(--color-surface-1)',
+                                            color: 'var(--color-text-primary)',
                                             '& fieldset': {
-                                                borderColor: '#3D424F',
+                                                borderColor: 'var(--color-border)',
                                             },
                                             '&:hover fieldset': {
-                                                borderColor: '#545D6B',
+                                                borderColor: 'var(--color-border-strong)',
                                             },
                                             '&.Mui-focused fieldset': {
-                                                borderColor: '#FF6B35',
+                                                borderColor: 'var(--color-primary-500)',
                                             },
                                         },
                                         '& .MuiOutlinedInput-input::placeholder': {
-                                            color: '#7A8290',
+                                            color: 'var(--color-text-muted)',
                                             opacity: 1,
                                         },
                                     }}
@@ -249,20 +249,20 @@ export const EmployeeFormView = React.memo(function EmployeeFormView({ isNew = f
                                     size="small"
                                     sx={{
                                         '& .MuiOutlinedInput-root': {
-                                            backgroundColor: '#242733',
-                                            color: '#FFFFFF',
+                                            backgroundColor: 'var(--color-surface-1)',
+                                            color: 'var(--color-text-primary)',
                                             '& fieldset': {
-                                                borderColor: '#3D424F',
+                                                borderColor: 'var(--color-border)',
                                             },
                                             '&:hover fieldset': {
-                                                borderColor: '#545D6B',
+                                                borderColor: 'var(--color-border-strong)',
                                             },
                                             '&.Mui-focused fieldset': {
-                                                borderColor: '#FF6B35',
+                                                borderColor: 'var(--color-primary-500)',
                                             },
                                         },
                                         '& .MuiOutlinedInput-input::placeholder': {
-                                            color: '#7A8290',
+                                            color: 'var(--color-text-muted)',
                                             opacity: 1,
                                         },
                                     }}
@@ -282,26 +282,26 @@ export const EmployeeFormView = React.memo(function EmployeeFormView({ isNew = f
                                     InputProps={{
                                         startAdornment: (
                                             <InputAdornment position="start">
-                                                <Iconify icon="solar:phone-bold" sx={{ color: '#7A8290' }} />
+                                                <Iconify icon="solar:phone-bold" sx={{ color: 'var(--color-text-muted)' }} />
                                             </InputAdornment>
                                         ),
                                     }}
                                     sx={{
                                         '& .MuiOutlinedInput-root': {
-                                            backgroundColor: '#242733',
-                                            color: '#FFFFFF',
+                                            backgroundColor: 'var(--color-surface-1)',
+                                            color: 'var(--color-text-primary)',
                                             '& fieldset': {
-                                                borderColor: '#3D424F',
+                                                borderColor: 'var(--color-border)',
                                             },
                                             '&:hover fieldset': {
-                                                borderColor: '#545D6B',
+                                                borderColor: 'var(--color-border-strong)',
                                             },
                                             '&.Mui-focused fieldset': {
-                                                borderColor: '#FF6B35',
+                                                borderColor: 'var(--color-primary-500)',
                                             },
                                         },
                                         '& .MuiOutlinedInput-input::placeholder': {
-                                            color: '#7A8290',
+                                            color: 'var(--color-text-muted)',
                                             opacity: 1,
                                         },
                                     }}
@@ -320,26 +320,26 @@ export const EmployeeFormView = React.memo(function EmployeeFormView({ isNew = f
                                     InputProps={{
                                         startAdornment: (
                                             <InputAdornment position="start">
-                                                <Iconify icon="solar:lock-password-outline" sx={{ color: '#7A8290' }} />
+                                                <Iconify icon="solar:lock-password-outline" sx={{ color: 'var(--color-text-muted)' }} />
                                             </InputAdornment>
                                         ),
                                     }}
                                     sx={{
                                         '& .MuiOutlinedInput-root': {
-                                            backgroundColor: '#242733',
-                                            color: '#FFFFFF',
+                                            backgroundColor: 'var(--color-surface-1)',
+                                            color: 'var(--color-text-primary)',
                                             '& fieldset': {
-                                                borderColor: '#3D424F',
+                                                borderColor: 'var(--color-border)',
                                             },
                                             '&:hover fieldset': {
-                                                borderColor: '#545D6B',
+                                                borderColor: 'var(--color-border-strong)',
                                             },
                                             '&.Mui-focused fieldset': {
-                                                borderColor: '#FF6B35',
+                                                borderColor: 'var(--color-primary-500)',
                                             },
                                         },
                                         '& .MuiOutlinedInput-input::placeholder': {
-                                            color: '#7A8290',
+                                            color: 'var(--color-text-muted)',
                                             opacity: 1,
                                         },
                                     }}
@@ -358,7 +358,7 @@ export const EmployeeFormView = React.memo(function EmployeeFormView({ isNew = f
                                     justifyContent: 'center',
                                 }}
                             >
-                                <Iconify icon="solar:shield-check-bold" sx={{ color: '#637373' }} />
+                                <Iconify icon="solar:shield-check-bold" sx={{ color: 'var(--color-text-muted)' }} />
                             </Box>
                             <Box>
                                 <Typography variant="h6" sx={{ fontWeight: 600 }}>
@@ -379,22 +379,22 @@ export const EmployeeFormView = React.memo(function EmployeeFormView({ isNew = f
                         >
                             <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 3 }}>
                                 <FormControl fullWidth size="small" disabled={isSubmitting}>
-                                    <InputLabel sx={{ color: '#7A8290' }}>{t('users.role', 'Role')}</InputLabel>
+                                    <InputLabel sx={{ color: 'var(--color-text-muted)' }}>{t('users.role', 'Role')}</InputLabel>
                                     <Select
                                         value={formData.role || ''}
                                         onChange={(e) => handleChange('role', e.target.value as string)}
                                         label={t('users.role', 'Role')}
                                         sx={{
-                                            backgroundColor: '#242733',
-                                            color: '#FFFFFF',
+                                            backgroundColor: 'var(--color-surface-1)',
+                                            color: 'var(--color-text-primary)',
                                             '& .MuiOutlinedInput-notchedOutline': {
-                                                borderColor: '#3D424F',
+                                                borderColor: 'var(--color-border)',
                                             },
                                             '&:hover .MuiOutlinedInput-notchedOutline': {
-                                                borderColor: '#545D6B',
+                                                borderColor: 'var(--color-border-strong)',
                                             },
                                             '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                                borderColor: '#FF6B35',
+                                                borderColor: 'var(--color-primary-500)',
                                             },
                                         }}
                                     >
@@ -410,22 +410,22 @@ export const EmployeeFormView = React.memo(function EmployeeFormView({ isNew = f
                                 </FormControl>
 
                                 <FormControl fullWidth size="small" disabled={isSubmitting}>
-                                    <InputLabel sx={{ color: '#7A8290' }}>{t('users.status', 'Status')}</InputLabel>
+                                    <InputLabel sx={{ color: 'var(--color-text-muted)' }}>{t('users.status', 'Status')}</InputLabel>
                                     <Select
                                         value={formData.is_active ? 'active' : 'inactive'}
                                         onChange={(e) => handleChange('is_active', e.target.value === 'active')}
                                         label={t('users.status', 'Status')}
                                         sx={{
-                                            backgroundColor: '#242733',
-                                            color: '#FFFFFF',
+                                            backgroundColor: 'var(--color-surface-1)',
+                                            color: 'var(--color-text-primary)',
                                             '& .MuiOutlinedInput-notchedOutline': {
-                                                borderColor: '#3D424F',
+                                                borderColor: 'var(--color-border)',
                                             },
                                             '&:hover .MuiOutlinedInput-notchedOutline': {
-                                                borderColor: '#545D6B',
+                                                borderColor: 'var(--color-border-strong)',
                                             },
                                             '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                                borderColor: '#FF6B35',
+                                                borderColor: 'var(--color-primary-500)',
                                             },
                                         }}
                                     >
@@ -436,7 +436,7 @@ export const EmployeeFormView = React.memo(function EmployeeFormView({ isNew = f
 
                                 {formData.role === 'cashier' && (
                                     <FormControl fullWidth size="small" disabled={isSubmitting || cashRegistersLoading}>
-                                        <InputLabel sx={{ color: '#7A8290' }}>
+                                        <InputLabel sx={{ color: 'var(--color-text-muted)' }}>
                                             {t('cashbox.cashiers.title', 'Cash Register')}
                                         </InputLabel>
                                         <Select
@@ -444,16 +444,16 @@ export const EmployeeFormView = React.memo(function EmployeeFormView({ isNew = f
                                             onChange={(e) => handleChange('cash_register_id', e.target.value as string)}
                                             label={t('cashbox.cashiers.title', 'Cash Register')}
                                             sx={{
-                                                backgroundColor: '#242733',
-                                                color: '#FFFFFF',
+                                                backgroundColor: 'var(--color-surface-1)',
+                                                color: 'var(--color-text-primary)',
                                                 '& .MuiOutlinedInput-notchedOutline': {
-                                                    borderColor: '#3D424F',
+                                                    borderColor: 'var(--color-border)',
                                                 },
                                                 '&:hover .MuiOutlinedInput-notchedOutline': {
-                                                    borderColor: '#545D6B',
+                                                    borderColor: 'var(--color-border-strong)',
                                                 },
                                                 '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                                    borderColor: '#FF6B35',
+                                                    borderColor: 'var(--color-primary-500)',
                                                 },
                                             }}
                                             startAdornment={
@@ -494,20 +494,20 @@ export const EmployeeFormView = React.memo(function EmployeeFormView({ isNew = f
                                     inputProps={{ maxLength: 6 }}
                                     sx={{
                                         '& .MuiOutlinedInput-root': {
-                                            backgroundColor: '#242733',
-                                            color: '#FFFFFF',
+                                            backgroundColor: 'var(--color-surface-1)',
+                                            color: 'var(--color-text-primary)',
                                             '& fieldset': {
-                                                borderColor: '#3D424F',
+                                                borderColor: 'var(--color-border)',
                                             },
                                             '&:hover fieldset': {
-                                                borderColor: '#545D6B',
+                                                borderColor: 'var(--color-border-strong)',
                                             },
                                             '&.Mui-focused fieldset': {
-                                                borderColor: '#FF6B35',
+                                                borderColor: 'var(--color-primary-500)',
                                             },
                                         },
                                         '& .MuiOutlinedInput-input::placeholder': {
-                                            color: '#7A8290',
+                                            color: 'var(--color-text-muted)',
                                             opacity: 1,
                                         },
                                     }}
@@ -533,14 +533,9 @@ export const EmployeeFormView = React.memo(function EmployeeFormView({ isNew = f
                                         variant="contained"
                                         type="submit"
                                         disabled={isSubmitting}
+                                        color="primary"
                                         sx={{
-                                            backgroundColor: '#FF6B35',
-                                            color: '#FFFFFF',
-                                            '&:hover': {
-                                                backgroundColor: '#E55A24',
-                                            },
                                             '&:disabled': {
-                                                backgroundColor: '#FF6B35',
                                                 opacity: 0.6,
                                             },
                                         }}

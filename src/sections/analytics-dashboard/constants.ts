@@ -1,14 +1,14 @@
 import { DashboardOverviewParams } from './types';
 
 export const CHART_COLORS = {
-  primary: '#2EC4B6',
-  secondary: '#E71D36',
-  tertiary: '#FF9F1C',
-  quaternary: '#011627',
-  success: '#4CAF50',
-  warning: '#FF9800',
-  error: '#F44336',
-  info: '#2196F3',
+  primary: 'var(--color-primary-500)',
+  secondary: 'var(--color-danger-500)',
+  tertiary: 'var(--color-warning-500)',
+  quaternary: 'var(--color-surface-tertiary)',
+  success: 'var(--color-success-500)',
+  warning: 'var(--color-warning-500)',
+  error: 'var(--color-danger-600)',
+  info: 'var(--color-info-500)',
 };
 
 export const KPI_CONFIG = {
