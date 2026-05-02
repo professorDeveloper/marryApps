@@ -2732,3 +2732,79 @@ func (h *Handler) GetMyOrders(c echo.Context) error {
 		http.StatusOK,
 	))
 }
+
+// TransferOrder handles POST /orders/:id/transfer
+// @Summary Transfer order to different table
+// @Description Transfer an order from its current table to a target table
+// @Tags Orders
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Order ID"
+// @Param request body model.OrderTransferRequest true "Transfer request with target_table_id"
+// @Success 200 {object} model.OrderResponse
+// @Failure 400 {object} model.ErrorResponse
+// @Failure 404 {object} model.ErrorResponse
+// @Failure 409 {object} model.ErrorResponse
+// @Failure 500 {object} model.ErrorResponse
+// @Router /api/v1/orders/{id}/transfer [post]
+func (h *Handler) TransferOrder(c echo.Context) error {
+	orderID := c.Param("id")
+	if orderID == "" {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"order_id is required",
+			"order_id must be provided in URL path",
+			http.StatusBadRequest,
+		))
+	}
+
+	var req model.OrderTransferRequest
+	if err := c.BindJSON(&req); err != nil {
+		log.Printf("Failed to bind transfer request: %v", err)
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"invalid request body",
+			err.Error(),
+			http.StatusBadRequest,
+		))
+	}
+
+	if err := h.validator.Struct(&req); err != nil {
+		return c.JSON(http.StatusUnprocessableEntity, model.NewErrorResponse(
+			"validation error",
+			err.Error(),
+			http.StatusUnprocessableEntity,
+		))
+	}
+
+	order, err := h.service.Order().TransferOrder(c.Request().Context(), orderID, req.TargetTableID)
+	if err != nil {
+		errMsg := err.Error()
+		logMsg := "transfer order failed"
+
+		// Determine HTTP status code based on error message
+		statusCode := http.StatusInternalServerError
+		if strings.Contains(errMsg, "not found") {
+			statusCode = http.StatusNotFound
+		} else if strings.Contains(errMsg, "not available") || strings.Contains(errMsg, "occupied") {
+			statusCode = http.StatusConflict
+		} else if strings.Contains(errMsg, "completed") || strings.Contains(errMsg, "no active session") {
+			statusCode = http.StatusBadRequest
+		}
+
+		if statusCode == http.StatusInternalServerError {
+			log.Printf("%s for order %s: %v", logMsg, orderID, err)
+		}
+
+		return c.JSON(statusCode, model.NewErrorResponse(
+			"transfer failed",
+			errMsg,
+			statusCode,
+		))
+	}
+
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Order transferred successfully",
+		order,
+		http.StatusOK,
+	))
+}

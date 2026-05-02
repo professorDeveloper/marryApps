@@ -151,6 +151,22 @@ func calcAmount(totalSec int64, pricePerHour pgtype.Numeric) *string {
 	return &v
 }
 
+// calcAmountWithTableType calculates the charge for an order session,
+// respecting the table type. Simple tables are never charged; only Time-Based
+// tables with a valid price_per_hour are charged.
+// This ensures billing accuracy after order transfers between table types.
+func calcAmountWithTableType(totalSec int64, pricePerHour pgtype.Numeric, tableType string) *string {
+	// Simple tables are never charged, regardless of price_per_hour setting
+	if tableType == string(model.TableTypeSimple) {
+		return nil
+	}
+	// Only charge time-based tables
+	if tableType != string(model.TableTypeTimeBased) {
+		return nil
+	}
+	return calcAmount(totalSec, pricePerHour)
+}
+
 func toTableTimerResponse(ctxRow pg.OrderTimerContextRow, session *pg.TableTimeSessionRow, now time.Time) *model.TableTimerResponse {
 	return toTableTimerResponseWithHistory(ctxRow, session, now, nil)
 }
@@ -202,7 +218,7 @@ func toTableTimerResponseWithHistory(ctxRow pg.OrderTimerContextRow, session *pg
 		resp.CurrentActiveSec = 0
 	}
 
-	resp.CurrentAmount = calcAmount(resp.TotalActiveSec, ctxRow.PricePerHour)
+	resp.CurrentAmount = calcAmountWithTableType(resp.TotalActiveSec, ctxRow.PricePerHour, ctxRow.TableType)
 
 	if session.FinalAmount.Valid {
 		v := numericToStr(session.FinalAmount)
@@ -828,7 +844,7 @@ func (s *TableTimerS) CloseTableTimer(ctx context.Context, orderID string, actor
 	// If no segment exists (backward compatibility), just close the session
 
 	finalAmount := pgtype.Numeric{}
-	if amount := calcAmount(total, ctxRow.PricePerHour); amount != nil {
+	if amount := calcAmountWithTableType(total, ctxRow.PricePerHour, ctxRow.TableType); amount != nil {
 		_ = finalAmount.Scan(*amount)
 	}
 

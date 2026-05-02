@@ -151,6 +151,7 @@ type OrderResponse struct {
 	Items             []OrderItemResponse `json:"items"`
 	ClientCreatedAt   *time.Time          `json:"client_created_at,omitempty"`
 	PaidAt            *time.Time          `json:"paid_at,omitempty"`
+	ActiveSessionID   *string             `json:"active_session_id,omitempty" example:"d5e6f7a8-b9c0-4d1e-8f2g-h3i4j5k6l7m8"`
 	CreatedAt         *time.Time          `json:"created_at,omitempty"`
 	UpdatedAt         *time.Time          `json:"updated_at,omitempty"`
 }
@@ -197,6 +198,10 @@ type UpdateOrderItemRequest struct {
 
 type UpdateOrderItemStatusRequest struct {
 	Status string `json:"status" validate:"required" example:"cooking"`
+}
+
+type OrderTransferRequest struct {
+	TargetTableID string `json:"target_table_id" validate:"required" example:"c0f18a64-7f5c-4425-9414-1b01cddee9d9"`
 }
 
 type OrderItemResponse struct {

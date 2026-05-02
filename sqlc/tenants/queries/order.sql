@@ -180,6 +180,20 @@ WHERE orders.id = $1
 RETURNING id, table_id, waiter_id, cashier_id, branch_id, status, guest_count, total_amount, comment,
           order_type, scheduled_at, reschedule_comment, client_created_at, paid_at, created_at, updated_at, deleted_at;
 
+-- name: UpdateOrderTable :one
+UPDATE orders
+SET table_id = $2,
+    updated_at = NOW(),
+    branch_id = COALESCE(
+        (SELECT h.branch_id FROM cafe_tables ct JOIN halls h ON h.id = ct.hall_id WHERE ct.id = $2),
+        branch_id
+    )
+WHERE orders.id = $1
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND deleted_at = 0
+RETURNING id, table_id, waiter_id, cashier_id, branch_id, status, guest_count, total_amount, comment,
+          order_type, scheduled_at, reschedule_comment, client_created_at, paid_at, created_at, updated_at, deleted_at;
+
 -- name: AssignCashierToOrder :one
 UPDATE orders
 SET cashier_id = $2,
