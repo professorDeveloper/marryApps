@@ -2759,20 +2759,12 @@ func (h *Handler) TransferOrder(c echo.Context) error {
 	}
 
 	var req model.OrderTransferRequest
-	if err := c.BindJSON(&req); err != nil {
+	if err := c.Bind(&req); err != nil {
 		log.Printf("Failed to bind transfer request: %v", err)
 		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
 			"invalid request body",
 			err.Error(),
 			http.StatusBadRequest,
-		))
-	}
-
-	if err := h.validator.Struct(&req); err != nil {
-		return c.JSON(http.StatusUnprocessableEntity, model.NewErrorResponse(
-			"validation error",
-			err.Error(),
-			http.StatusUnprocessableEntity,
 		))
 	}
 

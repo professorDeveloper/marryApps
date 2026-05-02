@@ -53,6 +53,7 @@ type TableTimeSessionRow struct {
 	OrderID              uuid.UUID          `json:"order_id"`
 	TableID              uuid.UUID          `json:"table_id"`
 	State                string             `json:"state"`
+	TableType            string             `json:"table_type"`
 	StartedAt            time.Time          `json:"started_at"`
 	ActiveStartedAt      pgtype.Timestamptz `json:"active_started_at"`
 	AccumulatedActiveSec int64              `json:"accumulated_active_sec"`
@@ -156,6 +157,7 @@ type CreateTableTimeSessionParams struct {
 	OrderID              uuid.UUID
 	TableID              uuid.UUID
 	State                string
+	TableType            string
 	StartedAt            time.Time
 	ActiveStartedAt      pgtype.Timestamptz
 	AccumulatedActiveSec int64
@@ -169,18 +171,20 @@ INSERT INTO table_time_sessions (
     order_id,
     table_id,
     state,
+    table_type,
     started_at,
     active_started_at,
     accumulated_active_sec,
     created_by,
     updated_by
 )
-VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
 RETURNING
     id,
     order_id,
     table_id,
     state,
+    table_type,
     started_at,
     active_started_at,
     accumulated_active_sec,
@@ -198,6 +202,7 @@ func (q *Queries) CreateTableTimeSession(ctx context.Context, arg CreateTableTim
 		arg.OrderID,
 		arg.TableID,
 		arg.State,
+		arg.TableType,
 		arg.StartedAt,
 		arg.ActiveStartedAt,
 		arg.AccumulatedActiveSec,
@@ -210,6 +215,7 @@ func (q *Queries) CreateTableTimeSession(ctx context.Context, arg CreateTableTim
 		&i.OrderID,
 		&i.TableID,
 		&i.State,
+		&i.TableType,
 		&i.StartedAt,
 		&i.ActiveStartedAt,
 		&i.AccumulatedActiveSec,

@@ -4278,7 +4278,7 @@ func (s *OrderS) TransferOrder(ctx context.Context, orderID string, targetTableI
 	}
 
 	// Lock source session with FOR UPDATE
-	currentSession, err := q.GetTableTimeSessionForOrderExclusive(txCtx, orderUUID)
+	currentSession, err := q.GetOpenTableTimeSessionByOrderIDForUpdate(txCtx, orderUUID)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, fmt.Errorf("no active session for order")
@@ -4304,36 +4304,62 @@ func (s *OrderS) TransferOrder(ctx context.Context, orderID string, targetTableI
 
 	// ============ PHASE A: CLOSE CURRENT SESSION ============
 
+	// Use session.table_type as source of truth for whether segments exist
 	sourceTableType := currentSession.TableType
 	now := pgtype.Timestamptz{Time: time.Now(), Valid: true}
 
-	// Close any open segments in source session
-	if sourceTableType == string(model.TableTypeTimeBased) {
-		openSegments, err := q.GetOpenSegmentsForSession(txCtx, currentSession.ID)
+	// For time-based sessions: close/finalize active segments and calculate charges
+	finalAmount := currentSession.FinalAmount
+	if sourceTableType == "time_based" {
+		segments, err := q.ListSegmentsBySessionID(txCtx, currentSession.ID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to fetch segments: %w", err)
 		}
 
-		for _, seg := range openSegments {
-			// For now, assume segment active_seconds are already calculated
-			// In a real scenario, you'd calculate durations here
-			_, err := q.UpdateTableTimeSessionSegment(txCtx, pg.UpdateTableTimeSessionSegmentParams{
-				ID:           seg.ID,
-				EndedAt:      now,
-				ActiveSeconds: seg.ActiveSeconds,
-				MoveOutReason: pgtype.Text{String: "transfer", Valid: true},
+		// Close open segments and calculate billing
+		totalActiveSeconds := currentSession.AccumulatedActiveSec
+		for _, seg := range segments {
+			// Only close segments that are still open
+			if seg.EndedAt.Valid {
+				continue
+			}
+
+			// Close segment with end time
+			_, err := q.UpdateTableTimeSessionSegmentClose(txCtx, pg.UpdateTableTimeSessionSegmentCloseParams{
+				ID:             seg.ID,
+				EndedAt:        pgtype.Timestamptz{Time: now.Time, Valid: true},
+				ActiveSeconds:  seg.ActiveSeconds,
+				PausedSeconds:  seg.PausedSeconds,
+				MoveOutReason:  "transfer",
 				MovedToTableID: pgtype.UUID{Bytes: targetTableUUID, Valid: true},
 			})
 			if err != nil {
 				return nil, fmt.Errorf("failed to close segment: %w", err)
 			}
+
+			// Accumulate active seconds for billing
+			totalActiveSeconds += seg.ActiveSeconds
 		}
+
+		// TODO: Calculate final_amount based on totalActiveSeconds and price_per_hour
+		// finalAmount = calculateBilling(totalActiveSeconds, sourceTable.PricePerHour)
 	}
 
 	// Mark source session as ended
-	_, err = q.UpdateTableTimeSession(txCtx, pg.UpdateTableTimeSessionParams{
-		ID:      currentSession.ID,
-		EndedAt: now,
+	userIDStr, _ := ctx.Value("user_id").(string)
+	var userID [16]byte
+	if userIDStr != "" {
+		if parsed, err := uuid.Parse(userIDStr); err == nil {
+			userID = parsed
+		}
+	}
+
+	_, err = q.UpdateTableTimeSessionClose(txCtx, pg.UpdateTableTimeSessionCloseParams{
+		ID:                   currentSession.ID,
+		AccumulatedActiveSec: currentSession.AccumulatedActiveSec,
+		EndedAt:              pgtype.Timestamptz{Time: now.Time, Valid: true},
+		FinalAmount:          finalAmount, // Now includes calculated amount if time-based
+		UpdatedBy:            pgtype.UUID{Bytes: userID, Valid: userIDStr != ""},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to close source session: %w", err)
@@ -4348,9 +4374,9 @@ func (s *OrderS) TransferOrder(ctx context.Context, orderID string, targetTableI
 		return nil, fmt.Errorf("failed to create new session: %w", err)
 	}
 
-	// For time-based tables transitioning from another type, create initial segment
-	if targetTableType == string(model.TableTypeTimeBased) && sourceTableType != targetTableType {
-		sourceTableID := uuid.MustParse(order.TableID)
+	// For time-based sessions: immediately create first segment to start the clock
+	if targetTableType == string(model.TableTypeTimeBased) {
+		sourceTableID := uuid.UUID(order.TableID.Bytes)
 		_, err := q.CreateTableTimeSessionSegment(txCtx, pg.CreateTableTimeSessionSegmentParams{
 			ID:               uuid.New(),
 			SessionID:        newSessionID,
@@ -4358,33 +4384,32 @@ func (s *OrderS) TransferOrder(ctx context.Context, orderID string, targetTableI
 			TableID:          targetTableUUID,
 			MoveInReason:     "transfer",
 			MovedFromTableID: pgtype.UUID{Bytes: sourceTableID, Valid: true},
-			StartedAt:        now,
-			ActiveSeconds:    0,
-			PausedSeconds:    0,
+			StartedAt:        now.Time,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to create transfer segment: %w", err)
 		}
 	}
+	// For simple tables: create session only, no segments
 
 	// ============ UPDATE ORDER AND TABLES ============
 
 	// Update order with new table
-	_, err = q.UpdateOrderTable(txCtx, pg.UpdateOrderTableParams{
+	_, err = q.UpdateOrder(txCtx, pg.UpdateOrderParams{
 		ID:      orderUUID,
-		TableID: targetTableUUID,
+		TableID: pgtype.UUID{Bytes: targetTableUUID, Valid: true},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to update order table: %w", err)
 	}
 
 	// Update table statuses
-	sourceTableID := uuid.MustParse(order.TableID)
+	sourceTableID := uuid.UUID(order.TableID.Bytes)
 
 	// Source table → free
 	_, err = q.UpdateCafeTableStatus(txCtx, pg.UpdateCafeTableStatusParams{
 		ID:     sourceTableID,
-		Status: pg.TableStatusFree,
+		Status: pg.NullTableStatus{TableStatus: pg.TableStatusFree, Valid: true},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to free source table: %w", err)
@@ -4393,7 +4418,7 @@ func (s *OrderS) TransferOrder(ctx context.Context, orderID string, targetTableI
 	// Target table → busy
 	_, err = q.UpdateCafeTableStatus(txCtx, pg.UpdateCafeTableStatusParams{
 		ID:     targetTableUUID,
-		Status: pg.TableStatusBusy,
+		Status: pg.NullTableStatus{TableStatus: pg.TableStatusBusy, Valid: true},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to occupy target table: %w", err)
@@ -4431,15 +4456,41 @@ func (s *OrderS) createSessionForOrder(
 	tableID uuid.UUID,
 	tableType string,
 ) (uuid.UUID, error) {
-	now := pgtype.Timestamptz{Time: time.Now(), Valid: true}
+	now := time.Now()
+	nowTS := pgtype.Timestamptz{Time: now, Valid: true}
 
-	// Create session record
+	userIDStr, _ := ctx.Value("user_id").(string)
+	var userID [16]byte
+	userIDValid := false
+	if userIDStr != "" {
+		if parsed, err := uuid.Parse(userIDStr); err == nil {
+			userID = parsed
+			userIDValid = true
+		}
+	}
+
+	// For time-based tables, set state to "running" with active start time
+	state := "inactive"
+	activeStartedAt := pgtype.Timestamptz{}
+	sessionTableType := "simple"
+	if tableType == string(model.TableTypeTimeBased) {
+		state = "running"
+		activeStartedAt = nowTS
+		sessionTableType = "time_based"
+	}
+
+	// Create session record with table_type
 	session, err := q.CreateTableTimeSession(ctx, pg.CreateTableTimeSessionParams{
-		ID:        uuid.New(),
-		OrderID:   orderID,
-		TableID:   tableID,
-		TableType: tableType,
-		StartedAt: now,
+		ID:                   uuid.New(),
+		OrderID:              orderID,
+		TableID:              tableID,
+		State:                state,
+		TableType:            sessionTableType, // ✅ NOW INCLUDED
+		StartedAt:            now,
+		ActiveStartedAt:      activeStartedAt,
+		AccumulatedActiveSec: 0,
+		CreatedBy:            pgtype.UUID{Bytes: userID, Valid: userIDValid},
+		UpdatedBy:            pgtype.UUID{Bytes: userID, Valid: userIDValid},
 	})
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("failed to create session: %w", err)
@@ -4448,14 +4499,13 @@ func (s *OrderS) createSessionForOrder(
 	// If time-based, create opening segment
 	if tableType == string(model.TableTypeTimeBased) {
 		_, err := q.CreateTableTimeSessionSegment(ctx, pg.CreateTableTimeSessionSegmentParams{
-			ID:            uuid.New(),
-			SessionID:     session.ID,
-			OrderID:       orderID,
-			TableID:       tableID,
-			MoveInReason:  "start",
-			StartedAt:     now,
-			ActiveSeconds: 0,
-			PausedSeconds: 0,
+			ID:               uuid.New(),
+			SessionID:        session.ID,
+			OrderID:          orderID,
+			TableID:          tableID,
+			StartedAt:        now,
+			MoveInReason:     "start",
+			MovedFromTableID: pgtype.UUID{},
 		})
 		if err != nil {
 			return uuid.Nil, fmt.Errorf("failed to create opening segment: %w", err)
