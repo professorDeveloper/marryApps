@@ -4469,8 +4469,9 @@ func (s *OrderS) createSessionForOrder(
 		}
 	}
 
-	// For time-based tables, set state to "running" with active start time
-	state := "inactive"
+	// For time-based tables, set state to "running"; for simple tables, state is "paused"
+	// The constraint only allows 'running', 'paused', 'closed' - 'inactive' is not allowed
+	state := "paused"
 	activeStartedAt := pgtype.Timestamptz{}
 	sessionTableType := "simple"
 	if tableType == string(model.TableTypeTimeBased) {
