@@ -4368,29 +4368,16 @@ func (s *OrderS) TransferOrder(ctx context.Context, orderID string, targetTableI
 	// ============ PHASE B: OPEN NEW SESSION ============
 
 	targetTableType := string(targetTable.TableType)
+	sourceTableID := uuid.UUID(order.TableID.Bytes)
 
-	newSessionID, err := s.createSessionForOrder(txCtx, q, orderUUID, targetTableUUID, targetTableType)
+	// Pass transfer context to createSessionForOrder to avoid duplicate segment creation
+	newSessionID, err := s.createSessionForOrderWithTransfer(
+		txCtx, q, orderUUID, targetTableUUID, targetTableType,
+		sourceTableID, // For transfer segment tracking
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create new session: %w", err)
 	}
-
-	// For time-based sessions: immediately create first segment to start the clock
-	if targetTableType == string(model.TableTypeTimeBased) {
-		sourceTableID := uuid.UUID(order.TableID.Bytes)
-		_, err := q.CreateTableTimeSessionSegment(txCtx, pg.CreateTableTimeSessionSegmentParams{
-			ID:               uuid.New(),
-			SessionID:        newSessionID,
-			OrderID:          orderUUID,
-			TableID:          targetTableUUID,
-			MoveInReason:     "transfer",
-			MovedFromTableID: pgtype.UUID{Bytes: sourceTableID, Valid: true},
-			StartedAt:        now.Time,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("failed to create transfer segment: %w", err)
-		}
-	}
-	// For simple tables: create session only, no segments
 
 	// ============ UPDATE ORDER AND TABLES ============
 
@@ -4510,6 +4497,75 @@ func (s *OrderS) createSessionForOrder(
 		})
 		if err != nil {
 			return uuid.Nil, fmt.Errorf("failed to create opening segment: %w", err)
+		}
+	}
+
+	return session.ID, nil
+}
+
+// createSessionForOrderWithTransfer creates a new session for an order during a table transfer
+// It's similar to createSessionForOrder but creates transfer segments with proper move tracking
+func (s *OrderS) createSessionForOrderWithTransfer(
+	ctx context.Context,
+	q *pg.Queries,
+	orderID uuid.UUID,
+	tableID uuid.UUID,
+	tableType string,
+	sourceTableID uuid.UUID,
+) (uuid.UUID, error) {
+	now := time.Now()
+	nowTS := pgtype.Timestamptz{Time: now, Valid: true}
+
+	userIDStr, _ := ctx.Value("user_id").(string)
+	var userID [16]byte
+	userIDValid := false
+	if userIDStr != "" {
+		if parsed, err := uuid.Parse(userIDStr); err == nil {
+			userID = parsed
+			userIDValid = true
+		}
+	}
+
+	// For time-based tables, set state to "running"; for simple tables, state is "paused"
+	state := "paused"
+	activeStartedAt := pgtype.Timestamptz{}
+	sessionTableType := "simple"
+	if tableType == string(model.TableTypeTimeBased) {
+		state = "running"
+		activeStartedAt = nowTS
+		sessionTableType = "time_based"
+	}
+
+	// Create session record with table_type
+	session, err := q.CreateTableTimeSession(ctx, pg.CreateTableTimeSessionParams{
+		ID:                   uuid.New(),
+		OrderID:              orderID,
+		TableID:              tableID,
+		State:                state,
+		TableType:            sessionTableType,
+		StartedAt:            now,
+		ActiveStartedAt:      activeStartedAt,
+		AccumulatedActiveSec: 0,
+		CreatedBy:            pgtype.UUID{Bytes: userID, Valid: userIDValid},
+		UpdatedBy:            pgtype.UUID{Bytes: userID, Valid: userIDValid},
+	})
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("failed to create session: %w", err)
+	}
+
+	// If time-based, create transfer segment with move tracking
+	if tableType == string(model.TableTypeTimeBased) {
+		_, err := q.CreateTableTimeSessionSegment(ctx, pg.CreateTableTimeSessionSegmentParams{
+			ID:               uuid.New(),
+			SessionID:        session.ID,
+			OrderID:          orderID,
+			TableID:          tableID,
+			StartedAt:        now,
+			MoveInReason:     "transfer",
+			MovedFromTableID: pgtype.UUID{Bytes: sourceTableID, Valid: true},
+		})
+		if err != nil {
+			return uuid.Nil, fmt.Errorf("failed to create transfer segment: %w", err)
 		}
 	}
 
