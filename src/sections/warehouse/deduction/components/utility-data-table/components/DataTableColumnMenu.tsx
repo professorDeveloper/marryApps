@@ -45,7 +45,7 @@ export function DataTableColumnMenu<T>({
           py: 1,
           fontSize: 12,
           color: 'var(--color-text-muted)',
-          fontFamily: '"Inter", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif',
+          fontFamily: 'var(--font-sans)',
         }}
       >
         Columns

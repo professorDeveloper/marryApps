@@ -13,8 +13,8 @@ export const CELL_SX: SxProps = {
   py: 1.5,
   px: 1,
   color: 'text.primary',
-  fontSize: '0.875rem',
+  fontSize: '1.1rem',
   fontWeight: 400,
-  fontFamily: 'var(--font-mono)',
+  fontFamily: 'var(--font-sans)',
   backgroundColor: 'transparent',
 };

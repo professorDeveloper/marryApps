@@ -63,7 +63,7 @@ export function CategoryListView() {
                 key: 'category',
                 label: t('categories.name', 'Category'),
                 width: '2fr',
-                sortable: true,
+                sortable: false,
                 filterable: false,
                 getValue: (row: ICategory) => row.name || '-',
                 renderCell: ({ row }: { row: ICategory }) => (
@@ -76,7 +76,7 @@ export function CategoryListView() {
                 key: 'storage_name',
                 label: t('categories.storage', 'Storage'),
                 width: '1.2fr',
-                sortable: true,
+                sortable: false,
                 filterable: true,
                 filter: {
                     type: 'multi' as const,
@@ -93,7 +93,7 @@ export function CategoryListView() {
                 key: 'department_name',
                 label: t('categories.department', 'Department'),
                 width: '1.2fr',
-                sortable: true,
+                sortable: false,
                 filterable: true,
                 filter: {
                     type: 'multi' as const,

@@ -2,7 +2,7 @@
 
 > **Module:** branches  
 > **Base URL:** https://api.maryai.uz/  
-> **Last Updated:** 2026-04-25T01:35:03.601Z
+> **Last Updated:** 2026-04-29T15:27:32.833Z
 
 ---
 

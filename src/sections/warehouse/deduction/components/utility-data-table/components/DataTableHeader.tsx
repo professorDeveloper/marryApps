@@ -62,8 +62,8 @@ export function DataTableHeader<T>({
         display: 'grid',
         gridTemplateColumns,
         alignItems: 'center',
-        py: 1,
-        maxHeight: 46,
+        py: 1.5,
+        maxHeight: 52,
         px: 1,
         backgroundColor: 'var(--color-surface-1)',
         borderBottom: '2px solid var(--color-border)',
@@ -91,7 +91,7 @@ export function DataTableHeader<T>({
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
           <Typography
             sx={{
-              fontFamily: '"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace',
+              // fontFamily: 'var(--font-sans)',
               fontSize: 12,
               color: 'var(--color-primary)',
               textAlign: 'center',
@@ -147,13 +147,13 @@ export function DataTableHeader<T>({
                 sx={{
                   flex: col.headerActionsAlign === 'end' ? 1 : '0 1 auto',
                   minWidth: 0,
-                  fontSize: '0.7rem',
+                  fontSize: '0.8rem',
                   lineHeight: 1.2,
                   color: 'var(--color-primary)',
                   fontWeight: 800,
                   textTransform: 'uppercase',
                   letterSpacing: 1.5,
-                  fontFamily: 'var(--font-mono)',
+                  fontFamily: 'var(--font-sans)',
                   whiteSpace: 'normal',
                   wordBreak: 'normal',
                   overflowWrap: 'normal',

@@ -118,7 +118,7 @@ export const DataTableRow = memo(function DataTableRow<T>({
       {showRowNumbers && (
         <Typography
           sx={{
-            fontFamily: 'var(--font-mono)',
+            fontFamily: 'var(--font-sans)',
             fontSize: 12,
             color: 'text.secondary',
             textAlign: 'center',
@@ -174,7 +174,7 @@ export const DataTableRow = memo(function DataTableRow<T>({
                       fontSize: 12,
                       backgroundColor: 'var(--color-surface-0)',
                       borderRadius: 1,
-                      fontFamily: 'var(--font-mono)',
+                      fontFamily: 'var(--font-sans)',
                     },
                     '& .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--color-border)' },
                     '& .MuiInputBase-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
@@ -194,7 +194,7 @@ export const DataTableRow = memo(function DataTableRow<T>({
                   fontSize: 12.5,
                   color: 'var(--color-text)',
                   textAlign: col.align || 'left',
-                  fontFamily: 'var(--font-mono)',
+                  fontFamily: 'var(--font-sans)',
                   textOverflow: 'ellipsis',
                   backgroundColor: 'transparent',
                 }}

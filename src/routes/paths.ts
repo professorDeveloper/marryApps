@@ -294,4 +294,5 @@ export const paths = {
     root: '/',
     floorPlan: `/floor-plan`,
   },
+  analytics: `/analytics`,
 };

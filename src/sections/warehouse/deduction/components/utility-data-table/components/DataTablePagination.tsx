@@ -63,7 +63,7 @@ export function DataTablePagination({
           sx={{
             fontSize: 12.5,
             color: 'var(--color-text-muted)',
-            fontFamily: '"Inter", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif',
+            fontFamily: 'var(--font-sans)',
             whiteSpace: 'nowrap',
           }}
         >
@@ -81,7 +81,7 @@ export function DataTablePagination({
             height: 30,
             fontSize: 12.5,
             color: 'var(--color-text)',
-            fontFamily: '"Inter", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif',
+            fontFamily: 'var(--font-sans)',
             backgroundColor: 'var(--color-surface-0)',
             borderRadius: 1,
             '& .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--color-border)' },
@@ -102,7 +102,7 @@ export function DataTablePagination({
         sx={{
           fontSize: 12.5,
           color: 'rgba(255,255,255,0.65)',
-          fontFamily: '"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace',
+          fontFamily: 'var(--font-sans)',
           whiteSpace: 'nowrap',
         }}
       >
@@ -153,7 +153,7 @@ export function DataTablePagination({
                 px: 0,
                 fontSize: 12,
                 fontWeight: p === page ? 700 : 400,
-                fontFamily: '"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace',
+                fontFamily: 'var(--font-sans)',
                 color: p === page ? '#000' : 'var(--color-text-muted)',
                 backgroundColor: p === page ? 'var(--color-primary)' : 'transparent',
                 '&:hover': {

@@ -139,7 +139,7 @@ export function ToolbarSearch({
             fontSize: 12.5,
             backgroundColor: 'rgba(9,9,11,0.7)',
             borderRadius: 1,
-            fontFamily: '"Inter", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif',
+            fontFamily: 'var(--font-sans)',
           },
           '& .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--color-border)' },
           '& .MuiInputBase-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
@@ -323,7 +323,7 @@ export function ToolbarSearch({
               '& .MuiInput-underline:after': { borderBottom: 'none' },
               '& .MuiInputBase-root': {
                 fontSize: 12.5,
-                fontFamily: '"Inter", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif',
+                fontFamily: 'var(--font-sans)',
               },
               minWidth: 100,
             }}

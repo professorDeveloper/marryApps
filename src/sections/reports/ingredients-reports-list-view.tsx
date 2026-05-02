@@ -207,7 +207,6 @@ export function IngredientReportsListView() {
     );
 
     const isStoragesEmpty = filterOptions.storage_id.length === 0;
-    const isIngredientsEmpty = filterOptions.ingredient_id.length === 0;
 
     const ingredientOptions = useMemo(
         () => (metadata.ingredients || []).map((ing: any) => ({ id: ing.id, label: ing.name })),
@@ -291,7 +290,6 @@ export function IngredientReportsListView() {
                 sortable: true,
                 width: '1fr',
                 align: 'left' as const,
-                mono: true,
                 getValue: (row: any) => Number(row?.begin_quantity || 0),
                 renderCell: ({ value }: { value: unknown }) => `${Number(value).toFixed(2)}`,
                 total: { aggregation: 'sum' as const },
@@ -302,7 +300,6 @@ export function IngredientReportsListView() {
                 sortable: true,
                 width: '0.8fr',
                 align: 'left' as const,
-                mono: true,
                 getValue: (row: any) => Number(row?.in || 0),
                 renderCell: ({ value }: { value: unknown }) => `${Number(value).toFixed(2)}`,
                 total: { aggregation: 'sum' as const },
@@ -313,7 +310,6 @@ export function IngredientReportsListView() {
                 sortable: true,
                 width: '0.8fr',
                 align: 'left' as const,
-                mono: true,
                 getValue: (row: any) => Number(row?.out || 0),
                 renderCell: ({ value }: { value: unknown }) => `${Number(value).toFixed(2)}`,
                 total: { aggregation: 'sum' as const },
@@ -324,7 +320,6 @@ export function IngredientReportsListView() {
                 sortable: true,
                 width: '1fr',
                 align: 'left' as const,
-                mono: true,
                 getValue: (row: any) => Number(row?.surplus || 0),
                 renderCell: ({ value }: { value: unknown }) => `${Number(value).toFixed(2)}`,
                 total: { aggregation: 'sum' as const },
@@ -335,7 +330,6 @@ export function IngredientReportsListView() {
                 sortable: true,
                 width: '1fr',
                 align: 'left' as const,
-                mono: true,
                 getValue: (row: any) => Number(row?.shortage || 0),
                 renderCell: ({ value }: { value: unknown }) => `${Number(value).toFixed(2)}`,
                 total: { aggregation: 'sum' as const },
@@ -346,7 +340,6 @@ export function IngredientReportsListView() {
                 sortable: true,
                 width: '1fr',
                 align: 'left' as const,
-                mono: true,
                 getValue: (row: any) => Number(row?.end_quantity || 0),
                 renderCell: ({ value }: { value: unknown }) => `${Number(value).toFixed(2)}`,
                 total: { aggregation: 'sum' as const },
@@ -401,10 +394,6 @@ export function IngredientReportsListView() {
         }
     }, [metadata.storages]);
 
-    // Date picker values
-    const startDateValue = useMemo(() => toPickerDate(draftFilters.start), [draftFilters.start]);
-    const endDateValue = useMemo(() => toPickerDate(draftFilters.end), [draftFilters.end]);
-
     // Apply date range changes
     useEffect(() => {
         setDraftFilters((prev) => ({
@@ -438,136 +427,7 @@ export function IngredientReportsListView() {
         setEndDate(nextEnd);
     }, []);
 
-    const renderFiltersContent = () => (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-            <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 2, flexWrap: 'wrap' }}>
-                <ToggleButtonGroup
-                    exclusive
-                    value={activeRange}
-                    onChange={(_, value) => {
-                        if (!value) return;
-                        applyRange(value);
-                    }}
-                    size="small"
-                    sx={{
-                        '& .MuiToggleButton-root': {
-                            textTransform: 'uppercase',
-                            fontWeight: 600,
-                            px: 2.5,
-                            border: 'none',
-                            borderRadius: 0,
-                            borderBottom: '2px solid transparent',
-                        },
-                        '& .MuiToggleButton-root.Mui-selected': {
-                            borderBottomColor: 'primary.main',
-                            backgroundColor: 'transparent',
-                        },
-                        '& .MuiToggleButton-root:hover': {
-                            backgroundColor: 'transparent',
-                        },
-                    }}
-                >
-                    <ToggleButton value="day">D</ToggleButton>
-                    <ToggleButton value="week">W</ToggleButton>
-                    <ToggleButton value="month">M</ToggleButton>
-                    <ToggleButton value="year">Y</ToggleButton>
-                </ToggleButtonGroup>
-
-                <Box
-                    sx={{
-                        display: 'grid',
-                        gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(4, 1fr)', lg: 'repeat(5, 1fr)' },
-                        gap: 1.5,
-                        flex: 1,
-                    }}
-                >
-            {/* Start Date - Required */}
-            <DatePicker
-                label={t('ingredientReports.startDate') || 'Start Date'}
-                value={startDate}
-                onChange={(value) => {
-                    setStartDate(value);
-                    setActiveRange('day');
-                }}
-                format="DD.MM.YYYY"
-                slotProps={{
-                    textField: {
-                        fullWidth: true,
-                        size: 'small',
-                        inputProps: { readOnly: true },
-                        sx: { cursor: 'pointer' },
-                    },
-                }}
-            />
-
-
-            {/* End Date - Required */}
-            <DatePicker
-                label={t('ingredientReports.endDate') || 'End Date'}
-                value={endDate}
-                onChange={(value) => {
-                    setEndDate(value);
-                    setActiveRange('day');
-                }}
-                format="DD.MM.YYYY"
-                slotProps={{
-                    textField: {
-                        fullWidth: true,
-                        size: 'small',
-                        inputProps: { readOnly: true },
-                        sx: { cursor: 'pointer' },
-                    },
-                }}
-            />
-
-            {/* Storage - Required */}
-            <NoDataTooltip enabled={isStoragesEmpty} title={noDataText}>
-                <TextField
-                    select
-                    label={t('ingredientReports.storage') || 'Storage'}
-                    value={selectedStorageId}
-                    onChange={(e) => handleStorageChange(e.target.value)}
-                    SelectProps={{ native: true }}
-                    size="small"
-                    fullWidth
-                    InputLabelProps={{ shrink: true }}
-                    sx={{
-                        '& .MuiOutlinedInput-root': {
-                            '&.Mui-focused fieldset': {
-                                borderColor: '#1890FF',
-                            },
-                        },
-                    }}
-                    disabled={isStoragesEmpty}
-                >
-                    <option value="" disabled hidden>
-                        {t('common.select') || 'Select Storage'}
-                    </option>
-                    {filterOptions.storage_id.map((option) => (
-                        <option key={option.value} value={option.value}>
-                            {option.label}
-                        </option>
-                    ))}
-                </TextField>
-            </NoDataTooltip>
-
-                </Box>
-            </Box>
-
-            {/* Action Buttons */}
-            {/* <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                <Button
-                    variant="outlined"
-                    size="small"
-                    startIcon={<Iconify icon="solar:restart-bold" />}
-                    onClick={handleResetFilters}
-                    sx={{ minWidth: 'auto', flex: 1 }}
-                >
-                    {t('ingredientReports.reset') || 'Reset'}
-                </Button>
-            </Box> */}
-        </Box>
-    );
+  
 
     // Render ingredient report detail modal content
     const renderReportDetailsContent = useCallback((data: any) => {

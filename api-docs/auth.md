@@ -2,7 +2,7 @@
 
 > **Module:** auth  
 > **Base URL:** https://api.maryai.uz/  
-> **Last Updated:** 2026-04-25T01:35:03.601Z
+> **Last Updated:** 2026-04-29T15:27:32.832Z
 
 ---
 
@@ -106,7 +106,7 @@
 
 **Summary:** POS staff login with pincode
 
-**Description:** Authenticate POS staff using brand_id, pos_password, and pincode
+**Description:** Authenticate POS staff using brand_id, a role password (superadmin/admin/manager), and pincode
 
 **Parameters:**
 

@@ -3,7 +3,7 @@
 > **Version:** 1.0  
 > **Base URL:** https://api.maryai.uz/  
 > **Description:** MaryAI API server with multi-language support (uz, ru, en)  
-> **Last Updated:** 2026-04-25T01:35:03.605Z
+> **Last Updated:** 2026-04-29T15:27:32.839Z
 
 ---
 
@@ -86,4 +86,4 @@ Common data models are shared across modules. Refer to individual module documen
 ---
 
 *This documentation is automatically generated from the Swagger/OpenAPI specification*  
-*Last updated: 2026-04-25T01:35:03.605Z*
+*Last updated: 2026-04-29T15:27:32.839Z*

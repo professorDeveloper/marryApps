@@ -26,6 +26,7 @@ const PageFive = lazy(() => import('src/pages/dashboard/five'));
 const PageSix = lazy(() => import('src/pages/dashboard/six'));
 const FloorPlanPage = lazy(() => import('src/pages/dashboard/floor-plan'));
 const HallsPage = lazy(() => import('src/pages/dashboard/halls'));
+const AnalyticsPage = lazy(() => import('src/pages/analytics'));
 
 // ----------------------------------------------------------------------
 
@@ -86,6 +87,7 @@ export const dashboardRoutes: RouteObject[] = [
       ...warehouseRoutes,
       ...reportRoutes,
       ...cashboxRoutes,
+      { path: 'analytics', element: <AnalyticsPage /> },
       ...settingRoutes,
     ],
   },

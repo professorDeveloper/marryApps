@@ -343,10 +343,8 @@ export function DataTable<T>({
     setVisibility(merged.visibility);
     setWidths(getDefaultWidths());
     handleSortChange({ key: null, dir: null });
-    updateFilters({});
     setSelectedIds(new Set());
-    onReset();
-  }, [storageStrategy, persistKey, merged, getDefaultWidths, updateFilters, handleSortChange, onReset]);
+  }, [storageStrategy, persistKey, merged, getDefaultWidths, handleSortChange]);
 
   // ---- Filters -----------------------------------------------------------
   const [filterAnchor, setFilterAnchor] = useState<HTMLElement | null>(null);

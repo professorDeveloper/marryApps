@@ -1,17 +1,16 @@
 /** **************************************
 * Fonts: JetBrains Mono for that "Tech" feel
 *************************************** */
-@import '@fontsource/jetbrains-mono/400.css';
-@import '@fontsource/jetbrains-mono/500.css';
-@import '@fontsource/jetbrains-mono/600.css';
-@import '@fontsource/jetbrains-mono/700.css';
-
 @import './components/scrollbar/styles.css';
 
 /** **************************************
 * Design Tokens (The Source of Truth)
 *************************************** */
 :root {
+  /* Font tokens */
+  --font-sans: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  
   /* Brand-fixed */
   --mary-orange: #FF5500;
   --mary-orange-hover: #FF7A1A;
@@ -120,7 +119,7 @@ body,
   min-height: 100%;
   flex-direction: column;
   margin: 0;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-sans) !important;
   background-color: var(--color-bg) !important;
 }
 
@@ -206,7 +205,7 @@ body {
 .MuiTableCell-root {
   border-bottom: 1px solid var(--color-border) !important;
   color: var(--color-text) !important;
-  font-family: 'JetBrains Mono', monospace !important;
+  font-family: var(--font-sans) !important;
 }
 
 .MuiTableCell-root:not(.MuiTableCell-head) {

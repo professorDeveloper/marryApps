@@ -37,7 +37,7 @@ export function CategoryFilter({
             fontSize: 12.5,
             backgroundColor: 'var(--color-surface-0)',
             borderRadius: 1,
-            fontFamily: '"Inter", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif',
+            fontFamily: 'var(--font-sans)',
           },
           '& .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--color-border)' },
           '& .MuiInputBase-root.Mui-focused .MuiOutlinedInput-notchedOutline': {

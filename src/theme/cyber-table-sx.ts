@@ -33,7 +33,7 @@ export const CYBER_TABLE_SX: SxProps<Theme> = {
     transition: '0.2s',
   },
   '& .MuiTableCell-root': {
-    fontFamily: 'var(--font-mono)',
+    fontFamily: 'var(--font-sans)',
     borderBottom: '1px solid var(--color-border)',
   },
   '& .MuiTableFooter-root': {

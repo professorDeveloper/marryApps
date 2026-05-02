@@ -483,4 +483,7 @@ export const endpoints = {
   metadata: {
     list: (include: string) => `/api/v1/metadata?include=${include}`,
   },
+  dashboard: {
+    overview: '/api/v1/dashboard/overview',
+  },
 } as const;

@@ -9,7 +9,6 @@ import Typography from '@mui/material/Typography';
 
 import { Iconify } from 'src/components/iconify';
 
-import { BORDER, SURFACE_BG } from '../utils';
 import { DataTableRow } from './DataTableRow';
 
 export type DataTableBodyProps<T> = {

@@ -44,7 +44,7 @@ export function DataTableTotalsFooter<T>({
       {showRowNumbers && (
         <Typography
           sx={{
-            fontFamily: 'var(--font-mono)',
+            fontFamily: 'var(--font-sans)',
             fontSize: 12.5,
             color: 'var(--color-text)',
             textAlign: 'center',
@@ -74,7 +74,7 @@ export function DataTableTotalsFooter<T>({
               fontWeight: 700,
               color: col.total ? 'var(--color-text)' : 'var(--color-text-muted)',
               opacity: col.total ? 1 : 0.5,
-              fontFamily: 'var(--font-mono)',
+              fontFamily: 'var(--font-sans)',
             }}
           >
             {col.total ? totals[col.key] : ''}

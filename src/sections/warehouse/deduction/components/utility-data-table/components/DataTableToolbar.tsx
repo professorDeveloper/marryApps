@@ -124,7 +124,7 @@ export function DataTableToolbar<T>({
                         fontSize: 12.5,
                         backgroundColor: 'var(--color-surface-0)',
                         borderRadius: 1,
-                        fontFamily: '"Inter", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif',
+                        fontFamily: 'var(--font-sans)',
                       },
                       '& .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--color-border)' },
                       '& .MuiInputBase-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
@@ -153,7 +153,7 @@ export function DataTableToolbar<T>({
                         fontSize: 12.5,
                         backgroundColor: 'var(--color-surface-0)',
                         borderRadius: 1,
-                        fontFamily: '"Inter", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif',
+                        fontFamily: 'var(--font-sans)',
                       },
                       '& .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--color-border)' },
                       '& .MuiInputBase-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
@@ -178,7 +178,7 @@ export function DataTableToolbar<T>({
                         px: 1,
                         height: 34,
                         fontSize: 12.5,
-                        fontFamily: '"Inter", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif',
+                        fontFamily: 'var(--font-sans)',
                       }}
                     >
                       {period.charAt(0).toUpperCase()}
@@ -196,7 +196,7 @@ export function DataTableToolbar<T>({
               sx={{
                 fontSize: 12.5,
                 color: 'var(--color-text-muted)',
-                fontFamily: '"Inter", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif',
+                fontFamily: 'var(--font-sans)',
               }}
             >
               Selected: <b>{selectedRows.length}</b>
@@ -219,7 +219,7 @@ export function DataTableToolbar<T>({
                   '&:hover': { color: 'var(--color-primary)', backgroundColor: 'var(--glow-sm)', boxShadow: 'var(--glow-shadow-md)' },
                   textTransform: 'none',
                   fontSize: 12.5,
-                  fontFamily: '"Inter", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif',
+                  fontFamily: 'var(--font-sans)',
                 }}
               >
                 {a.label}

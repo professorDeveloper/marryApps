@@ -2,7 +2,7 @@
 
 > **Module:** core  
 > **Base URL:** https://api.maryai.uz/  
-> **Last Updated:** 2026-04-25T01:35:03.601Z
+> **Last Updated:** 2026-04-29T15:27:32.833Z
 
 ---
 
@@ -54,6 +54,69 @@
 ```
 
 - **500**: Internal server error
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorResponse"
+}
+```
+
+
+## /api/v1/dashboard/overview
+
+### GET /api/v1/dashboard/overview 🔒
+
+**Summary:** Get dashboard overview
+
+**Description:** Returns aggregated dashboard data including KPIs, sales dynamics, revenue by payment types, revenue by categories, and dish sales
+
+**Parameters:**
+
+| Name | Location | Type | Required | Description |
+|------|----------|------|----------|-------------|
+| start | query | string | Yes | Start date (RFC3339 format) |
+| end | query | string | Yes | End date (RFC3339 format) |
+| group_by | query | string | No | Group by (day, week, month) |
+| dish_metric | query | string | No | Dish metric (revenue, quantity) |
+| dish_sort | query | string | No | Dish sort (asc, desc) |
+| limit | query | integer | No | Limit for dish sales |
+| lang | query | string | No | Language (uz, ru, en) |
+
+**Responses:**
+
+- **200**: OK
+  ```json
+{
+  "allOf": [
+    {
+      "$ref": "#/definitions/model.SuccessResponse"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/definitions/model.DashboardOverviewResponse"
+        }
+      }
+    }
+  ]
+}
+```
+
+- **400**: Bad Request
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorResponse"
+}
+```
+
+- **401**: Unauthorized
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorResponse"
+}
+```
+
+- **500**: Internal Server Error
   ```json
 {
   "$ref": "#/definitions/model.ErrorResponse"
@@ -3580,6 +3643,20 @@
 }
 ```
 
+- **404**: Inventory not found
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorResponse"
+}
+```
+
+- **409**: Inventory already deleted or not the latest
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorResponse"
+}
+```
+
 - **500**: Internal server error
   ```json
 {
@@ -3722,6 +3799,20 @@
 ```
 
 - **401**: Unauthorized
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorResponse"
+}
+```
+
+- **404**: Inventory not found
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorResponse"
+}
+```
+
+- **409**: Inventory already deleted or not the latest
   ```json
 {
   "$ref": "#/definitions/model.ErrorResponse"
@@ -7497,6 +7588,87 @@
 ```
 
 
+## /api/v1/orders/{id}/table-timer/transfer
+
+### POST /api/v1/orders/{id}/table-timer/transfer 🔒
+
+**Summary:** Transfer order table timer to another table
+
+**Description:** Transfers the active table timer session to a different table
+
+**Parameters:**
+
+| Name | Location | Type | Required | Description |
+|------|----------|------|----------|-------------|
+| id | path | string | Yes | Session ID |
+| request | body | object | Yes | Transfer request |
+
+**Request Body:**
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "reason": {
+      "type": "string"
+    },
+    "to_table_id": {
+      "type": "string"
+    }
+  }
+}
+```
+
+**Responses:**
+
+- **200**: OK
+  ```json
+{
+  "allOf": [
+    {
+      "$ref": "#/definitions/model.SuccessResponse"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/definitions/model.TableTimerResponse"
+        }
+      }
+    }
+  ]
+}
+```
+
+- **400**: Bad Request
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorResponse"
+}
+```
+
+- **401**: Unauthorized
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorResponse"
+}
+```
+
+- **403**: Forbidden
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorResponse"
+}
+```
+
+- **409**: Conflict
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorResponse"
+}
+```
+
+
 ## /api/v1/outgoing-invoices
 
 ### GET /api/v1/outgoing-invoices 🔒
@@ -8348,91 +8520,6 @@
   ```json
 {
   "$ref": "#/definitions/model.ErrorResponse"
-}
-```
-
-
-## /api/v1/settings/pos-password
-
-### PUT /api/v1/settings/pos-password 🔒
-
-**Summary:** Update POS password
-
-**Description:** Update POS password for current tenant. Only admin/manager/superadmin can do this.
-
-**Parameters:**
-
-| Name | Location | Type | Required | Description |
-|------|----------|------|----------|-------------|
-| request | body | object | Yes | POS password update payload |
-
-**Request Body:**
-
-```json
-{
-  "$ref": "#/definitions/model.UpdatePOSPasswordRequest"
-}
-```
-
-**Responses:**
-
-- **200**: OK
-  ```json
-{
-  "$ref": "#/definitions/model.UpdatePOSPasswordSwaggerResponse"
-}
-```
-
-- **400**: Bad Request
-  ```json
-{
-  "$ref": "#/definitions/model.ErrorData"
-}
-```
-
-- **401**: Unauthorized
-  ```json
-{
-  "$ref": "#/definitions/model.ErrorData"
-}
-```
-
-- **403**: Forbidden
-  ```json
-{
-  "$ref": "#/definitions/model.ErrorData"
-}
-```
-
-
-## /api/v1/settings/pos-password/status
-
-### GET /api/v1/settings/pos-password/status 🔒
-
-**Summary:** Get POS password status
-
-**Description:** Returns whether POS password is configured for current tenant
-
-**Responses:**
-
-- **200**: OK
-  ```json
-{
-  "$ref": "#/definitions/model.POSPasswordStatusSwaggerResponse"
-}
-```
-
-- **401**: Unauthorized
-  ```json
-{
-  "$ref": "#/definitions/model.ErrorData"
-}
-```
-
-- **403**: Forbidden
-  ```json
-{
-  "$ref": "#/definitions/model.ErrorData"
 }
 ```
 

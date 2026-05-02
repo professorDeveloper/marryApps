@@ -2,7 +2,7 @@
 
 > **Module:** admin  
 > **Base URL:** https://api.maryai.uz/  
-> **Last Updated:** 2026-04-25T01:35:03.588Z
+> **Last Updated:** 2026-04-29T15:27:32.827Z
 
 ---
 
