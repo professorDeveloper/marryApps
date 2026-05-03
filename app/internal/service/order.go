@@ -4391,8 +4391,6 @@ func (s *OrderS) TransferOrder(ctx context.Context, orderID string, targetTableI
 	}
 
 	// Update table statuses
-	sourceTableID := uuid.UUID(order.TableID.Bytes)
-
 	// Source table → free
 	_, err = q.UpdateCafeTableStatus(txCtx, pg.UpdateCafeTableStatusParams{
 		ID:     sourceTableID,

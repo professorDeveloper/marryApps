@@ -1,7 +1,6 @@
 package service
 
 import (
-	"strconv"
 	"testing"
 
 	"github.com/jackc/pgx/v5/pgtype"
@@ -116,8 +115,6 @@ func createNumeric(value string) pgtype.Numeric {
 }
 
 func TestCalcTotalActiveSec(t *testing.T) {
-	now := createTime("2026-05-02T12:00:00Z")
-
 	tests := []struct {
 		name     string
 		session  func() pgtype.Timestamptz // returns Active started at
