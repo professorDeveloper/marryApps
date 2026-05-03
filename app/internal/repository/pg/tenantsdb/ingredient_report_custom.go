@@ -61,7 +61,8 @@ active_movements AS (
 	LEFT JOIN transfers t ON m.source_type = 'transfer' AND m.source_id = t.id
 	LEFT JOIN orders o ON m.source_type = 'order' AND m.source_id = o.id
 	LEFT JOIN separation_acts sa ON m.source_type = 'separation_act' AND m.source_id = sa.id
-	WHERE (m.source_type IS NULL)
+	WHERE m.is_active = TRUE
+	  AND ((m.source_type IS NULL)
 	   OR (m.source_type = 'inventory' AND inv.deleted_at = 0 AND inv.status = 'active')
 	   OR (m.source_type = 'invoice' AND i.deleted_at = 0 AND i.status = 'received')
 	   OR (m.source_type = 'deduction' AND d.deleted_at = 0 AND d.status = 'active')
@@ -69,7 +70,7 @@ active_movements AS (
 	   OR (m.source_type = 'outgoing_invoice' AND oi.deleted_at = 0 AND oi.status = 'active')
 	   OR (m.source_type = 'transfer' AND t.deleted_at = 0 AND t.status = 'active')
 	   OR (m.source_type = 'order' AND o.deleted_at = 0 AND o.status <> 'cancelled')
-	   OR (m.source_type = 'separation_act' AND sa.deleted_at = 0 AND sa.status = 'active')
+	   OR (m.source_type = 'separation_act' AND sa.deleted_at = 0 AND sa.status = 'active'))
 )`
 
 func (q *Queries) GetIngredientReport(ctx context.Context, arg GetIngredientReportParams) ([]IngredientReportRow, error) {
@@ -520,6 +521,7 @@ func (q *Queries) GetIngredientStockMovements(ctx context.Context, arg GetIngred
 	FROM ingredient_stock_movements
 	WHERE storage_id = $1
 		AND ingredient_id = $2
+		AND is_active = TRUE
 		AND COALESCE(effective_at, created_at) >= $3
 		AND COALESCE(effective_at, created_at) <= $4
 	ORDER BY COALESCE(effective_at, created_at) ASC, created_at ASC, id ASC

@@ -39,9 +39,10 @@ func (q *Queries) InsertIngredientStockMovement(ctx context.Context, arg InsertI
 			price_per_unit,
 			source_type,
 			source_id,
-			effective_at
+			effective_at,
+			is_active
 		)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,TRUE)
 	`
 
 	_, err := q.db.Exec(ctx, sql,
@@ -146,4 +147,21 @@ func (q *Queries) GetStockMovementsBySourceID(ctx context.Context, sourceID uuid
 		items = append(items, row)
 	}
 	return items, rows.Err()
+}
+
+type UpdateIngredientStockMovementIsActiveParams struct {
+	ID       uuid.UUID
+	IsActive bool
+}
+
+// UpdateIngredientStockMovementIsActive updates the is_active status of a movement.
+// This allows marking specific movements as inactive so they don't appear in reports.
+func (q *Queries) UpdateIngredientStockMovementIsActive(ctx context.Context, arg UpdateIngredientStockMovementIsActiveParams) error {
+	const sql = `
+		UPDATE ingredient_stock_movements
+		SET is_active = $2
+		WHERE id = $1
+	`
+	_, err := q.db.Exec(ctx, sql, arg.ID, arg.IsActive)
+	return err
 }
