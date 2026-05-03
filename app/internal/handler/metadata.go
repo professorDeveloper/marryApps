@@ -19,6 +19,15 @@ var metadataWhitelist = map[string]string{
 	"modifiers":          "modifiers",
 	"dedication_groups":  "deduction_act_groups",
 	"transaction_groups": "group_transactions",
+	"halls":              "halls",
+	"users":              "users",
+	"admin":              "role_admin",
+	"manager":            "role_manager",
+	"waiter":             "role_waiter",
+	"cashier":            "role_cashier",
+	"kitchen":            "role_kitchen",
+	"user":               "role_user",
+	"superadmin":         "role_superadmin",
 }
 
 // GetMetadata godoc

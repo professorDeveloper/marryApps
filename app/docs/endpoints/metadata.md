@@ -34,6 +34,15 @@ The `include` parameter accepts the following comma-separated entity names:
 | `modifiers` | `modifiers` | Modifiers for menu items |
 | `dedication_groups` | `deduction_act_groups` | Deduction/act groups |
 | `transaction_groups` | `group_transactions` | Transaction groups |
+| `halls` | `halls` | Restaurant halls/areas |
+| `users` | `users` | All users |
+| `admin` | `users` | Users with admin role |
+| `manager` | `users` | Users with manager role |
+| `waiter` | `users` | Users with waiter role |
+| `cashier` | `users` | Users with cashier role |
+| `kitchen` | `users` | Users with kitchen role |
+| `user` | `users` | Users with basic user role |
+| `superadmin` | `users` | Users with superadmin role |
 
 ## Response Structure
 
@@ -55,6 +64,56 @@ The `include` parameter accepts the following comma-separated entity names:
     {
       "id": "650e8400-e29b-41d4-a716-446655440000",
       "name": "Sales"
+    }
+  ],
+  "halls": [
+    {
+      "id": "750e8400-e29b-41d4-a716-446655440000",
+      "name": "Main Hall"
+    },
+    {
+      "id": "750e8400-e29b-41d4-a716-446655440001",
+      "name": "VIP Hall"
+    }
+  ],
+  "admin": [
+    {
+      "id": "850e8400-e29b-41d4-a716-446655440000",
+      "name": "John Admin"
+    }
+  ],
+  "users": [
+    {
+      "id": "850e8400-e29b-41d4-a716-446655440000",
+      "name": "John Admin"
+    },
+    {
+      "id": "850e8400-e29b-41d4-a716-446655440001",
+      "name": "Jane Manager"
+    },
+    {
+      "id": "950e8400-e29b-41d4-a716-446655440000",
+      "name": "Alice Waiter"
+    },
+    {
+      "id": "950e8400-e29b-41d4-a716-446655440001",
+      "name": "Bob Waiter"
+    }
+  ],
+  "admin": [
+    {
+      "id": "850e8400-e29b-41d4-a716-446655440000",
+      "name": "John Admin"
+    }
+  ],
+  "waiter": [
+    {
+      "id": "950e8400-e29b-41d4-a716-446655440000",
+      "name": "Alice Waiter"
+    },
+    {
+      "id": "950e8400-e29b-41d4-a716-446655440001",
+      "name": "Bob Waiter"
     }
   ]
 }
@@ -82,10 +141,22 @@ GET /api/v1/metadata?include=storages,departments,ingredients
 GET /api/v1/metadata?include=categories
 ```
 
+### Retrieve Halls and Specific Role Users
+
+```bash
+GET /api/v1/metadata?include=halls,admin,manager,waiter
+```
+
+### Retrieve All Users
+
+```bash
+GET /api/v1/metadata?include=users
+```
+
 ### Retrieve All Available Entities
 
 ```bash
-GET /api/v1/metadata?include=storages,departments,categories,ingredient_groups,ingredients,compounds,menus,modifiers,dedication_groups,transaction_groups
+GET /api/v1/metadata?include=storages,departments,categories,ingredient_groups,ingredients,compounds,menus,modifiers,dedication_groups,transaction_groups,halls,users,admin,manager,waiter,cashier,kitchen,user,superadmin
 ```
 
 ### Empty Include
