@@ -474,6 +474,7 @@ func (s *TableTimerS) StartTableTimerIfNeeded(ctx context.Context, orderID strin
 		OrderID:              oID,
 		TableID:              uuid.UUID(ctxRow.TableID.Bytes),
 		State:                string(model.TableTimerStateRunning),
+		TableType:            ctxRow.TableType,
 		StartedAt:            now,
 		ActiveStartedAt:      activeStartedAt,
 		AccumulatedActiveSec: 0,
