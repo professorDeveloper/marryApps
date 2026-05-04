@@ -202,6 +202,7 @@ type UpdateOrderItemStatusRequest struct {
 
 type OrderTransferRequest struct {
 	TargetTableID string `json:"target_table_id" validate:"required" example:"c0f18a64-7f5c-4425-9414-1b01cddee9d9"`
+	Reason        string `json:"reason,omitempty" example:"client moved to another table"`
 }
 
 type OrderItemResponse struct {

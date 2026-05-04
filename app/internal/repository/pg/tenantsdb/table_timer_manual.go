@@ -67,23 +67,31 @@ type TableTimeSessionRow struct {
 
 const getOpenTableTimeSessionByOrderID = `
 SELECT
-    id,
-    order_id,
-    table_id,
-    state,
-    started_at,
-    active_started_at,
-    accumulated_active_sec,
-    ended_at,
-    final_amount,
-    created_by,
-    updated_by,
-    created_at,
-    updated_at
-FROM table_time_sessions
-WHERE order_id = $1
-  AND COALESCE(deleted_at, 0) = 0
-  AND ended_at IS NULL
+    s.id,
+    s.order_id,
+    s.table_id,
+    s.state,
+    s.started_at,
+    s.active_started_at,
+    s.accumulated_active_sec,
+    s.ended_at,
+    s.final_amount,
+    s.created_by,
+    s.updated_by,
+    s.created_at,
+    s.updated_at,
+    COALESCE(s.table_type, ct.table_type, 'simple') AS table_type
+FROM table_time_sessions s
+JOIN cafe_tables ct
+  ON ct.id = s.table_id
+ AND COALESCE(ct.deleted_at, 0) = 0
+JOIN orders o
+  ON o.id = s.order_id
+WHERE s.order_id = $1
+  AND COALESCE(s.deleted_at, 0) = 0
+  AND s.ended_at IS NULL
+  AND COALESCE(s.table_type, ct.table_type, 'simple') = 'time_based'
+  AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 LIMIT 1
 `
 
@@ -104,29 +112,38 @@ func (q *Queries) GetOpenTableTimeSessionByOrderID(ctx context.Context, orderID 
 		&i.UpdatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TableType,
 	)
 	return i, err
 }
 
 const getOpenTableTimeSessionByOrderIDForUpdate = `
 SELECT
-    id,
-    order_id,
-    table_id,
-    state,
-    started_at,
-    active_started_at,
-    accumulated_active_sec,
-    ended_at,
-    final_amount,
-    created_by,
-    updated_by,
-    created_at,
-    updated_at
-FROM table_time_sessions
-WHERE order_id = $1
-  AND COALESCE(deleted_at, 0) = 0
-  AND ended_at IS NULL
+    s.id,
+    s.order_id,
+    s.table_id,
+    s.state,
+    s.started_at,
+    s.active_started_at,
+    s.accumulated_active_sec,
+    s.ended_at,
+    s.final_amount,
+    s.created_by,
+    s.updated_by,
+    s.created_at,
+    s.updated_at,
+    COALESCE(s.table_type, ct.table_type, 'simple') AS table_type
+FROM table_time_sessions s
+JOIN cafe_tables ct
+  ON ct.id = s.table_id
+ AND COALESCE(ct.deleted_at, 0) = 0
+JOIN orders o
+  ON o.id = s.order_id
+WHERE s.order_id = $1
+  AND COALESCE(s.deleted_at, 0) = 0
+  AND s.ended_at IS NULL
+  AND COALESCE(s.table_type, ct.table_type, 'simple') = 'time_based'
+  AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 LIMIT 1
 FOR UPDATE
 `
@@ -148,6 +165,7 @@ func (q *Queries) GetOpenTableTimeSessionByOrderIDForUpdate(ctx context.Context,
 		&i.UpdatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TableType,
 	)
 	return i, err
 }
@@ -339,33 +357,42 @@ type UpdateTableTimeSessionCloseParams struct {
 }
 
 const updateTableTimeSessionClose = `
-UPDATE table_time_sessions
+UPDATE table_time_sessions s
 SET
     state = 'closed',
     active_started_at = NULL,
     accumulated_active_sec = $2,
     ended_at = $3,
     final_amount = $4,
-    updated_by = $5
-WHERE id = $1
+    updated_by = $5,
+    updated_at = NOW()
+FROM orders o, cafe_tables ct
+WHERE s.id = $1
+  AND o.id = s.order_id
+  AND ct.id = s.table_id
+  AND COALESCE(ct.deleted_at, 0) = 0
+  AND COALESCE(s.deleted_at, 0) = 0
+  AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 RETURNING
-    id,
-    order_id,
-    table_id,
-    state,
-    started_at,
-    active_started_at,
-    accumulated_active_sec,
-    ended_at,
-    final_amount,
-    created_by,
-    updated_by,
-    created_at,
-    updated_at
+    s.id,
+    s.order_id,
+    s.table_id,
+    s.state,
+    s.started_at,
+    s.active_started_at,
+    s.accumulated_active_sec,
+    s.ended_at,
+    s.final_amount,
+    s.created_by,
+    s.updated_by,
+    s.created_at,
+    s.updated_at,
+    COALESCE(s.table_type, ct.table_type, 'simple') AS table_type
 `
 
 func (q *Queries) UpdateTableTimeSessionClose(ctx context.Context, arg UpdateTableTimeSessionCloseParams) (TableTimeSessionRow, error) {
 	row := q.db.QueryRow(ctx, updateTableTimeSessionClose, arg.ID, arg.AccumulatedActiveSec, arg.EndedAt, arg.FinalAmount, arg.UpdatedBy)
+
 	var i TableTimeSessionRow
 	err := row.Scan(
 		&i.ID,
@@ -381,7 +408,9 @@ func (q *Queries) UpdateTableTimeSessionClose(ctx context.Context, arg UpdateTab
 		&i.UpdatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TableType,
 	)
+
 	return i, err
 }
 
@@ -426,23 +455,31 @@ func (q *Queries) CreateTableTimeEvent(ctx context.Context, arg CreateTableTimeE
 
 const getOpenTableTimeSessionByTableID = `
 SELECT
-    id,
-    order_id,
-    table_id,
-    state,
-    started_at,
-    active_started_at,
-    accumulated_active_sec,
-    ended_at,
-    final_amount,
-    created_by,
-    updated_by,
-    created_at,
-    updated_at
-FROM table_time_sessions
-WHERE table_id = $1
-  AND COALESCE(deleted_at, 0) = 0
-  AND ended_at IS NULL
+    s.id,
+    s.order_id,
+    s.table_id,
+    s.state,
+    s.started_at,
+    s.active_started_at,
+    s.accumulated_active_sec,
+    s.ended_at,
+    s.final_amount,
+    s.created_by,
+    s.updated_by,
+    s.created_at,
+    s.updated_at,
+    COALESCE(s.table_type, ct.table_type, 'simple') AS table_type
+FROM table_time_sessions s
+JOIN cafe_tables ct
+  ON ct.id = s.table_id
+ AND COALESCE(ct.deleted_at, 0) = 0
+JOIN orders o
+  ON o.id = s.order_id
+WHERE s.table_id = $1
+  AND COALESCE(s.deleted_at, 0) = 0
+  AND s.ended_at IS NULL
+  AND COALESCE(s.table_type, ct.table_type, 'simple') = 'time_based'
+  AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 LIMIT 1
 `
 
@@ -525,29 +562,34 @@ func (q *Queries) GetOpenTableTimeSessionByTableID(ctx context.Context, tableID 
 		&i.UpdatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TableType,
 	)
 	return i, err
 }
 
 const getLatestTableTimeSessionByOrderID = `
 SELECT
-    id,
-    order_id,
-    table_id,
-    state,
-    started_at,
-    active_started_at,
-    accumulated_active_sec,
-    ended_at,
-    final_amount,
-    created_by,
-    updated_by,
-    created_at,
-    updated_at
-FROM table_time_sessions
-WHERE order_id = $1
-  AND COALESCE(deleted_at, 0) = 0
-ORDER BY created_at DESC
+    s.id,
+    s.order_id,
+    s.table_id,
+    s.state,
+    s.started_at,
+    s.active_started_at,
+    s.accumulated_active_sec,
+    s.ended_at,
+    s.final_amount,
+    s.created_by,
+    s.updated_by,
+    s.created_at,
+    s.updated_at,
+    COALESCE(s.table_type, ct.table_type, 'simple') AS table_type
+FROM table_time_sessions s
+LEFT JOIN cafe_tables ct ON ct.id = s.table_id AND COALESCE(ct.deleted_at, 0) = 0
+LEFT JOIN orders o ON o.id = s.order_id
+WHERE s.order_id = $1
+  AND COALESCE(s.deleted_at, 0) = 0
+  AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+ORDER BY s.created_at DESC
 LIMIT 1
 `
 
@@ -568,6 +610,7 @@ func (q *Queries) GetLatestTableTimeSessionByOrderID(ctx context.Context, orderI
 		&i.UpdatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TableType,
 	)
 	return i, err
 }
@@ -822,23 +865,31 @@ func (q *Queries) ListSegmentsBySessionID(ctx context.Context, sessionID uuid.UU
 
 const getOpenTableTimeSessionByIDForUpdate = `
 SELECT
-    id,
-    order_id,
-    table_id,
-    state,
-    started_at,
-    active_started_at,
-    accumulated_active_sec,
-    ended_at,
-    final_amount,
-    created_by,
-    updated_by,
-    created_at,
-    updated_at
-FROM table_time_sessions
-WHERE id = $1
-  AND COALESCE(deleted_at, 0) = 0
-  AND ended_at IS NULL
+    s.id,
+    s.order_id,
+    s.table_id,
+    s.state,
+    s.started_at,
+    s.active_started_at,
+    s.accumulated_active_sec,
+    s.ended_at,
+    s.final_amount,
+    s.created_by,
+    s.updated_by,
+    s.created_at,
+    s.updated_at,
+    COALESCE(s.table_type, ct.table_type, 'simple') AS table_type
+FROM table_time_sessions s
+JOIN cafe_tables ct
+  ON ct.id = s.table_id
+ AND COALESCE(ct.deleted_at, 0) = 0
+JOIN orders o
+  ON o.id = s.order_id
+WHERE s.id = $1
+  AND COALESCE(s.deleted_at, 0) = 0
+  AND s.ended_at IS NULL
+  AND COALESCE(s.table_type, ct.table_type, 'simple') = 'time_based'
+  AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 LIMIT 1
 FOR UPDATE
 `
@@ -860,6 +911,7 @@ func (q *Queries) GetOpenTableTimeSessionByIDForUpdate(ctx context.Context, sess
 		&i.UpdatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TableType,
 	)
 	return i, err
 }
@@ -871,28 +923,32 @@ type UpdateTableTimeSessionTableIDForTransferParams struct {
 }
 
 const updateTableTimeSessionTableIDForTransfer = `
-UPDATE table_time_sessions
+UPDATE table_time_sessions s
 SET
     table_id = $2,
     updated_by = $3,
     updated_at = NOW()
-WHERE id = $1
-  AND COALESCE(deleted_at, 0) = 0
-  AND ended_at IS NULL
+FROM cafe_tables ct
+WHERE s.id = $1
+  AND ct.id = $2
+  AND COALESCE(s.deleted_at, 0) = 0
+  AND s.ended_at IS NULL
+  AND COALESCE(ct.deleted_at, 0) = 0
 RETURNING
-    id,
-    order_id,
-    table_id,
-    state,
-    started_at,
-    active_started_at,
-    accumulated_active_sec,
-    ended_at,
-    final_amount,
-    created_by,
-    updated_by,
-    created_at,
-    updated_at
+    s.id,
+    s.order_id,
+    s.table_id,
+    s.state,
+    s.started_at,
+    s.active_started_at,
+    s.accumulated_active_sec,
+    s.ended_at,
+    s.final_amount,
+    s.created_by,
+    s.updated_by,
+    s.created_at,
+    s.updated_at,
+    COALESCE(s.table_type, ct.table_type, 'simple') AS table_type
 `
 
 func (q *Queries) UpdateTableTimeSessionTableIDForTransfer(ctx context.Context, arg UpdateTableTimeSessionTableIDForTransferParams) (TableTimeSessionRow, error) {
@@ -912,6 +968,7 @@ func (q *Queries) UpdateTableTimeSessionTableIDForTransfer(ctx context.Context, 
 		&i.UpdatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TableType,
 	)
 	return i, err
 }
@@ -929,6 +986,25 @@ RETURNING id
 
 func (q *Queries) UpdateOrderTableIDForTimerTransfer(ctx context.Context, orderID uuid.UUID, tableID uuid.UUID) (uuid.UUID, error) {
 	row := q.db.QueryRow(ctx, updateOrderTableIDForTimerTransfer, orderID, tableID)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
+// UpdateOrderTableIDForTransfer is the general-purpose transfer query (replaces UpdateOrderTableIDForTimerTransfer)
+const updateOrderTableIDForTransfer = `
+UPDATE orders
+SET
+    table_id = $2,
+    updated_at = NOW()
+WHERE id = $1
+  AND COALESCE(deleted_at, 0) = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+RETURNING id
+`
+
+func (q *Queries) UpdateOrderTableIDForTransfer(ctx context.Context, orderID uuid.UUID, tableID uuid.UUID) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, updateOrderTableIDForTransfer, orderID, tableID)
 	var id uuid.UUID
 	err := row.Scan(&id)
 	return id, err

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"math/big"
 	"strconv"
 	"strings"
 	"time"
@@ -4248,8 +4249,10 @@ func (s *OrderS) GetMyOrders(ctx context.Context, waiterID string, req model.Get
 }
 
 // TransferOrder transfers an order from its current table to a target table
-// Implements two-phase transfer: Phase A (close current session) + Phase B (open new session)
-func (s *OrderS) TransferOrder(ctx context.Context, orderID string, targetTableID string) (*model.OrderResponse, error) {
+// Supports two transfer types:
+// - Simple transfer: order has no active table_time_session (just updates order.table_id and table statuses)
+// - Time-based transfer: order has active session (preserves session, creates new segment)
+func (s *OrderS) TransferOrder(ctx context.Context, orderID string, targetTableID string, reason string) (*model.OrderResponse, error) {
 	orderUUID, err := uuid.Parse(orderID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid order_id: %w", err)
@@ -4268,7 +4271,6 @@ func (s *OrderS) TransferOrder(ctx context.Context, orderID string, targetTableI
 		defer tx.Rollback(ctx)
 	}
 
-	// ============ VALIDATION ============
 	order, err := q.GetOrderByID(txCtx, orderUUID)
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -4277,295 +4279,531 @@ func (s *OrderS) TransferOrder(ctx context.Context, orderID string, targetTableI
 		return nil, fmt.Errorf("failed to get order: %w", err)
 	}
 
-	// Lock source session with FOR UPDATE
-	currentSession, err := q.GetOpenTableTimeSessionByOrderIDForUpdate(txCtx, orderUUID)
+	if !order.TableID.Valid {
+		return nil, fmt.Errorf("order has no source table")
+	}
+
+	if order.Status.Valid {
+		st := string(order.Status.OrderStatus)
+		switch st {
+		case string(model.OrderStatusPaid), string(model.OrderStatusCancelled), string(model.OrderStatusServed):
+			return nil, fmt.Errorf("cannot transfer %s order", st)
+		}
+	}
+
+	sourceTableID := uuid.UUID(order.TableID.Bytes)
+
+	if sourceTableID == targetTableUUID {
+		return nil, fmt.Errorf("source and target tables are the same")
+	}
+
+	actorUUID, roleStr := getTransferActorFromContext(ctx)
+
+	sourceTable, err := q.LockCafeTableByID(txCtx, sourceTableID)
 	if err != nil {
 		if err == pgx.ErrNoRows {
-			return nil, fmt.Errorf("no active session for order")
+			return nil, fmt.Errorf("source table not found")
 		}
-		return nil, fmt.Errorf("failed to get session: %w", err)
+		return nil, fmt.Errorf("failed to lock source table: %w", err)
 	}
 
-	if currentSession.EndedAt.Valid {
-		return nil, fmt.Errorf("cannot transfer completed order")
-	}
-
-	targetTable, err := q.GetCafeTableByID(txCtx, targetTableUUID)
+	targetTable, err := q.LockCafeTableByID(txCtx, targetTableUUID)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, fmt.Errorf("target table not found")
 		}
-		return nil, fmt.Errorf("failed to get target table: %w", err)
+		return nil, fmt.Errorf("failed to lock target table: %w", err)
 	}
 
-	if string(targetTable.Status) != "free" {
+	if string(targetTable.Status) != string(model.TableStatusFree) {
 		return nil, fmt.Errorf("target table is not available")
 	}
 
-	// ============ PHASE A: CLOSE CURRENT SESSION ============
-
-	// Use session.table_type as source of truth for whether segments exist
-	sourceTableType := currentSession.TableType
-	now := pgtype.Timestamptz{Time: time.Now(), Valid: true}
-
-	// For time-based sessions: close/finalize active segments and calculate charges
-	finalAmount := currentSession.FinalAmount
-	if sourceTableType == "time_based" {
-		segments, err := q.ListSegmentsBySessionID(txCtx, currentSession.ID)
-		if err != nil {
-			return nil, fmt.Errorf("failed to fetch segments: %w", err)
-		}
-
-		// Close open segments and calculate billing
-		totalActiveSeconds := currentSession.AccumulatedActiveSec
-		for _, seg := range segments {
-			// Only close segments that are still open
-			if seg.EndedAt.Valid {
-				continue
-			}
-
-			// Close segment with end time
-			_, err := q.UpdateTableTimeSessionSegmentClose(txCtx, pg.UpdateTableTimeSessionSegmentCloseParams{
-				ID:             seg.ID,
-				EndedAt:        pgtype.Timestamptz{Time: now.Time, Valid: true},
-				ActiveSeconds:  seg.ActiveSeconds,
-				PausedSeconds:  seg.PausedSeconds,
-				MoveOutReason:  "transfer",
-				MovedToTableID: pgtype.UUID{Bytes: targetTableUUID, Valid: true},
-			})
-			if err != nil {
-				return nil, fmt.Errorf("failed to close segment: %w", err)
-			}
-
-			// Accumulate active seconds for billing
-			totalActiveSeconds += seg.ActiveSeconds
-		}
-
-		// TODO: Calculate final_amount based on totalActiveSeconds and price_per_hour
-		// finalAmount = calculateBilling(totalActiveSeconds, sourceTable.PricePerHour)
-	}
-
-	// Mark source session as ended
-	userIDStr, _ := ctx.Value("user_id").(string)
-	var userID [16]byte
-	if userIDStr != "" {
-		if parsed, err := uuid.Parse(userIDStr); err == nil {
-			userID = parsed
-		}
-	}
-
-	_, err = q.UpdateTableTimeSessionClose(txCtx, pg.UpdateTableTimeSessionCloseParams{
-		ID:                   currentSession.ID,
-		AccumulatedActiveSec: currentSession.AccumulatedActiveSec,
-		EndedAt:              pgtype.Timestamptz{Time: now.Time, Valid: true},
-		FinalAmount:          finalAmount, // Now includes calculated amount if time-based
-		UpdatedBy:            pgtype.UUID{Bytes: userID, Valid: userIDStr != ""},
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to close source session: %w", err)
-	}
-
-	// ============ PHASE B: OPEN NEW SESSION ============
-
+	sourceTableType := string(sourceTable.TableType)
 	targetTableType := string(targetTable.TableType)
-	sourceTableID := uuid.UUID(order.TableID.Bytes)
 
-	// Pass transfer context to createSessionForOrder to avoid duplicate segment creation
-	newSessionID, err := s.createSessionForOrderWithTransfer(
-		txCtx, q, orderUUID, targetTableUUID, targetTableType,
-		sourceTableID, // For transfer segment tracking
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create new session: %w", err)
+	currentSession, sessionErr := q.GetOpenTableTimeSessionByOrderIDForUpdate(txCtx, orderUUID)
+	if sessionErr != nil && sessionErr != pgx.ErrNoRows {
+		return nil, fmt.Errorf("failed to check active timer session: %w", sessionErr)
 	}
 
-	// ============ UPDATE ORDER AND TABLES ============
+	hasActiveTimeSession := sessionErr == nil
 
-	// Update order with new table
-	_, err = q.UpdateOrder(txCtx, pg.UpdateOrderParams{
-		ID:      orderUUID,
-		TableID: pgtype.UUID{Bytes: targetTableUUID, Valid: true},
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to update order table: %w", err)
-	}
-
-	// Update table statuses
-	// Source table → free
-	_, err = q.UpdateCafeTableStatus(txCtx, pg.UpdateCafeTableStatusParams{
-		ID:     sourceTableID,
-		Status: pg.NullTableStatus{TableStatus: pg.TableStatusFree, Valid: true},
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to free source table: %w", err)
-	}
-
-	// Target table → busy
-	_, err = q.UpdateCafeTableStatus(txCtx, pg.UpdateCafeTableStatusParams{
-		ID:     targetTableUUID,
-		Status: pg.NullTableStatus{TableStatus: pg.TableStatusBusy, Valid: true},
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to occupy target table: %w", err)
-	}
-
-	// ============ COMMIT AND RETURN ============
-
-	if ownsTx {
-		if err := tx.Commit(ctx); err != nil {
-			return nil, fmt.Errorf("failed to commit transfer: %w", err)
+	// ============================================================
+	// 1) SIMPLE -> SIMPLE
+	// ============================================================
+	if sourceTableType == string(model.TableTypeSimple) &&
+		targetTableType == string(model.TableTypeSimple) {
+		if hasActiveTimeSession {
+			return nil, fmt.Errorf("simple table order must not have active timer session")
 		}
-	}
 
-	// Fetch updated order
-	updated, err := s.GetOrderByID(ctx, orderID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch updated order: %w", err)
-	}
-
-	// Set active session ID in response
-	if updated != nil {
-		sessionID := newSessionID.String()
-		updated.ActiveSessionID = &sessionID
-	}
-
-	return updated, nil
-}
-
-// createSessionForOrder creates a new session for an order
-// For time-based tables, also creates the initial segment
-func (s *OrderS) createSessionForOrder(
-	ctx context.Context,
-	q *pg.Queries,
-	orderID uuid.UUID,
-	tableID uuid.UUID,
-	tableType string,
-) (uuid.UUID, error) {
-	now := time.Now()
-	nowTS := pgtype.Timestamptz{Time: now, Valid: true}
-
-	userIDStr, _ := ctx.Value("user_id").(string)
-	var userID [16]byte
-	userIDValid := false
-	if userIDStr != "" {
-		if parsed, err := uuid.Parse(userIDStr); err == nil {
-			userID = parsed
-			userIDValid = true
+		if _, err := q.UpdateOrderTableIDForTransfer(txCtx, orderUUID, targetTableUUID); err != nil {
+			return nil, fmt.Errorf("failed to update order table: %w", err)
 		}
+
+		if _, err := q.SetTableFree(txCtx, sourceTableID); err != nil {
+			return nil, fmt.Errorf("failed to set source table free: %w", err)
+		}
+
+		if _, err := q.SetTableBusy(txCtx, targetTableUUID); err != nil {
+			return nil, fmt.Errorf("failed to set target table busy: %w", err)
+		}
+
+		resp, err := s.getUpdatedOrderResponse(txCtx, q, orderUUID)
+		if err != nil {
+			return nil, err
+		}
+
+		if ownsTx {
+			if err := tx.Commit(ctx); err != nil {
+				return nil, fmt.Errorf("failed to commit transaction: %w", err)
+			}
+		}
+
+		return resp, nil
 	}
 
-	// For time-based tables, set state to "running"; for simple tables, state is "paused"
-	// The constraint only allows 'running', 'paused', 'closed' - 'inactive' is not allowed
-	state := "paused"
-	activeStartedAt := pgtype.Timestamptz{}
-	sessionTableType := "simple"
-	if tableType == string(model.TableTypeTimeBased) {
-		state = "running"
-		activeStartedAt = nowTS
-		sessionTableType = "time_based"
+	// ============================================================
+	// 2) SIMPLE -> TIME_BASED
+	// Start new timer session from transfer moment.
+	// Billing starts from this transfer moment.
+	// ============================================================
+	if sourceTableType == string(model.TableTypeSimple) &&
+		targetTableType == string(model.TableTypeTimeBased) {
+		if hasActiveTimeSession {
+			return nil, fmt.Errorf("simple table order must not have active timer session")
+		}
+
+		targetBusySession, err := q.GetOpenTableTimeSessionByTableID(txCtx, targetTableUUID)
+		if err == nil {
+			_ = targetBusySession
+			return nil, fmt.Errorf("target table is already busy")
+		}
+		if err != nil && err != pgx.ErrNoRows {
+			return nil, fmt.Errorf("failed to check target table session: %w", err)
+		}
+
+		session, err := s.startTimerSessionForTransfer(txCtx, q, orderUUID, targetTableUUID, sourceTableID, actorUUID)
+		if err != nil {
+			return nil, err
+		}
+
+		if _, err := q.UpdateOrderTableIDForTransfer(txCtx, orderUUID, targetTableUUID); err != nil {
+			return nil, fmt.Errorf("failed to update order table: %w", err)
+		}
+
+		if _, err := q.SetTableFree(txCtx, sourceTableID); err != nil {
+			return nil, fmt.Errorf("failed to set source table free: %w", err)
+		}
+
+		if _, err := q.SetTableBusy(txCtx, targetTableUUID); err != nil {
+			return nil, fmt.Errorf("failed to set target table busy: %w", err)
+		}
+
+		if err := s.writeTransferTimerEvent(txCtx, q, session.ID, orderUUID, targetTableUUID, actorUUID, roleStr, reason); err != nil {
+			return nil, fmt.Errorf("failed to write transfer event: %w", err)
+		}
+
+		resp, err := s.getUpdatedOrderResponse(txCtx, q, orderUUID)
+		if err != nil {
+			return nil, err
+		}
+
+		if ownsTx {
+			if err := tx.Commit(ctx); err != nil {
+				return nil, fmt.Errorf("failed to commit transaction: %w", err)
+			}
+		}
+
+		return resp, nil
 	}
 
-	// Create session record with table_type
-	session, err := q.CreateTableTimeSession(ctx, pg.CreateTableTimeSessionParams{
-		ID:                   uuid.New(),
-		OrderID:              orderID,
-		TableID:              tableID,
-		State:                state,
-		TableType:            sessionTableType, // ✅ NOW INCLUDED
-		StartedAt:            now,
-		ActiveStartedAt:      activeStartedAt,
-		AccumulatedActiveSec: 0,
-		CreatedBy:            pgtype.UUID{Bytes: userID, Valid: userIDValid},
-		UpdatedBy:            pgtype.UUID{Bytes: userID, Valid: userIDValid},
-	})
-	if err != nil {
-		return uuid.Nil, fmt.Errorf("failed to create session: %w", err)
+	// From this point source is expected to be time_based.
+	if sourceTableType == string(model.TableTypeTimeBased) && !hasActiveTimeSession {
+		return nil, fmt.Errorf("time-based transfer requires active timer session")
 	}
 
-	// If time-based, create opening segment
-	if tableType == string(model.TableTypeTimeBased) {
-		_, err := q.CreateTableTimeSessionSegment(ctx, pg.CreateTableTimeSessionSegmentParams{
-			ID:               uuid.New(),
-			SessionID:        session.ID,
-			OrderID:          orderID,
-			TableID:          tableID,
-			StartedAt:        now,
-			MoveInReason:     "start",
-			MovedFromTableID: pgtype.UUID{},
+	if hasActiveTimeSession && currentSession.TableType != string(model.TableTypeTimeBased) {
+		return nil, fmt.Errorf("active session is not time_based")
+	}
+
+	// ============================================================
+	// 3) TIME_BASED -> TIME_BASED
+	// Keep same session. Close old segment, open new segment.
+	// ============================================================
+	if sourceTableType == string(model.TableTypeTimeBased) &&
+		targetTableType == string(model.TableTypeTimeBased) {
+		targetBusySession, err := q.GetOpenTableTimeSessionByTableID(txCtx, targetTableUUID)
+		if err == nil && targetBusySession.ID != currentSession.ID {
+			return nil, fmt.Errorf("target table is already busy")
+		}
+		if err != nil && err != pgx.ErrNoRows {
+			return nil, fmt.Errorf("failed to check target table session: %w", err)
+		}
+
+		activeSegment, err := q.GetActiveSegmentBySessionID(txCtx, currentSession.ID)
+		if err != nil {
+			if err == pgx.ErrNoRows {
+				return nil, fmt.Errorf("active segment not found")
+			}
+			return nil, fmt.Errorf("failed to get active segment: %w", err)
+		}
+
+		now := time.Now().UTC()
+
+		pausedSeconds, err := s.calculatePausedSecondsFromEvents(txCtx, q, currentSession.ID, activeSegment.StartedAt, now)
+		if err != nil {
+			return nil, fmt.Errorf("failed to calculate paused seconds: %w", err)
+		}
+
+		segmentDuration := now.Unix() - activeSegment.StartedAt.Unix()
+		activeSeconds := segmentDuration - pausedSeconds
+		if activeSeconds < 0 {
+			activeSeconds = 0
+		}
+
+		_, err = q.UpdateTableTimeSessionSegmentClose(txCtx, pg.UpdateTableTimeSessionSegmentCloseParams{
+			ID:             activeSegment.ID,
+			EndedAt:        pgtype.Timestamptz{Time: now, Valid: true},
+			ActiveSeconds:  activeSeconds,
+			PausedSeconds:  pausedSeconds,
+			MoveOutReason:  "transfer",
+			MovedToTableID: pgtype.UUID{Bytes: targetTableUUID, Valid: true},
 		})
 		if err != nil {
-			return uuid.Nil, fmt.Errorf("failed to create opening segment: %w", err)
+			return nil, fmt.Errorf("failed to close old segment: %w", err)
 		}
-	}
 
-	return session.ID, nil
-}
-
-// createSessionForOrderWithTransfer creates a new session for an order during a table transfer
-// It's similar to createSessionForOrder but creates transfer segments with proper move tracking
-func (s *OrderS) createSessionForOrderWithTransfer(
-	ctx context.Context,
-	q *pg.Queries,
-	orderID uuid.UUID,
-	tableID uuid.UUID,
-	tableType string,
-	sourceTableID uuid.UUID,
-) (uuid.UUID, error) {
-	now := time.Now()
-	nowTS := pgtype.Timestamptz{Time: now, Valid: true}
-
-	userIDStr, _ := ctx.Value("user_id").(string)
-	var userID [16]byte
-	userIDValid := false
-	if userIDStr != "" {
-		if parsed, err := uuid.Parse(userIDStr); err == nil {
-			userID = parsed
-			userIDValid = true
-		}
-	}
-
-	// For time-based tables, set state to "running"; for simple tables, state is "paused"
-	state := "paused"
-	activeStartedAt := pgtype.Timestamptz{}
-	sessionTableType := "simple"
-	if tableType == string(model.TableTypeTimeBased) {
-		state = "running"
-		activeStartedAt = nowTS
-		sessionTableType = "time_based"
-	}
-
-	// Create session record with table_type
-	session, err := q.CreateTableTimeSession(ctx, pg.CreateTableTimeSessionParams{
-		ID:                   uuid.New(),
-		OrderID:              orderID,
-		TableID:              tableID,
-		State:                state,
-		TableType:            sessionTableType,
-		StartedAt:            now,
-		ActiveStartedAt:      activeStartedAt,
-		AccumulatedActiveSec: 0,
-		CreatedBy:            pgtype.UUID{Bytes: userID, Valid: userIDValid},
-		UpdatedBy:            pgtype.UUID{Bytes: userID, Valid: userIDValid},
-	})
-	if err != nil {
-		return uuid.Nil, fmt.Errorf("failed to create session: %w", err)
-	}
-
-	// If time-based, create transfer segment with move tracking
-	if tableType == string(model.TableTypeTimeBased) {
-		_, err := q.CreateTableTimeSessionSegment(ctx, pg.CreateTableTimeSessionSegmentParams{
+		_, err = q.CreateTableTimeSessionSegment(txCtx, pg.CreateTableTimeSessionSegmentParams{
 			ID:               uuid.New(),
-			SessionID:        session.ID,
-			OrderID:          orderID,
-			TableID:          tableID,
+			SessionID:        currentSession.ID,
+			OrderID:          orderUUID,
+			TableID:          targetTableUUID,
 			StartedAt:        now,
 			MoveInReason:     "transfer",
 			MovedFromTableID: pgtype.UUID{Bytes: sourceTableID, Valid: true},
 		})
 		if err != nil {
-			return uuid.Nil, fmt.Errorf("failed to create transfer segment: %w", err)
+			return nil, fmt.Errorf("failed to create new segment: %w", err)
+		}
+
+		_, err = q.UpdateTableTimeSessionTableIDForTransfer(txCtx, pg.UpdateTableTimeSessionTableIDForTransferParams{
+			ID:        currentSession.ID,
+			TableID:   targetTableUUID,
+			UpdatedBy: actorUUID,
+		})
+		if err != nil {
+			errText := strings.ToLower(err.Error())
+			if strings.Contains(errText, "uq_table_time_sessions_open_table") ||
+				strings.Contains(errText, "duplicate key value") {
+				return nil, fmt.Errorf("target table is already busy")
+			}
+			return nil, fmt.Errorf("failed to update session table_id: %w", err)
+		}
+
+		if _, err := q.UpdateOrderTableIDForTransfer(txCtx, orderUUID, targetTableUUID); err != nil {
+			return nil, fmt.Errorf("failed to update order table: %w", err)
+		}
+
+		if _, err := q.SetTableFree(txCtx, sourceTableID); err != nil {
+			return nil, fmt.Errorf("failed to set source table free: %w", err)
+		}
+
+		if _, err := q.SetTableBusy(txCtx, targetTableUUID); err != nil {
+			return nil, fmt.Errorf("failed to set target table busy: %w", err)
+		}
+
+		if err := s.writeTransferTimerEvent(txCtx, q, currentSession.ID, orderUUID, targetTableUUID, actorUUID, roleStr, reason); err != nil {
+			return nil, fmt.Errorf("failed to write transfer event: %w", err)
+		}
+
+		resp, err := s.getUpdatedOrderResponse(txCtx, q, orderUUID)
+		if err != nil {
+			return nil, err
+		}
+
+		if ownsTx {
+			if err := tx.Commit(ctx); err != nil {
+				return nil, fmt.Errorf("failed to commit transaction: %w", err)
+			}
+		}
+
+		return resp, nil
+	}
+
+	// ============================================================
+	// 4) TIME_BASED -> SIMPLE
+	// Close timer session. Billing stops at transfer moment.
+	// ============================================================
+	if sourceTableType == string(model.TableTypeTimeBased) &&
+		targetTableType == string(model.TableTypeSimple) {
+		activeSegment, err := q.GetActiveSegmentBySessionID(txCtx, currentSession.ID)
+		if err != nil {
+			if err == pgx.ErrNoRows {
+				return nil, fmt.Errorf("active segment not found")
+			}
+			return nil, fmt.Errorf("failed to get active segment: %w", err)
+		}
+
+		now := time.Now().UTC()
+
+		pausedSeconds, err := s.calculatePausedSecondsFromEvents(txCtx, q, currentSession.ID, activeSegment.StartedAt, now)
+		if err != nil {
+			return nil, fmt.Errorf("failed to calculate paused seconds: %w", err)
+		}
+
+		segmentDuration := now.Unix() - activeSegment.StartedAt.Unix()
+		activeSeconds := segmentDuration - pausedSeconds
+		if activeSeconds < 0 {
+			activeSeconds = 0
+		}
+
+		_, err = q.UpdateTableTimeSessionSegmentClose(txCtx, pg.UpdateTableTimeSessionSegmentCloseParams{
+			ID:             activeSegment.ID,
+			EndedAt:        pgtype.Timestamptz{Time: now, Valid: true},
+			ActiveSeconds:  activeSeconds,
+			PausedSeconds:  pausedSeconds,
+			MoveOutReason:  "transfer",
+			MovedToTableID: pgtype.UUID{Bytes: targetTableUUID, Valid: true},
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to close old segment: %w", err)
+		}
+
+		totalActiveSeconds := currentSession.AccumulatedActiveSec + activeSeconds
+
+		sourceTableFull, err := q.GetCafeTableByID(txCtx, sourceTableID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get source table for price: %w", err)
+		}
+
+		finalAmount, err := s.calculateFinalAmountForSessionTransfer(sourceTableFull.PricePerHour, totalActiveSeconds)
+		if err != nil {
+			return nil, fmt.Errorf("failed to calculate final timer amount: %w", err)
+		}
+
+		_, err = q.UpdateTableTimeSessionClose(txCtx, pg.UpdateTableTimeSessionCloseParams{
+			ID:                   currentSession.ID,
+			AccumulatedActiveSec: totalActiveSeconds,
+			EndedAt:              pgtype.Timestamptz{Time: now, Valid: true},
+			FinalAmount:          finalAmount,
+			UpdatedBy:            actorUUID,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to close timer session: %w", err)
+		}
+
+		if _, err := q.UpdateOrderTableIDForTransfer(txCtx, orderUUID, targetTableUUID); err != nil {
+			return nil, fmt.Errorf("failed to update order table: %w", err)
+		}
+
+		if _, err := q.SetTableFree(txCtx, sourceTableID); err != nil {
+			return nil, fmt.Errorf("failed to set source table free: %w", err)
+		}
+
+		if _, err := q.SetTableBusy(txCtx, targetTableUUID); err != nil {
+			return nil, fmt.Errorf("failed to set target table busy: %w", err)
+		}
+
+		if err := s.writeTransferTimerEvent(txCtx, q, currentSession.ID, orderUUID, targetTableUUID, actorUUID, roleStr, reason); err != nil {
+			return nil, fmt.Errorf("failed to write transfer event: %w", err)
+		}
+
+		resp, err := s.getUpdatedOrderResponse(txCtx, q, orderUUID)
+		if err != nil {
+			return nil, err
+		}
+
+		if ownsTx {
+			if err := tx.Commit(ctx); err != nil {
+				return nil, fmt.Errorf("failed to commit transaction: %w", err)
+			}
+		}
+
+		return resp, nil
+	}
+
+	return nil, fmt.Errorf("cannot transfer between different table types")
+}
+
+func (s *OrderS) getUpdatedOrderResponse(ctx context.Context, q *pg.Queries, orderID uuid.UUID) (*model.OrderResponse, error) {
+	order, err := q.GetOrderByID(ctx, orderID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get updated order: %w", err)
+	}
+
+	return toOrderResponse(order), nil
+}
+
+func getTransferActorFromContext(ctx context.Context) (pgtype.UUID, string) {
+	userIDStr, _ := ctx.Value("user_id").(string)
+	roleStr, _ := ctx.Value("role").(string)
+
+	if strings.TrimSpace(roleStr) == "" {
+		roleStr, _ = ctx.Value("user_role").(string)
+	}
+
+	var actorUUID pgtype.UUID
+	if strings.TrimSpace(userIDStr) != "" {
+		if parsed, err := uuid.Parse(userIDStr); err == nil {
+			actorUUID = pgtype.UUID{Bytes: parsed, Valid: true}
 		}
 	}
 
-	return session.ID, nil
+	return actorUUID, roleStr
+}
+
+func (s *OrderS) writeTransferTimerEvent(
+	ctx context.Context,
+	q *pg.Queries,
+	sessionID uuid.UUID,
+	orderID uuid.UUID,
+	tableID uuid.UUID,
+	actorUUID pgtype.UUID,
+	actorRole string,
+	reason string,
+) error {
+	var comment *string
+	if r := strings.TrimSpace(reason); r != "" {
+		comment = &r
+	}
+
+	return q.CreateTableTimeEvent(ctx, pg.CreateTableTimeEventParams{
+		ID:          uuid.New(),
+		SessionID:   sessionID,
+		OrderID:     orderID,
+		TableID:     tableID,
+		EventType:   "transfer",
+		ActorUserID: actorUUID,
+		ActorRole:   &actorRole,
+		Comment:     comment,
+	})
+}
+
+func (s *OrderS) startTimerSessionForTransfer(
+	ctx context.Context,
+	q *pg.Queries,
+	orderID uuid.UUID,
+	targetTableID uuid.UUID,
+	sourceTableID uuid.UUID,
+	actorUUID pgtype.UUID,
+) (pg.TableTimeSessionRow, error) {
+	now := time.Now().UTC()
+	nowTS := pgtype.Timestamptz{Time: now, Valid: true}
+
+	session, err := q.CreateTableTimeSession(ctx, pg.CreateTableTimeSessionParams{
+		ID:                   uuid.New(),
+		OrderID:              orderID,
+		TableID:              targetTableID,
+		State:                string(model.TableTimerStateRunning),
+		TableType:            string(model.TableTypeTimeBased),
+		StartedAt:            now,
+		ActiveStartedAt:      nowTS,
+		AccumulatedActiveSec: 0,
+		CreatedBy:            actorUUID,
+		UpdatedBy:            actorUUID,
+	})
+	if err != nil {
+		return pg.TableTimeSessionRow{}, fmt.Errorf("failed to create timer session for transfer: %w", err)
+	}
+
+	if _, err := q.CreateTableTimeSessionSegment(ctx, pg.CreateTableTimeSessionSegmentParams{
+		ID:               uuid.New(),
+		SessionID:        session.ID,
+		OrderID:          orderID,
+		TableID:          targetTableID,
+		StartedAt:        now,
+		MoveInReason:     "transfer",
+		MovedFromTableID: pgtype.UUID{Bytes: sourceTableID, Valid: true},
+	}); err != nil {
+		return pg.TableTimeSessionRow{}, fmt.Errorf("failed to create transfer timer segment: %w", err)
+	}
+
+	return session, nil
+}
+
+func pgNumericToFloat64(n pgtype.Numeric) (float64, error) {
+	if !n.Valid {
+		return 0, fmt.Errorf("numeric value is null")
+	}
+
+	if n.NaN {
+		return 0, fmt.Errorf("numeric value is NaN")
+	}
+
+	if n.Int == nil {
+		return 0, fmt.Errorf("numeric value is empty")
+	}
+
+	r := new(big.Rat).SetInt(n.Int)
+
+	if n.Exp > 0 {
+		multiplier := new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(n.Exp)), nil)
+		r.Mul(r, new(big.Rat).SetInt(multiplier))
+	} else if n.Exp < 0 {
+		divisor := new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(-n.Exp)), nil)
+		r.Quo(r, new(big.Rat).SetInt(divisor))
+	}
+
+	value, _ := r.Float64()
+	return value, nil
+}
+
+func float64ToPgNumeric(value float64) (pgtype.Numeric, error) {
+	var n pgtype.Numeric
+
+	if math.IsNaN(value) || math.IsInf(value, 0) {
+		return n, fmt.Errorf("invalid numeric value")
+	}
+
+	if value < 0 {
+		value = 0
+	}
+
+	if err := n.Scan(strconv.FormatFloat(value, 'f', 2, 64)); err != nil {
+		return n, fmt.Errorf("failed to convert amount to numeric: %w", err)
+	}
+
+	return n, nil
+}
+
+func (s *OrderS) calculateFinalAmountForSessionTransfer(
+	pricePerHour pgtype.Numeric,
+	totalActiveSeconds int64,
+) (pgtype.Numeric, error) {
+	if totalActiveSeconds < 0 {
+		totalActiveSeconds = 0
+	}
+
+	pricePerHourFloat, err := pgNumericToFloat64(pricePerHour)
+	if err != nil {
+		return pgtype.Numeric{}, fmt.Errorf("price_per_hour is null or invalid: %w", err)
+	}
+
+	if pricePerHourFloat <= 0 {
+		return pgtype.Numeric{}, fmt.Errorf("price_per_hour is null or 0")
+	}
+
+	amount := pricePerHourFloat * float64(totalActiveSeconds) / 3600.0
+	return float64ToPgNumeric(amount)
+}
+
+// calculatePausedSecondsFromEvents calculates paused seconds from timer events
+// Helper functions (maxTime, minTime, derivePauseIntervalsFromEventRows, sumPauseIntervalSeconds)
+// are defined in table_timer.go and reused here
+func (s *OrderS) calculatePausedSecondsFromEvents(
+	ctx context.Context,
+	q *pg.Queries,
+	sessionID uuid.UUID,
+	segmentStart time.Time,
+	segmentEnd time.Time,
+) (int64, error) {
+	events, err := q.ListTableTimeEventsBySessionID(ctx, sessionID)
+	if err != nil {
+		return 0, fmt.Errorf("failed to list timer events: %w", err)
+	}
+
+	intervals := derivePauseIntervalsFromEventRows(events, segmentStart, segmentEnd)
+	return sumPauseIntervalSeconds(intervals), nil
 }

@@ -162,13 +162,11 @@ func (h *Handler) CreateOrder(c echo.Context) error {
 		(req.ScheduledAt == nil || *req.ScheduledAt == "")
 
 	if shouldAutoStartTimer && order != nil {
-		// Check if table is free before auto-starting timer
+		// Check table type to determine if timer should be started
 		table, tableErr := h.service.CafeTable().GetCafeTableByID(c.Request().Context(), req.TableID)
 		if tableErr != nil {
 			log.Printf("CreateOrder auto-start timer skipped: failed to get table %s: %v", req.TableID, tableErr)
-		} else if table.Status != "free" {
-			log.Printf("CreateOrder auto-start timer skipped: table %s is not free (status: %s)", req.TableID, table.Status)
-		} else {
+		} else if table.TableType == "time_based" {
 			if _, timerErr := h.service.TableTimer().StartTableTimerIfNeeded(
 				c.Request().Context(),
 				order.ID,
@@ -177,6 +175,8 @@ func (h *Handler) CreateOrder(c echo.Context) error {
 			); timerErr != nil {
 				log.Printf("CreateOrder auto-start timer skipped/failed for order %s: %v", order.ID, timerErr)
 			}
+		} else {
+			log.Printf("CreateOrder auto-start timer skipped: table %s is simple table, timer not needed", req.TableID)
 		}
 	}
 
@@ -272,13 +272,11 @@ func (h *Handler) CreateOrdersBatch(c echo.Context) error {
 			(srcReq.ScheduledAt == nil || *srcReq.ScheduledAt == "")
 
 		if shouldAutoStartTimer {
-			// Check if table is free before auto-starting timer
+			// Check table type to determine if timer should be started
 			table, tableErr := h.service.CafeTable().GetCafeTableByID(c.Request().Context(), srcReq.TableID)
 			if tableErr != nil {
 				log.Printf("CreateOrdersBatch auto-start timer skipped: failed to get table %s: %v", srcReq.TableID, tableErr)
-			} else if table.Status != "free" {
-				log.Printf("CreateOrdersBatch auto-start timer skipped: table %s is not free (status: %s)", srcReq.TableID, table.Status)
-			} else {
+			} else if table.TableType == "time_based" {
 				if _, timerErr := h.service.TableTimer().StartTableTimerIfNeeded(
 					c.Request().Context(),
 					result.Order.ID,
@@ -287,6 +285,8 @@ func (h *Handler) CreateOrdersBatch(c echo.Context) error {
 				); timerErr != nil {
 					log.Printf("CreateOrdersBatch auto-start timer skipped/failed for order %s: %v", result.Order.ID, timerErr)
 				}
+			} else {
+				log.Printf("CreateOrdersBatch auto-start timer skipped: table %s is simple table, timer not needed", srcReq.TableID)
 			}
 		}
 	}
@@ -1633,7 +1633,7 @@ func (h *Handler) RestoreOrder(c echo.Context) error {
 		table, tableErr := h.service.CafeTable().GetCafeTableByID(c.Request().Context(), order.TableID)
 		if tableErr != nil {
 			log.Printf("RestoreOrder auto-start timer skipped: failed to get table %s: %v", order.TableID, tableErr)
-		} else if table.Status == "free" {
+		} else if table.TableType == "time_based" {
 			if _, timerErr := h.service.TableTimer().StartTableTimerIfNeeded(
 				c.Request().Context(),
 				order.ID,
@@ -1643,7 +1643,7 @@ func (h *Handler) RestoreOrder(c echo.Context) error {
 				log.Printf("RestoreOrder auto-start timer skipped/failed for order %s: %v", order.ID, timerErr)
 			}
 		} else {
-			log.Printf("RestoreOrder auto-start timer skipped: table %s is not free (status: %s)", order.TableID, table.Status)
+			log.Printf("RestoreOrder auto-start timer skipped: table %s is simple table, timer not needed", order.TableID)
 		}
 	}
 
@@ -2526,7 +2526,7 @@ func (h *Handler) ActivateOrder(c echo.Context) error {
 		table, tableErr := h.service.CafeTable().GetCafeTableByID(c.Request().Context(), order.TableID)
 		if tableErr != nil {
 			log.Printf("ActivateOrder auto-start timer skipped: failed to get table %s: %v", order.TableID, tableErr)
-		} else if table.Status == "free" {
+		} else if table.TableType == "time_based" {
 			if _, timerErr := h.service.TableTimer().StartTableTimerIfNeeded(
 				c.Request().Context(),
 				order.ID,
@@ -2536,7 +2536,7 @@ func (h *Handler) ActivateOrder(c echo.Context) error {
 				log.Printf("ActivateOrder auto-start timer skipped/failed for order %s: %v", order.ID, timerErr)
 			}
 		} else {
-			log.Printf("ActivateOrder auto-start timer skipped: table %s is not free (status: %s)", order.TableID, table.Status)
+			log.Printf("ActivateOrder auto-start timer skipped: table %s is simple table, timer not needed", order.TableID)
 		}
 	}
 
@@ -2768,18 +2768,32 @@ func (h *Handler) TransferOrder(c echo.Context) error {
 		))
 	}
 
-	order, err := h.service.Order().TransferOrder(c.Request().Context(), orderID, req.TargetTableID)
+	order, err := h.service.Order().TransferOrder(c.Request().Context(), orderID, req.TargetTableID, req.Reason)
 	if err != nil {
 		errMsg := err.Error()
 		logMsg := "transfer order failed"
 
-		// Determine HTTP status code based on error message
 		statusCode := http.StatusInternalServerError
-		if strings.Contains(errMsg, "not found") {
+		lowerErr := strings.ToLower(errMsg)
+
+		if strings.Contains(lowerErr, "not found") {
 			statusCode = http.StatusNotFound
-		} else if strings.Contains(errMsg, "not available") || strings.Contains(errMsg, "occupied") {
+		} else if strings.Contains(lowerErr, "not available") ||
+			strings.Contains(lowerErr, "already busy") ||
+			strings.Contains(lowerErr, "occupied") ||
+			strings.Contains(lowerErr, "table already has an active order") {
 			statusCode = http.StatusConflict
-		} else if strings.Contains(errMsg, "completed") || strings.Contains(errMsg, "no active session") {
+		} else if strings.Contains(lowerErr, "invalid") ||
+			strings.Contains(lowerErr, "required") ||
+			strings.Contains(lowerErr, "source and target tables are the same") ||
+			strings.Contains(lowerErr, "cannot transfer") ||
+			strings.Contains(lowerErr, "time-based transfer requires active timer session") ||
+			strings.Contains(lowerErr, "requires active timer session") ||
+			strings.Contains(lowerErr, "must be time_based") ||
+			strings.Contains(lowerErr, "must be simple") ||
+			strings.Contains(lowerErr, "order has no source table") ||
+			strings.Contains(lowerErr, "completed") ||
+			strings.Contains(lowerErr, "no active session") {
 			statusCode = http.StatusBadRequest
 		}
 
