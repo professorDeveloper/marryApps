@@ -19834,6 +19834,76 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/orders/{id}/transfer": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Transfer an order from its current table to a target table",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Orders"
+                ],
+                "summary": "Transfer order to different table",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Order ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Transfer request with target_table_id",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.OrderTransferRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.OrderResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/outgoing-invoices": {
             "get": {
                 "security": [
@@ -30182,6 +30252,10 @@ const docTemplate = `{
         "model.OrderResponse": {
             "type": "object",
             "properties": {
+                "active_session_id": {
+                    "type": "string",
+                    "example": "d5e6f7a8-b9c0-4d1e-8f2g-h3i4j5k6l7m8"
+                },
                 "cash_register_id": {
                     "type": "string",
                     "example": "a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"
@@ -30300,6 +30374,22 @@ const docTemplate = `{
                 "OrderStatusReserved",
                 "OrderStatusRescheduled"
             ]
+        },
+        "model.OrderTransferRequest": {
+            "type": "object",
+            "required": [
+                "target_table_id"
+            ],
+            "properties": {
+                "reason": {
+                    "type": "string",
+                    "example": "client moved to another table"
+                },
+                "target_table_id": {
+                    "type": "string",
+                    "example": "c0f18a64-7f5c-4425-9414-1b01cddee9d9"
+                }
+            }
         },
         "model.OrderType": {
             "type": "string",

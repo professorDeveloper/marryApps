@@ -32,14 +32,70 @@ func (s *TableTimerS) getTenantMutationQueries(ctx context.Context) (*pg.Queries
 		if q, ok := repository.TenantQueriesFromContext(ctx); ok && q != nil {
 			return q, ctx, existingTx, false, nil
 		}
+
 		q := pg.New(existingTx)
-		txCtx := repository.WithTenantQueries(ctx, q)
+		txCtx := repository.WithTenantTx(ctx, existingTx)
+		txCtx = repository.WithTenantQueries(txCtx, q)
+
 		return q, txCtx, existingTx, false, nil
 	}
 
 	tx, err := s.repo.PgRepo.TenantPool.Begin(ctx)
 	if err != nil {
 		return nil, nil, nil, false, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+
+	brandID, _ := ctx.Value("brand_id").(string)
+	brandID = strings.TrimSpace(brandID)
+	if brandID == "" {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("brand_id is missing in context")
+	}
+
+	schemaName := fmt.Sprintf("tenant_%s", brandID)
+	if _, err := tx.Exec(ctx, fmt.Sprintf(`SET LOCAL search_path TO "%s", public`, schemaName)); err != nil {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("failed to set tenant search_path: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx, "SET LOCAL app.brand_id = $1", brandID); err != nil {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("failed to set app.brand_id: %w", err)
+	}
+
+	if branchID, _ := ctx.Value("branch_id").(string); strings.TrimSpace(branchID) != "" {
+		if _, err := tx.Exec(ctx, "SET LOCAL app.branch_id = $1", strings.TrimSpace(branchID)); err != nil {
+			tx.Rollback(ctx)
+			return nil, nil, nil, false, fmt.Errorf("failed to set app.branch_id: %w", err)
+		}
+	}
+
+	q := pg.New(tx)
+	txCtx := repository.WithTenantTx(ctx, tx)
+	txCtx = repository.WithTenantQueries(txCtx, q)
+
+	return q, txCtx, tx, true, nil
+}
+
+// getTenantReadQueries returns tenant queries within a read-only transaction for read operations.
+// If a transaction already exists in context, it reuses it. Otherwise, it creates a new read-only transaction.
+// Returns: queries, enriched context, transaction, ownsTx (whether we created the tx), error
+func (s *TableTimerS) getTenantReadQueries(ctx context.Context) (*pg.Queries, context.Context, pgx.Tx, bool, error) {
+	if existingTx, ok := repository.TenantTxFromContext(ctx); ok && existingTx != nil {
+		// Reuse existing transaction - get queries from context or create from tx
+		if q, ok := repository.TenantQueriesFromContext(ctx); ok && q != nil {
+			return q, ctx, existingTx, false, nil
+		}
+		q := pg.New(existingTx)
+		txCtx := repository.WithTenantQueries(ctx, q)
+		return q, txCtx, existingTx, false, nil
+	}
+
+	// For read-only operations without an existing transaction, begin a read-only transaction
+	// This ensures the connection is not released before queries complete
+	tx, err := s.repo.PgRepo.TenantPool.BeginTx(ctx, pgx.TxOptions{AccessMode: pgx.ReadOnly})
+	if err != nil {
+		return nil, nil, nil, false, fmt.Errorf("failed to begin read-only transaction: %w", err)
 	}
 
 	brandID, _ := ctx.Value("brand_id").(string)
@@ -85,17 +141,23 @@ func parseActorUUID(userID string) (pgtype.UUID, error) {
 }
 
 func (s *TableTimerS) getTimerContext(ctx context.Context, orderID uuid.UUID) (pg.OrderTimerContextRow, error) {
-	var result pg.OrderTimerContextRow
-	err := withTenantRead(ctx, s.repo, func(tenantCtx context.Context, q *pg.Queries) error {
-		row, err := q.GetOrderTimerContext(tenantCtx, orderID)
-		if err != nil {
-			return err
-		}
-		result = row
-		return nil
-	})
+	q, txCtx, tx, ownsTx, err := s.getTenantReadQueries(ctx)
 	if err != nil {
-		return result, err
+		return pg.OrderTimerContextRow{}, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	result, err := q.GetOrderTimerContext(txCtx, orderID)
+	if err != nil {
+		return pg.OrderTimerContextRow{}, err
+	}
+
+	if ownsTx {
+		if err := tx.Rollback(ctx); err != nil {
+			return pg.OrderTimerContextRow{}, fmt.Errorf("failed to rollback read-only transaction: %w", err)
+		}
 	}
 
 	if result.OrderType != "dine_in" {
@@ -541,48 +603,47 @@ func (s *TableTimerS) GetTableTimerState(ctx context.Context, orderID string) (*
 	}
 
 	var session *pg.TableTimeSessionRow
-	var sessionErr error
 	var tableHistory []model.TableSegment
-	err = withTenantRead(ctx, s.repo, func(tenantCtx context.Context, q *pg.Queries) error {
-		s, err := q.GetOpenTableTimeSessionByOrderID(tenantCtx, oID)
-		if err == nil {
-			session = &s
-			// Build table history for the session
-			history, err := buildTableHistory(tenantCtx, q, session.ID, time.Now())
-			if err != nil {
-				return fmt.Errorf("failed to build table history: %w", err)
-			}
-			tableHistory = history
-			return nil
-		}
-		if err != pgx.ErrNoRows {
-			sessionErr = fmt.Errorf("failed to get open timer session: %w", err)
-			return sessionErr
-		}
 
+	q, txCtx, tx, ownsTx, err := s.getTenantReadQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	sess, err := q.GetOpenTableTimeSessionByOrderID(txCtx, oID)
+	if err == nil {
+		session = &sess
+		// Build table history for the session
+		history, err := buildTableHistory(txCtx, q, session.ID, time.Now())
+		if err != nil {
+			return nil, fmt.Errorf("failed to build table history: %w", err)
+		}
+		tableHistory = history
+	} else if err != pgx.ErrNoRows {
+		return nil, fmt.Errorf("failed to get open timer session: %w", err)
+	} else {
 		// No session found by order, check by table
-		openByTable, err := q.GetOpenTableTimeSessionByTableID(tenantCtx, uuid.UUID(ctxRow.TableID.Bytes))
+		openByTable, err := q.GetOpenTableTimeSessionByTableID(txCtx, uuid.UUID(ctxRow.TableID.Bytes))
 		if err == nil {
 			session = &openByTable
 			// Build table history for the session
-			history, err := buildTableHistory(tenantCtx, q, session.ID, time.Now())
+			history, err := buildTableHistory(txCtx, q, session.ID, time.Now())
 			if err != nil {
-				return fmt.Errorf("failed to build table history: %w", err)
+				return nil, fmt.Errorf("failed to build table history: %w", err)
 			}
 			tableHistory = history
-			return nil
+		} else if err != pgx.ErrNoRows {
+			return nil, fmt.Errorf("failed to check active table timer by table: %w", err)
 		}
-		if err != pgx.ErrNoRows {
-			sessionErr = fmt.Errorf("failed to check active table timer by table: %w", err)
-			return sessionErr
-		}
-		return nil
-	})
-	if sessionErr != nil {
-		return nil, sessionErr
 	}
-	if err != nil {
-		return nil, err
+
+	if ownsTx {
+		if err := tx.Rollback(ctx); err != nil {
+			return nil, fmt.Errorf("failed to rollback read-only transaction: %w", err)
+		}
 	}
 
 	// No session exists, return empty state
@@ -923,6 +984,10 @@ func (s *TableTimerS) TransferTableTimer(ctx context.Context, sessionID string, 
 		return nil, fmt.Errorf("session must be running to transfer")
 	}
 
+	if session.TableType != string(model.TableTypeTimeBased) {
+		return nil, fmt.Errorf("active session must be time_based")
+	}
+
 	activeSegment, err := q.GetActiveSegmentBySessionID(txCtx, session.ID)
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -937,19 +1002,33 @@ func (s *TableTimerS) TransferTableTimer(ctx context.Context, sessionID string, 
 		return nil, fmt.Errorf("target table is the same as current table")
 	}
 
-	targetTable, err := q.GetCafeTableByID(txCtx, tID)
+	// Lock old/source table too, so status changes stay safe in this transaction.
+	sourceTable, err := q.LockCafeTableByID(txCtx, oldTableID)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, fmt.Errorf("source table not found")
+		}
+		return nil, fmt.Errorf("failed to lock source table: %w", err)
+	}
+
+	if sourceTable.TableType != string(model.TableTypeTimeBased) {
+		return nil, fmt.Errorf("source table must be time_based")
+	}
+
+	// Target table must be locked with FOR UPDATE, not fetched with GetCafeTableByID.
+	targetTable, err := q.LockCafeTableByID(txCtx, tID)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, fmt.Errorf("target table not found")
 		}
-		return nil, fmt.Errorf("failed to get target table: %w", err)
+		return nil, fmt.Errorf("failed to lock target table: %w", err)
 	}
 
 	if targetTable.TableType != string(model.TableTypeTimeBased) {
 		return nil, fmt.Errorf("target table must be time_based")
 	}
 
-	if string(targetTable.Status) != "free" {
+	if string(targetTable.Status) != string(model.TableStatusFree) {
 		return nil, fmt.Errorf("target table is already busy")
 	}
 
@@ -961,7 +1040,7 @@ func (s *TableTimerS) TransferTableTimer(ctx context.Context, sessionID string, 
 		return nil, fmt.Errorf("failed to check target table session: %w", err)
 	}
 
-	now := time.Now()
+	now := time.Now().UTC()
 
 	pausedSeconds, err := s.calculatePausedSecondsFromEvents(txCtx, q, session.ID, activeSegment.StartedAt, now)
 	if err != nil {
@@ -1020,6 +1099,24 @@ func (s *TableTimerS) TransferTableTimer(ctx context.Context, sessionID string, 
 		return nil, fmt.Errorf("failed to set new table busy: %w", err)
 	}
 
+	var comment *string
+	if r := strings.TrimSpace(reason); r != "" {
+		comment = &r
+	}
+
+	if err := q.CreateTableTimeEvent(txCtx, pg.CreateTableTimeEventParams{
+		ID:          uuid.New(),
+		SessionID:   updatedSession.ID,
+		OrderID:     updatedSession.OrderID,
+		TableID:     tID,
+		EventType:   "transfer",
+		ActorUserID: actorUUID,
+		ActorRole:   &actorRole,
+		Comment:     comment,
+	}); err != nil {
+		return nil, fmt.Errorf("failed to write transfer event: %w", err)
+	}
+
 	ctxRow, err := q.GetOrderTimerContext(txCtx, updatedSession.OrderID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get updated timer context: %w", err)
@@ -1038,8 +1135,6 @@ func (s *TableTimerS) TransferTableTimer(ctx context.Context, sessionID string, 
 		}
 	}
 
-	_ = reason
-
 	return resp, nil
 }
 
@@ -1050,47 +1145,58 @@ func (s *TableTimerS) GetTableTimerByTableID(ctx context.Context, tableID string
 	}
 
 	var session *pg.TableTimeSessionRow
-	var sessionErr error
 	var tableHistory []model.TableSegment
-	err = withTenantRead(ctx, s.repo, func(tenantCtx context.Context, q *pg.Queries) error {
-		s, err := q.GetOpenTableTimeSessionByTableID(tenantCtx, tID)
-		if err == pgx.ErrNoRows {
-			return nil
-		}
-		if err != nil {
-			sessionErr = fmt.Errorf("failed to get open timer session by table: %w", err)
-			return sessionErr
-		}
-		session = &s
-		// Build table history for the session
-		history, err := buildTableHistory(tenantCtx, q, session.ID, time.Now())
-		if err != nil {
-			return fmt.Errorf("failed to build table history: %w", err)
-		}
-		tableHistory = history
-		return nil
-	})
-	if sessionErr != nil {
-		return nil, sessionErr
-	}
+
+	q, txCtx, tx, ownsTx, err := s.getTenantReadQueries(ctx)
 	if err != nil {
 		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	sess, err := q.GetOpenTableTimeSessionByTableID(txCtx, tID)
+	if err == pgx.ErrNoRows {
+		// No session found
+	} else if err != nil {
+		return nil, fmt.Errorf("failed to get open timer session by table: %w", err)
+	} else {
+		session = &sess
+		// Build table history for the session
+		history, err := buildTableHistory(txCtx, q, session.ID, time.Now())
+		if err != nil {
+			return nil, fmt.Errorf("failed to build table history: %w", err)
+		}
+		tableHistory = history
+	}
+
+	if ownsTx {
+		if err := tx.Rollback(ctx); err != nil {
+			return nil, fmt.Errorf("failed to rollback read-only transaction: %w", err)
+		}
 	}
 	if session == nil {
 		return nil, nil
 	}
 
-	var ctxRow pg.OrderTimerContextRow
-	err = withTenantRead(ctx, s.repo, func(tenantCtx context.Context, q *pg.Queries) error {
-		row, err := q.GetOrderTimerContext(tenantCtx, session.OrderID)
-		if err != nil {
-			return fmt.Errorf("failed to get order timer context: %w", err)
-		}
-		ctxRow = row
-		return nil
-	})
+	// Get order timer context
+	q2, txCtx2, tx2, ownsTx2, err := s.getTenantReadQueries(ctx)
 	if err != nil {
 		return nil, err
+	}
+	if ownsTx2 {
+		defer tx2.Rollback(ctx)
+	}
+
+	ctxRow, err := q2.GetOrderTimerContext(txCtx2, session.OrderID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get order timer context: %w", err)
+	}
+
+	if ownsTx2 {
+		if err := tx2.Rollback(ctx); err != nil {
+			return nil, fmt.Errorf("failed to rollback read-only transaction: %w", err)
+		}
 	}
 
 	return toTableTimerResponseWithHistory(ctxRow, session, time.Now(), tableHistory), nil

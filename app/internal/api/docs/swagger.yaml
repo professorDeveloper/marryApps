@@ -3210,6 +3210,9 @@ definitions:
     - OrderItemStatusCancelled
   model.OrderResponse:
     properties:
+      active_session_id:
+        example: d5e6f7a8-b9c0-4d1e-8f2g-h3i4j5k6l7m8
+        type: string
       cash_register_id:
         example: a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5
         type: string
@@ -3297,6 +3300,17 @@ definitions:
     - OrderStatusCancelled
     - OrderStatusReserved
     - OrderStatusRescheduled
+  model.OrderTransferRequest:
+    properties:
+      reason:
+        example: client moved to another table
+        type: string
+      target_table_id:
+        example: c0f18a64-7f5c-4425-9414-1b01cddee9d9
+        type: string
+    required:
+    - target_table_id
+    type: object
   model.OrderType:
     enum:
     - dine_in
@@ -18125,6 +18139,51 @@ paths:
       summary: Transfer order table timer to another table
       tags:
       - order-table-timer
+  /api/v1/orders/{id}/transfer:
+    post:
+      consumes:
+      - application/json
+      description: Transfer an order from its current table to a target table
+      parameters:
+      - description: Order ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Transfer request with target_table_id
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.OrderTransferRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.OrderResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Transfer order to different table
+      tags:
+      - Orders
   /api/v1/orders/batch:
     post:
       consumes:
