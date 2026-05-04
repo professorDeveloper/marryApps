@@ -1,8 +1,3 @@
--- DOWN migration
--- Roll back support for transfer events in check constraint.
--- Existing transfer events are mapped to closed to preserve audit rows.
--- Note: PostgreSQL cannot drop enum values directly, so public.table_time_event_type will still contain 'transfer'.
-
 UPDATE table_time_events
 SET event_type = 'closed'
 WHERE event_type::text = 'transfer';
