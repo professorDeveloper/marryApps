@@ -11,7 +11,6 @@ import {
     Typography,
     IconButton,
     DialogTitle,
-    ListItemText,
     DialogActions,
     DialogContent,
 } from '@mui/material';
@@ -22,6 +21,7 @@ import { useRouter } from 'src/routes/hooks';
 import { DashboardContent } from 'src/layouts/dashboard';
 import { useGetIngredients, useDeleteIngredient } from 'src/actions/ingredients';
 import { useMetadata } from 'src/hooks/use-metadata';
+import { usePaginationRows } from 'src/hooks/use-pagination-rows';
 import { MetadataEntity } from 'src/types/metadata';
 
 import { toast } from 'src/components/snackbar';
@@ -30,24 +30,9 @@ import { GenericViewModal } from 'src/components/generic-view-view';
 
 import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
 import { RouterLink } from 'src/routes/components';
+import { RenderCell } from 'src/components/RenderCell';
+import { CELL_SX } from 'src/sections/warehouse/deduction/components/utility-data-table/utils/constants';
 
-function RenderCellIngredientName({ row }: { row: any }) {
-    const name = row.name || '-';
-
-    return (
-        <Box sx={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            py: 1.5, 
-            px: 1,
-            color: 'text.primary',
-            fontSize: '0.875rem',
-            fontWeight: 400
-        }}>
-            {name}
-        </Box>
-    );
-}
 
 function getMeasurementLabel(value: string, t: (key: string) => string): string {
     switch (value) {
@@ -67,9 +52,10 @@ export function IngredientListView() {
     const router = useRouter();
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+    const { rowsPerPage } = usePaginationRows();
     const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
         page: 0,
-        pageSize: 20,
+        pageSize: rowsPerPage,
     });
     const { ingredients, ingredientsLoading, ingredientsTotal } = useGetIngredients(
         debouncedSearchQuery,
@@ -79,12 +65,11 @@ export function IngredientListView() {
         }
     );
     const { deleteIngredient } = useDeleteIngredient();
-    const { data: metadata } = useMetadata([MetadataEntity.INGREDIENT_GROUPS]);
+    const { data: metadata, isLoading: metadataLoading } = useMetadata([MetadataEntity.INGREDIENT_GROUPS]);
     const [viewModalOpen, setViewModalOpen] = useState(false);
     const [selectedIngredient, setSelectedIngredient] = useState<IIngredientItem | null>(null);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [ingredientToDelete, setIngredientToDelete] = useState<string | null>(null);
-    const lastSearchKeyRef = useState('')[1];
 
     useEffect(() => {
         const timeout = setTimeout(() => {
@@ -137,7 +122,7 @@ export function IngredientListView() {
                 align: 'left' as const,
                 getValue: (row: IIngredientItem) => row?.name ?? '',
                 renderCell: ({ row }: { row: IIngredientItem }) => (
-                    <RenderCellIngredientName row={row} />
+                    <RenderCell label={row?.name} />
                 ),
             },
             {
@@ -148,27 +133,15 @@ export function IngredientListView() {
                 width: '1.2fr',
                 align: 'left' as const,
                 getValue: (row: IIngredientItem) => {
-                    const ingredientGroups = metadata.ingredient_groups || [];
+                    const ingredientGroups = metadata?.ingredient_groups || [];
                     const group = ingredientGroups.find((g: any) => g.id === row.group_id);
-                    return row?.group_name || group?.name || row?.group_id || '-';
+                    return group?.name || row?.group_id || '-';
                 },
                 renderCell: ({ row }: { row: IIngredientItem }) => {
-                    const ingredientGroups = metadata.ingredient_groups || [];
+                    const ingredientGroups = metadata?.ingredient_groups || [];
                     const group = ingredientGroups.find((g: any) => g.id === row.group_id);
-                    const groupName = row?.group_name || group?.name || row?.group_id || '-';
-                    return (
-                        <Box sx={{ 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            py: 1.5, 
-                            px: 1,
-                            color: 'text.primary',
-                            fontSize: '0.875rem',
-                            fontWeight: 400
-                        }}>
-                            {groupName}
-                        </Box>
-                    );
+                    const groupName = group?.name || row?.group_id || '-';
+                    return <RenderCell label={groupName} />;
                 },
             },
             {
@@ -180,17 +153,7 @@ export function IngredientListView() {
                 align: 'left' as const,
                 getValue: (row: IIngredientItem) => row?.measurement || '-',
                 renderCell: ({ value }: { value: unknown }) => (
-                    <Box sx={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        py: 1.5, 
-                        px: 1,
-                        color: 'text.primary',
-                        fontSize: '0.875rem',
-                        fontWeight: 400
-                    }}>
-                        {getMeasurementLabel(String(value ?? '-'), t)}
-                    </Box>
+                    <RenderCell label={getMeasurementLabel(String(value ?? '-'), t)} />
                 ),
             },
             {
@@ -203,28 +166,10 @@ export function IngredientListView() {
                 renderCell: ({ value }: { value: unknown }) => {
                     const colorCode = value as string;
                     if (!colorCode) {
-                        return (
-                            <Box sx={{ 
-                                display: 'flex', 
-                                alignItems: 'center', 
-                                py: 1.5, 
-                                px: 1,
-                                color: 'text.primary',
-                                fontSize: '0.875rem',
-                                fontWeight: 400
-                            }}>
-                                -
-                            </Box>
-                        );
+                        return <RenderCell label="-" />;
                     }
                     return (
-                        <Box sx={{ 
-                            display: 'flex', 
-                            justifyContent: 'center', 
-                            alignItems: 'center', 
-                            py: 1.5, 
-                            px: 1
-                        }}>
+                        <Box sx={CELL_SX}>
                             <Box
                                 sx={{
                                     width: 40,
@@ -248,17 +193,7 @@ export function IngredientListView() {
                 align: 'left' as const,
                 getValue: (row: IIngredientItem) => row?.price_per_unit || '-',
                 renderCell: ({ row }: { row: IIngredientItem }) => (
-                    <Box sx={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        py: 1.5, 
-                        px: 1,
-                        color: 'text.primary',
-                        fontSize: '0.875rem',
-                        fontWeight: 400
-                    }}>
-                        {row?.price_per_unit || '-'}
-                    </Box>
+                    <RenderCell label={row?.price_per_unit || '-'} />
                 ),
             },
             {
@@ -335,12 +270,9 @@ export function IngredientListView() {
             <Box>
                 <Typography variant="subtitle2" sx={{ color: 'text.secondary', mb: 0.5 }}>
                     {t('warehouse.group')}
-                </Typography>
+                </Typography>   
                 <Typography variant="body2">
-                    {ingredient._expand?.group_id?.name ||
-                        ingredient.group_name ||
-                        ingredient.group_id ||
-                        '-'}
+                    { metadata?.ingredient_groups?.find((g: any) => g.id === ingredient.group_id)?.name || '-' }
                 </Typography>
             </Box>
             <Box>

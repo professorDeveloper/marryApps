@@ -171,7 +171,7 @@ const InvoiceFormView = React.memo(function InvoiceFormView() {
 
                 toast.success(t('warehouse.invoices.created'));
                 api?.restoreFromPersisted([]);
-                router.push(paths.warehouse.invoices.root);
+                router.push(paths.warehouse.invoiceDetails.root);
                 return;
             }
 
@@ -187,7 +187,7 @@ const InvoiceFormView = React.memo(function InvoiceFormView() {
 
             toast.success(t('warehouse.invoiceDetails.batchCreatedSuccess'));
             api?.restoreFromPersisted([]);
-            router.push(paths.warehouse.invoices.root);
+            router.push(paths.warehouse.invoiceDetails.root);
         } catch (error) {
             console.error('Error submitting batch:', error);
             toast.error(error instanceof Error ? error.message : t('error.loadFailed'));

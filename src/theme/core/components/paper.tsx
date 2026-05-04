@@ -14,6 +14,7 @@ const MuiPaper: Components<Theme>['MuiPaper'] = {
       borderRadius: '16px',
       border: `1px solid ${theme.vars.palette.divider}`,
       boxShadow: '0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.03)',
+      backgroundColor: theme.vars.palette.background.paper,
       [`[data-theme="dark"] &, .dark &`]: {
         boxShadow: '0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2)',
       },

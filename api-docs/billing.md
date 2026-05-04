@@ -2,7 +2,7 @@
 
 > **Module:** billing  
 > **Base URL:** https://api.maryai.uz/  
-> **Last Updated:** 2026-04-29T15:27:32.832Z
+> **Last Updated:** 2026-05-03T04:40:13.563Z
 
 ---
 

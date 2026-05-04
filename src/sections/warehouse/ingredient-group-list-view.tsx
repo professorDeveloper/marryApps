@@ -25,6 +25,7 @@ import { Iconify } from 'src/components/iconify';
 import { GenericViewModal } from 'src/components/generic-view-view';
 
 import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
+import { usePaginationRows } from 'src/hooks/use-pagination-rows';
 import { CELL_SX } from './deduction/components/utility-data-table/utils';
 import { RouterLink } from 'src/routes/components';
 
@@ -33,7 +34,8 @@ export function IngredientGroupListView() {
     const router = useRouter();
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
-    const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 20 });
+    const { rowsPerPage } = usePaginationRows();
+    const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: rowsPerPage });
     const { ingredientGroups, ingredientGroupsLoading, pagination } = useGetIngredientGroupsPage({
         search: debouncedSearchQuery,
         limit: paginationModel.pageSize,

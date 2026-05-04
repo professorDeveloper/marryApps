@@ -1,8 +1,6 @@
 import type { BoxProps } from '@mui/material/Box';
 import type { SettingsState } from '../types';
 
-import { varAlpha } from 'minimal-shared/utils';
-
 import Box from '@mui/material/Box';
 
 import { OptionButton } from './styles';
@@ -45,12 +43,10 @@ export function NavLayoutOptions({
             key={option.value}
             selected={selected}
             onClick={() => onChangeOption(option.value)}
-            sx={[
-              (theme) => ({
-                height: 64,
-                border: `solid 1px ${varAlpha(theme.vars.palette.grey['500Channel'], 0.08)}`,
-              }),
-            ]}
+            sx={{
+              height: 64,
+              border: `solid 1px var(--color-border)`,
+            }}
           >
             {option.icon}
           </OptionButton>

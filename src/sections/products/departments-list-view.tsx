@@ -24,6 +24,7 @@ import { Iconify } from 'src/components/iconify';
 import { GenericViewModal } from 'src/components/generic-view-view';
 
 import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
+import { usePaginationRows } from 'src/hooks/use-pagination-rows';
 import { StorageFilter } from 'src/sections/warehouse/deduction/components/utility-data-table/components/StorageFilter';
 import { DEPARTMENTS_TABLE_PERSIST_KEY } from 'src/sections/menu/compounds/utilities';
 import { RouterLink } from 'src/routes/components';
@@ -261,9 +262,10 @@ export function DepartmentsListView() {
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [storageId, setStorageId] = useState('');
   const [sortState, setSortState] = useState<{ key: string | null; dir: 'asc' | 'desc' | null }>({ key: null, dir: null });
+  const { rowsPerPage } = usePaginationRows();
   const [paginationModel, setPaginationModel] = useState({
     page: 0,
-    pageSize: 20,
+    pageSize: rowsPerPage,
   });
   const { data: metadata } = useMetadata([MetadataEntity.STORAGES]);
   const storages = metadata.storages || [];
@@ -449,7 +451,7 @@ export function DepartmentsListView() {
             setSearchQuery('');
             setStorageId('');
             setSortState({ key: null, dir: null });
-            setPaginationModel({ page: 0, pageSize: 20 });
+            setPaginationModel({ page: 0, pageSize: rowsPerPage });
           }}
           searchValue={searchQuery}
           onSearchChange={setSearchQuery}

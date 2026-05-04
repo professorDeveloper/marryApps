@@ -280,7 +280,11 @@ export function CustomReportsListView() {
         key: 'author',
         label: 'Author',
         sortable: true,
-        filter: { type: 'multi' as const },
+        filter: {
+          type: 'multi' as const,
+          options: authors.map((a) => a.id),
+          getOptionLabel: (id: string) => authors.find((a) => a.id === id)?.name || id,
+        },
         width: '1.5fr',
         align: 'left' as const,
         getValue: (row: CustomReport) => row?.author ?? '',
@@ -325,7 +329,7 @@ export function CustomReportsListView() {
         renderCell: () => null,
       },
     ],
-    [t, handleViewClick]
+    [t, handleViewClick, authors]
   );
 
   return (
@@ -348,6 +352,12 @@ export function CustomReportsListView() {
         searchValue={searchQuery}
         onSearchChange={(value: string) => {
           setSearchQuery(value);
+          setPaginationModel((prev) => ({ ...prev, page: 0 }));
+        }}
+        filters={draftFilters.author ? { author: { type: 'multi', value: [draftFilters.author] } } : {}}
+        onFiltersChange={(filterState) => {
+          const selectedAuthor = (filterState.author?.value as string[])?.[0] || '';
+          setDraftFilters((prev) => ({ ...prev, author: selectedAuthor }));
           setPaginationModel((prev) => ({ ...prev, page: 0 }));
         }}
         page={paginationModel.page}

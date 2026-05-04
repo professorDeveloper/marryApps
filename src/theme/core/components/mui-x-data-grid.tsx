@@ -362,8 +362,20 @@ const MuiDataGrid: Components<Theme>['MuiDataGrid'] = {
       padding: theme.spacing(2),
       backgroundColor: theme.vars.palette.background.paper,
       color: theme.vars.palette.text.primary,
+      gap: theme.spacing(1),
       [`& .${iconButtonClasses.root}`]: {
         color: theme.vars.palette.text.primary,
+      },
+      '& button': {
+        color: theme.vars.palette.text.primary,
+      },
+      '& [class*="MuiButton"]': {
+        color: theme.vars.palette.text.primary,
+        backgroundColor: 'transparent',
+        border: `1px solid ${theme.vars.palette.divider}`,
+        '&:hover': {
+          backgroundColor: theme.vars.palette.background.default,
+        },
       },
     }),
     toolbarDivider: {

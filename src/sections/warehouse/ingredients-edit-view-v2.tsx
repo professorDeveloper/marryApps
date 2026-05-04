@@ -23,8 +23,8 @@ import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 // ── Constants ────────────────────────────────────────────────────────────────
 
 const COLOR_CODES = [
-    '#f04438', '#2e90fa', '#12b76a', '#f79009', '#8E33FF', '#ff4d1a',
-    '#fda29b', '#d92d20', '#84caff', '#f79009', '#000000', '#FFFFFF',
+    'var(--color-danger-500)', 'var(--color-info-500)', 'var(--color-success-500)', 'var(--color-warning-500)', 'var(--color-secondary-500)', 'var(--color-primary-500)',
+    'var(--color-danger-100)', 'var(--color-danger-600)', 'var(--color-info-100)', 'var(--color-warning-300)', 'var(--color-text)', 'var(--color-text-on-primary)',
 ];
 
 // ── Component ────────────────────────────────────────────────────────────────

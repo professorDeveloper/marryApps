@@ -14,18 +14,18 @@ import { useGetIngredient, useCreateIngredient, useUpdateIngredient, useDeleteIn
 import { GenericEditV2 } from 'src/components/generic-edit-v2';
 
 const COLOR_CODES = [
-    '#FF4842', // Red
-    '#1890FF', // Blue
-    '#00AB55', // Green
-    '#FFC107', // Yellow
-    '#7F00FF', // Violet
-    '#ff4d1a', // Orange
-    '#FF1493', // Deep Pink
-    '#00CED1', // Dark Turquoise
-    '#FFD700', // Gold
-    '#8B4513', // Saddle Brown
-    '#000000', // Black
-    '#FFFFFF', // White
+    'var(--color-danger-500)', // Red
+    'var(--color-info-500)', // Blue
+    'var(--color-success-500)', // Green
+    'var(--color-warning-500)', // Yellow
+    'var(--color-secondary-500)', // Violet
+    'var(--color-primary-500)', // Orange
+    'var(--color-accent-500)', // Deep Pink/Accent
+    'var(--color-neutral-500)', // Dark Turquoise/Neutral
+    'var(--color-warning-100)', // Gold
+    'var(--color-primary-600)', // Saddle Brown
+    'var(--color-text)', // Black
+    'var(--color-text-on-primary)', // White
 ];
 
 export interface IngredientEditViewProps {

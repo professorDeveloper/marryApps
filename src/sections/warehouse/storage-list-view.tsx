@@ -6,29 +6,20 @@ import { useTranslation } from 'react-i18next';
 import { useMemo, useState, useEffect, useCallback } from 'react';
 
 import { useTheme } from '@mui/material/styles';
-import { Box, Button, Dialog, IconButton, DialogTitle, ListItemText, DialogActions, DialogContent } from '@mui/material';
+import { Box, Button, Dialog, IconButton, DialogTitle, DialogActions, DialogContent } from '@mui/material';
 
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
 
 import { DashboardContent } from 'src/layouts/dashboard';
 import { useGetStorages, useDeleteStorage } from 'src/actions/departments';
+import { usePaginationRows } from 'src/hooks/use-pagination-rows';
 
 import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
 
 import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
-
-function RenderCellStorageName({ params }: { params: any }) {
-  const { row } = params;
-  const name = row.name || '-';
-
-  return (
-    <Box sx={CELL_SX}>
-      {name}
-    </Box>
-  );
-}
+import { RenderCell } from 'src/components/RenderCell';
 
 function RenderCellColor({ params }: { params: any }) {
   const colorCode = params.row.color_code;
@@ -41,27 +32,21 @@ function RenderCellColor({ params }: { params: any }) {
     );
   }
 
-  return (
-    <Box sx={{ 
-      display: 'flex', 
-      justifyContent: 'center', 
-      alignItems: 'center', 
-      py: 1.5, 
-      px: 1
-    }}>
-      <Box
-        sx={{
-          width: 40,
-          height: 32,
-          borderRadius: '6px',
-          bgcolor: colorCode,
-          border: '1px solid',
-          borderColor: 'divider',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-        }}
-      />
-    </Box>
-  );
+    return (
+      <Box sx={CELL_SX}>
+        <Box
+          sx={{
+            width: 40,
+            height: 32,
+            borderRadius: '6px',
+            bgcolor: colorCode,
+            border: '1px solid',
+            borderColor: 'divider',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+          }}
+        />
+      </Box>
+    );
 }
 
 export function WarehouseStorageListView() {
@@ -70,9 +55,10 @@ export function WarehouseStorageListView() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+  const { rowsPerPage } = usePaginationRows();
   const [paginationModel, setPaginationModel] = useState({
     page: 0,
-    pageSize: 20,
+    pageSize: rowsPerPage,
   });
   const [sortState, setSortState] = useState<{ key: string | null; dir: 'asc' | 'desc' | null }>({ key: null, dir: null });
 
@@ -135,7 +121,7 @@ export function WarehouseStorageListView() {
         filterable: true,
         align: 'left',
         getValue: (row) => row.name || '',
-        renderCell: ({ row }) => <RenderCellStorageName params={{ row }} />,
+        renderCell: ({ row }) => <RenderCell label={row.name} />,
       },
       {
         key: 'color_code',
@@ -231,7 +217,7 @@ export function WarehouseStorageListView() {
           onReset={() => {
             setSearchQuery('');
             setSortState({ key: null, dir: null });
-            setPaginationModel({ page: 0, pageSize: 20 });
+            setPaginationModel({ page: 0, pageSize: rowsPerPage });
           }}
           searchValue={searchQuery}
           onSearchChange={setSearchQuery}

@@ -524,6 +524,12 @@ export function Meals() {
                         setSortState({ key: sort.key, dir: sort.dir });
                         setPaginationModel((prev) => ({ ...prev, page: 0 }));
                     }}
+                    filters={filters.category_id ? { category_id: { type: 'multi', value: [filters.category_id] } } : {}}
+                    onFiltersChange={(filterState) => {
+                        const selectedCategory = (filterState.category_id?.value as string[])?.[0];
+                        setDraftFilters((prev) => ({ ...prev, category_id: selectedCategory || '' }));
+                        setPaginationModel((prev) => ({ ...prev, page: 0 }));
+                    }}
                     page={paginationModel.page}
                     rowsPerPage={paginationModel.pageSize}
                     totalCount={pagination?.total || 0}

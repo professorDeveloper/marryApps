@@ -19,10 +19,11 @@ import {
 
 import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
 import { usePaginationRows } from 'src/hooks/use-pagination-rows';
+import { RenderCell } from 'src/components/RenderCell';
 
 function IngredientStockListView() {
     const { t } = useTranslation('menu');
-    const { rowsPerPage: globalRowsPerPage } = usePaginationRows();
+    const { rowsPerPage: globalRowsPerPage, setRowsPerPage } = usePaginationRows();
     const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: globalRowsPerPage });
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
@@ -135,16 +136,6 @@ function IngredientStockListView() {
         return map;
     }, [enrichedStocks]);
 
-    // Create reverse mapping from storage names to storage IDs for API calls
-    const reverseStorageMap = useMemo(() => {
-        const map: Record<string, string> = {};
-        enrichedStocks.forEach((stock: any) => {
-            if (stock.storage_id && stock.storage_name) {
-                map[stock.storage_name] = stock.storage_id;
-            }
-        });
-        return map;
-    }, [enrichedStocks]);
 
     const filtersValue = useMemo(() => {
         const result: Record<string, { type: 'multi'; value: string[] }> = {};
@@ -163,7 +154,8 @@ function IngredientStockListView() {
                 sortable: true,
                 width: '1.5fr',
                 align: 'left' as const,
-                getValue: (row: any) => row?.ingredient_name ?? '',
+                getValue: (row: any) => row?.ingredient_name ?? '', 
+                renderCell: (params: any) => <RenderCell label={params.row?.ingredient_name} />,
             },
             {
                 key: 'quantity',
@@ -173,6 +165,8 @@ function IngredientStockListView() {
                 align: 'right' as const,
                 mono: true,
                 getValue: (row: any) => row?.quantity ?? '',
+                renderCell: (params: any) => <RenderCell label={params.row?.quantity} />,
+
             },
             {
                 key: 'measurement',
@@ -181,6 +175,8 @@ function IngredientStockListView() {
                 width: '1fr',
                 align: 'left' as const,
                 getValue: (row: any) => row?.measurement ?? '-',
+                renderCell: (params: any) => <RenderCell label={params.row?.measurement } />,
+
             },
             {
                 key: 'price_per_unit',
@@ -189,6 +185,7 @@ function IngredientStockListView() {
                 width: '1fr',
                 align: 'left' as const,
                 getValue: (row: any) => row?.price_per_unit ?? '-',
+                renderCell: (params: any) => <RenderCell label={params.row?.price_per_unit} />,
             },
             {
                 key: 'storage_name',
@@ -202,6 +199,7 @@ function IngredientStockListView() {
                 width: '1.2fr',
                 align: 'left' as const,
                 getValue: (row: any) => row?.storage_name ?? '',
+                renderCell: (params: any) => <RenderCell label={params.row?.storage_name} />,
             },
             {
                 key: 'created_at',
@@ -211,6 +209,7 @@ function IngredientStockListView() {
                 align: 'left' as const,
                 getValue: (row: any) =>
                     row?.created_at ? new Date(row.created_at).toLocaleDateString() : '',
+                renderCell: (params: any) => <RenderCell label={ params.row?.created_at ? new Date(params.row.created_at).toLocaleDateString() : ''} />,
             },
         ],
         [t, storageOptions, storageMap]
@@ -240,7 +239,10 @@ function IngredientStockListView() {
                     totalCount={pagination?.total || 0}
                     rowsPerPageOptions={[10, 20, 50, 100]}
                     onPageChange={(p) => setPaginationModel((prev) => ({ ...prev, page: p }))}
-                    onRowsPerPageChange={(size) => setPaginationModel({ page: 0, pageSize: size })}
+                    onRowsPerPageChange={(size) => {
+                        setPaginationModel({ page: 0, pageSize: size });
+                        setRowsPerPage(size);
+                    }}
                     searchValue={searchQuery}
                     onSearchChange={handleSearchChange}
                     onSortChange={(sort) => {

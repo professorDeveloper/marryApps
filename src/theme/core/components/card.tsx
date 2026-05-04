@@ -10,6 +10,8 @@ const MuiCard: Components<Theme>['MuiCard'] = {
       boxShadow: `var(--card-shadow, ${theme.vars.customShadows.card})`,
       borderRadius: '16px', // Match reference design
       zIndex: 0, // Fix Safari overflow: hidden with border radius
+      backgroundImage: 'none',
+      backgroundColor: theme.vars.palette.background.paper,
     }),
   },
 };

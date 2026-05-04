@@ -266,7 +266,7 @@ export function ToolbarSearch({
           alignItems: 'flex-start',
           gap: 0.5,
           p: 0.5,
-          backgroundColor: 'rgba(9,9,11,0.7)',
+          backgroundColor: 'var(--color-surface-1)',
           borderRadius: 1,
           border: '1px solid var(--color-border)',
           minWidth: 200,

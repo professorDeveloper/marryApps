@@ -7,9 +7,11 @@ import { useTranslation } from 'react-i18next';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
+import { Chip } from '@mui/material';
 
 import { paths } from 'src/routes/paths';
 
+import { getStatusColor, formatStatusLabel } from 'src/utils/status-colors';
 import { Iconify } from 'src/components/iconify';
 
 import { DataTable } from 'src/sections/warehouse/deduction/components/utility-data-table/components/DataTable';
@@ -94,30 +96,14 @@ export function UserManagementView() {
         sortable: true,
         getValue: (row) => row.status || '',
         renderCell: ({ value }) => {
-          const status = String(value || '').toLowerCase();
-          let bgColor = 'var(--color-surface-2)';
-          let textColor = 'var(--color-text-secondary)';
-          if (status === 'active') {
-            bgColor = 'var(--color-info-50)';
-            textColor = 'var(--color-info-600)';
-          }
-          if (status === 'inactive') {
-            bgColor = 'var(--color-danger-50)';
-            textColor = 'var(--color-danger-600)';
-          }
+          const status = String(value || '');
           return (
-            <span
-              style={{
-                padding: '4px 12px',
-                borderRadius: '4px',
-                fontSize: '14px',
-                fontWeight: 700,
-                backgroundColor: bgColor,
-                color: textColor,
-              }}
-            >
-              {status}
-            </span>
+            <Chip
+              size="small"
+              label={formatStatusLabel(status)}
+              color={getStatusColor(status)}
+              sx={{ textTransform: 'capitalize' }}
+            />
           );
         },
       },

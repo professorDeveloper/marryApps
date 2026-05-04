@@ -113,7 +113,7 @@ export function KPICards({ kpis, onDateRangeChange, startDate, endDate }: KPICar
                 transition: 'all 0.2s',
                 '&:hover': {
                   borderColor: 'var(--color-primary)',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                  boxShadow: 'var(--shadow-card-light)',
                 },
               }}
             >

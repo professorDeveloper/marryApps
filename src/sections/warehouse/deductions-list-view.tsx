@@ -16,10 +16,14 @@ import {
     DialogTitle,
     DialogActions,
     DialogContent,
+    Chip,
 } from '@mui/material';
 
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
+
+import { getStatusColor, formatStatusLabel } from 'src/utils/status-colors';
+import { RenderCell } from 'src/components/RenderCell';
 
 import {
     useDeductionsAPI
@@ -31,6 +35,7 @@ import { DashboardContent } from 'src/layouts/dashboard';
 import { Iconify } from 'src/components/iconify';
 
 import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
+import { usePaginationRows } from 'src/hooks/use-pagination-rows';
 
 import {
     DeductionsDetailsModal,
@@ -80,7 +85,8 @@ export function DeductionsListView() {
     const [ingredientsMap, setIngredientsMap] = useState<Record<string, string>>({});
     const [loading, setLoading] = useState(true);
     const [rowCount, setRowCount] = useState(0);
-    const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 20 });
+    const { rowsPerPage } = usePaginationRows();
+    const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: rowsPerPage });
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedDeleteId, setSelectedDeleteId] = useState<string | null>(null);
     const [activePeriod, setActivePeriod] = useState<'day' | 'week' | 'month' | 'year'>('month');
@@ -338,7 +344,9 @@ export function DeductionsListView() {
                 mono: true,
                 width: '2fr',
                 getValue: (row: Deduction) => Number((row as any)?.balance ?? 0),
-                renderCell: ({ value }: { value: unknown }) => formatPrice(Number(value ?? 0)),
+                renderCell: ({ value }: { value: unknown }) => (
+                    <RenderCell label={formatPrice(Number(value ?? 0))} />
+                ),
                 total: { aggregation: 'sum' as const },
             },
             {
@@ -350,29 +358,12 @@ export function DeductionsListView() {
                 align: 'left' as const,
                 getValue: (row: Deduction) => String((row as any)?.status ?? ''),
                 renderCell: ({ value }: { value: unknown }) => (
-                    <Box
-                        sx={{
-                            px: 1.25,
-                            py: 0.5,
-                            borderRadius: 0.75,
-                            border: '1px solid',
-                            borderColor: (value ?? '') === 'active' ? theme.vars.palette.success.dark : theme.vars.palette.warning.dark,
-                            backgroundColor:
-                                (value ?? '') === 'active'
-                                    ? 'rgba(34, 197, 94, 0.10)'
-                                    : 'rgba(245, 158, 11, 0.10)',
-                            color:
-                                (value ?? '') === 'active'
-                                    ? theme.vars.palette.success.light
-                                    : theme.vars.palette.warning.light,
-                            fontSize: 12,
-                            fontWeight: 700,
-                            textAlign: 'center',
-                            minWidth: 72,
-                        }}
-                    >
-                        {String(value ?? '')}
-                    </Box>
+                    <Chip
+                        size="small"
+                        label={formatStatusLabel(String(value ?? ''))}
+                        color={getStatusColor(String(value ?? ''))}
+                        sx={{ textTransform: 'capitalize' }}
+                    />
                 ),
             },
             {
@@ -489,7 +480,7 @@ export function DeductionsListView() {
                         setSearchQuery('');
                         setFilterValues({ storage_id: '', act_group_id: '', status: '' });
                         setSortState({ key: null, dir: null });
-                        setPaginationModel({ page: 0, pageSize: 20 });
+                        setPaginationModel({ page: 0, pageSize: rowsPerPage });
                         setStartDate(new Date());
                         setEndDate(new Date());
                         setActivePeriod('month');

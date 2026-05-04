@@ -3,8 +3,9 @@ import type { Theme } from '@mui/material/styles';
 
 // ----------------------------------------------------------------------
 
-export const bulletColor = { dark: 'var(--color-surface-1)', light: 'var(--color-border-light)' };
-// export const bulletColor = { dark: 'var(--color-primary)', light: 'var(--color-primary)' };
+// Sidebar should always be dark, regardless of light/dark mode
+// Using CSS variable for consistency - matches --color-sidebar-text in global.css
+export const bulletColor = { dark: 'var(--color-sidebar-text)', light: 'var(--color-sidebar-text)' };
 
 
 function colorVars(theme: Theme, variant?: 'vertical' | 'mini' | 'horizontal') {

@@ -3,13 +3,62 @@ import { DashboardOverviewParams } from './types';
 export const CHART_COLORS = {
   primary: 'var(--color-primary-500)',
   secondary: 'var(--color-danger-500)',
-  tertiary: 'var(--color-warning-500)',
+  tertiary: 'var(--color-secondary-500)',
   quaternary: 'var(--color-surface-tertiary)',
   success: 'var(--color-success-500)',
   warning: 'var(--color-warning-500)',
   error: 'var(--color-danger-600)',
   info: 'var(--color-info-500)',
 };
+
+/**
+ * Resolve CSS variable to concrete color string for chart libraries
+ * that don't support CSS custom properties
+ */
+const colorCache = new Map<string, string>();
+
+export function resolveChartColor(cssVar: string): string {
+  if (typeof window === 'undefined') return cssVar;
+  if (!cssVar.startsWith('var(')) return cssVar;
+
+  // Check cache first
+  if (colorCache.has(cssVar)) {
+    return colorCache.get(cssVar)!;
+  }
+
+  // Extract the variable name from var(--name)
+  const varName = cssVar.replace(/^var\(/, '').replace(/\)$/, '');
+  const tempEl = document.createElement('div');
+  tempEl.style.color = `var(${varName})`;
+
+  let computedColor: string | null = null;
+  try {
+    document.body.appendChild(tempEl);
+    computedColor = window.getComputedStyle(tempEl).color;
+  } finally {
+    document.body.removeChild(tempEl);
+  }
+
+  const result = computedColor || cssVar;
+  colorCache.set(cssVar, result);
+  return result;
+}
+
+/**
+ * Get all resolved chart colors as an object
+ */
+export function getResolvedChartColors(): Record<keyof typeof CHART_COLORS, string> {
+  return {
+    primary: resolveChartColor(CHART_COLORS.primary),
+    secondary: resolveChartColor(CHART_COLORS.secondary),
+    tertiary: resolveChartColor(CHART_COLORS.tertiary),
+    quaternary: resolveChartColor(CHART_COLORS.quaternary),
+    success: resolveChartColor(CHART_COLORS.success),
+    warning: resolveChartColor(CHART_COLORS.warning),
+    error: resolveChartColor(CHART_COLORS.error),
+    info: resolveChartColor(CHART_COLORS.info),
+  };
+}
 
 export const KPI_CONFIG = {
   revenue: {

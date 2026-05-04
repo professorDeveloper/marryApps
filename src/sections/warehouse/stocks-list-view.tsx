@@ -11,6 +11,7 @@ import { Iconify } from 'src/components/iconify';
 
 import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
 import { RouterLink } from 'src/routes/components';
+import { RenderCell } from 'src/components/RenderCell';
 
 export function StocksListView() {
     const { t } = useTranslation('menu');
@@ -26,17 +27,7 @@ export function StocksListView() {
                 align: 'left' as const,
                 getValue: (row: any) => row?.sku ?? '',
                 renderCell: ({ row }: { row: any }) => (
-                    <Box sx={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        py: 1.5, 
-                        px: 1,
-                        color: 'text.primary',
-                        fontSize: '0.875rem',
-                        fontWeight: 400
-                    }}>
-                        {row?.sku ?? '-'}
-                    </Box>
+                    <RenderCell label={row?.sku} />
                 ),
             },
             {
@@ -47,17 +38,7 @@ export function StocksListView() {
                 align: 'left' as const,
                 getValue: (row: any) => row?.name ?? '',
                 renderCell: ({ row }: { row: any }) => (
-                    <Box sx={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        py: 1.5, 
-                        px: 1,
-                        color: 'text.primary',
-                        fontSize: '0.875rem',
-                        fontWeight: 400
-                    }}>
-                        {row?.name ?? '-'}
-                    </Box>
+                    <RenderCell label={row?.name} />
                 ),
             },
             {
@@ -68,17 +49,7 @@ export function StocksListView() {
                 align: 'left' as const,
                 getValue: (row: any) => row?.quantity ?? '',
                 renderCell: ({ row }: { row: any }) => (
-                    <Box sx={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        py: 1.5, 
-                        px: 1,
-                        color: 'text.primary',
-                        fontSize: '0.875rem',
-                        fontWeight: 400
-                    }}>
-                        {row?.quantity ?? '-'}
-                    </Box>
+                    <RenderCell label={row?.quantity} />
                 ),
             },
             {
@@ -89,17 +60,7 @@ export function StocksListView() {
                 align: 'left' as const,
                 getValue: (row: any) => row?.location ?? '',
                 renderCell: ({ row }: { row: any }) => (
-                    <Box sx={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        py: 1.5, 
-                        px: 1,
-                        color: 'text.primary',
-                        fontSize: '0.875rem',
-                        fontWeight: 400
-                    }}>
-                        {row?.location ?? '-'}
-                    </Box>
+                    <RenderCell label={row?.location} />
                 ),
             },
         ],

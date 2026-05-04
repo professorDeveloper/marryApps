@@ -3,9 +3,12 @@ import type { NavGroupProps, NavSectionProps } from '../types';
 import { memo } from 'react';
 import { useBoolean } from 'minimal-shared/hooks';
 import { mergeClasses } from 'minimal-shared/utils';
+import { isActiveLink } from 'minimal-shared/utils';
 
 import Collapse from '@mui/material/Collapse';
 import { useTheme } from '@mui/material/styles';
+
+import { usePathname } from 'src/routes/hooks';
 
 import { NavList } from './nav-list';
 import { Nav, NavUl, NavLi, NavSubheader } from '../components';
@@ -61,7 +64,15 @@ const Group = memo(function Group({
   checkPermissions,
   enabledRootRedirect,
 }: NavGroupProps) {
+  const pathname = usePathname();
   const groupOpen = useBoolean(true);
+
+  // Check if any child item in this group is active
+  const isChildActive = items.some((item) => {
+    const itemMatch = isActiveLink(pathname, item.path, item.deepMatch ?? false);
+    const childMatch = item.children?.some((child) => isActiveLink(pathname, child.path, true)) ?? false;
+    return itemMatch || childMatch;
+  });
 
   const renderContent = () => (
     <NavUl sx={{ gap: 'var(--nav-item-gap)' }}>
@@ -86,6 +97,7 @@ const Group = memo(function Group({
           <NavSubheader
             data-title={subheader}
             open={groupOpen.value}
+            active={isChildActive}
             onClick={groupOpen.onToggle}
             sx={slotProps?.subheader}
           >

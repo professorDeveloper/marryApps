@@ -104,12 +104,7 @@ export function ConnectedDeviceListView() {
           const type = String(value || 'close_check');
           const displayLabel = type === 'close_check' ? 'Close Check' : type.charAt(0).toUpperCase() + type.slice(1);
           return (
-            <Box sx={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              py: 1.5, 
-              px: 1
-            }}>
+            <Box sx={CELL_SX}>
               <Box
                 sx={{
                   padding: '4px 12px',
@@ -138,12 +133,7 @@ export function ConnectedDeviceListView() {
           const connectionTypeConfig = CONNECTION_TYPES.find(ct => ct.value === connectionType);
           const displayLabel = connectionTypeConfig?.label || connectionType.toUpperCase();
           return (
-            <Box sx={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              py: 1.5, 
-              px: 1
-            }}>
+            <Box sx={CELL_SX}>
               <Box
                 sx={{
                   padding: '4px 12px',

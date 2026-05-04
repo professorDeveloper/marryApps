@@ -60,7 +60,11 @@ export const NavVertical = memo(function NavVertical({
     <NavRoot
       isNavMini={isNavMini}
       layoutQuery={layoutQuery}
-      className={mergeClasses([layoutClasses.nav.root, layoutClasses.nav.vertical, className])}
+      className={mergeClasses([
+        layoutClasses.nav.root, 
+        layoutClasses.nav.vertical, 
+        className
+      ])}
       sx={sx}
       {...other}
     >
@@ -103,8 +107,8 @@ export const NavVertical = memo(function NavVertical({
           overflow: 'hidden',
           ...(isNavMini ? hiddenAnimatedStyles : visibleStyles),
           transition: theme.transitions.create(transitionProps, {
-            easing: 'var(--layout-transition-easing)',
-            duration: 'var(--layout-transition-duration)',
+            easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
+            duration: '400ms',
           }),
         })}
       >
@@ -135,8 +139,8 @@ export const NavVertical = memo(function NavVertical({
           overflow: 'hidden',
           ...(isNavMini ? visibleStyles : hiddenAnimatedStyles),
           transition: theme.transitions.create(transitionProps, {
-            easing: 'var(--layout-transition-easing)',
-            duration: 'var(--layout-transition-duration)',
+            easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
+            duration: '400ms',
           }),
         })}
       >
@@ -176,15 +180,16 @@ const NavRoot = styled('div', {
     display: 'none',
     position: 'fixed',
     flexDirection: 'column',
-    zIndex: 'var(--layout-nav-zIndex)',
-    backgroundColor: 'var(--layout-nav-bg)',
+    zIndex: theme.zIndex.drawer + 1,
     overflow: 'visible',
     willChange: 'width',
-    width: isNavMini ? 'var(--layout-nav-mini-width)' : 'var(--layout-nav-vertical-width)',
-    borderRight: `1px solid var(--layout-nav-border-color, ${varAlpha(theme.vars.palette.grey['500Channel'], 0.12)})`,
+    backgroundColor: 'var(--color-dark-800)',
+    borderRight: '1px solid var(--color-border-strong)',
+    width: isNavMini ? '88px' : '300px',
+    minWidth: isNavMini ? '88px' : '300px',
     transition: theme.transitions.create(['width'], {
-      easing: 'var(--layout-transition-easing)',
-      duration: 'var(--layout-transition-duration)',
+      easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
+      duration: '400ms',
     }),
     [theme.breakpoints.up(layoutQuery)]: { display: 'flex' },
   })

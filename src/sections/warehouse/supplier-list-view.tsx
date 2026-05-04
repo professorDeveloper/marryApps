@@ -21,6 +21,7 @@ import { Iconify } from 'src/components/iconify';
 
 import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
 import { RouterLink } from 'src/routes/components';
+import { RenderCell } from 'src/components/RenderCell';
 
 export function InvoicesListView() {
     const { t } = useTranslation('menu');
@@ -94,17 +95,7 @@ export function InvoicesListView() {
                 align: 'left' as const,
                 getValue: (row: any) => row?.name ?? '',
                 renderCell: ({ row }: { row: any }) => (
-                    <Box sx={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        py: 1.5, 
-                        px: 1,
-                        color: 'text.primary',
-                        fontSize: '0.875rem',
-                        fontWeight: 400
-                    }}>
-                        {row?.name || '-'}
-                    </Box>
+                    <RenderCell label={row?.name} />
                 ),
             },
             {
@@ -115,17 +106,7 @@ export function InvoicesListView() {
                 align: 'left' as const,
                 getValue: (row: any) => row?.phone_number ?? '',
                 renderCell: ({ row }: { row: any }) => (
-                    <Box sx={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        py: 1.5, 
-                        px: 1,
-                        color: 'text.primary',
-                        fontSize: '0.875rem',
-                        fontWeight: 400
-                    }}>
-                        {row?.phone_number || '-'}
-                    </Box>
+                    <RenderCell label={row?.phone_number} />
                 ),
             },
             {

@@ -155,7 +155,7 @@ const EditFormFieldComponent: FC<EditFormFieldProps> = ({ field, value, onChange
                                 boxShadow:
                                     selectedColor === color
                                         ? '0 0 0 2px var(--color-bg), 0 0 0 4px var(--color-text-primary)'
-                                        : '0 0 0 1px rgba(17, 24, 39, 0.2)',
+                                        : '0 0 0 1px var(--color-border-subtle)',
                                 '&:hover': {
                                     transform: 'translateY(-1px)',
                                 },
@@ -175,7 +175,7 @@ const EditFormFieldComponent: FC<EditFormFieldProps> = ({ field, value, onChange
                                         transform: 'translate(-50%, -50%)',
                                         fontSize: 18,
                                         color: 'var(--color-text-on-primary)',
-                                        filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.45))',
+                                        filter: 'var(--filter-shadow-light)',
                                     }}
                                 />
                             )}

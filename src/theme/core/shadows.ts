@@ -25,7 +25,7 @@ function createShadows(colorChannel: string): Shadows {
 /* **********************************************************************
  * 📦 Custom shadows matching reference design
  * **********************************************************************/
-const lightShadows: Shadows = [
+const lightShadows = [
   'none',
   '0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.03)', // Level 1
   '0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06)',
@@ -36,10 +36,10 @@ const lightShadows: Shadows = [
   '0 16px 40px rgba(0,0,0,0.14)',
   '0 20px 48px rgba(0,0,0,0.16)',
   '0 24px 56px rgba(0,0,0,0.18)',
-  ...Array(16).fill('0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.03)'),
-] as unknown as Shadows;
+  ...Array(15).fill('0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.03)'),
+] as Shadows;
 
-const darkShadows: Shadows = [
+const darkShadows = [
   'none',
   '0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2)', // Level 1
   '0 1px 3px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.3)',
@@ -50,8 +50,8 @@ const darkShadows: Shadows = [
   '0 16px 40px rgba(0,0,0,0.65)',
   '0 20px 48px rgba(0,0,0,0.7)',
   '0 24px 56px rgba(0,0,0,0.75)',
-  ...Array(16).fill('0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2)'),
-] as unknown as Shadows;
+  ...Array(15).fill('0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2)'),
+] as Shadows;
 
 export const shadows: SchemesRecord<Shadows> = {
   light: lightShadows,

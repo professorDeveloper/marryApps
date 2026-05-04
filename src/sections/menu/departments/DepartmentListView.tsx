@@ -21,6 +21,7 @@ import { GenericViewModal } from 'src/components/generic-view-view';
 
 import { DashboardContent } from 'src/layouts/dashboard';
 import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
+import { usePaginationRows } from 'src/hooks/use-pagination-rows';
 import { StorageFilter } from 'src/sections/warehouse/deduction/components/utility-data-table/components/StorageFilter';
 import { DEPARTMENTS_TABLE_PERSIST_KEY } from 'src/sections/menu/compounds/utilities';
 
@@ -46,9 +47,10 @@ export function DepartmentListView() {
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [storageId, setStorageId] = useState('');
   const [sortState, setSortState] = useState<{ key: string | null; dir: 'asc' | 'desc' | null }>({ key: null, dir: null });
+  const { rowsPerPage } = usePaginationRows();
   const [paginationModel, setPaginationModel] = useState({
     page: 0,
-    pageSize: 20,
+    pageSize: rowsPerPage,
   });
   const { storages } = useGetStorages();
 

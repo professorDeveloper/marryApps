@@ -14,7 +14,7 @@ import Typography from '@mui/material/Typography';
 import { Iconify } from 'src/components/iconify';
 import { ToolbarSearch } from './ToolbarSearch';
 
-import { ACCENT, BORDER } from '../utils';
+import { ACCENT } from '../utils';
 
 export type DataTableToolbarProps<T> = {
   searchValue?: string;
@@ -233,8 +233,8 @@ export function DataTableToolbar<T>({
               size="small"
               onClick={onOpenColumnMenu}
               sx={{
-                color: 'rgba(255,255,255,0.65)',
-                '&:hover': { color: ACCENT, backgroundColor: 'rgba(245, 158, 11, 0.10)' },
+                color: 'var(--color-primary)',
+                '&:hover': { color: ACCENT, backgroundColor: 'var(--overlay-warning-10)' },
               }}
             >
               <Iconify icon="solar:settings-bold-duotone" width={18} />
@@ -245,8 +245,8 @@ export function DataTableToolbar<T>({
               size="small"
               onClick={onReset}
               sx={{
-                color: 'rgba(255,255,255,0.65)',
-                '&:hover': { color: ACCENT, backgroundColor: 'rgba(245, 158, 11, 0.10)' },
+                color: 'var(--color-primary)',
+                '&:hover': { color: ACCENT, backgroundColor: 'var(--overlay-warning-10)' },
               }}
             >
               <Iconify icon="solar:restart-bold" width={18} />

@@ -5,74 +5,30 @@
 import { Box, ListItemText, Typography } from '@mui/material';
 
 import type { IDepartmentItem } from 'src/types/departments.tsx';
+import { RenderCell } from 'src/components/RenderCell';
+import { CELL_SX } from 'src/sections/warehouse/deduction/components/utility-data-table/utils/constants';
 
 interface CellRenderParams {
   row: IDepartmentItem;
 }
 
 export function RenderCellDepartmentName({ row }: CellRenderParams) {
-  const name = row.name || '-';
-
-  return (
-    <Box sx={{ 
-      display: 'flex', 
-      alignItems: 'center', 
-      py: 1.5, 
-      px: 1,
-      color: 'text.primary',
-      fontSize: '0.875rem',
-      fontWeight: 400
-    }}>
-      {name}
-    </Box>
-  );
+  return <RenderCell label={row.name || '-'} />;
 }
 
 export function RenderCellStorageId({ row }: CellRenderParams) {
-  const storageName = row.storage_name || '-';
-
-  return (
-    <Box sx={{ 
-      display: 'flex', 
-      alignItems: 'center', 
-      py: 1.5, 
-      px: 1,
-      color: 'text.primary',
-      fontSize: '0.875rem',
-      fontWeight: 400
-    }}>
-      {storageName}
-    </Box>
-  );
+  return <RenderCell label={row.storage_name || '-'} />;
 }
 
 export function RenderCellColor({ row }: CellRenderParams) {
   const colorCode = row.color_code;
 
   if (!colorCode) {
-    return (
-      <Box sx={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        py: 1.5, 
-        px: 1,
-        color: 'text.primary',
-        fontSize: '0.875rem',
-        fontWeight: 400
-      }}>
-        -
-      </Box>
-    );
+    return <RenderCell label="-" />;
   }
 
   return (
-    <Box sx={{ 
-      display: 'flex', 
-      justifyContent: 'center', 
-      alignItems: 'center', 
-      py: 1.5, 
-      px: 1
-    }}>
+    <Box sx={CELL_SX}>
       <Box
         sx={{
           width: 40,

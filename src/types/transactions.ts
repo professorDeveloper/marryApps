@@ -10,6 +10,8 @@ export interface ITransaction {
   to_branch_id?: string;
   group_transaction_id: string;
   amount: string;
+  cash_amount?: string;
+  card_amount?: string;
   description: string;
   pay_type: string;
   date: string;
@@ -24,9 +26,10 @@ export interface ITransaction {
 export interface TransactionFilters {
   date_from?: string;
   date_to?: string;
-  type?: TransactionType | '';
-  cash_register_id?: string;
-  group_transaction_id?: string;
+  type?: TransactionType | '' | string;  // Allow comma-separated values
+  pay_type?: string;  // Allow comma-separated values: 'cash', 'card', 'transfer'
+  cash_register_id?: string;  // Allow comma-separated values
+  group_transaction_id?: string;  // Allow comma-separated values
   search?: string;
   sort_by?: string;
   sort_order?: string;
@@ -68,6 +71,8 @@ export interface TransactionReportResponse {
 
 export interface IncomeExpensePayload {
   amount: string;
+  cash_amount?: string | null;
+  card_amount?: string | null;
   cash_register_id: string;
   date: string;
   description: string;
@@ -78,6 +83,8 @@ export interface IncomeExpensePayload {
 
 export interface TransferPayload {
   amount: string;
+  cash_amount?: string | null;
+  card_amount?: string | null;
   date: string;
   description: string;
   from_branch_id: string;

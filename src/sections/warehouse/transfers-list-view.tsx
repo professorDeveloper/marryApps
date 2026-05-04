@@ -8,10 +8,12 @@ import { useMemo, useState, useEffect, useCallback } from 'react';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
-import { Dialog, DialogTitle, DialogActions, DialogContent } from '@mui/material';
+import { Dialog, DialogTitle, DialogActions, DialogContent, Chip } from '@mui/material';
 
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
+
+import { getStatusColor, formatStatusLabel } from 'src/utils/status-colors';
 
 import { useStorageAPI } from 'src/hooks/use-storage-api';
 import { useTransfersAPI } from 'src/hooks/use-transfers-api';
@@ -24,7 +26,9 @@ import { DashboardContent } from 'src/layouts/dashboard';
 import { Iconify } from 'src/components/iconify';
 
 import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
+import { usePaginationRows } from 'src/hooks/use-pagination-rows';
 import { RouterLink } from 'src/routes/components';
+import { RenderCell } from 'src/components/RenderCell';
 
 interface Branch {
   id: string;
@@ -119,9 +123,10 @@ export function TransfersListView() {
   const [groupOptions, setGroupOptions] = useState<string[]>([]);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [openConfirm, setOpenConfirm] = useState(false);
+  const { rowsPerPage } = usePaginationRows();
   const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
     page: 0,
-    pageSize: 20,
+    pageSize: rowsPerPage,
   });
   const [draftFilters, setDraftFilters] = useState({
     status: '',
@@ -439,17 +444,7 @@ export function TransfersListView() {
         getValue: (row: Transfer) =>
           row?.number ?? t('common.notFound', 'Not found'),
         renderCell: ({ row }: { row: Transfer }) => (
-          <Box sx={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            py: 1.5, 
-            px: 1,
-            color: 'text.primary',
-            fontSize: '0.875rem',
-            fontWeight: 400
-          }}>
-            {row?.number ?? t('common.notFound', 'Not found')}
-          </Box>
+          <RenderCell label={String(row?.number || t('common.notFound', 'Not found'))} />
         ),
       },
       {
@@ -470,19 +465,7 @@ export function TransfersListView() {
         renderCell: ({ row }: { row: Transfer }) => {
           const value = !row.from_branch_id ? t('common.notFound', 'Not found') : 
                      branchesMap[row.from_branch_id] || t('common.notFound', 'Not found');
-          return (
-            <Box sx={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              py: 1.5, 
-              px: 1,
-              color: 'text.primary',
-              fontSize: '0.875rem',
-              fontWeight: 400
-            }}>
-              {value}
-            </Box>
-          );
+          return <RenderCell label={value} />;
         },
       },
       {
@@ -503,19 +486,7 @@ export function TransfersListView() {
         renderCell: ({ row }: { row: Transfer }) => {
           const value = !row.to_branch_id ? t('common.notFound', 'Not found') : 
                      branchesMap[row.to_branch_id] || t('common.notFound', 'Not found');
-          return (
-            <Box sx={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              py: 1.5, 
-              px: 1,
-              color: 'text.primary',
-              fontSize: '0.875rem',
-              fontWeight: 400
-            }}>
-              {value}
-            </Box>
-          );
+          return <RenderCell label={value} />;
         },
       },
       {
@@ -536,19 +507,7 @@ export function TransfersListView() {
         renderCell: ({ row }: { row: Transfer }) => {
           const value = !row.from_storage_id ? t('common.notFound', 'Not found') : 
                      storagesMap[row.from_storage_id] || t('common.notFound', 'Not found');
-          return (
-            <Box sx={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              py: 1.5, 
-              px: 1,
-              color: 'text.primary',
-              fontSize: '0.875rem',
-              fontWeight: 400
-            }}>
-              {value}
-            </Box>
-          );
+          return <RenderCell label={value} />;
         },
       },
       {
@@ -569,19 +528,7 @@ export function TransfersListView() {
         renderCell: ({ row }: { row: Transfer }) => {
           const value = !row.to_storage_id ? t('common.notFound', 'Not found') : 
                      storagesMap[row.to_storage_id] || t('common.notFound', 'Not found');
-          return (
-            <Box sx={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              py: 1.5, 
-              px: 1,
-              color: 'text.primary',
-              fontSize: '0.875rem',
-              fontWeight: 400
-            }}>
-              {value}
-            </Box>
-          );
+          return <RenderCell label={value} />;
         },
       },
       {
@@ -602,19 +549,7 @@ export function TransfersListView() {
         renderCell: ({ row }: { row: Transfer }) => {
           const value = !row.act_group_id ? t('common.notFound', 'Not found') : 
                      groupsMap[row.act_group_id] || t('common.notFound', 'Not found');
-          return (
-            <Box sx={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              py: 1.5, 
-              px: 1,
-              color: 'text.primary',
-              fontSize: '0.875rem',
-              fontWeight: 400
-            }}>
-              {value}
-            </Box>
-          );
+          return <RenderCell label={value} />;
         },
       },
       {
@@ -626,33 +561,15 @@ export function TransfersListView() {
         align: 'left' as const,
         getValue: (row: Transfer) => row?.status || '',
         renderCell: ({ value }: { value: unknown }) => {
-          const status = String(value ?? '').toLowerCase();
+          const status = String(value ?? '');
           if (!status) return t('common.notFound', 'Not found');
-          let bgColor = 'var(--color-surface-secondary)';
-          let textColor = 'var(--color-text-secondary)';
-          if (status === 'draft') { bgColor = 'var(--color-warning-50)'; textColor = 'var(--color-warning-600)'; }
-          if (status === 'active') { bgColor = 'var(--color-success-50)'; textColor = 'var(--color-success-600)'; }
-          if (status === 'deleted') { bgColor = 'var(--color-danger-50)'; textColor = 'var(--color-danger-600)'; }
           return (
-            <Box sx={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              py: 1.5, 
-              px: 1
-            }}>
-              <Box
-                sx={{
-                  padding: '4px 12px',
-                  borderRadius: '4px',
-                  fontSize: '0.875rem',
-                  fontWeight: 600,
-                  backgroundColor: bgColor,
-                  color: textColor,
-                }}
-              >
-                {status}
-              </Box>
-            </Box>
+            <Chip
+              size="small"
+              label={formatStatusLabel(status)}
+              color={getStatusColor(status)}
+              sx={{ textTransform: 'capitalize' }}
+            />
           );
         },
       },
@@ -670,19 +587,7 @@ export function TransfersListView() {
         renderCell: ({ value }: { value: unknown }) => {
           const num = Number(value ?? 0);
           const displayValue = !num && num !== 0 ? t('common.notFound', 'Not found') : num.toLocaleString();
-          return (
-            <Box sx={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              py: 1.5, 
-              px: 1,
-              color: 'text.primary',
-              fontSize: '0.875rem',
-              fontWeight: 400
-            }}>
-              {displayValue}
-            </Box>
-          );
+          return <RenderCell label={displayValue} />;
         },
         total: { aggregation: 'sum' as const },
       },
@@ -709,19 +614,7 @@ export function TransfersListView() {
               dateValue = '-';
             }
           }
-          return (
-            <Box sx={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              py: 1.5, 
-              px: 1,
-              color: 'text.primary',
-              fontSize: '0.875rem',
-              fontWeight: 400
-            }}>
-              {dateValue || '-'}
-            </Box>
-          );
+          return <RenderCell label={dateValue || '-'} />;
         },
       },
       {

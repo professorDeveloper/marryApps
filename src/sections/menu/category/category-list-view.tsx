@@ -3,7 +3,7 @@ import type { DataTableColumn } from 'src/sections/warehouse/deduction/component
 import { CELL_SX } from 'src/sections/warehouse/deduction/components/utility-data-table/utils/constants';
 
 import { useTranslation } from 'react-i18next';
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback, useEffect } from 'react';
 
 import Box from '@mui/material/Box';
 import Dialog from '@mui/material/Dialog';
@@ -23,6 +23,7 @@ import { GenericViewModal } from 'src/components/generic-view-view';
 import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
 
 import { useCategoryData } from './hooks/useCategoryData';
+import { usePaginationRows } from 'src/hooks/use-pagination-rows';
 import { StorageNameCell } from './components/StorageNameCell';
 import { CategoryGoodsTable } from './components/CategoryGoodsTable';
 import { RouterLink } from 'src/routes/components';
@@ -249,7 +250,13 @@ export function CategoryListView() {
     }, []);
 
     // Handle pagination
-    const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 20 });
+    const { rowsPerPage } = usePaginationRows();
+    const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: rowsPerPage });
+
+    // Sync paginationModel with rowsPerPage when it changes externally
+    useEffect(() => {
+        setPaginationModel((prev) => ({ ...prev, pageSize: rowsPerPage }));
+    }, [rowsPerPage]);
 
     const handlePageChangeInternal = useCallback((page: number, pageSize: number) => {
         setPaginationModel({ page, pageSize });

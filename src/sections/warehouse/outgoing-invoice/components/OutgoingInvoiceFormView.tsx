@@ -274,7 +274,7 @@ const OutgoingInvoiceFormView = React.memo(function OutgoingInvoiceFormView() {
                             opacity: 0.85,
                         }}
                     >
-                        <CircularProgress />
+                        <CircularProgress color="primary" />
                     </Box>
                 )}
 
@@ -469,7 +469,7 @@ const BatchResponseView = React.memo(function BatchResponseView({
                                             onClick={() => onDeleteItem(item.id)}
                                         >
                                             {deletingItemId === item.id ? (
-                                                <CircularProgress size={16} />
+                                                <CircularProgress size={16} color="inherit" />
                                             ) : (
                                                 <DeleteIcon fontSize="small" />
                                             )}

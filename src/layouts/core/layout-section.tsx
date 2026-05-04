@@ -1,56 +1,44 @@
-import type { Theme, SxProps, CSSObject } from '@mui/material/styles';
-
+import type { Theme, SxProps } from '@mui/material/styles';
 import { mergeClasses } from 'minimal-shared/utils';
-
 import { styled } from '@mui/material/styles';
-import GlobalStyles from '@mui/material/GlobalStyles';
-
 import { layoutClasses } from './classes';
-import { layoutSectionVars } from './css-vars';
 
 // ----------------------------------------------------------------------
 
 export type LayoutSectionProps = React.ComponentProps<'div'> & {
   sx?: SxProps<Theme>;
-  cssVars?: CSSObject;
   children?: React.ReactNode;
   footerSection?: React.ReactNode;
   headerSection?: React.ReactNode;
   sidebarSection?: React.ReactNode;
+  mini?: boolean;
 };
 
 export function LayoutSection({
   sx,
-  cssVars,
   children,
   footerSection,
   headerSection,
   sidebarSection,
+  mini,
   className,
   ...other
 }: LayoutSectionProps) {
-  const inputGlobalStyles = (
-    <GlobalStyles styles={(theme) => ({ body: { ...layoutSectionVars(theme), ...cssVars } })} />
-  );
-
   return (
-    <>
-      {inputGlobalStyles}
-
-      <LayoutRoot
-        id="root__layout"
-        className={mergeClasses([layoutClasses.root, className])}
-        sx={sx}
-        {...other}
-      >
+    <LayoutRoot
+      id="root__layout"
+      className={mergeClasses([layoutClasses.root, className])}
+      sx={sx}
+      {...other}
+    >
         {sidebarSection ? (
           <>
             {sidebarSection}
-            <LayoutSidebarContainer className={layoutClasses.sidebarContainer}>
+            <div className={`${layoutClasses.sidebarContainer} sidebar-container ${mini ? 'mini' : ''}`}>
               {headerSection}
               {children}
               {footerSection}
-            </LayoutSidebarContainer>
+            </div>
           </>
         ) : (
           <>
@@ -60,7 +48,6 @@ export function LayoutSection({
           </>
         )}
       </LayoutRoot>
-    </>
   );
 }
 

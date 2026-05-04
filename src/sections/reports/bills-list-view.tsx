@@ -61,10 +61,10 @@ const toPickerDate = (value?: string): dayjs.Dayjs | null => (value ? dayjs(valu
 interface BillsListFilters {
     start: string;
     end: string;
-    bill_status: string;
-    payment_type: string;
+    bill_status: string[];
+    payment_type: string[];
     waiter_id: string;
-    hall_id: string;
+    hall_id: string[];
     table_id: string;
     status: string; // Adding status field for compatibility
     q: string; // Adding search field for compatibility
@@ -75,10 +75,10 @@ interface BillsListFilters {
 const initialFilters: BillsListFilters = {
     start: getTodayUtcBoundary(),
     end: getTomorrowUtcBoundary(true),
-    bill_status: '',
-    payment_type: '',
+    bill_status: [],
+    payment_type: [],
     waiter_id: '',
-    hall_id: '',
+    hall_id: [],
     table_id: '',
     status: '',
     q: '',
@@ -443,10 +443,14 @@ export function BillsListView() {
                 ),
             },
             {
-                key: 'hall_name',
+                key: 'hall_id',
                 label: t('bills.hall') || 'Hall',
                 sortable: true,
-                filter: { type: 'multi' as const },
+                filter: {
+                    type: 'multi' as const,
+                    options: halls.map((h) => h.id),
+                    getOptionLabel: (id: string) => halls.find((h) => h.id === id)?.name || id,
+                },
                 width: '1fr',
                 align: 'left' as const,
                 getValue: (row: any) => row?.hall_name ?? '-',
@@ -597,20 +601,20 @@ export function BillsListView() {
                 },
             }
         ],
-        [t, i18n.language]
+        [t, i18n.language, halls]
     );
 
     // Filter handlers adapted for invoice pattern
     const handleStatusChange = useCallback(
         (status: string) => {
-            setDraftFilters((prev) => ({ ...prev, bill_status: status }));
+            setDraftFilters((prev) => ({ ...prev, bill_status: status ? [status] : [] }));
         },
         []
     );
 
     const handlePaymentTypeChange = useCallback(
         (type: string) => {
-            setDraftFilters((prev) => ({ ...prev, payment_type: type }));
+            setDraftFilters((prev) => ({ ...prev, payment_type: type ? [type] : [] }));
         },
         []
     );
@@ -624,7 +628,7 @@ export function BillsListView() {
 
     const handleHallChange = useCallback(
         (hallId: string) => {
-            setDraftFilters((prev) => ({ ...prev, hall_id: hallId }));
+            setDraftFilters((prev) => ({ ...prev, hall_id: hallId ? [hallId] : [] }));
         },
         []
     );
@@ -882,6 +886,23 @@ export function BillsListView() {
                         setSearchQuery(value);
                         setPaginationModel((prev) => ({ ...prev, page: 0 }));
                     }}
+                    filters={{
+                        ...(draftFilters.hall_id?.length ? { hall_id: { type: 'multi', value: draftFilters.hall_id } } : {}),
+                        ...(draftFilters.payment_type?.length ? { payment_type: { type: 'multi', value: draftFilters.payment_type } } : {}),
+                        ...(draftFilters.bill_status?.length ? { bill_status: { type: 'multi', value: draftFilters.bill_status } } : {}),
+                    }}
+                    onFiltersChange={(filterState) => {
+                        const hallIds = (filterState.hall_id?.value as string[]) || [];
+                        const paymentTypes = (filterState.payment_type?.value as string[]) || [];
+                        const billStatuses = (filterState.bill_status?.value as string[]) || [];
+                        setDraftFilters((prev) => ({
+                            ...prev,
+                            hall_id: hallIds,
+                            payment_type: paymentTypes,
+                            bill_status: billStatuses,
+                        }));
+                        setPaginationModel((prev) => ({ ...prev, page: 0 }));
+                    }}
                     page={paginationModel.page}
                     rowsPerPage={paginationModel.pageSize}
                     totalCount={rowCount}
@@ -910,13 +931,13 @@ export function BillsListView() {
                         }
                     }}
                     defaultConfig={{
-                        order: ['bill_no', 'opened_at', 'closed_at', 'waiter_name', 'hall_name', 'guest_count', 'food_cost', 'grand_total', 'payment_type', 'service_amount', 'discount_amount', 'bill_status'],
+                        order: ['bill_no', 'opened_at', 'closed_at', 'waiter_name', 'hall_id', 'guest_count', 'food_cost', 'grand_total', 'payment_type', 'service_amount', 'discount_amount', 'bill_status'],
                         visibility: {
                             bill_no: true,
                             opened_at: true,
                             closed_at: true,
                             waiter_name: true,
-                            hall_name: true,
+                            hall_id: true,
                             guest_count: true,
                             food_cost: true,
                             grand_total: true,
@@ -930,7 +951,7 @@ export function BillsListView() {
                             opened_at: '1.2fr',
                             closed_at: '1fr',
                             waiter_name: '1.2fr',
-                            hall_name: '0.8fr',
+                            hall_id: '0.8fr',
                             guest_count: '0.5fr',
                             food_cost: '1fr',
                             grand_total: '1fr',

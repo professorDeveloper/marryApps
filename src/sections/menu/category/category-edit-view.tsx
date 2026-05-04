@@ -39,18 +39,18 @@ export interface CategoryEditViewProps {
 // ============================================================================
 
 const COLOR_CODES = [
-    '#f04438', // Error/Red
-    '#2e90fa', // Info/Blue
-    '#12b76a', // Success/Green
-    '#f79009', // Warning/Yellow
-    '#8E33FF', // Secondary/Violet
-    '#ff4d1a', // Primary/Orange
-    '#ff4d1a', // Accent Orange
-    '#d92d20', // Danger/Dark Red
-    '#fda29b', // Light Error
-    '#84caff', // Light Info
-    '#000000', // Black
-    '#FFFFFF', // White
+    'var(--color-danger-500)', // Error/Red
+    'var(--color-info-500)', // Info/Blue
+    'var(--color-success-500)', // Success/Green
+    'var(--color-warning-500)', // Warning/Yellow
+    'var(--color-secondary-500)', // Secondary/Violet
+    'var(--color-primary-500)', // Primary/Orange
+    'var(--color-accent-500)', // Accent Orange
+    'var(--color-danger-600)', // Danger/Dark Red
+    'var(--color-danger-100)', // Light Error
+    'var(--color-info-100)', // Light Info
+    'var(--color-text)', // Black text color
+    'var(--color-text-on-primary)', // White
 ];
 
 // ============================================================================
@@ -105,7 +105,7 @@ function buildBasicInfoSection(): CardSection {
                 key: 'color_code',
                 label: 'departments.color',
                 type: 'color',
-                defaultValue: '#f04438',
+                defaultValue: 'var(--color-danger-500)',
                 colors: COLOR_CODES,
             },
         ],

@@ -12,8 +12,6 @@ import Alert from '@mui/material/Alert';
 import { useTheme } from '@mui/material/styles';
 import { iconButtonClasses } from '@mui/material/IconButton';
 
-import { usePathname } from 'src/routes/hooks';
-
 import { usePageNavigation } from 'src/hooks/use-page-navigation';
 import { useGetWorkspacesBranches } from 'src/hooks/use-workspaces-branches';
 
@@ -38,13 +36,12 @@ import { AccountDrawer } from '../components/account-drawer';
 import { SettingsButton } from '../components/settings-button';
 import { LanguagePopover } from '../components/language-popover';
 import { WorkspacesPopover } from '../components/workspaces-popover';
-import { dashboardLayoutVars, dashboardNavColorVars } from './css-vars';
 import { NotificationsDrawer } from '../components/notifications-drawer';
 import { MainSection, layoutClasses, HeaderSection, LayoutSection } from '../core';
 
 // ----------------------------------------------------------------------
 
-type LayoutBaseProps = Pick<LayoutSectionProps, 'sx' | 'children' | 'cssVars'>;
+type LayoutBaseProps = Pick<LayoutSectionProps, 'sx' | 'children'>;
 
 export type DashboardLayoutProps = LayoutBaseProps & {
   layoutQuery?: Breakpoint;
@@ -60,14 +57,11 @@ export type DashboardLayoutProps = LayoutBaseProps & {
 
 export function DashboardLayout({
   sx,
-  cssVars,
   children,
   slotProps,
   layoutQuery = 'lg',
-  pageTitle,
 }: DashboardLayoutProps) {
   const theme = useTheme();
-  const pathname = usePathname();
 
   const { user } = useAuthContext();
 
@@ -80,23 +74,13 @@ export function DashboardLayout({
 
   const { pageTitle: dynamicPageTitle, breadcrumbs: dynamicBreadcrumbs } = usePageNavigation();
 
-  const { navColor, navLayout } = settings.state;
-
-  const navVars = useMemo(
-    () => dashboardNavColorVars(theme, navColor, navLayout),
-    [theme, navColor, navLayout]
-  );
+  const { navLayout } = settings.state;
 
   const { value: open, onFalse: onClose, onTrue: onOpen } = useBoolean();
 
   const navData = useMemo(
     () => slotProps?.nav?.data ?? getNavData(tMenu),
     [slotProps?.nav?.data, tMenu]
-  );
-
-  const layoutCssVars = useMemo(
-    () => ({ ...dashboardLayoutVars(theme), ...navVars.layout, ...cssVars }),
-    [theme, navVars.layout, cssVars]
   );
 
   const isNavMini = navLayout === 'mini';
@@ -139,7 +123,7 @@ export function DashboardLayout({
           ...(isNavVertical && { px: { [layoutQuery]: 5 } }),
           ...(isNavHorizontal && {
             bgcolor: 'var(--layout-nav-bg)',
-            height: { [layoutQuery]: 'var(--layout-nav-horizontal-height)' },
+            height: { [layoutQuery]: '64px' },
             [`& .${iconButtonClasses.root}`]: { color: 'var(--layout-nav-text-secondary-color)' },
           }),
         },
@@ -156,7 +140,6 @@ export function DashboardLayout({
         <NavHorizontal
           data={navData}
           layoutQuery={layoutQuery}
-          cssVars={navVars.section}
           checkPermissions={canDisplayItemByRole}
         />
       ) : null,
@@ -183,7 +166,6 @@ export function DashboardLayout({
             data={navData}
             open={open}
             onClose={onClose}
-            cssVars={navVars.section}
             checkPermissions={canDisplayItemByRole}
           />
 
@@ -199,7 +181,7 @@ export function DashboardLayout({
         </>
       ),
       rightArea: (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0, sm: 0.75 } }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 2, sm: 0.75 } }}>
           {/** @slot Searchbar */}
            {/* @slot Workspace popover */}
             <WorkspacesPopover
@@ -255,7 +237,6 @@ export function DashboardLayout({
       data={navData}
       isNavMini={isNavMini}
       layoutQuery={layoutQuery}
-      cssVars={navVars.section}
       checkPermissions={canDisplayItemByRole}
       onToggleNav={onToggleNav}
     />
@@ -269,6 +250,7 @@ export function DashboardLayout({
       sx={[
         {
           position: 'relative',
+          px:2,
           overflow: 'hidden',
           '& > .cyber-bg-layer': {
             position: 'absolute',
@@ -306,21 +288,10 @@ export function DashboardLayout({
       /** **************************************
        * @Styles
        *************************************** */
-      cssVars={layoutCssVars}
       sx={[
-        {
-          [`& .${layoutClasses.sidebarContainer}`]: {
-            [theme.breakpoints.up(layoutQuery)]: {
-              pl: isNavMini ? 'var(--layout-nav-mini-width)' : 'var(--layout-nav-vertical-width)',
-              transition: theme.transitions.create(['padding-left'], {
-                easing: 'var(--layout-transition-easing)',
-                duration: 'var(--layout-transition-duration)',
-              }),
-            },
-          },
-        },
         ...(Array.isArray(sx) ? sx : [sx]),
       ]}
+      mini={isNavMini}
     >
       {renderMain()}
     </LayoutSection>

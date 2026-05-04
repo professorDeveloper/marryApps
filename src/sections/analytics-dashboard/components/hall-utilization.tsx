@@ -61,7 +61,7 @@ export function HallUtilization({ data = HALL_UTILIZATION_MOCK_DATA }: HallUtili
                         '&:hover': {
                           opacity: 1,
                           transform: 'translateY(-2px)',
-                          boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+                          boxShadow: 'var(--shadow-card-medium)',
                         },
                       }}
                     >

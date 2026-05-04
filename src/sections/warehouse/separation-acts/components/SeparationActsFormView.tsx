@@ -407,7 +407,7 @@ const SeparationActsFormView = React.memo(function SeparationActsFormView({
                             opacity: 0.85,
                         }}
                     >
-                        <CircularProgress />
+                        <CircularProgress color="primary" />
                     </Box>
                 )}
 
@@ -515,7 +515,7 @@ const SeparationActsFormView = React.memo(function SeparationActsFormView({
                                                             }
                                                         >
                                                             {deletingItemId === item.id ? (
-                                                                <CircularProgress size={16} />
+                                                                <CircularProgress size={16} color="inherit" />
                                                             ) : (
                                                                 t('common.delete', 'Delete')
                                                             )}

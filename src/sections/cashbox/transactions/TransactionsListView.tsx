@@ -3,6 +3,7 @@ import type { ITransaction, TransactionFilters } from 'src/types/transactions';
 import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router';
 
 import {
   Dialog,
@@ -12,6 +13,7 @@ import {
   DialogActions,
 } from '@mui/material';
 
+import { paths } from 'src/routes/paths';
 import { useTransactionsAPI } from 'src/hooks/use-transactions-api';
 
 import { DashboardContent } from 'src/layouts/dashboard';
@@ -80,6 +82,7 @@ const INITIAL_FILTERS: TransactionFilters = getInitialFilters();
 
 export function TransactionsListView() {
   const { t } = useTranslation('menu');
+  const navigate = useNavigate();
   const {
     getTransactions,
     deleteTransaction,
@@ -105,6 +108,7 @@ export function TransactionsListView() {
   const [endDate, setEndDate] = useState<dayjs.Dayjs | null>(null);
   const [activeRange, setActiveRange] = useState<'day' | 'week' | 'month' | 'year'>('day');
   const [sortState, setSortState] = useState<{ key: string | null; dir: 'asc' | 'desc' | null }>({ key: null, dir: null });
+  const [columnFilters, setColumnFilters] = useState<Record<string, { type: 'text' | 'multi'; value: string | string[] }>>({});
 
   // Debounce search query
   useEffect(() => {
@@ -138,6 +142,23 @@ export function TransactionsListView() {
       sort_order: sortState.dir || '',
     }));
   }, [sortState]);
+
+  // Apply column filter changes
+  useEffect(() => {
+    const getFilterValue = (value: unknown): string => {
+      if (Array.isArray(value)) return value.join(',');
+      if (typeof value === 'string') return value;
+      return '';
+    };
+
+    setFilters((prev) => ({
+      ...prev,
+      type: getFilterValue(columnFilters.type?.value),
+      pay_type: getFilterValue(columnFilters.pay_type?.value),
+      cash_register_id: getFilterValue(columnFilters.cash_register_id?.value),
+      group_transaction_id: getFilterValue(columnFilters.group_transaction_id?.value),
+    }));
+  }, [columnFilters]);
 
   // Apply date range changes
   useEffect(() => {
@@ -257,6 +278,7 @@ export function TransactionsListView() {
     setSearchQuery('');
     setDebouncedSearchQuery('');
     setSortState({ key: null, dir: null });
+    setColumnFilters({});
     const today = dayjs();
     setStartDate(today.startOf('day'));
     setEndDate(today.endOf('day'));
@@ -275,6 +297,10 @@ export function TransactionsListView() {
     setDeleteId(id);
     setOpenConfirm(true);
   }, []);
+
+  const handleCreateClick = useCallback(() => {
+    navigate(paths.cashbox.transactionsNew);
+  }, [navigate]);
 
   const handleSearchChange = useCallback((value: string) => {
     setSearchQuery(value);
@@ -302,7 +328,10 @@ export function TransactionsListView() {
           onSearchChange={handleSearchChange}
           onSortChange={handleSortChange}
           onDeleteClick={handleDeleteClick}
+          onCreateClick={handleCreateClick}
           onReset={handleResetFilters}
+          filters={columnFilters}
+          onFiltersChange={setColumnFilters}
           showPeriodPicker
           periodPickerProps={{
             startDate: startDate ? startDate.toDate() : null,

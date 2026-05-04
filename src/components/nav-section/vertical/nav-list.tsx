@@ -6,7 +6,8 @@ import { isActiveLink, isExternalLink } from 'minimal-shared/utils';
 
 import { usePathname } from 'src/routes/hooks';
 
-import { NavItem } from './nav-item';
+import { SidebarFolder } from './sidebar-folder';
+import { SidebarFolderItem } from './sidebar-folder-item';
 import { navSectionClasses } from '../styles';
 import { NavUl, NavLi, NavCollapse } from '../components';
 
@@ -50,31 +51,36 @@ export function NavList({
     }
   }, [data.children, onToggle]);
 
-  const renderNavItem = () => (
-    <NavItem
-      ref={navItemRef}
+  const renderNavItem = () => {
+    const commonProps = {
+      ref: navItemRef,
       // slots
-      path={data.path}
-      icon={data.icon}
-      info={data.info}
-      title={data.title}
-      caption={data.caption}
+      path: data.path,
+      icon: data.icon,
+      info: data.info,
+      title: data.title,
+      caption: data.caption,
       // state
-      open={open}
-      active={isActive}
-      disabled={data.disabled}
+      open,
+      active: isActive,
+      disabled: data.disabled,
       // options
-      depth={depth}
-      render={render}
-      hasChild={!!data.children}
-      externalLink={isExternalLink(data.path)}
-      enabledRootRedirect={enabledRootRedirect}
+      depth,
+      render,
+      externalLink: isExternalLink(data.path),
+      enabledRootRedirect,
       // styles
-      slotProps={depth === 1 ? slotProps?.rootItem : slotProps?.subItem}
+      slotProps: depth === 1 ? slotProps?.rootItem : slotProps?.subItem,
       // actions
-      onClick={handleToggleMenu}
-    />
-  );
+      onClick: handleToggleMenu,
+    };
+
+    return data.children ? (
+      <SidebarFolder {...commonProps} />
+    ) : (
+      <SidebarFolderItem {...commonProps} />
+    );
+  };
 
   const renderCollapse = () =>
     !!data.children && (

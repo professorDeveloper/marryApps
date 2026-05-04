@@ -7,10 +7,12 @@ import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Button,
+  Chip,
 } from '@mui/material';
 
 import { paths } from 'src/routes/paths';
 
+import { getStatusColor, formatStatusLabel } from 'src/utils/status-colors';
 import { DashboardContent } from 'src/layouts/dashboard';
 import { usePaginationRows } from 'src/hooks/use-pagination-rows';
 
@@ -383,25 +385,14 @@ export function SalesListView() {
         align: 'left',
         getValue: (row: SalesReport) => row?.status || '',
         renderCell: ({ value }: { value: unknown }) => {
-          const status = String(value ?? '').toLowerCase();
-          let bgColor = 'var(--color-surface-2)';
-          let textColor = 'var(--color-text-secondary)';
-          if (status === 'pending') { bgColor = 'var(--color-warning-50)'; textColor = 'var(--color-warning-600)'; }
-          if (status === 'completed') { bgColor = 'var(--color-info-50)'; textColor = 'var(--color-info-600)'; }
-          if (status === 'cancelled') { bgColor = 'var(--color-danger-50)'; textColor = 'var(--color-danger-600)'; }
+          const status = String(value ?? '');
           return (
-            <span
-              style={{
-                padding: '4px 12px',
-                borderRadius: '4px',
-                fontSize: '14px',
-                fontWeight: 700,
-                backgroundColor: bgColor,
-                color: textColor,
-              }}
-            >
-              {status}
-            </span>
+            <Chip
+              size="small"
+              label={formatStatusLabel(status)}
+              color={getStatusColor(status)}
+              sx={{ textTransform: 'capitalize' }}
+            />
           );
         },
       },
@@ -464,6 +455,12 @@ export function SalesListView() {
         searchValue={searchQuery}
         onSearchChange={(value: string) => {
           setSearchQuery(value);
+          setPaginationModel((prev) => ({ ...prev, page: 0 }));
+        }}
+        filters={draftFilters.status ? { status: { type: 'multi', value: [draftFilters.status] } } : {}}
+        onFiltersChange={(filterState) => {
+          const selectedStatuses = (filterState.status?.value as string[]) || [];
+          setDraftFilters((prev) => ({ ...prev, status: selectedStatuses[0] || '' }));
           setPaginationModel((prev) => ({ ...prev, page: 0 }));
         }}
         page={paginationModel.page}

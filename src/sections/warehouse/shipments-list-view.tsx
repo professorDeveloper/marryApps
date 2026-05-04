@@ -19,10 +19,13 @@ import {
   DialogActions,
   DialogContent,
   TableContainer,
+  Chip,
 } from '@mui/material';
 
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
+
+import { getStatusColor, formatStatusLabel } from 'src/utils/status-colors';
 
 import { useStorageAPI } from 'src/hooks/use-storage-api';
 import { useSupplierAPI } from 'src/hooks/use-supplier-api';
@@ -343,31 +346,14 @@ export function ShipmentsListView() {
         align: 'left' as const,
         getValue: (row: Shipment) => row?.status || '',
         renderCell: ({ value }: { value: unknown }) => {
-          const status = String(value ?? '').toLowerCase();
-          let bgColor = 'var(--color-surface-2)';
-          let textColor = 'var(--color-text-secondary)';
-          if (status === 'active') { bgColor = 'var(--color-success-50)'; textColor = 'var(--color-success-600)'; }
-          if (status === 'deleted') { bgColor = 'var(--color-danger-50)'; textColor = 'var(--color-danger-600)'; }
+          const status = String(value ?? '');
           return (
-            <Box sx={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              py: 1.5, 
-              px: 1
-            }}>
-              <Box
-                sx={{
-                  padding: '4px 12px',
-                  borderRadius: '4px',
-                  fontSize: '0.875rem',
-                  fontWeight: 600,
-                  backgroundColor: bgColor,
-                  color: textColor,
-                }}
-              >
-                {status}
-              </Box>
-            </Box>
+            <Chip
+              size="small"
+              label={formatStatusLabel(status)}
+              color={getStatusColor(status)}
+              sx={{ textTransform: 'capitalize' }}
+            />
           );
         },
       },

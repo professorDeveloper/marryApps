@@ -159,7 +159,7 @@ const ImageUploadFieldComponent: FC<ImageUploadFieldProps> = ({
                             sx={{
                                 position: 'absolute',
                                 inset: 0,
-                                bgcolor: 'rgba(0,0,0,0.5)',
+                                bgcolor: 'var(--overlay-dark-50)',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
@@ -185,10 +185,10 @@ const ImageUploadFieldComponent: FC<ImageUploadFieldProps> = ({
                                 position: 'absolute',
                                 top: 8,
                                 right: 8,
-                                bgcolor: 'rgba(0,0,0,0.6)',
+                                bgcolor: 'var(--overlay-dark-60)',
                                 color: 'white',
                                 '&:hover': {
-                                    bgcolor: 'rgba(0,0,0,0.8)',
+                                    bgcolor: 'var(--overlay-dark-80)',
                                 },
                             }}
                         >

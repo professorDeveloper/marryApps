@@ -632,10 +632,8 @@ export function DataTable<T>({
             rowsPerPageOptions={rowsPerPageOptions}
             onPageChange={onPageChange}
             onRowsPerPageChange={(newRowsPerPage) => {
-              // Update global storage if parent is not explicitly controlling rowsPerPage
-              if (propRowsPerPage === undefined) {
-                setGlobalRowsPerPage(newRowsPerPage);
-              }
+              // Always update global state and localStorage for rowsPerPage
+              setGlobalRowsPerPage(newRowsPerPage);
               onRowsPerPageChange?.(newRowsPerPage);
             }}
           />

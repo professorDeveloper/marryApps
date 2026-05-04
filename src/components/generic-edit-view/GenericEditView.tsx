@@ -34,6 +34,8 @@ export const GenericEditView: FC<GenericEditViewProps> = ({
             fullWidth: field.fullWidth,
             colors: field.colors,
             height: field.height,
+            visible: field.visible,
+            disabled: field.disabled,
         }),
         []
     );

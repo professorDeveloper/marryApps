@@ -27,10 +27,28 @@ const buildQueryString = (params: IBillsFilterParams): string => {
 
     if (params.start) queryParams.append('start', params.start);
     if (params.end) queryParams.append('end', params.end);
-    if (params.bill_status) queryParams.append('bill_status', params.bill_status);
-    if (params.payment_type) queryParams.append('payment_type', params.payment_type);
-    if (params.waiter_id) queryParams.append('waiter_id', params.waiter_id);
-    if (params.hall_id) queryParams.append('hall_id', params.hall_id);
+    const billStatus = params.bill_status;
+    if (Array.isArray(billStatus) && billStatus.length > 0) {
+        queryParams.append('bill_status', billStatus.join(','));
+    } else if (billStatus) {
+        queryParams.append('bill_status', billStatus as string);
+    }
+    const paymentType = params.payment_type;
+    if (Array.isArray(paymentType) && paymentType.length > 0) {
+        queryParams.append('payment_type', paymentType.join(','));
+    } else if (paymentType) {
+        queryParams.append('payment_type', paymentType as string);
+    }
+    const waiterId = params.waiter_id;
+    if (waiterId != null && waiterId !== '') {
+        queryParams.append('waiter_id', String(waiterId));
+    }
+    const hallId = params.hall_id;
+    if (Array.isArray(hallId) && hallId.length > 0) {
+        queryParams.append('hall_id', hallId.join(','));
+    } else if (typeof hallId === 'string' && hallId !== '') {
+        queryParams.append('hall_id', hallId);
+    }
     if (params.table_id) queryParams.append('table_id', params.table_id);
 
     queryParams.append('limit', String(params.limit ?? 20));

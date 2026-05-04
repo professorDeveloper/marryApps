@@ -26,8 +26,8 @@ export function NavItem({
   /********/
   depth,
   render,
-  hasChild,
   slotProps,
+  hasChild,
   className,
   externalLink,
   enabledRootRedirect,
@@ -71,38 +71,15 @@ export function NavItem({
       )}
 
       {title && (
-        <ItemTexts {...ownerState} className={navSectionClasses.item.texts} sx={slotProps?.texts}>
           <ItemTitle {...ownerState} className={navSectionClasses.item.title} sx={slotProps?.title}>
             {title}
           </ItemTitle>
-
-          {caption && (
-            <Tooltip title={caption} placement="top-start">
-              <ItemCaptionText
-                {...ownerState}
-                className={navSectionClasses.item.caption}
-                sx={slotProps?.caption}
-              >
-                {caption}
-              </ItemCaptionText>
-            </Tooltip>
-          )}
-        </ItemTexts>
       )}
 
       {info && (
         <ItemInfo {...ownerState} className={navSectionClasses.item.info} sx={slotProps?.info}>
           {navItem.renderInfo}
         </ItemInfo>
-      )}
-
-      {hasChild && (
-        <ItemArrow
-          {...ownerState}
-          icon={open ? 'eva:arrow-ios-downward-fill' : 'eva:arrow-ios-forward-fill'}
-          className={navSectionClasses.item.arrow}
-          sx={slotProps?.arrow}
-        />
       )}
     </ItemRoot>
   );
@@ -153,10 +130,11 @@ const ItemRoot = styled(ButtonBase, { shouldForwardProp })<StyledState>(({
     }),
     ...(active && {
       color: 'var(--nav-item-root-active-color)',
-      backgroundColor: 'var(--nav-item-root-active-bg)',
-      '&:hover': { backgroundColor: 'var(--nav-item-root-active-hover-bg)' },
+      backgroundColor: 'var(--color-primary-500) !important',
+      '&:hover': { backgroundColor: 'var(--color-primary-500) !important' },
       ...theme.applyStyles('dark', {
         color: 'var(--nav-item-root-active-color-on-dark)',
+        backgroundColor: 'var(--color-primary-500) !important',
       }),
     }),
   };
@@ -203,12 +181,6 @@ const ItemIcon = styled('span', { shouldForwardProp })<StyledState>(() => ({
   margin: 'var(--nav-icon-margin)',
 }));
 
-/**
- * @slot texts
- */
-const ItemTexts = styled('span', { shouldForwardProp })<StyledState>(() => ({
-  ...navItemStyles.texts,
-}));
 
 /**
  * @slot title
@@ -222,13 +194,6 @@ const ItemTitle = styled('span', { shouldForwardProp })<StyledState>(({ theme })
   ],
 }));
 
-/**
- * @slot caption text
- */
-const ItemCaptionText = styled('span', { shouldForwardProp })<StyledState>(({ theme }) => ({
-  ...navItemStyles.captionText(theme),
-  color: 'var(--nav-item-caption-color)',
-}));
 
 /**
  * @slot info

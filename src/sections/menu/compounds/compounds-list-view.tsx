@@ -44,8 +44,8 @@ import { GenericViewModal } from 'src/components/generic-view-view';
 import { formatDate, formatPrice } from 'src/components/generic-view-view/modal-formatters';
 
 import { DataTable } from 'src/sections/warehouse/deduction/components/utility-data-table';
-import { CELL_SX } from 'src/sections/warehouse/deduction/components/utility-data-table/utils/constants';
 import { RouterLink } from 'src/routes/components';
+import { RenderCell } from 'src/components/RenderCell';
 
 
 // ============================================================================
@@ -471,7 +471,7 @@ export function HalfMeals() {
 
     const ingredientGroupMap = useMemo(() => {
         const map = new Map<string, string>();
-        const ingredientGroups = metadata.ingredient_groups || [];
+        const ingredientGroups = metadata?.ingredient_groups || [];
 
         ingredientGroups.forEach((group: any) => {
             if (group?.id) {
@@ -480,7 +480,7 @@ export function HalfMeals() {
         });
 
         return map;
-    }, [metadata.ingredient_groups]);
+    }, [metadata?.ingredient_groups]);
 
     // Measurement options with translations
     const _measurementOptions = useMemo(
@@ -495,7 +495,7 @@ export function HalfMeals() {
     // Ingredient group options for filtering (derived from expanded compounds to avoid extra API call)
     const ingredientGroupOptions = useMemo(() => {
         const map = new Map<string, string>();
-        const ingredientGroups = metadata.ingredient_groups || [];
+        const ingredientGroups = metadata?.ingredient_groups || [];
 
         ingredientGroups.forEach((group: any) => {
             if (group?.id) {
@@ -512,7 +512,7 @@ export function HalfMeals() {
             }
         });
         return Array.from(map.entries()).map(([value, label]) => ({ value, label }));
-    }, [compounds, metadata.ingredient_groups]);
+    }, [compounds, metadata?.ingredient_groups]);
 
     // DataTable columns
     const columns = useMemo(
@@ -524,15 +524,9 @@ export function HalfMeals() {
                 width: '2fr',
                 align: 'left' as const,
                 getValue: (row: ICompound) => row?.name ?? '',
-                renderCell: ({ row }: { row: ICompound }) => {
-                    const name = row.name || '-';
-
-                    return (
-                        <Box sx={CELL_SX}>
-                            {name}
-                        </Box>
-                    );
-                },
+                renderCell: ({ row }: { row: ICompound }) => (
+                    <RenderCell label={row.name} />
+                ),
             },
             {
                 key: 'measurement',
@@ -545,11 +539,7 @@ export function HalfMeals() {
                 renderCell: ({ value }: { value: unknown }) => {
                     const measurementKey = `semifinishedProducts.${value}`;
                     const label = t(measurementKey);
-                    return (
-                        <Box sx={CELL_SX}>
-                            {label}
-                        </Box>
-                    );
+                    return <RenderCell label={label} />;
                 },
             },
             {
@@ -560,17 +550,13 @@ export function HalfMeals() {
                 width: '1.5fr',
                 align: 'left' as const,
                 getValue: (row: ICompound) => (
-                        row.ingredient_group_name ||
                         ingredientGroupMap.get(row.ingredient_group_id) ||
+                        row.ingredient_group_name ||
                         '-'
                     ),
                 renderCell: ({ row }: { row: ICompound }) => {
-                    const groupName = row.ingredient_group_name || ingredientGroupMap.get(row.ingredient_group_id) || '-';
-                    return (
-                        <Box sx={CELL_SX}>
-                            {groupName}
-                        </Box>
-                    );
+                    const groupName = ingredientGroupMap.get(row.ingredient_group_id) || row.ingredient_group_name || '-';
+                    return <RenderCell label={groupName} />;
                 },
             },
             {
@@ -580,16 +566,14 @@ export function HalfMeals() {
                 width: '1fr',
                 align: 'left' as const,
                 getValue: (row: ICompound) => {
-                    const numPrice = typeof row.price === 'string' ? parseFloat(row.price) : row.price;
+                    const parsed = typeof row.price === 'string' ? parseFloat(row.price) : row.price;
+                    const numPrice = Number.isFinite(parsed) ? parsed : 0;
                     return numPrice || 0;
                 },
                 renderCell: ({ value }: { value: unknown }) => {
-                    const numPrice = typeof value === 'string' ? parseFloat(value) : value;
-                    return (
-                        <Box sx={CELL_SX}>
-                            {String(numPrice)} so&apos;m
-                        </Box>
-                    );
+                    const parsed = typeof value === 'string' ? parseFloat(value) : value;
+                    const numPrice = Number.isFinite(parsed) ? parsed : 0;
+                    return <RenderCell label={`${numPrice} so'm`} />;
                 },
             },
             {
@@ -601,11 +585,7 @@ export function HalfMeals() {
                 getValue: (row: ICompound) => row?.quantity || 0,
                 renderCell: ({ row }: { row: ICompound }) => {
                     const quantity = row?.quantity || 0;
-                    return (
-                        <Box sx={CELL_SX}>
-                            {quantity}
-                        </Box>
-                    );
+                    return <RenderCell label={String(quantity)} />;
                 },
             },
             {

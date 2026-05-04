@@ -13,10 +13,12 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Chip,
 } from '@mui/material';
 
 import { paths } from 'src/routes/paths';
 
+import { getStatusColor, formatStatusLabel } from 'src/utils/status-colors';
 import { useStorageAPI } from 'src/hooks/use-storage-api';
 
 import { DashboardContent } from 'src/layouts/dashboard';
@@ -325,10 +327,14 @@ export function InventoryReportsListView() {
         ),
       },
       {
-        key: 'storage_name',
+        key: 'storage_id',
         label: t('inventory.storage', 'Storage'),
         sortable: true,
-        filter: { type: 'multi' as const },
+        filter: {
+          type: 'multi' as const,
+          options: storages.map((s) => s.id),
+          getOptionLabel: (id: string) => storages.find((s) => s.id === id)?.name || id,
+        },
         width: '1.2fr',
         align: 'left' as const,
         getValue: (row: any) => row?.storage_name ?? '',
@@ -360,33 +366,14 @@ export function InventoryReportsListView() {
         align: 'left' as const,
         getValue: (row: any) => row?.status || '',
         renderCell: ({ value }: { value: unknown }) => {
-          const status = String(value ?? '').toLowerCase();
-          let bgColor = 'var(--color-surface-secondary)';
-          let textColor = 'var(--color-text-secondary)';
-          if (status === 'active') { bgColor = 'var(--color-success-50)'; textColor = 'var(--color-success-600)'; }
-          if (status === 'completed') { bgColor = 'var(--color-info-50)'; textColor = 'var(--color-info-600)'; }
-          if (status === 'draft') { bgColor = 'var(--color-warning-50)'; textColor = 'var(--color-warning-600)'; }
-          if (status === 'cancelled') { bgColor = 'var(--color-danger-50)'; textColor = 'var(--color-danger-600)'; }
+          const status = String(value ?? '');
           return (
-            <Box sx={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              py: 1.5, 
-              px: 1
-            }}>
-              <Box
-                sx={{
-                  padding: '4px 12px',
-                  borderRadius: '4px',
-                  fontSize: '0.875rem',
-                  fontWeight: 600,
-                  backgroundColor: bgColor,
-                  color: textColor,
-                }}
-              >
-                {status}
-              </Box>
-            </Box>
+            <Chip
+              size="small"
+              label={formatStatusLabel(status)}
+              color={getStatusColor(status)}
+              sx={{ textTransform: 'capitalize' }}
+            />
           );
         },
       },
@@ -476,7 +463,7 @@ export function InventoryReportsListView() {
         ),
       },
     ],
-    [t, handleViewClick]
+    [t, handleViewClick, storages]
   );
 
   const startDateValue = useMemo(() => toPickerDate(draftFilters.date_from), [draftFilters.date_from]);
@@ -506,6 +493,20 @@ export function InventoryReportsListView() {
             setSearchQuery(value);
             setPaginationModel({ page: 0, pageSize: paginationModel.pageSize });
           }}
+          filters={{
+            ...(draftFilters.storage_id ? { storage_id: { type: 'multi', value: [draftFilters.storage_id] } } : {}),
+            ...(draftFilters.status ? { status: { type: 'multi', value: [draftFilters.status] } } : {}),
+          }}
+          onFiltersChange={(filterState) => {
+            const storageId = (filterState.storage_id?.value as string[])?.[0] || '';
+            const status = (filterState.status?.value as string[])?.[0] || '';
+            setDraftFilters((prev) => ({
+              ...prev,
+              storage_id: storageId,
+              status,
+            }));
+            setPaginationModel({ page: 0, pageSize: paginationModel.pageSize });
+          }}
           page={paginationModel.page}
           rowsPerPage={paginationModel.pageSize}
           totalCount={total}
@@ -513,10 +514,10 @@ export function InventoryReportsListView() {
           onPageChange={handlePaginationPageChange}
           onRowsPerPageChange={handlePaginationRowsPerPageChange}
           defaultConfig={{
-            order: ['number', 'storage_name', 'description', 'status', 'surplus_amount', 'shortage_amount', 'date', 'actions'],
+            order: ['number', 'storage_id', 'description', 'status', 'surplus_amount', 'shortage_amount', 'date', 'actions'],
             visibility: {
               number: true,
-              storage_name: true,
+              storage_id: true,
               description: true,
               status: true,
               surplus_amount: true,
@@ -526,7 +527,7 @@ export function InventoryReportsListView() {
             },
             widths: {
               number: '0.8fr',
-              storage_name: '1.2fr',
+              storage_id: '1.2fr',
               description: '1.5fr',
               status: '0.8fr',
               surplus_amount: '1fr',

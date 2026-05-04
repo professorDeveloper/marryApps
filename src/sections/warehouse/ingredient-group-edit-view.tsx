@@ -20,18 +20,18 @@ import {
 import { GenericEditView } from 'src/components/generic-edit-view';
 
 const COLOR_CODES = [
-  '#f04438', // Error/Red
-  '#2e90fa', // Info/Blue
-  '#12b76a', // Success/Green
-  '#f79009', // Warning/Yellow
-  '#8E33FF', // Secondary/Violet
-  '#ff4d1a', // Primary/Orange
-  '#fda29b', // Light Error
-  '#d92d20', // Danger/Dark Red
-  '#84caff', // Light Info
-  '#f79009', // Warning
-  '#000000', // Black
-  '#FFFFFF', // White
+  'var(--color-danger-500)', // Error/Red
+  'var(--color-info-500)', // Info/Blue
+  'var(--color-success-500)', // Success/Green
+  'var(--color-warning-500)', // Warning/Yellow
+  'var(--color-secondary-500)', // Secondary/Violet
+  'var(--color-primary-500)', // Primary/Orange
+  'var(--color-danger-100)', // Light Error
+  'var(--color-danger-600)', // Danger/Dark Red
+  'var(--color-info-100)', // Light Info
+  'var(--color-warning-300)', // Light Warning
+  'var(--color-text)', // Black
+  'var(--color-text-on-primary)', // White
 ];
 
 function translateSection(section: CardSection, t: TFunction): CardSection {
@@ -78,7 +78,7 @@ function buildColorSection(): CardSection {
         key: 'color_code',
         label: '',
         type: 'color' as const,
-        defaultValue: '#f04438',
+        defaultValue: 'var(--color-danger-500)',
         colors: COLOR_CODES,
       },
     ],

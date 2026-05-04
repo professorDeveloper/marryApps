@@ -15,14 +15,18 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Chip,
 } from '@mui/material';
 
 import { paths } from 'src/routes/paths';
 
+import { getStatusColor, formatStatusLabel } from 'src/utils/status-colors';
 import { useInvoiceAPI } from 'src/hooks/use-invoice-api';
 import { useStorageAPI } from 'src/hooks/use-storage-api';
 import { useSupplierAPI } from 'src/hooks/use-supplier-api';
 import { useInvoiceDetailsAPI } from 'src/hooks/use-invoice-details-api';
+import { useMetadata } from 'src/hooks/use-metadata';
+import { MetadataEntity } from 'src/types/metadata';
 
 import { fetcher } from 'src/lib/axios';
 import { DashboardContent } from 'src/layouts/dashboard';
@@ -127,108 +131,102 @@ const toUtcDayBoundary = (value: dayjs.Dayjs, endOfDay = false): string => {
 const toPickerDate = (value?: string): dayjs.Dayjs | null => (value ? dayjs(value.slice(0, 10)) : null);
 
 let staticDataCache: {
-    suppliers: any[];
-    storages: any[];
-    ingredients: any[];
+  suppliers: any[];
+  storages: any[];
 } | null = null;
 
 let staticDataPromise: Promise<{
-    suppliers: any[];
-    storages: any[];
-    ingredients: any[];
+  suppliers: any[];
+  storages: any[];
 }> | null = null;
 
 export function InvoiceDetailsStandaloneListView() {
-    const { t } = useTranslation('menu');
-    const noDataText = t('noDataAvailable', "Tushunarli ma'lumot mavjud emas");
-    const { deleteInvoiceDetails, getIngredients, getInvoicesPage } = useInvoiceDetailsAPI();
-    const { deleteInvoices } = useInvoiceAPI();
-    const { getSuppliers } = useSupplierAPI();
-    const { getStorages } = useStorageAPI();
-    const [rawInvoices, setRawInvoices] = useState<any[]>([]);
-    const [suppliers, setSuppliers] = useState<any[]>([]);
-    const [storages, setStorages] = useState<any[]>([]);
-    const [ingredients, setIngredients] = useState<any[]>([]);
-    const [selectedInvoiceDetails, setSelectedInvoiceDetails] = useState<InvoiceDetailWithFullInfo[]>([]);
-    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-    const [selectedDeleteId, setSelectedDeleteId] = useState<string | null>(null);
-    const [selectedDeleteType, setSelectedDeleteType] = useState<'invoice' | 'detail' | null>(null);
-    const [selectedInvoice, setSelectedInvoice] = useState<any | null>(null);
-    const [filters, setFilters] = useState<InvoiceListFilters>(initialFilters);
-    const [draftFilters, setDraftFilters] = useState<InvoiceListFilters>(initialFilters);
-    const [tableFilters, setTableFilters] = useState<DataTableFilterState>({});
-    const [rowCount, setRowCount] = useState(0);
-    const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 20 });
-    const [activePeriod, setActivePeriod] = useState<'day' | 'week' | 'month' | 'year' | undefined>(undefined);
-    const lastInvoicesKeyRef = useRef('');
+  const { t } = useTranslation('menu');
+  const noDataText = t('noDataAvailable', "Tushunarli ma'lumot mavjud emas");
+  const { deleteInvoiceDetails, getInvoicesPage } = useInvoiceDetailsAPI();
+  const { deleteInvoices } = useInvoiceAPI();
+  const { getSuppliers } = useSupplierAPI();
+  const { getStorages } = useStorageAPI();
+  const { data: metadata } = useMetadata([MetadataEntity.INGREDIENTS]);
+  const ingredients = metadata[MetadataEntity.INGREDIENTS] ?? [];
+  const [rawInvoices, setRawInvoices] = useState<any[]>([]);
+  const [suppliers, setSuppliers] = useState<any[]>([]);
+  const [storages, setStorages] = useState<any[]>([]);
+  const [selectedInvoiceDetails, setSelectedInvoiceDetails] = useState<InvoiceDetailWithFullInfo[]>([]);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedDeleteId, setSelectedDeleteId] = useState<string | null>(null);
+  const [selectedDeleteType, setSelectedDeleteType] = useState<'invoice' | 'detail' | null>(null);
+  const [selectedInvoice, setSelectedInvoice] = useState<any | null>(null);
+  const [filters, setFilters] = useState<InvoiceListFilters>(initialFilters);
+  const [draftFilters, setDraftFilters] = useState<InvoiceListFilters>(initialFilters);
+  const [tableFilters, setTableFilters] = useState<DataTableFilterState>({});
+  const [rowCount, setRowCount] = useState(0);
+  const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 20 });
+  const [activePeriod, setActivePeriod] = useState<'day' | 'week' | 'month' | 'year' | undefined>(undefined);
+  const lastInvoicesKeyRef = useRef('');
 
-    useEffect(() => {
-        const fetchStaticData = async () => {
-            try {
-                if (staticDataCache) {
-                    setSuppliers(staticDataCache.suppliers);
-                    setStorages(staticDataCache.storages);
-                    setIngredients(staticDataCache.ingredients);
-                    return;
-                }
+  useEffect(() => {
+    const fetchStaticData = async () => {
+      try {
+        if (staticDataCache) {
+          setSuppliers(staticDataCache.suppliers);
+          setStorages(staticDataCache.storages);
+          return;
+        }
 
-                if (!staticDataPromise) {
-                    staticDataPromise = Promise.all([
-                        getSuppliers(),
-                        getStorages(),
-                        getIngredients(),
-                    ]).then(([suppliersData, storagesData, ingredientsData]) => ({
-                        suppliers: suppliersData || [],
-                        storages: storagesData || [],
-                        ingredients: ingredientsData || [],
-                    }));
-                }
+        if (!staticDataPromise) {
+          staticDataPromise = Promise.all([
+            getSuppliers(),
+            getStorages(),
+          ]).then(([suppliersData, storagesData]) => ({
+            suppliers: suppliersData || [],
+            storages: storagesData || [],
+          }));
+        }
 
-                const resolved = await staticDataPromise;
-                staticDataCache = resolved;
+        const resolved = await staticDataPromise;
+        staticDataCache = resolved;
 
-                setSuppliers(resolved.suppliers);
-                setStorages(resolved.storages);
-                setIngredients(resolved.ingredients);
-            } catch {
-                setSuppliers([]);
-                setStorages([]);
-                setIngredients([]);
-            }
-        };
+        setSuppliers(resolved.suppliers);
+        setStorages(resolved.storages);
+      } catch {
+        setSuppliers([]);
+        setStorages([]);
+      }
+    };
 
-        fetchStaticData();
-    }, [getSuppliers, getStorages, getIngredients]);
+    fetchStaticData();
+  }, [getSuppliers, getStorages]);
 
-    useEffect(() => {
-        const fetchInvoices = async () => {
-            const key = JSON.stringify({
-                date_from: filters.date_from,
-                date_to: filters.date_to,
-                storage_id: filters.storage_id,
-                supplier_id: filters.supplier_id,
-                ingredient_id: filters.ingredient_id,
-                status: filters.status,
-                search: filters.search,
-                expand: filters.expand,
-                limit: filters.limit,
-                offset: filters.offset,
-            });
+  useEffect(() => {
+    const fetchInvoices = async () => {
+      const key = JSON.stringify({
+        date_from: filters.date_from,
+        date_to: filters.date_to,
+        storage_id: filters.storage_id,
+        supplier_id: filters.supplier_id,
+        ingredient_id: filters.ingredient_id,
+        status: filters.status,
+        search: filters.search,
+        expand: filters.expand,
+        limit: filters.limit,
+        offset: filters.offset,
+      });
 
-            if (lastInvoicesKeyRef.current === key) return;
-            lastInvoicesKeyRef.current = key;
+      if (lastInvoicesKeyRef.current === key) return;
+      lastInvoicesKeyRef.current = key;
 
-            try {
-                const response = await getInvoicesPage(filters);
-                setRowCount(response.total || 0);
-                setRawInvoices(response.items || []);
-            } finally {
-                // Loading state handled by DataTable component
-            }
-        };
+      try {
+        const response = await getInvoicesPage(filters);
+        setRowCount(response.total || 0);
+        setRawInvoices(response.items || []);
+      } finally {
+        // Loading state handled by DataTable component
+      }
+    };
 
-        fetchInvoices();
-    }, [filters, getInvoicesPage]);
+    fetchInvoices();
+  }, [filters, getInvoicesPage]);
 
     const handleFiltersChange = (newFilters: DataTableFilterState) => {
         setTableFilters(newFilters);
@@ -484,31 +482,14 @@ export function InvoiceDetailsStandaloneListView() {
                 align: 'left' as const,
                 getValue: (row: any) => row?.status || '',
                 renderCell: ({ value }: { value: unknown }) => {
-                    const status = String(value ?? '').toLowerCase();
-                    let bgColor = 'var(--color-surface-2)';
-                    let textColor = 'var(--color-text-secondary)';
-                    if (status === 'pending') { bgColor = 'var(--color-warning-50)'; textColor = 'var(--color-warning-600)'; }
-                    if (status === 'deleted') { bgColor = 'var(--color-danger-50)'; textColor = 'var(--color-danger-600)'; }
+                    const status = String(value ?? '');
                     return (
-                        <Box sx={{ 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            py: 1.5, 
-                            px: 1
-                        }}>
-                            <Box
-                                sx={{
-                                    padding: '4px 12px',
-                                    borderRadius: '4px',
-                                    fontSize: '0.875rem',
-                                    fontWeight: 600,
-                                    backgroundColor: bgColor,
-                                    color: textColor,
-                                }}
-                            >
-                                {status}
-                            </Box>
-                        </Box>
+                        <Chip
+                            size="small"
+                            label={formatStatusLabel(status)}
+                            color={getStatusColor(status)}
+                            sx={{ textTransform: 'capitalize' }}
+                        />
                     );
                 },
             },

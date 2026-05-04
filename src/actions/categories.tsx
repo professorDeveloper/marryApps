@@ -237,13 +237,21 @@ export function useGetCategoriesPage(params?: { search?: string; limit?: number;
     const offset = typeof params?.offset === 'number' ? params?.offset : 0;
     const expand = 'name_i18n,department_id';
 
-    const queryParams: Record<string, any> = { limit, offset, expand };
-    if (params?.sort_by) queryParams.sort_by = params.sort_by;
-    if (params?.sort_order) queryParams.sort_order = params.sort_order;
+    // Create stable query parameters for SWR key to ensure parameter changes trigger refetch
+    const queryParams = useMemo(() => {
+        const qp: Record<string, any> = { limit, offset, expand };
+        if (params?.sort_by) qp.sort_by = params.sort_by;
+        if (params?.sort_order) qp.sort_order = params.sort_order;
+        return qp;
+    }, [limit, offset, expand, params?.sort_by, params?.sort_order]);
 
-    const swrKey = normalizedQuery
-        ? [endpoints.category.search, { params: { q: normalizedQuery, ...queryParams } }]
-        : [endpoints.category.list, { params: queryParams }];
+    // Create a stable SWR key that includes all parameters to ensure changes are detected
+    const swrKey = useMemo(() => {
+        if (normalizedQuery) {
+            return [endpoints.category.search, { params: { q: normalizedQuery, ...queryParams } }];
+        }
+        return [endpoints.category.list, { params: queryParams }];
+    }, [normalizedQuery, queryParams]);
 
     const { data, isLoading, error, isValidating } = useSWR<
         BackendResponse<ICategory[]> | ICategory[]

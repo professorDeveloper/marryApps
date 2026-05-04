@@ -5,7 +5,7 @@ import type { DataTableColumn } from 'src/sections/warehouse/deduction/component
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Box, IconButton } from '@mui/material';
+import { Box, Button, Chip, IconButton, Tooltip } from '@mui/material';
 
 import { paths } from 'src/routes/paths';
 import { RouterLink } from 'src/routes/components';
@@ -24,6 +24,7 @@ interface TransactionsDataTableProps {
   searchValue?: string;
   onSearchChange?: (value: string) => void;
   onDeleteClick: (id: string) => void;
+  onCreateClick?: () => void;
   page?: number;
   rowsPerPage?: number;
   totalCount?: number;
@@ -31,6 +32,8 @@ interface TransactionsDataTableProps {
   onRowsPerPageChange?: (rowsPerPage: number) => void;
   onReset?: () => void;
   onSortChange?: (sort: { key: string | null; dir: 'asc' | 'desc' | null }) => void;
+  filters?: Record<string, { type: 'text' | 'multi'; value: string | string[] }>;
+  onFiltersChange?: (filters: Record<string, { type: 'text' | 'multi'; value: string | string[] }>) => void;
   headerActions?: ReactNode;
   showPeriodPicker?: boolean;
   periodPickerProps?: {
@@ -55,6 +58,7 @@ export function TransactionsDataTable({
   searchValue = '',
   onSearchChange,
   onDeleteClick,
+  onCreateClick,
   page = 0,
   rowsPerPage = 20,
   totalCount = 0,
@@ -62,6 +66,8 @@ export function TransactionsDataTable({
   onRowsPerPageChange,
   onReset,
   onSortChange,
+  filters,
+  onFiltersChange,
   headerActions,
   showPeriodPicker = false,
   periodPickerProps,
@@ -69,20 +75,46 @@ export function TransactionsDataTable({
   periodButtonProps,
 }: TransactionsDataTableProps) {
   const { t } = useTranslation('menu');
-
   const columns = useMemo<DataTableColumn<ITransaction>[]>(
     () => [
       {
         key: 'type',
         label: t('common.type', 'Type'),
-        width: 150,
+        width: 140,
         sortable: true,
+        filterable: true,
         getValue: (row) => row.type,
-        renderCell: ({ row }) => (
-          <Box sx={CELL_SX}>
-            {row.type || '-'}
-          </Box>
-        ),
+        filter: {
+          type: 'multi',
+          options: ['income', 'expense', 'transfer', 'bill_payment'],
+          getOptionLabel: (v) => {
+            const labels: Record<string, string> = {
+              income: t('transactions.typeIncome', 'Income'),
+              expense: t('transactions.typeExpense', 'Expense'),
+              transfer: t('transactions.typeTransfer', 'Transfer'),
+              bill_payment: t('transactions.typeBillPayment', 'Bill Payment'),
+            };
+            return labels[v] || v;
+          },
+        },
+        renderCell: ({ row }) => {
+          const typeConfig: Record<string, { label: string; color: 'success' | 'error' | 'info' | 'warning' }> = {
+            income: { label: t('transactions.typeIncome', 'Income'), color: 'success' },
+            expense: { label: t('transactions.typeExpense', 'Expense'), color: 'error' },
+            transfer: { label: t('transactions.typeTransfer', 'Transfer'), color: 'info' },
+            bill_payment: { label: t('transactions.typeBillPayment', 'Bill Payment'), color: 'warning' },
+          };
+          const config = typeConfig[row.type];
+          return (
+            <Box sx={{ ...CELL_SX, justifyContent: 'center' }}>
+              {config ? (
+                <Chip size="small" color={config.color} label={config.label} />
+              ) : (
+                row.type || '-'
+              )}
+            </Box>
+          );
+        },
       },
       {
         key: 'amount',
@@ -116,6 +148,7 @@ export function TransactionsDataTable({
         width: '1fr',
         minWidth: 180,
         sortable: true,
+        filterable: true,
         getValue: (row) => {
           if (row.type === 'transfer') {
             const fromName = cashRegisterMap[row.from_cash_register_id || ''] || row.from_cash_register_id || '-';
@@ -124,26 +157,66 @@ export function TransactionsDataTable({
           }
           return cashRegisterMap[row.cash_register_id || ''] || row.cash_register_id || '-';
         },
+        filter: {
+          type: 'multi',
+          options: Object.keys(cashRegisterMap),
+          getOptionLabel: (v) => cashRegisterMap[v] || v,
+        },
         renderCell: ({ row }) => {
-          let registerValue;
           if (row.type === 'transfer') {
             const fromName = cashRegisterMap[row.from_cash_register_id || ''] || row.from_cash_register_id || '-';
             const toName = cashRegisterMap[row.to_cash_register_id || ''] || row.to_cash_register_id || '-';
-            registerValue = `${fromName} -> ${toName}`;
-          } else {
-            registerValue = cashRegisterMap[row.cash_register_id || ''] || row.cash_register_id || '-';
+            const registerValue = `${fromName} -> ${toName}`;
+            return (
+              <Tooltip title={registerValue} placement="top" arrow>
+                <Box sx={{
+                  ...CELL_SX,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  maxWidth: '100%',
+                }}>
+                  {registerValue}
+                </Box>
+              </Tooltip>
+            );
           }
+
+          const mappedName = cashRegisterMap[row.cash_register_id || ''];
+          if (mappedName) {
+            return (
+              <Tooltip title={mappedName} placement="top" arrow>
+                <Box sx={{
+                  ...CELL_SX,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  maxWidth: '100%',
+                }}>
+                  {mappedName}
+                </Box>
+              </Tooltip>
+            );
+          }
+
+          // Cashier not found (deleted) - show info icon chip
+          if (row.cash_register_id) {
+            const deletedTooltip = t('cashbox.cashierDeleted', 'This cashier has been deleted. The reference is preserved for historical records but the cashier details are no longer available.');
+            return (
+              <Tooltip title={deletedTooltip} placement="top" arrow>
+                <Chip
+                  size="small"
+                  color="info"
+                  icon={<Iconify icon="solar:info-circle-bold" width={18} />}
+                  sx={{ cursor: 'help', '& .MuiChip-label': { display: 'none' } }}
+                />
+              </Tooltip>
+            );
+          }
+
           return (
-            <Box sx={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              py: 1.5, 
-              px: 1,
-              color: 'text.primary',
-              fontSize: '0.875rem',
-              fontWeight: 400
-            }}>
-              {registerValue}
+            <Box sx={CELL_SX}>
+              {'-'}
             </Box>
           );
         },
@@ -154,58 +227,108 @@ export function TransactionsDataTable({
         width: '1fr',
         minWidth: 150,
         sortable: true,
+        filterable: true,
         getValue: (row) => groupsMap[row.group_transaction_id] || row.group_transaction_id || '-',
-        renderCell: ({ row }) => (
-          <Box sx={CELL_SX}>
-            {groupsMap[row.group_transaction_id] || row.group_transaction_id || '-'}
-          </Box>
-        ),
+        filter: {
+          type: 'multi',
+          options: Object.keys(groupsMap),
+          getOptionLabel: (v) => groupsMap[v] || v,
+        },
+        renderCell: ({ row }) => {
+          const mappedName = groupsMap[row.group_transaction_id || ''];
+          const displayValue = mappedName || '-';
+          const tooltipValue = mappedName || row.group_transaction_id || '-';
+          return (
+            <Tooltip title={tooltipValue} placement="top" arrow>
+              <Box sx={{
+                ...CELL_SX,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                maxWidth: '100%',
+              }}>
+                {displayValue}
+              </Box>
+            </Tooltip>
+          );
+        },
       },
       {
         key: 'user_id',
         label: t('users.fullName', 'User'),
         width: '1fr',
         minWidth: 180,
-        sortable: true,
+        sortable: false,
         getValue: (row) => usersMap[row.user_id || ''] || row.user_id || '-',
-        renderCell: ({ row }) => (
-          <Box sx={CELL_SX}>
-            {usersMap[row.user_id || ''] || row.user_id || '-'}
-          </Box>
-        ),
+        renderCell: ({ row }) => {
+          const mappedName = usersMap[row.user_id || ''];
+          const displayValue = mappedName || (row.user_id ? row.user_id.slice(0, 8) + '...' : '-');
+          const tooltipValue = mappedName || row.user_id || '-';
+          return (
+            <Tooltip title={tooltipValue} placement="top" arrow>
+              <Box sx={{
+                ...CELL_SX,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                maxWidth: '100%',
+              }}>
+                {displayValue}
+              </Box>
+            </Tooltip>
+          );
+        },
       },
       {
         key: 'pay_type',
         label: t('common.paymentType', 'Pay type'),
         width: 120,
         sortable: true,
+        filterable: true,
         getValue: (row) => row.pay_type,
-        renderCell: ({ row }) => (
-          <Box sx={CELL_SX}>
-            {row.pay_type || '-'}
-          </Box>
-        ),
+        filter: {
+          type: 'multi',
+          options: ['cash', 'card', 'transfer'],
+          getOptionLabel: (v) => {
+            const labels: Record<string, string> = {
+              cash: t('paymentTypes.cash', 'Cash'),
+              card: t('paymentTypes.card', 'Card'),
+              transfer: t('paymentTypes.transfer', 'Transfer'),
+            };
+            return labels[v] || v;
+          },
+        },
+        renderCell: ({ row }) => {
+          const payTypeLabels: Record<string, string> = {
+            cash: t('paymentTypes.cash', 'Cash'),
+            card: t('paymentTypes.card', 'Card'),
+            transfer: t('paymentTypes.transfer', 'Transfer'),
+          };
+          const label = payTypeLabels[row.pay_type || ''] || row.pay_type;
+          return (
+            <Box sx={{ ...CELL_SX, justifyContent: 'center' }}>
+              {row.pay_type ? (
+                <Chip size="small" variant="outlined" label={label} />
+              ) : (
+                '-'
+              )}
+            </Box>
+          );
+        },
       },
       {
         key: 'customer_paid_amount',
         label: t('cashbox.customerPaid', 'Customer paid'),
         width: 150,
-        sortable: true,
+        sortable: false,
         align: 'right',
         mono: true,
-        getValue: (row) => row.customer_paid_amount ? Number(row.customer_paid_amount) : 0,
-        renderCell: ({ value }) => {
-          const paidValue = value ? Number(value).toLocaleString() : '-';
+        getValue: (row) => row.customer_paid_amount != null ? Number(row.customer_paid_amount) : undefined,
+        renderCell: ({ row, value }) => {
+          if (row.customer_paid_amount == null) return <Box sx={CELL_SX}>-</Box>;
+          const paidValue = Number(value).toLocaleString();
           return (
-            <Box sx={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              py: 1.5, 
-              px: 1,
-              color: 'text.primary',
-              fontSize: '0.875rem',
-              fontWeight: 400
-            }}>
+            <Box sx={CELL_SX}>
               {paidValue}
             </Box>
           );
@@ -215,22 +338,15 @@ export function TransactionsDataTable({
         key: 'change_amount',
         label: t('cashbox.changeAmount', 'Change'),
         width: 120,
-        sortable: true,
+        sortable: false,
         align: 'right',
         mono: true,
-        getValue: (row) => row.change_amount ? Number(row.change_amount) : 0,
-        renderCell: ({ value }) => {
-          const changeValue = value ? Number(value).toLocaleString() : '-';
+        getValue: (row) => row.change_amount != null ? Number(row.change_amount) : undefined,
+        renderCell: ({ row, value }) => {
+          if (row.change_amount == null) return <Box sx={CELL_SX}>-</Box>;
+          const changeValue = Number(value).toLocaleString();
           return (
-            <Box sx={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              py: 1.5, 
-              px: 1,
-              color: 'text.primary',
-              fontSize: '0.875rem',
-              fontWeight: 400
-            }}>
+            <Box sx={CELL_SX}>
               {changeValue}
             </Box>
           );
@@ -264,13 +380,26 @@ export function TransactionsDataTable({
         label: t('deductions.description', 'Description'),
         width: '1fr',
         minWidth: 220,
-        sortable: true,
+        sortable: false,
         getValue: (row) => row.description,
-        renderCell: ({ row }) => (
-          <Box sx={CELL_SX}>
-            {row.description || '-'}
-          </Box>
-        ),
+        renderCell: ({ row }) => {
+          const description = row.description || '-';
+          return (
+            <Tooltip title={description} placement="top" arrow>
+              <Box
+                sx={{
+                  ...CELL_SX,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  maxWidth: '100%',
+                }}
+              >
+                {description}
+              </Box>
+            </Tooltip>
+          );
+        },
       },
       {
         key: 'actions',
@@ -358,6 +487,8 @@ export function TransactionsDataTable({
       getRowId={(row) => String(row.id)}
       searchValue={searchValue}
       onSearchChange={onSearchChange}
+      filters={filters}
+      onFiltersChange={onFiltersChange}
       onSortChange={onSortChange}
       page={page}
       rowsPerPage={rowsPerPage}
@@ -366,7 +497,20 @@ export function TransactionsDataTable({
       onPageChange={onPageChange}
       onRowsPerPageChange={onRowsPerPageChange}
       onReset={onReset || (() => {})}
-      headerActions={headerActions}
+      headerActions={
+        onCreateClick ? (
+          <Button
+            variant="contained"
+            startIcon={<Iconify icon="solar:add-circle-bold" />}
+            onClick={onCreateClick}
+            size="small"
+          >
+            {t('transactions.createTransaction', 'Create Transaction')}
+          </Button>
+        ) : (
+          headerActions
+        )
+      }
       showPeriodPicker={showPeriodPicker}
       periodPickerProps={periodPickerProps}
       showPeriodButtons={showPeriodButtons}

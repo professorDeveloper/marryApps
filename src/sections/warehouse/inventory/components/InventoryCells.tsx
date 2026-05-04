@@ -4,9 +4,11 @@ import React, { memo } from 'react';
 
 import Box from '@mui/material/Box';
 import IconButton from '@mui/material/IconButton';
+import { Chip } from '@mui/material';
 
 import { Iconify } from 'src/components/iconify';
 
+import { getStatusColor, formatStatusLabel } from 'src/utils/status-colors';
 import { 
   formatInventoryDate, 
   formatInventoryAmount, 
@@ -42,26 +44,13 @@ interface InventoryStatusCellProps {
 }
 
 export const InventoryStatusCell = memo(function InventoryStatusCell({ value }: InventoryStatusCellProps) {
-  const config = getInventoryStatusConfig(value);
-
   return (
-    <Box
-      sx={{
-        px: 1.25,
-        py: 0.5,
-        borderRadius: 0.75,
-        border: '1px solid',
-        borderColor: config.color + '40',
-        backgroundColor: config.color + '10',
-        color: config.color,
-        fontSize: 12,
-        fontWeight: 700,
-        textAlign: 'center',
-        minWidth: 72,
-      }}
-    >
-      {config.label}
-    </Box>
+    <Chip
+      size="small"
+      label={formatStatusLabel(value)}
+      color={getStatusColor(value)}
+      sx={{ textTransform: 'capitalize' }}
+    />
   );
 });
 

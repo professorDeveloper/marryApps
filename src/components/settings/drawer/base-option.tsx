@@ -1,7 +1,5 @@
 import type { ButtonBaseProps } from '@mui/material/ButtonBase';
 
-import { varAlpha } from 'minimal-shared/utils';
-
 import Switch from '@mui/material/Switch';
 import Tooltip from '@mui/material/Tooltip';
 import { styled } from '@mui/material/styles';
@@ -62,7 +60,7 @@ export function BaseOption({
             <Iconify
               width={16}
               icon="eva:info-outline"
-              sx={{ cursor: 'pointer', color: 'text.disabled' }}
+              sx={{ cursor: 'pointer', color: 'var(--color-text-muted)' }}
             />
           </Tooltip>
         )}
@@ -81,12 +79,14 @@ const ItemRoot = styled(ButtonBase, {
   alignItems: 'flex-start',
   padding: theme.spacing(2, 2, 2, 2.5),
   borderRadius: Number(theme.shape.borderRadius) * 2,
-  border: `solid 1px ${varAlpha(theme.vars.palette.grey['500Channel'], 0.12)}`,
+  backgroundColor: 'var(--color-surface-0)',
+  border: `solid 1px var(--color-border)`,
   '&:hover': {
-    backgroundColor: varAlpha(theme.vars.palette.grey['500Channel'], 0.08),
+    backgroundColor: 'var(--color-surface-1)',
   },
   ...(selected && {
-    backgroundColor: varAlpha(theme.vars.palette.grey['500Channel'], 0.08),
+    backgroundColor: 'var(--color-surface-1)',
+    borderColor: 'var(--color-primary)',
   }),
 }));
 

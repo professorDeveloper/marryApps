@@ -1,42 +1,20 @@
-import { useState, useEffect } from 'react';
-
-const STORAGE_KEY = 'global-rows-per-page';
-const DEFAULT_ROWS_PER_PAGE = 20;
+import { useAppSelector, useAppDispatch } from 'src/store';
+import { setRowsPerPage as setRowsPerPageAction } from 'src/store/slices/paginationSlice';
 
 /**
  * Hook to manage global rows per page setting across all DataTable components.
- * Persists the value to localStorage and provides a reactive state.
+ * Uses Redux as the source of truth with localStorage persistence.
  */
 export function usePaginationRows() {
-  const [rowsPerPage, setRowsPerPage] = useState<number>(DEFAULT_ROWS_PER_PAGE);
+  const rowsPerPage = useAppSelector((state) => state.pagination.rowsPerPage);
+  const dispatch = useAppDispatch();
 
-  // Load from localStorage on mount
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed = parseInt(saved, 10);
-        if (!isNaN(parsed) && parsed > 0) {
-          setRowsPerPage(parsed);
-        }
-      }
-    } catch (error) {
-      console.error('Failed to load rows per page from localStorage:', error);
-    }
-  }, []);
-
-  // Update localStorage when rowsPerPage changes
-  const setRowsPerPageWithStorage = (value: number) => {
-    setRowsPerPage(value);
-    try {
-      localStorage.setItem(STORAGE_KEY, String(value));
-    } catch (error) {
-      console.error('Failed to save rows per page to localStorage:', error);
-    }
+  const setRowsPerPage = (value: number) => {
+    dispatch(setRowsPerPageAction(value));
   };
 
   return {
     rowsPerPage,
-    setRowsPerPage: setRowsPerPageWithStorage,
+    setRowsPerPage,
   };
 }

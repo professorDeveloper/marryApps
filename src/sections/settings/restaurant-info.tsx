@@ -329,7 +329,7 @@ export function RestaurantInfoListView() {
                 <Iconify
                   icon="socials:facebook"
                   width={24}
-                  sx={{ color: '#1877F2' }}
+                  sx={{ color: 'var(--color-social-facebook)' }}
                 />
                 <Typography
                   variant="body2"
@@ -352,7 +352,7 @@ export function RestaurantInfoListView() {
                   icon="socials:instagram"
                   width={24}
                   sx={{
-                    background: 'linear-gradient(45deg, #E1306C, #F77737, #FCAF45)',
+                    background: 'linear-gradient(45deg, var(--color-social-instagram-start), var(--color-social-instagram-middle), var(--color-social-instagram-end))',
                     borderRadius: '50%',
                   }}
                 />
@@ -376,7 +376,7 @@ export function RestaurantInfoListView() {
                 <Iconify
                   icon="socials:linkedin"
                   width={24}
-                  sx={{ color: '#0A66C2' }}
+                  sx={{ color: 'var(--color-social-linkedin)' }}
                 />
                 <Typography
                   variant="body2"
@@ -398,7 +398,7 @@ export function RestaurantInfoListView() {
                 <Iconify
                   icon="socials:twitter"
                   width={24}
-                  sx={{ color: '#000000' }}
+                  sx={{ color: 'var(--color-text)' }}
                 />
                 <Typography
                   variant="body2"

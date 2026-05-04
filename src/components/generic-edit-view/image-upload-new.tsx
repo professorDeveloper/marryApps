@@ -212,7 +212,7 @@ const ImageUploadComponent: FC<ImageUploadFieldProps> = ({
                                     sx={{
                                         position: 'absolute',
                                         inset: 0,
-                                        bgcolor: 'rgba(255,255,255,0.8)',
+                                        bgcolor: 'var(--overlay-light)',
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',

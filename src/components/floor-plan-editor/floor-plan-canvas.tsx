@@ -44,10 +44,10 @@ export const FloorPlanCanvas = ({
     const [containerSize, setContainerSize] = useState({ width: 1000, height: 400 });
     const [renderKey, setRenderKey] = useState(0);
 
-    // Theme-aware colors
+    // Theme-aware colors - use resolved theme colors for Konva (not CSS variables)
     const isDark = colorScheme === 'dark';
-    const canvasBgColor = isDark ? 'var(--color-surface-2)' : 'var(--color-bg)';
-    const canvasBgOuterColor = isDark ? theme.vars.palette.background.paper : theme.vars.palette.grey[100];
+    const canvasBgColor = isDark ? theme.palette.background.paper : theme.palette.grey[50];
+    const canvasBgOuterColor = isDark ? theme.palette.background.paper : theme.palette.grey[100];
     const borderColor = isDark ? theme.palette.divider : theme.palette.grey[300];
     const textColor = theme.palette.text.secondary;
     const gridColor = isDark ? theme.palette.divider : theme.palette.grey[300];

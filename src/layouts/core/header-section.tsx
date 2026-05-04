@@ -52,6 +52,8 @@ export function HeaderSection({
       className={mergeClasses([layoutClasses.header, className])}
       sx={[
         (theme) => ({
+          py: 1.5,
+          borderRadius: 0,
           ...(isOffset && {
             '--color': `var(--offset-color, ${theme.vars.palette.text.primary})`,
           }),

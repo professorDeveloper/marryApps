@@ -75,10 +75,10 @@ export interface IBillDetailResponse {
 export interface IBillsFilterParams {
     start?: string;
     end?: string;
-    bill_status?: IBillStatus;
-    payment_type?: IPaymentType;
+    bill_status?: IBillStatus | IBillStatus[];
+    payment_type?: IPaymentType | IPaymentType[];
     waiter_id?: string;
-    hall_id?: string;
+    hall_id?: string | string[];
     table_id?: string;
     limit?: number;
     offset?: number;

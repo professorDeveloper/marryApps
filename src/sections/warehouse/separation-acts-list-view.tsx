@@ -23,10 +23,13 @@ import {
   DialogActions,
   DialogContent,
   TableContainer,
+  Chip,
 } from '@mui/material';
 
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
+
+import { getStatusColor, formatStatusLabel } from 'src/utils/status-colors';
 
 import { useStorageAPI } from 'src/hooks/use-storage-api';
 import { useDeductionsAPI } from 'src/hooks/use-deductions-api';
@@ -292,6 +295,17 @@ export function SeparationActsListView() {
         width: '0.8fr',
         align: 'left' as const,
         getValue: (row: SeparationAct) => row?.status || '',
+        renderCell: ({ value }: { value: unknown }) => {
+          const status = String(value ?? '');
+          return (
+            <Chip
+              size="small"
+              label={formatStatusLabel(status)}
+              color={getStatusColor(status)}
+              sx={{ textTransform: 'capitalize' }}
+            />
+          );
+        },
       },
       {
         key: 'total_amount',

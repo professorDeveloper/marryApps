@@ -21,10 +21,13 @@ import {
     DialogActions,
     DialogContent,
     TableContainer,
+    Chip,
 } from '@mui/material';
 
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
+
+import { getStatusColor, formatStatusLabel } from 'src/utils/status-colors';
 
 import { useStorageAPI } from 'src/hooks/use-storage-api';
 import { useInventoryAPI } from 'src/hooks/use-inventory-api';
@@ -89,38 +92,17 @@ import { Iconify } from 'src/components/iconify';
 import { GenericViewModal } from 'src/components/generic-view-view';
 
 import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
+import { usePaginationRows } from 'src/hooks/use-pagination-rows';
 import { RouterLink } from 'src/routes/components';
 
 function RenderCellStatus({ status }: { status: string }) {
-    const statusConfig: Record<string, { label: string; color: string }> = {
-        active: { label: 'Active', color: 'var(--color-success-500)' },
-        draft: { label: 'Draft', color: 'var(--color-warning-500)' },
-        deleted: { label: 'Deleted', color: 'var(--color-danger-500)' },
-    };
-
-    const config = statusConfig[status] || statusConfig.draft;
-
     return (
-        <Box sx={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            py: 1.5, 
-            px: 1
-        }}>
-            <Box
-                sx={{
-                    padding: '4px 12px',
-                    borderRadius: '4px',
-                    fontSize: '0.875rem',
-                    fontWeight: 600,
-                    backgroundColor: `${config.color}20`,
-                    color: config.color,
-                    textTransform: 'uppercase',
-                }}
-            >
-                {config.label}
-            </Box>
-        </Box>
+        <Chip
+            size="small"
+            label={formatStatusLabel(status)}
+            color={getStatusColor(status)}
+            sx={{ textTransform: 'capitalize' }}
+        />
     );
 }
 
@@ -149,10 +131,16 @@ export function InventoryListView() {
     const [itemsLoading, setItemsLoading] = useState(false);
     const [inventoryItems, setInventoryItems] = useState<IInventoryItem[]>([]);
     const [pagination, setPagination] = useState<IBackendPagination | undefined>(undefined);
+    const { rowsPerPage } = usePaginationRows();
     const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
         page: 0,
-        pageSize: 20,
+        pageSize: rowsPerPage,
     });
+
+    // Sync paginationModel with rowsPerPage when it changes externally
+    useEffect(() => {
+        setPaginationModel((prev) => ({ ...prev, pageSize: rowsPerPage }));
+    }, [rowsPerPage]);
     const [activePeriod, setActivePeriod] = useState<'day' | 'week' | 'month' | 'year' | undefined>('day');
     const [storageOptions, setStorageOptions] = useState<Array<{ id: string; name: string }>>([]);
     const [sort, setSort] = useState({ by: 'date', order: 'desc' as 'asc' | 'desc' });

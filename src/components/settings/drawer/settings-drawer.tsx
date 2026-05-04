@@ -1,7 +1,7 @@
 import type { SettingsState, SettingsDrawerProps } from '../types';
 
 import { useEffect, useCallback } from 'react';
-import { hasKeys, varAlpha } from 'minimal-shared/utils';
+import { hasKeys } from 'minimal-shared/utils';
 
 import Box from '@mui/material/Box';
 import Badge from '@mui/material/Badge';
@@ -285,16 +285,14 @@ export function SettingsDrawer({ sx, defaultSettings }: SettingsDrawerProps) {
       anchor="right"
       open={settings.openDrawer}
       onClose={settings.onCloseDrawer}
+      // sx={{}}
       slotProps={{
         backdrop: { invisible: true },
         paper: {
           sx: [
-            (theme) => ({
-              ...theme.mixins.paperStyles(theme, {
-                color: varAlpha(theme.vars.palette.background.defaultChannel, 0.9),
-              }),
+            {
               width: 360,
-            }),
+            },
             ...(Array.isArray(sx) ? sx : [sx]),
           ],
         },

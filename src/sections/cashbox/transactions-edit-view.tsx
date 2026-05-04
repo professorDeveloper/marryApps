@@ -1,4 +1,5 @@
 import type { TransactionType } from 'src/types/transactions';
+import type { TFunction } from 'i18next';
 
 import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
@@ -19,10 +20,15 @@ interface TransactionsEditViewProps {
   isNew?: boolean;
 }
 
-const PAY_TYPE_OPTIONS = [
-  { value: 'cash', label: 'Cash' },
-  { value: 'card', label: 'Card' },
-  { value: 'transfer', label: 'Transfer' },
+const getPayTypeOptions = (t: TFunction) => [
+  { value: 'cash', label: t('payType.cash', 'Cash') },
+  { value: 'card', label: t('payType.card', 'Card') },
+];
+
+const getTransactionTypeOptions = (t: TFunction) => [
+  { value: 'income', label: t('transactions.income', 'Income') },
+  { value: 'expense', label: t('transactions.expense', 'Expense') },
+  { value: 'transfer', label: t('transactions.transfer', 'Transfer') },
 ];
 
 const getDefaultType = (kind: string | null): TransactionType => {
@@ -59,6 +65,7 @@ export function TransactionsEditView({ isNew = false }: TransactionsEditViewProp
   const [transactionType, setTransactionType] = useState<TransactionType>(getDefaultType(kind));
   const [groupOptions, setGroupOptions] = useState<{ value: string; label: string }[]>([]);
   const [cashRegisterOptions, setCashRegisterOptions] = useState<{ value: string; label: string }[]>([]);
+  const [fromCashRegisterOptions, setFromCashRegisterOptions] = useState<{ value: string; label: string }[]>([]);
   const [toCashRegisterOptions, setToCashRegisterOptions] = useState<{ value: string; label: string }[]>([]);
   const [branchOptions, setBranchOptions] = useState<{ value: string; label: string }[]>([]);
   const [fromBranchOptions, setFromBranchOptions] = useState<{ value: string; label: string }[]>([]);
@@ -79,34 +86,38 @@ export function TransactionsEditView({ isNew = false }: TransactionsEditViewProp
   });
 
   const loadBaseData = useCallback(async () => {
-    const [groups, cashRegisters, branches, currentUser] = await Promise.all([
-      getTransactionGroups(),
-      getCashRegisters(),
-      getBranches(),
-      getCurrentUser(),
-    ]);
+    try {
+      const [groups, cashRegisters, branches, currentUser] = await Promise.all([
+        getTransactionGroups(),
+        getCashRegisters(),
+        getBranches(),
+        getCurrentUser(),
+      ]);
 
-    const nextBranchOptions = branches.map((item) => ({ value: item.id, label: item.name }));
+      const nextBranchOptions = branches.map((item) => ({ value: item.id, label: item.name }));
 
-    setGroupOptions(groups.map((item) => ({ value: item.id, label: item.name })));
-    setCashRegisterOptions(cashRegisters.map((item) => ({ value: item.id, label: item.name })));
-    setBranchOptions(nextBranchOptions);
+      setGroupOptions(groups.map((item) => ({ value: item.id, label: item.name })));
+      setCashRegisterOptions(cashRegisters.map((item) => ({ value: item.id, label: item.name })));
+      setBranchOptions(nextBranchOptions);
 
-    if (currentUser?.branch_id) {
-      setMyBranchId(currentUser.branch_id);
+      if (currentUser?.branch_id) {
+        setMyBranchId(currentUser.branch_id);
 
-      if (isNew) {
-        const currentBranch = nextBranchOptions.find((item) => item.value === currentUser.branch_id);
-        setFromBranchOptions(currentBranch ? [currentBranch] : []);
-        setFormData((prev) => ({
-          ...prev,
-          from_branch_id: prev.from_branch_id || currentUser.branch_id,
-        }));
+        if (isNew) {
+          const currentBranch = nextBranchOptions.find((item) => item.value === currentUser.branch_id);
+          setFromBranchOptions(currentBranch ? [currentBranch] : []);
+          setFormData((prev) => ({
+            ...prev,
+            from_branch_id: prev.from_branch_id || currentUser.branch_id,
+          }));
+        } else {
+          setFromBranchOptions(nextBranchOptions);
+        }
       } else {
         setFromBranchOptions(nextBranchOptions);
       }
-    } else {
-      setFromBranchOptions(nextBranchOptions);
+    } catch (error) {
+      console.error('Error loading base data:', error);
     }
   }, [getBranches, getCashRegisters, getCurrentUser, getTransactionGroups, isNew]);
 
@@ -158,6 +169,44 @@ export function TransactionsEditView({ isNew = false }: TransactionsEditViewProp
       };
     });
   }, [isNew, myBranchId, transactionType]);
+
+  useEffect(() => {
+    const loadFromBranchCashRegisters = async () => {
+      if (transactionType !== 'transfer') {
+        setFromCashRegisterOptions([]);
+        return;
+      }
+
+      if (!formData.from_branch_id) {
+        setFromCashRegisterOptions([]);
+        setFormData((prev) => ({
+          ...prev,
+          from_cash_register_id: '',
+        }));
+        return;
+      }
+
+      try {
+        const branchCashRegisters = await getCashRegistersByBranch(formData.from_branch_id);
+        const options = branchCashRegisters.map((item) => ({ value: item.id, label: item.name }));
+        setFromCashRegisterOptions(options);
+
+        setFormData((prev) => {
+          const exists = options.some((item) => item.value === prev.from_cash_register_id);
+          if (exists) return prev;
+          return {
+            ...prev,
+            from_cash_register_id: '',
+          };
+        });
+      } catch (error) {
+        console.error('Error loading from branch cash registers:', error);
+        setFromCashRegisterOptions([]);
+      }
+    };
+
+    loadFromBranchCashRegisters();
+  }, [formData.from_branch_id, getCashRegistersByBranch, transactionType]);
 
   useEffect(() => {
     const loadToBranchCashRegisters = async () => {
@@ -239,7 +288,84 @@ export function TransactionsEditView({ isNew = false }: TransactionsEditViewProp
   );
 
   const sections = useMemo(() => {
-    const commonFields = [
+    // Use visible property for dynamic field display - this is required for GenericEditV2
+    // The visible callback receives the current form data and should return boolean
+    const fields = [
+      // Fields with options (selects) - always at the top
+      {
+        key: 'type',
+        label: t('common.type', 'Type'),
+        type: 'select' as const,
+        required: true,
+        options: getTransactionTypeOptions(t),
+        defaultValue: 'income',
+      },
+      {
+        key: 'pay_type',
+        label: t('common.paymentType', 'Pay type'),
+        type: 'select' as const,
+        required: true,
+        options: getPayTypeOptions(t),
+        defaultValue: 'cash',
+      },
+      {
+        key: 'group_transaction_id',
+        label: t('deductions.group', 'Group'),
+        type: 'select' as const,
+        required: true,
+        options: groupOptions,
+        defaultValue: '',
+      },
+      // Income/Expense specific - only visible when type is income or expense
+      {
+        key: 'cash_register_id',
+        label: t('transactions.cashRegister', 'Cash register'),
+        type: 'select' as const,
+        required: true,
+        options: cashRegisterOptions,
+        defaultValue: '',
+        visible: (data: Record<string, any>) => data.type === 'income' || data.type === 'expense',
+      },
+      // Transfer specific fields - only visible when type is transfer
+      // Layout: From branch (left) | To branch (right) on same row
+      {
+        key: 'from_branch_id',
+        label: t('transactions.fromBranch', 'From branch'),
+        type: 'select' as const,
+        required: true,
+        options: fromBranchOptions.length ? fromBranchOptions : branchOptions,
+        defaultValue: '',
+        visible: (data: Record<string, any>) => data.type === 'transfer',
+      },
+      {
+        key: 'to_branch_id',
+        label: t('transactions.toBranch', 'To branch'),
+        type: 'select' as const,
+        required: true,
+        options: branchOptions,
+        defaultValue: '',
+        visible: (data: Record<string, any>) => data.type === 'transfer',
+      },
+      // From cash register (left) | To cash register (right) on same row below
+      {
+        key: 'from_cash_register_id',
+        label: t('transactions.fromCashRegister', 'From cash register'),
+        type: 'select' as const,
+        required: true,
+        options: fromCashRegisterOptions.length ? fromCashRegisterOptions : cashRegisterOptions,
+        defaultValue: '',
+        visible: (data: Record<string, any>) => data.type === 'transfer',
+      },
+      {
+        key: 'to_cash_register_id',
+        label: t('transactions.toCashRegister', 'To cash register'),
+        type: 'select' as const,
+        required: true,
+        options: toCashRegisterOptions,
+        defaultValue: '',
+        visible: (data: Record<string, any>) => data.type === 'transfer',
+      },
+      // Non-select fields - below
       {
         key: 'amount',
         label: t('common.total', 'Amount'),
@@ -255,22 +381,6 @@ export function TransactionsEditView({ isNew = false }: TransactionsEditViewProp
         defaultValue: dayjs().format('YYYY-MM-DD'),
       },
       {
-        key: 'pay_type',
-        label: t('common.paymentType', 'Pay type'),
-        type: 'select' as const,
-        required: true,
-        options: PAY_TYPE_OPTIONS,
-        defaultValue: 'cash',
-      },
-      {
-        key: 'group_transaction_id',
-        label: t('deductions.group', 'Group'),
-        type: 'select' as const,
-        required: true,
-        options: groupOptions,
-        defaultValue: '',
-      },
-      {
         key: 'description',
         label: t('deductions.description', 'Description'),
         type: 'textarea' as const,
@@ -279,81 +389,15 @@ export function TransactionsEditView({ isNew = false }: TransactionsEditViewProp
       },
     ];
 
-    if (transactionType === 'transfer') {
-      return [
-        {
-          id: 'transfer',
-          title: 'Transfer details',
-          columns: 2,
-          fields: [
-            ...commonFields,
-            {
-              key: 'from_branch_id',
-              label: 'From branch',
-              type: 'select' as const,
-              required: true,
-              options: fromBranchOptions.length ? fromBranchOptions : branchOptions,
-              defaultValue: '',
-            },
-            {
-              key: 'to_branch_id',
-              label: 'To branch',
-              type: 'select' as const,
-              required: true,
-              options: branchOptions,
-              defaultValue: '',
-            },
-            {
-              key: 'from_cash_register_id',
-              label: 'From cash register',
-              type: 'select' as const,
-              required: true,
-              options: cashRegisterOptions,
-              defaultValue: '',
-            },
-            {
-              key: 'to_cash_register_id',
-              label: 'To cash register',
-              type: 'select' as const,
-              required: true,
-              options: toCashRegisterOptions,
-              defaultValue: '',
-            },
-          ],
-        },
-      ];
-    }
-
     return [
       {
-        id: 'income-expense',
-        title: 'Transaction details',
+        id: 'transaction-details',
+        title: t('transactions.transactionDetails', 'Transaction Details'),
         columns: 2,
-        fields: [
-          ...commonFields,
-          {
-            key: 'type',
-            label: t('common.type', 'Type'),
-            type: 'select' as const,
-            required: true,
-            options: [
-              { value: 'income', label: 'Income' },
-              { value: 'expense', label: 'Expense' },
-            ],
-            defaultValue: transactionType,
-          },
-          {
-            key: 'cash_register_id',
-            label: 'Cash register',
-            type: 'select' as const,
-            required: true,
-            options: cashRegisterOptions,
-            defaultValue: '',
-          },
-        ],
+        fields,
       },
     ];
-  }, [branchOptions, cashRegisterOptions, fromBranchOptions, groupOptions, t, toCashRegisterOptions, transactionType]);
+  }, [branchOptions, cashRegisterOptions, fromBranchOptions, fromCashRegisterOptions, groupOptions, t, toCashRegisterOptions, transactionType]);
 
   const config = useMemo(
     () => ({

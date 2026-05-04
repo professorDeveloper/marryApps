@@ -20,6 +20,7 @@ import { Iconify } from 'src/components/iconify';
 
 import { DashboardContent } from 'src/layouts/dashboard';
 import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
+import { usePaginationRows } from 'src/hooks/use-pagination-rows';
 
 import { TABLE_COLUMN_ORDER, TABLE_COLUMN_VISIBILITY, TABLE_COLUMN_WIDTHS, MODIFIERS_TABLE_PERSIST_KEY } from './constants';
 import { RouterLink } from 'src/routes/components';
@@ -39,9 +40,10 @@ export function ModifierListView() {
   const [modifierToDelete, setModifierToDelete] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+  const { rowsPerPage } = usePaginationRows();
   const [paginationModel, setPaginationModel] = useState({
     page: 0,
-    pageSize: 20,
+    pageSize: rowsPerPage,
   });
 
   // Debounce quick filter input before hitting search API
