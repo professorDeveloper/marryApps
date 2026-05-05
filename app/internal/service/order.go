@@ -2440,11 +2440,6 @@ func (s *OrderS) consumeItemStockWithModifiers(ctx context.Context, q *pg.Querie
 		return fmt.Errorf("failed to get order item: %w", err)
 	}
 
-	order, err := q.GetOrderByID(ctx, item.OrderID)
-	if err != nil {
-		return fmt.Errorf("failed to get order: %w", err)
-	}
-
 	goodID := item.GoodID
 	quantity := item.Quantity
 	orderID := item.OrderID
@@ -2506,11 +2501,21 @@ func (s *OrderS) consumeItemStockWithModifiers(ctx context.Context, q *pg.Querie
 		return fmt.Errorf("no active storage configured for good %s", goodID)
 	}
 
-	if err := assertOrderStorageMutationAllowed(ctx, q, order, storageID.Bytes, "order item"); err != nil {
-		return err
+	effectiveAt := pgtype.Timestamptz{
+		Time:  time.Now().UTC(),
+		Valid: true,
 	}
 
-	effectiveAt := orderMutationEffectiveAt(order)
+	if item.CreatedAt.Valid {
+		effectiveAt = pgtype.Timestamptz{
+			Time:  item.CreatedAt.Time.UTC(),
+			Valid: true,
+		}
+	}
+
+	if err := assertCanMutateAfterInventory(ctx, q, storageID.Bytes, effectiveAt.Time, "order item"); err != nil {
+		return err
+	}
 	touched := make(map[orderTouchedKey]struct{})
 
 	// Process all usages (base good + modifiers)
@@ -2562,7 +2567,7 @@ func (s *OrderS) consumeItemStockWithModifiers(ctx context.Context, q *pg.Querie
 				PricePerUnit: price,
 				SourceType:   &sourceType,
 				SourceID:     &srcID,
-				EffectiveAt:  effectiveAt,
+				EffectiveAt:  &effectiveAt,
 			}); err != nil {
 				return fmt.Errorf("failed to insert order stock movement: %w", err)
 			}

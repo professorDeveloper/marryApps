@@ -1688,6 +1688,7 @@ func (h *Handler) CreateOrderItem(c echo.Context) error {
 			http.StatusBadRequest,
 		))
 	}
+
 	if _, err := uuid.Parse(req.OrderID); err != nil {
 		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
 			"invalid order_id format",
@@ -1695,6 +1696,7 @@ func (h *Handler) CreateOrderItem(c echo.Context) error {
 			http.StatusBadRequest,
 		))
 	}
+
 	if len(req.Items) == 0 {
 		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
 			"at least one item is required",
@@ -1705,11 +1707,30 @@ func (h *Handler) CreateOrderItem(c echo.Context) error {
 
 	items, err := h.service.Order().CreateOrderItems(c.Request().Context(), req)
 	if err != nil {
-		log.Printf("CreateOrderItems failed: %v", err)
-		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
-			"failed to create order items",
+		errText := strings.ToLower(err.Error())
+
+		status := http.StatusInternalServerError
+		message := "failed to create order items"
+
+		switch {
+		case strings.Contains(errText, "locked by active inventory"):
+			status = http.StatusConflict
+			message = "Aktiv inventarizatsiya sababli buyurtma elementi qo‘shib bo‘lmaydi"
+
+		case strings.Contains(errText, "not found"):
+			status = http.StatusNotFound
+			message = "requested resource not found"
+
+		case strings.Contains(errText, "invalid") ||
+			strings.Contains(errText, "required") ||
+			strings.Contains(errText, "must be greater than 0"):
+			status = http.StatusBadRequest
+		}
+
+		return c.JSON(status, model.NewErrorResponse(
+			message,
 			err.Error(),
-			http.StatusInternalServerError,
+			status,
 		))
 	}
 
