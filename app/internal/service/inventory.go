@@ -134,6 +134,16 @@ func (s *InventoryS) getTenantReadQueries(ctx context.Context) (*pg.Queries, con
 //  Create
 // ─────────────────────────────────────────────
 
+func validateCountedAtNotFuture(countedAt time.Time) error {
+	now := time.Now().UTC()
+
+	if countedAt.UTC().After(now.Add(2 * time.Minute)) {
+		return fmt.Errorf("counted_at cannot be in the future")
+	}
+
+	return nil
+}
+
 func (s *InventoryS) CreateInventory(ctx context.Context, req *model.CreateInventoryRequest) (*model.InventoryResponse, error) {
 	id := uuid.New()
 
@@ -150,6 +160,9 @@ func (s *InventoryS) CreateInventory(ctx context.Context, req *model.CreateInven
 	countedAt, err := time.Parse(time.RFC3339, req.CountedAt)
 	if err != nil {
 		return nil, fmt.Errorf("invalid counted_at: %w", err)
+	}
+	if err := validateCountedAtNotFuture(countedAt); err != nil {
+		return nil, err
 	}
 
 	descriptionI18n := pgtype.UUID{Valid: false}
@@ -480,6 +493,12 @@ func (s *InventoryS) UpdateInventory(ctx context.Context, id string, req *model.
 				tx.Rollback(ctx)
 			}
 			return nil, fmt.Errorf("invalid counted_at: %w", err)
+		}
+		if err := validateCountedAtNotFuture(ca); err != nil {
+			if ownsTx {
+				tx.Rollback(ctx)
+			}
+			return nil, err
 		}
 		finalCountedAt = ca
 	}

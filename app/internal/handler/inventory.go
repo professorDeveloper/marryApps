@@ -38,8 +38,14 @@ func (h *Handler) CreateInventory(c echo.Context) error {
 
 	resp, err := h.service.Inventory().CreateInventory(c.Request().Context(), &req)
 	if err != nil {
-		if strings.Contains(err.Error(), "invalid counted_at") || strings.Contains(err.Error(), "invalid date") {
-			return c.JSON(http.StatusBadRequest, model.NewErrorResponse("Invalid request data", err.Error(), http.StatusBadRequest))
+		if strings.Contains(err.Error(), "invalid counted_at") ||
+			strings.Contains(err.Error(), "invalid date") ||
+			strings.Contains(err.Error(), "counted_at cannot be in the future") {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"Invalid request data",
+				err.Error(),
+				http.StatusBadRequest,
+			))
 		}
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
 	}
@@ -70,8 +76,14 @@ func (h *Handler) CreateInventoryBatch(c echo.Context) error {
 	}
 	resp, err := h.service.Inventory().CreateInventoryBatch(c.Request().Context(), &req)
 	if err != nil {
-		if strings.Contains(err.Error(), "invalid counted_at") || strings.Contains(err.Error(), "invalid date") {
-			return c.JSON(http.StatusBadRequest, model.NewErrorResponse("Invalid request data", err.Error(), http.StatusBadRequest))
+		if strings.Contains(err.Error(), "invalid counted_at") ||
+			strings.Contains(err.Error(), "invalid date") ||
+			strings.Contains(err.Error(), "counted_at cannot be in the future") {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"Invalid request data",
+				err.Error(),
+				http.StatusBadRequest,
+			))
 		}
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
 	}
@@ -660,8 +672,15 @@ func (h *Handler) UpdateInventory(c echo.Context) error {
 
 	resp, err := h.service.Inventory().UpdateInventory(c.Request().Context(), id, &req)
 	if err != nil {
-		if strings.Contains(err.Error(), "invalid counted_at") || strings.Contains(err.Error(), "invalid date") || strings.Contains(err.Error(), "cannot change counted_at") {
-			return c.JSON(http.StatusBadRequest, model.NewErrorResponse("Invalid request data", err.Error(), http.StatusBadRequest))
+		if strings.Contains(err.Error(), "invalid counted_at") ||
+			strings.Contains(err.Error(), "invalid date") ||
+			strings.Contains(err.Error(), "cannot change counted_at") ||
+			strings.Contains(err.Error(), "counted_at cannot be in the future") {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"Invalid request data",
+				err.Error(),
+				http.StatusBadRequest,
+			))
 		}
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
 	}
