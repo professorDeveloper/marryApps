@@ -333,7 +333,20 @@
     "nameEn": "Nomi (inglizcha)",
     "nameRu": "Nomi (ruscha)",
     "som": "so'm",
-    "min": "daqiqa"
+    "min": "daqiqa",
+    "availableModifiers": "Mavjud modifikatorlar",
+    "addedModifiers": "Qo'shilgan modifikatorlar",
+    "noModifiersFound": "Modifikatorlar topilmadi",
+    "noModifiersAdded": "Modifikatorlar qo'shilmagan",
+    "totalModifiers": "Jami",
+    "addSelected": "Tanlanganlarni qo'shish",
+    "removeAll": "Hammasini olib tashlash",
+    "items": "Elementlar",
+    "addedItems": "Qo'shilgan elementlar",
+    "availableItems": "Mavjud elementlar",
+    "pricePerUnit": "Birlik narxi",
+    "totalPrice": "Jami narx",
+    "summaryItems": "Elementlar"
   },
   "modifiers": {
     "title": "Modifikatorlar",

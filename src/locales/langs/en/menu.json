@@ -347,7 +347,20 @@
     "cancel": "Cancel",
     "confirm": "Confirm",
     "som": "sum",
-    "min": "min"
+    "min": "min",
+    "availableModifiers": "Available Modifiers",
+    "addedModifiers": "Added Modifiers",
+    "noModifiersFound": "No modifiers found",
+    "noModifiersAdded": "No modifiers added",
+    "totalModifiers": "Total",
+    "addSelected": "Add Selected",
+    "removeAll": "Remove All",
+    "items": "Items",
+    "addedItems": "Added Items",
+    "availableItems": "Available Items",
+    "pricePerUnit": "Price/Unit",
+    "totalPrice": "Total",
+    "summaryItems": "Items"
   },
   "modifiers": {
     "title": "Modifiers",

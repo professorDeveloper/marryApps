@@ -327,7 +327,20 @@
     "nameRu": "Название (русский)",
     "nameUz": "Название (узбекский)",
     "som": "сум",
-    "min": "минута"
+    "min": "минута",
+    "availableModifiers": "Доступные модификаторы",
+    "addedModifiers": "Добавленные модификаторы",
+    "noModifiersFound": "Модификаторы не найдены",
+    "noModifiersAdded": "Модификаторы не добавлены",
+    "totalModifiers": "Всего",
+    "addSelected": "Добавить выбранные",
+    "removeAll": "Удалить все",
+    "items": "Элементы",
+    "addedItems": "Добавленные элементы",
+    "availableItems": "Доступные элементы",
+    "pricePerUnit": "Цена за единицу",
+    "totalPrice": "Общая цена",
+    "summaryItems": "Элементы"
   },
   "modifiers": {
     "title": "Модификаторы",

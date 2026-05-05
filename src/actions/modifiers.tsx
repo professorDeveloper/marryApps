@@ -50,18 +50,16 @@ export function useGetModifiers(
   options?: { limit?: number; offset?: number; expand?: string }
 ) {
   const normalizedQuery = searchQuery?.trim() || '';
-  const expand = options?.expand || 'category';
+  const expand = options?.expand;
 
   const params = {
     ...(normalizedQuery ? { q: normalizedQuery } : {}),
     ...(typeof options?.limit === 'number' ? { limit: options?.limit } : {}),
     ...(typeof options?.offset === 'number' ? { offset: options?.offset } : {}),
-    expand,
+    ...(expand ? { expand } : {}),
   };
 
-  const swrKey = normalizedQuery
-    ? [endpoints.modifier.search, { params }]
-    : [endpoints.modifier.list, { params }];
+  const swrKey = [endpoints.modifier.list, { params }];
 
   const { data, isLoading, error, isValidating } = useSWR<
     BackendResponse<IModifierItem[]> | IModifierItem[]

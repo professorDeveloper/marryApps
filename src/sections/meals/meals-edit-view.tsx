@@ -25,9 +25,10 @@ import { useGetCategories } from 'src/actions/categories';
 import { GeneralInformation } from 'src/sections/warehouse/utils/components/GeneralInformation';
 
 import { MealRelatedSection } from './components/MealRelatedSection';
-import { MealModifiersSection } from './components/MealModifiersSection';
+import { MealModifiersSection, type MealModifiersApi } from './components/MealModifiersSection';
 import { MealGeneralInformation } from './components/MealGeneralInformation';
 import { MealItemPicker, type MealItemPickerApi } from './components/MealItemPicker';
+import { useGetGoodModifiers, useSyncGoodModifiers } from 'src/actions/good-modifiers';
 
 export interface MealEditViewProps {
     isNew?: boolean;
@@ -47,6 +48,8 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
     const { createMealWithCalculations } = useCreateMealWithCalculations();
     const { updateMealWithCalculations } = useUpdateMealWithCalculations();
     const { createTranslation, updateTranslation } = useTranslationsAPI();
+    const { syncModifiers } = useSyncGoodModifiers();
+    const { modifiers: goodModifiers, modifiersLoading } = useGetGoodModifiers(isNew ? undefined : mealId || undefined);
 
     // ── General info state ─────────────────────────────────────────────────
     const [name, setName] = useState('');
@@ -71,6 +74,10 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
 
     // ── Section refs ──────────────────────────────────────────────────────
     const mealItemsApiRef = useRef<MealItemPickerApi | null>(null);
+    const modifierPickerApiRef = useRef<MealModifiersApi | null>(null);
+
+    // ── Track initial modifiers for comparison ────────────────────────────
+    const [initialModifierIds, setInitialModifierIds] = useState<string[]>([]);
 
     // ── Hydrate general info from loaded meal ─────────────────────────────
     useEffect(() => {
@@ -106,6 +113,20 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
             }));
         mealItemsApiRef.current?.restoreFromPersisted(ingredientCalcs, compoundCalcs);
     }, [mealWithCalculations]);
+
+    // ── Hydrate modifiers from loaded good modifiers ──────────────────────
+    useEffect(() => {
+        if (!goodModifiers || goodModifiers.length === 0) {
+            setInitialModifierIds([]);
+            modifierPickerApiRef.current?.restoreFromPersisted([]);
+            return;
+        }
+        // Extract modifier IDs from the response
+        // The response could be either IGoodModifier[] or IModifierItem[]
+        const modifierIds = goodModifiers.map((m: any) => m.modifier_id || m.id);
+        setInitialModifierIds(modifierIds);
+        modifierPickerApiRef.current?.restoreFromPersisted(modifierIds);
+    }, [goodModifiers]);
 
     // ── Set default category when categories are loaded ───────────────────
     useEffect(() => {
@@ -210,6 +231,9 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
                     compound_calculations: [],
                 };
 
+            // Get current modifier IDs from the picker
+            const currentModifierIds = modifierPickerApiRef.current?.getModifierIds() ?? [];
+
             const goodPayload = {
                 name,
                 name_i18n: resolvedNameI18n,
@@ -222,18 +246,27 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
                 cook_time: cookTime ? Number(cookTime) : 0,
             };
 
+            let savedMealId = mealId;
+
             if (isNew) {
-                await createMealWithCalculations({
+                const result = await createMealWithCalculations({
                     good: goodPayload,
                     ingredient_calculations: ingredientCalculations,
                     compound_calculations: compoundCalculations,
                 });
+                // Extract the saved meal ID from the result for attaching modifiers
+                savedMealId = result?.good?.id || result?.id;
             } else if (mealId) {
                 await updateMealWithCalculations(mealId, {
                     good: goodPayload,
                     ingredient_calculations: ingredientCalculations,
                     compound_calculations: compoundCalculations,
                 });
+            }
+
+            // Sync modifiers after saving the meal
+            if (savedMealId) {
+                await syncModifiers(savedMealId, currentModifierIds, isNew ? [] : initialModifierIds);
             }
 
             router.push(paths.menu.meals.root);
@@ -256,10 +289,12 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
         descriptionI18n,
         isNew,
         mealId,
+        initialModifierIds,
         createMealWithCalculations,
         updateMealWithCalculations,
         createTranslation,
         updateTranslation,
+        syncModifiers,
         router,
         t,
     ]);
@@ -310,6 +345,7 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
                             justifyContent: 'center',
                             zIndex: 2,
                             opacity: 0.85,
+                            
                         }}
                     >
                         <CircularProgress />
@@ -339,18 +375,7 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
                     onToggle={handleInfoToggle}
                 />
 
-                {/* Items Accordion */}
-                <GeneralInformation
-                    title={t('mealsProducts.items', 'Items')}
-                    isOpen={isMealItemsOpen}
-                    onToggle={handleMealItemsToggle}
-                    disabled={sectionsDisabled}
-                    summaryValues={[
-                        `${mealItemsSummary.ingredientCount} ${t('mealsProducts.filterIngredients', 'Ingredients')}`,
-                        `${mealItemsSummary.compoundCount} ${t('mealsProducts.filterSemiFinished', 'Compounds')}`,
-                        `${t('total', 'Total')}: ${mealItemsSummary.totalCost}`
-                    ]}
-                >
+       
                     {/* Tabs inside accordion */}
                     <Box sx={{ width: '100%' }}>
                         <Tabs
@@ -395,7 +420,16 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
                         )}
                         {activeTab === 1 && (
                             <Box sx={{ height: '100%' }}>
-                                {React.createElement(MealModifiersSection)}
+                                <MealModifiersSection
+                                    apiRef={modifierPickerApiRef}
+                                    isVisible={isMealItemsOpen && activeTab === 1}
+                                    metaFieldsOpen={isInfoOpen}
+                                    onCancel={() => {}}
+                                    onSave={() => {}}
+                                    cancelDisabled
+                                    saveDisabled
+                                    saveLabel={saveLabel}
+                                />
                             </Box>
                         )}
                         {activeTab === 2 && (
@@ -404,7 +438,7 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
                             </Box>
                         )}
                     </Box>
-                </GeneralInformation>
+                {/* </GeneralInformation> */}
 
                 {/* Action buttons - outside accordion */}
                 <Stack direction="row" spacing={1} justifyContent="flex-end">

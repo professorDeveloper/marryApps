@@ -320,7 +320,20 @@
     "nameEn": "Номи (инглизча)",
     "nameRu": "Номи (русча)",
     "som": "сўм",
-    "min": "дақиқа"
+    "min": "дақиқа",
+    "availableModifiers": "Мавжуд модификаторлар",
+    "addedModifiers": "Қўшилган модификаторлар",
+    "noModifiersFound": "Модификаторлар топилмади",
+    "noModifiersAdded": "Модификаторлар қўшилмаган",
+    "totalModifiers": "Жами",
+    "addSelected": "Танланганларни қўшиш",
+    "removeAll": "Ҳаммасини олиб ташлаш",
+    "items": "Элементлар",
+    "addedItems": "Қўшилган элементлар",
+    "availableItems": "Мавжуд элементлар",
+    "pricePerUnit": "Бирлик нархи",
+    "totalPrice": "Жами нарх",
+    "summaryItems": "Элементлар"
   },
   "modifiers": {
     "title": "Модификаторлар",

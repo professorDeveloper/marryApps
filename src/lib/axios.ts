@@ -265,6 +265,9 @@ export const endpoints = {
     calculations: (goodId: string) => `/api/v1/goods/calculations?good_id=${goodId}`,
     createCalculation: '/api/v1/goods/calculations',
     deleteCalculation: (calculationId: string) => `/api/v1/goods/calculations/${calculationId}`,
+    modifiers: (goodId: string) => `/api/v1/goods/${goodId}/modifiers`,
+    attachModifier: (goodId: string) => `/api/v1/goods/${goodId}/modifiers`,
+    detachModifier: (goodId: string, modifierId: string) => `/api/v1/goods/${goodId}/modifiers/${modifierId}`,
   },
   media: {
     uploadImage: '/api/v1/media/image',
@@ -466,7 +469,6 @@ export const endpoints = {
   },
   modifier: {
     list: '/api/v1/modifiers',
-    search: '/api/v1/modifiers/search',
     details: (id: string) => `/api/v1/modifiers/${id}`,
     create: '/api/v1/modifiers',
     update: (id: string) => `/api/v1/modifiers/${id}`,

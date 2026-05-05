@@ -2,7 +2,7 @@
 
 > **Module:** core  
 > **Base URL:** https://api.maryai.uz/  
-> **Last Updated:** 2026-05-03T04:40:13.564Z
+> **Last Updated:** 2026-05-04T12:38:52.475Z
 
 ---
 
@@ -7662,6 +7662,67 @@
 ```
 
 - **409**: Conflict
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorResponse"
+}
+```
+
+
+## /api/v1/orders/{id}/transfer
+
+### POST /api/v1/orders/{id}/transfer 🔒
+
+**Summary:** Transfer order to different table
+
+**Description:** Transfer an order from its current table to a target table
+
+**Parameters:**
+
+| Name | Location | Type | Required | Description |
+|------|----------|------|----------|-------------|
+| id | path | string | Yes | Order ID |
+| request | body | object | Yes | Transfer request with target_table_id |
+
+**Request Body:**
+
+```json
+{
+  "$ref": "#/definitions/model.OrderTransferRequest"
+}
+```
+
+**Responses:**
+
+- **200**: OK
+  ```json
+{
+  "$ref": "#/definitions/model.OrderResponse"
+}
+```
+
+- **400**: Bad Request
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorResponse"
+}
+```
+
+- **404**: Not Found
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorResponse"
+}
+```
+
+- **409**: Conflict
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorResponse"
+}
+```
+
+- **500**: Internal Server Error
   ```json
 {
   "$ref": "#/definitions/model.ErrorResponse"
