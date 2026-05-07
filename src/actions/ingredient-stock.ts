@@ -5,6 +5,7 @@ import type {
     IIngredientStockResponse,
 } from 'src/types/ingredient-stock';
 import type { MetadataRecord } from 'src/types/metadata';
+import type { IIngredientItem } from 'src/types/ingredients';
 
 import useSWR, { mutate } from 'swr';
 import { useMemo, useCallback } from 'react';
@@ -12,6 +13,7 @@ import { useMemo, useCallback } from 'react';
 import { putter, fetcher, deleter, endpoints } from 'src/lib/axios';
 import { useMetadata } from 'src/hooks/use-metadata';
 import { MetadataEntity } from 'src/types/metadata';
+import { useGetIngredients } from 'src/actions/ingredients';
 
 import { toast } from 'src/components/snackbar';
 
@@ -26,11 +28,11 @@ const swrOptions: SWRConfiguration = {
  */
 function enrichIngredientStocks(
     stocks: IIngredientStock[],
-    ingredients: MetadataRecord[],
+    ingredients: IIngredientItem[],
     storages: MetadataRecord[]
 ): IIngredientStock[] {
     const ingredientMap = new Map(
-        ingredients?.map((ing: MetadataRecord) => [ing.id, ing.name]) || []
+        ingredients?.map((ing: IIngredientItem) => [ing.id, ing]) || []
     );
 
     const storageMap = new Map(
@@ -38,13 +40,15 @@ function enrichIngredientStocks(
     );
 
     return stocks.map((stock) => {
-        const ingredientName = ingredientMap.get(stock.ingredient_id);
+        const ingredient = ingredientMap.get(stock.ingredient_id);
         const storageName = storageMap.get(stock.storage_id);
         
         return {
             ...stock,
-            ingredient_name: ingredientName || stock.ingredient_id,
+            ingredient_name: ingredient?.name || stock.ingredient_id,
             storage_name: storageName || stock.storage_id,
+            measurement: ingredient?.measurement,
+            price_per_unit: ingredient?.price_per_unit,
         };
     });
 }
@@ -56,8 +60,9 @@ export function useGetIngredientStocks(options?: { includeIngredientMeta?: boole
     const url = endpoints.ingredientStock.list;
     const includeIngredientMeta = options?.includeIngredientMeta !== false;
     const { data: metadata, isLoading: metadataLoading } = useMetadata(
-        includeIngredientMeta ? [MetadataEntity.INGREDIENTS, MetadataEntity.STORAGES] : []
+        includeIngredientMeta ? [MetadataEntity.STORAGES] : []
     );
+    const { ingredients, ingredientsLoading } = useGetIngredients();
 
     const { data, isLoading, error, isValidating } = useSWR<IIngredientStockResponse>(
         url,
@@ -69,20 +74,20 @@ export function useGetIngredientStocks(options?: { includeIngredientMeta?: boole
         const stocks = Array.isArray(data?.data) ? data?.data : [];
         return enrichIngredientStocks(
             stocks,
-            metadata?.ingredients || [],
+            ingredients || [],
             metadata?.storages || []
         );
-    }, [data?.data, metadata?.ingredients, metadata?.storages]);
+    }, [data?.data, ingredients, metadata?.storages]);
 
     const memoizedValue = useMemo(
         () => ({
             stocks: enrichedStocks,
-            stocksLoading: isLoading || metadataLoading,
+            stocksLoading: isLoading || metadataLoading || ingredientsLoading,
             stocksError: error,
             stocksValidating: isValidating,
-            stocksEmpty: !isLoading && !metadataLoading && !isValidating && !enrichedStocks.length,
+            stocksEmpty: !isLoading && !metadataLoading && !ingredientsLoading && !isValidating && !enrichedStocks.length,
         }),
-        [enrichedStocks, error, isLoading, isValidating, metadataLoading]
+        [enrichedStocks, error, isLoading, isValidating, metadataLoading, ingredientsLoading]
     );
 
     return memoizedValue;
@@ -126,31 +131,31 @@ export function useGetIngredientStocksPage(params?: {
         { ...swrOptions }
     );
 
-    // Use metadata hook to get all ingredients and storages without pagination
+    // Use metadata hook for storages and ingredients hook for full ingredient data
     const { data: metadata, isLoading: metadataLoading } = useMetadata([
-        MetadataEntity.INGREDIENTS,
         MetadataEntity.STORAGES,
     ]);
+    const { ingredients, ingredientsLoading } = useGetIngredients();
 
     const enrichedStocks = useMemo(() => {
         const stocks = Array.isArray(data?.data) ? data?.data : [];
         return enrichIngredientStocks(
             stocks,
-            metadata?.ingredients || [],
+            ingredients || [],
             metadata?.storages || []
         );
-    }, [data?.data, metadata?.ingredients, metadata?.storages]);
+    }, [data?.data, ingredients, metadata?.storages]);
 
     const memoizedValue = useMemo(
         () => ({
             stocks: enrichedStocks,
-            stocksLoading: isLoading || metadataLoading,
+            stocksLoading: isLoading || metadataLoading || ingredientsLoading,
             stocksError: error,
             stocksValidating: isValidating,
-            stocksEmpty: !isLoading && !metadataLoading && !isValidating && !enrichedStocks.length,
+            stocksEmpty: !isLoading && !metadataLoading && !ingredientsLoading && !isValidating && !enrichedStocks.length,
             pagination: data?.pagination,
         }),
-        [enrichedStocks, data?.pagination, error, isLoading, isValidating, metadataLoading]
+        [enrichedStocks, data?.pagination, error, isLoading, isValidating, metadataLoading, ingredientsLoading]
     );
 
     return memoizedValue;
@@ -162,8 +167,9 @@ export function useGetIngredientStocksPage(params?: {
 export function useGetIngredientStock(stockId: string) {
     const url = stockId ? endpoints.ingredientStock.details(stockId) : '';
     const { data: metadata, isLoading: metadataLoading } = useMetadata(
-        stockId ? [MetadataEntity.INGREDIENTS, MetadataEntity.STORAGES] : []
+        stockId ? [MetadataEntity.STORAGES] : []
     );
+    const { ingredients, ingredientsLoading } = useGetIngredients();
 
     const { data, isLoading, error, isValidating } = useSWR<IIngredientStockResponse>(
         url,
@@ -177,19 +183,19 @@ export function useGetIngredientStock(stockId: string) {
         if (!stock) return null;
         return enrichIngredientStocks(
             [stock],
-            metadata?.ingredients || [],
+            ingredients || [],
             metadata?.storages || []
         )[0];
-    }, [data?.data, metadata?.ingredients, metadata?.storages]);
+    }, [data?.data, ingredients, metadata?.storages]);
 
     const memoizedValue = useMemo(
         () => ({
             stock: enrichedData,
-            stockLoading: isLoading || metadataLoading,
+            stockLoading: isLoading || metadataLoading || ingredientsLoading,
             stockError: error,
             stockValidating: isValidating,
         }),
-        [enrichedData, error, isLoading, isValidating, metadataLoading]
+        [enrichedData, error, isLoading, isValidating, metadataLoading, ingredientsLoading]
     );
 
     return memoizedValue;

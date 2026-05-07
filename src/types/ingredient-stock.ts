@@ -9,6 +9,7 @@ export interface IIngredientStock {
     ingredient_name?: string;
     storage_name?: string;
     measurement?: string;
+    price_per_unit?: string;
 }
 
 export interface IIngredientStockFormData {
