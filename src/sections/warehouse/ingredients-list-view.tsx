@@ -64,8 +64,8 @@ export function IngredientListView() {
             offset: paginationModel.page * paginationModel.pageSize,
         }
     );
+    const { data: metadata } = useMetadata([MetadataEntity.INGREDIENT_GROUPS]);
     const { deleteIngredient } = useDeleteIngredient();
-    const { data: metadata, isLoading: metadataLoading } = useMetadata([MetadataEntity.INGREDIENT_GROUPS]);
     const [viewModalOpen, setViewModalOpen] = useState(false);
     const [selectedIngredient, setSelectedIngredient] = useState<IIngredientItem | null>(null);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
