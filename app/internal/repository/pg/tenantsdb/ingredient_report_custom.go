@@ -131,9 +131,9 @@ first_movement AS (
 		m.price_per_unit AS begin_price
 	FROM active_movements m
 	JOIN params p ON p.storage_id = m.storage_id
-	WHERE COALESCE(m.effective_at, m.created_at) >= p.start_ts AND COALESCE(m.effective_at, m.created_at) < p.end_ts
+	WHERE COALESCE(m.effective_at, m.created_at) <= p.start_ts
 		AND (p.ingredient_id IS NULL OR m.ingredient_id = p.ingredient_id)
-	ORDER BY m.ingredient_id, COALESCE(m.effective_at, m.created_at) ASC, m.id ASC
+	ORDER BY m.ingredient_id, COALESCE(m.effective_at, m.created_at) DESC, m.id DESC
 ),
 last_movement AS (
 	SELECT DISTINCT ON (m.ingredient_id)
@@ -141,7 +141,7 @@ last_movement AS (
 		m.price_per_unit AS end_price
 	FROM active_movements m
 	JOIN params p ON p.storage_id = m.storage_id
-	WHERE COALESCE(m.effective_at, m.created_at) >= p.start_ts AND COALESCE(m.effective_at, m.created_at) < p.end_ts
+	WHERE COALESCE(m.effective_at, m.created_at) <= p.end_ts
 		AND (p.ingredient_id IS NULL OR m.ingredient_id = p.ingredient_id)
 	ORDER BY m.ingredient_id, COALESCE(m.effective_at, m.created_at) DESC, m.id DESC
 )
@@ -391,10 +391,9 @@ first_movement AS (
 		m.price_per_unit AS begin_price
 	FROM active_movements m
 	JOIN params p ON m.storage_id = p.storage_id
-	WHERE COALESCE(m.effective_at, m.created_at) > '-infinity'::timestamptz
-		AND COALESCE(m.effective_at, m.created_at) <= p.end_ts
+	WHERE COALESCE(m.effective_at, m.created_at) <= p.end_ts
 		AND (p.ingredient_id IS NULL OR m.ingredient_id = p.ingredient_id)
-	ORDER BY m.ingredient_id, COALESCE(m.effective_at, m.created_at) ASC, m.id ASC
+	ORDER BY m.ingredient_id, COALESCE(m.effective_at, m.created_at) DESC, m.id DESC
 ),
 last_movement AS (
 	SELECT DISTINCT ON (m.ingredient_id)
@@ -402,8 +401,7 @@ last_movement AS (
 		m.price_per_unit AS end_price
 	FROM active_movements m
 	JOIN params p ON m.storage_id = p.storage_id
-	WHERE COALESCE(m.effective_at, m.created_at) > '-infinity'::timestamptz
-		AND COALESCE(m.effective_at, m.created_at) <= p.end_ts
+	WHERE COALESCE(m.effective_at, m.created_at) <= p.end_ts
 		AND (p.ingredient_id IS NULL OR m.ingredient_id = p.ingredient_id)
 	ORDER BY m.ingredient_id, COALESCE(m.effective_at, m.created_at) DESC, m.id DESC
 )
