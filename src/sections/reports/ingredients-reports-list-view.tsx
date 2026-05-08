@@ -286,7 +286,7 @@ export function IngredientReportsListView() {
             },
             {
                 key: 'begin_price',
-                label: t('ingredientReports.beginPrice') || 'Begin Price',
+                label: t('ingredientReports.startingPrice') || 'Starting Price',
                 sortable: true,
                 width: '1fr',
                 align: 'left' as const,
@@ -355,7 +355,7 @@ export function IngredientReportsListView() {
             },
             {
                 key: 'end_price',
-                label: t('ingredientReports.endPrice') || 'End Price',
+                label: t('ingredientReports.endingPrice') || 'Ending Price',
                 sortable: true,
                 width: '1fr',
                 align: 'left' as const,
