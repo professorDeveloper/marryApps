@@ -20,6 +20,9 @@ type IngredientReportRow struct {
 	OutQty      pgtype.Numeric `json:"out"`
 	ShortageQty pgtype.Numeric `json:"shortage"`
 	SurplusQty  pgtype.Numeric `json:"surplus"`
+
+	BeginPrice pgtype.Numeric `json:"begin_price"`
+	EndPrice   pgtype.Numeric `json:"end_price"`
 }
 
 type GetIngredientReportParams struct {
@@ -121,6 +124,26 @@ sums AS (
 	WHERE COALESCE(m.effective_at, m.created_at) >= p.start_ts AND COALESCE(m.effective_at, m.created_at) < p.end_ts
 		AND (p.ingredient_id IS NULL OR m.ingredient_id = p.ingredient_id)
 	GROUP BY m.ingredient_id
+),
+first_movement AS (
+	SELECT DISTINCT ON (m.ingredient_id)
+		m.ingredient_id,
+		m.price_per_unit AS begin_price
+	FROM active_movements m
+	JOIN params p ON p.storage_id = m.storage_id
+	WHERE COALESCE(m.effective_at, m.created_at) >= p.start_ts AND COALESCE(m.effective_at, m.created_at) < p.end_ts
+		AND (p.ingredient_id IS NULL OR m.ingredient_id = p.ingredient_id)
+	ORDER BY m.ingredient_id, COALESCE(m.effective_at, m.created_at) ASC, m.id ASC
+),
+last_movement AS (
+	SELECT DISTINCT ON (m.ingredient_id)
+		m.ingredient_id,
+		m.price_per_unit AS end_price
+	FROM active_movements m
+	JOIN params p ON p.storage_id = m.storage_id
+	WHERE COALESCE(m.effective_at, m.created_at) >= p.start_ts AND COALESCE(m.effective_at, m.created_at) < p.end_ts
+		AND (p.ingredient_id IS NULL OR m.ingredient_id = p.ingredient_id)
+	ORDER BY m.ingredient_id, COALESCE(m.effective_at, m.created_at) DESC, m.id DESC
 )
 SELECT
 	i.id AS ingredient_id,
@@ -133,7 +156,9 @@ SELECT
 	COALESCE(s.in_qty, 0)::numeric(18,6) AS in_qty,
 	COALESCE(s.out_qty, 0)::numeric(18,6) AS out_qty,
 	COALESCE(s.shortage_qty, 0)::numeric(18,6) AS shortage_qty,
-	COALESCE(s.surplus_qty, 0)::numeric(18,6) AS surplus_qty
+	COALESCE(s.surplus_qty, 0)::numeric(18,6) AS surplus_qty,
+	fm.begin_price,
+	lm.end_price
 FROM base_ingredients bi
 JOIN ingredients i ON i.id = bi.ingredient_id AND i.deleted_at = 0
 	AND (NULLIF($7::text, '') IS NULL OR i.measurement::text = $7::text)
@@ -141,6 +166,8 @@ JOIN ingredients i ON i.id = bi.ingredient_id AND i.deleted_at = 0
 JOIN begin_qty b ON b.ingredient_id = bi.ingredient_id
 JOIN end_qty e ON e.ingredient_id = bi.ingredient_id
 LEFT JOIN sums s ON s.ingredient_id = bi.ingredient_id
+LEFT JOIN first_movement fm ON fm.ingredient_id = bi.ingredient_id
+LEFT JOIN last_movement lm ON lm.ingredient_id = bi.ingredient_id
 ORDER BY
   CASE
     WHEN $9::text = 'begin_quantity' AND $10::text = 'asc' THEN b.begin_qty
@@ -218,6 +245,8 @@ LIMIT $5 OFFSET $6
 			&r.OutQty,
 			&r.ShortageQty,
 			&r.SurplusQty,
+			&r.BeginPrice,
+			&r.EndPrice,
 		); err != nil {
 			return nil, err
 		}
@@ -340,7 +369,7 @@ anchors AS (
 	FROM base_ingredients bi
 	LEFT JOIN last_inventory_event lie ON lie.ingredient_id = bi.ingredient_id
 ),
-sums AS (
+	sums AS (
 	SELECT
 		a.ingredient_id,
 		COALESCE(SUM(m.qty_in),  0)::numeric(18,6) AS in_qty,
@@ -355,6 +384,28 @@ sums AS (
 		AND COALESCE(m.effective_at, m.created_at) > a.anchor_ts
 		AND COALESCE(m.effective_at, m.created_at) <= p.end_ts
 	GROUP BY a.ingredient_id
+),
+first_movement AS (
+	SELECT DISTINCT ON (m.ingredient_id)
+		m.ingredient_id,
+		m.price_per_unit AS begin_price
+	FROM active_movements m
+	JOIN params p ON m.storage_id = p.storage_id
+	WHERE COALESCE(m.effective_at, m.created_at) > '-infinity'::timestamptz
+		AND COALESCE(m.effective_at, m.created_at) <= p.end_ts
+		AND (p.ingredient_id IS NULL OR m.ingredient_id = p.ingredient_id)
+	ORDER BY m.ingredient_id, COALESCE(m.effective_at, m.created_at) ASC, m.id ASC
+),
+last_movement AS (
+	SELECT DISTINCT ON (m.ingredient_id)
+		m.ingredient_id,
+		m.price_per_unit AS end_price
+	FROM active_movements m
+	JOIN params p ON m.storage_id = p.storage_id
+	WHERE COALESCE(m.effective_at, m.created_at) > '-infinity'::timestamptz
+		AND COALESCE(m.effective_at, m.created_at) <= p.end_ts
+		AND (p.ingredient_id IS NULL OR m.ingredient_id = p.ingredient_id)
+	ORDER BY m.ingredient_id, COALESCE(m.effective_at, m.created_at) DESC, m.id DESC
 )
 SELECT
 	i.id                                   AS ingredient_id,
@@ -367,11 +418,15 @@ SELECT
 	COALESCE(s.in_qty,       0)::numeric(18,6) AS in_qty,
 	COALESCE(s.out_qty,      0)::numeric(18,6) AS out_qty,
 	COALESCE(s.shortage_qty, 0)::numeric(18,6) AS shortage_qty,
-	COALESCE(s.surplus_qty,  0)::numeric(18,6) AS surplus_qty
+	COALESCE(s.surplus_qty,  0)::numeric(18,6) AS surplus_qty,
+	fm.begin_price,
+	lm.end_price
 FROM base_ingredients bi
 JOIN ingredients i ON i.id = bi.ingredient_id AND i.deleted_at = 0
 JOIN anchors     a ON a.ingredient_id = bi.ingredient_id
 LEFT JOIN sums   s ON s.ingredient_id = bi.ingredient_id
+LEFT JOIN first_movement fm ON fm.ingredient_id = bi.ingredient_id
+LEFT JOIN last_movement lm ON lm.ingredient_id = bi.ingredient_id
 ORDER BY i.name ASC
 LIMIT $4 OFFSET $5
 `
@@ -406,6 +461,8 @@ LIMIT $4 OFFSET $5
 			&r.OutQty,
 			&r.ShortageQty,
 			&r.SurplusQty,
+			&r.BeginPrice,
+			&r.EndPrice,
 		); err != nil {
 			return nil, err
 		}

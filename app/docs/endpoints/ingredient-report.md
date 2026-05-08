@@ -82,7 +82,9 @@ If no `sort_by` parameter is provided, results are sorted by `ingredient_name` i
       "in": "50.000000",
       "out": "70.000000",
       "shortage": "5.000000",
-      "surplus": "0.000000"
+      "surplus": "0.000000",
+      "begin_price": "10000.00",
+      "end_price": "12000.00"
     }
   ],
   "totals": {
