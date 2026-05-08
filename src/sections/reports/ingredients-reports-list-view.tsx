@@ -285,6 +285,15 @@ export function IngredientReportsListView() {
                 },
             },
             {
+                key: 'begin_price',
+                label: t('ingredientReports.beginPrice') || 'Begin Price',
+                sortable: true,
+                width: '1fr',
+                align: 'left' as const,
+                getValue: (row: any) => Number(row?.begin_price || 0),
+                renderCell: ({ value }: { value: unknown }) => `${Number(value).toFixed(2)}`,
+            },
+            {
                 key: 'begin_quantity',
                 label: t('ingredientReports.beginQty') || 'Begin Qty',
                 sortable: true,
@@ -343,6 +352,15 @@ export function IngredientReportsListView() {
                 getValue: (row: any) => Number(row?.end_quantity || 0),
                 renderCell: ({ value }: { value: unknown }) => `${Number(value).toFixed(2)}`,
                 total: { aggregation: 'sum' as const },
+            },
+            {
+                key: 'end_price',
+                label: t('ingredientReports.endPrice') || 'End Price',
+                sortable: true,
+                width: '1fr',
+                align: 'left' as const,
+                getValue: (row: any) => Number(row?.end_price || 0),
+                renderCell: ({ value }: { value: unknown }) => `${Number(value).toFixed(2)}`,
             },
             {
                 key: 'actions',
@@ -652,27 +670,31 @@ export function IngredientReportsListView() {
                       />
                     }
                     defaultConfig={{
-                        order: ['ingredient_name', 'measurement', 'begin_quantity', 'in', 'out', 'surplus', 'shortage', 'end_quantity', 'actions'],
+                        order: ['ingredient_name', 'measurement', 'begin_price', 'begin_quantity', 'in', 'out', 'surplus', 'shortage', 'end_quantity', 'end_price', 'actions'],
                         visibility: {
                             ingredient_name: true,
                             measurement: true,
+                            begin_price: true,
                             begin_quantity: true,
                             in: true,
                             out: true,
                             surplus: true,
                             shortage: true,
                             end_quantity: true,
+                            end_price: true,
                             actions: true,
                         },
                         widths: {
                             ingredient_name: '1.5fr',
                             measurement: '0.8fr',
+                            begin_price: '1fr',
                             begin_quantity: '1fr',
                             in: '0.8fr',
                             out: '0.8fr',
                             surplus: '1fr',
                             shortage: '1fr',
                             end_quantity: '1fr',
+                            end_price: '1fr',
                             actions: '0.7fr',
                         },
                     }}
