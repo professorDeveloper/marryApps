@@ -115,4 +115,5 @@ export type InventoryItemsSectionProps = {
     saveDisabled: boolean;
     isSaving: boolean;
     metaFieldsOpen?: boolean;
+    tableHeight?: string | number;
 };

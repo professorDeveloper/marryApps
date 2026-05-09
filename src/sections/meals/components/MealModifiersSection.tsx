@@ -1,6 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import React, { useMemo, useState, useCallback, useEffect, startTransition } from 'react';
 
+import { Box, Button } from '@mui/material';
+
 import { useGetModifiers } from 'src/actions/modifiers';
 import {
     formatPrice,
@@ -30,6 +32,7 @@ interface MealModifiersSectionProps {
     apiRef: React.RefObject<MealModifiersApi | null>;
     isVisible?: boolean;
     metaFieldsOpen?: boolean;
+    tableHeight?: string | number;
     onCancel?: () => void;
     onSave?: () => void | Promise<void>;
     cancelDisabled?: boolean;
@@ -45,6 +48,7 @@ export const MealModifiersSection = React.memo(function MealModifiersSection({
     apiRef,
     isVisible = true,
     metaFieldsOpen,
+    tableHeight,
     onCancel,
     onSave,
     cancelDisabled,
@@ -180,26 +184,42 @@ export const MealModifiersSection = React.memo(function MealModifiersSection({
     };
 
     return (
-        <ItemPickerSection
-            items={pickerItems}
-            loading={modifiersLoading || modifiersValidating}
-            transferredItems={transferredItems}
-            excludedIdSet={excludedIdSet}
-            columns={columns}
-            onValueChange={() => {}} // No editable values for modifiers
-            onQuickAdd={handleQuickAdd}
-            onMoveRight={handleMoveRight}
-            onRemoveRow={handleRemoveRow}
-            onRemoveMany={handleRemoveMany}
-            summaryEntries={summaryEntries}
-            totalLabel={t('mealsProducts.totalModifiers', 'Total')}
-            totalValue={formatPrice(transferredItems.length)}
-            onCancel={onCancel}
-            onSave={onSave}
-            cancelDisabled={cancelDisabled}
-            saveDisabled={saveDisabled}
-            saveLabel={saveLabel}
-            metaFieldsOpen={metaFieldsOpen}
-        />
+        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+            <ItemPickerSection
+                items={pickerItems}
+                loading={modifiersLoading || modifiersValidating}
+                transferredItems={transferredItems}
+                excludedIdSet={excludedIdSet}
+                columns={columns}
+                onValueChange={() => {}} // No editable values for modifiers
+                onQuickAdd={handleQuickAdd}
+                onMoveRight={handleMoveRight}
+                onRemoveRow={handleRemoveRow}
+                onRemoveMany={handleRemoveMany}
+                summaryEntries={summaryEntries}
+                totalLabel={t('mealsProducts.totalModifiers', 'Total')}
+                totalValue={formatPrice(transferredItems.length)}
+                metaFieldsOpen={metaFieldsOpen}
+                tableHeight={tableHeight}
+            />
+            {onCancel && onSave && (
+                <Box sx={{ mt: 2, display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+                    <Button
+                        variant="outlined"
+                        onClick={onCancel}
+                        disabled={cancelDisabled}
+                    >
+                        {t('cancel')}
+                    </Button>
+                    <Button
+                        variant="contained"
+                        onClick={() => void onSave()}
+                        disabled={saveDisabled}
+                    >
+                        {saveLabel ?? t('common.save', 'Save')}
+                    </Button>
+                </Box>
+            )}
+        </Box>
     );
 });

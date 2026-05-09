@@ -33,12 +33,8 @@ export const AddedItemsPanel = React.memo<AddedItemsPanelProps>(({
     summaryEntries,
     totalLabel,
     totalValue,
-    onCancel,
-    onSave,
-    cancelDisabled,
-    saveDisabled,
-    saveLabel,
     metaFieldsOpen,
+    tableHeight,
 }) => {
     const { t } = useTranslation('menu');
 
@@ -84,14 +80,28 @@ export const AddedItemsPanel = React.memo<AddedItemsPanelProps>(({
         [columns]
     );
 
+    // Calculate height based on tableHeight and metaFieldsOpen
+    const calculatedHeight = useMemo(() => {
+        if (tableHeight) {
+            // If tableHeight is provided, use it as base and adjust with metaFieldsOpen
+            const baseHeight = typeof tableHeight === 'number' ? `${tableHeight}px` : tableHeight;
+            if (metaFieldsOpen) {
+                return `calc(${baseHeight} - 200px)`;
+            }
+            return baseHeight;
+        }
+        // Fall back to current behavior if tableHeight not provided
+        return summaryEntries
+            ? (metaFieldsOpen ? 'calc(100vh - 400px)' : 'calc(100vh - 200px)')
+            : LIST_MAX_HEIGHT;
+    }, [tableHeight, metaFieldsOpen, summaryEntries]);
+
     return (
         <Paper
             sx={{
                 display: "flex",
                 flexDirection: "column",
-                height: summaryEntries
-                    ? (metaFieldsOpen ? 'calc(100vh - 400px)' : 'calc(100vh - 200px)')
-                    : LIST_MAX_HEIGHT,
+                height: calculatedHeight,
                 backgroundColor:"transparent"
             }}
         >
@@ -99,7 +109,7 @@ export const AddedItemsPanel = React.memo<AddedItemsPanelProps>(({
                 p: 2,
                 display: 'flex',
                 flexDirection: 'column',
-                height: "100%",
+                height: "90%",
 
             }}>
                 <Box
@@ -331,30 +341,6 @@ export const AddedItemsPanel = React.memo<AddedItemsPanelProps>(({
 
                 </Box>
             </Paper>
-            {/* Action buttons */}
-            {(onCancel || onSave) && (
-                <Box sx={{ mt: 2, display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
-                    {onCancel && (
-                        <Button
-                            variant="outlined"
-                            onClick={onCancel}
-                            disabled={cancelDisabled}
-                        >
-                            {t('cancel')}
-                        </Button>
-                    )}
-                    {onSave && (
-                        <Button
-                            variant="contained"
-                            color="primary"
-                            onClick={() => void onSave()}
-                            disabled={saveDisabled}
-                        >
-                            {saveLabel ?? t('common.save', 'Save')}
-                        </Button>
-                    )}
-                </Box>
-            )}
         </Paper>
     );
 });

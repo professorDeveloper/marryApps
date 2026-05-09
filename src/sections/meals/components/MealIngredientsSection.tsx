@@ -1,6 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import React, { useRef, useMemo, useState, useEffect, useCallback, startTransition } from 'react';
 
+import { Box, Button } from '@mui/material';
+
 import { useIngredients } from 'src/sections/warehouse/invoice/hooks/useIngredients';
 import {
     formatPrice,
@@ -38,6 +40,8 @@ interface MealIngredientsSectionProps {
     cancelDisabled?: boolean;
     saveDisabled?: boolean;
     saveLabel: string;
+    metaFieldsOpen?: boolean;
+    tableHeight?: string | number;
 }
 
 // ---------------------------------------------------------------------------
@@ -53,6 +57,8 @@ export const MealIngredientsSection = React.memo(function MealIngredientsSection
     cancelDisabled = false,
     saveDisabled = false,
     saveLabel,
+    metaFieldsOpen,
+    tableHeight,
 }: MealIngredientsSectionProps) {
     const { t } = useTranslation('menu');
     const { ingredients, loading: ingredientsLoading, refreshIngredients } = useIngredients();
@@ -242,25 +248,40 @@ export const MealIngredientsSection = React.memo(function MealIngredientsSection
     };
 
     return (
-        <ItemPickerSection
-            items={pickerItems}
-            loading={ingredientsLoading}
-            transferredItems={transferredItems}
-            excludedIdSet={excludedIdSet}
-            columns={columns}
-            onValueChange={handleValueChange}
-            onQuickAdd={handleQuickAdd}
-            onMoveRight={handleMoveRight}
-            onRemoveRow={handleRemoveRow}
-            onRemoveMany={handleRemoveMany}
-            summaryEntries={summaryEntries}
-            totalLabel={t('calculation.total', 'Total')}
-            totalValue={formatPrice(totalQty)}
-            onCancel={onCancel}
-            onSave={onSave}
-            cancelDisabled={cancelDisabled}
-            saveDisabled={saveDisabled}
-            saveLabel={saveLabel}
-        />
+        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+            <ItemPickerSection
+                items={pickerItems}
+                loading={ingredientsLoading}
+                transferredItems={transferredItems}
+                excludedIdSet={excludedIdSet}
+                columns={columns}
+                onValueChange={handleValueChange}
+                onQuickAdd={handleQuickAdd}
+                onMoveRight={handleMoveRight}
+                onRemoveRow={handleRemoveRow}
+                onRemoveMany={handleRemoveMany}
+                summaryEntries={summaryEntries}
+                totalLabel={t('calculation.total', 'Total')}
+                totalValue={formatPrice(totalQty)}
+                metaFieldsOpen={metaFieldsOpen}
+                tableHeight={tableHeight}
+            />
+            <Box sx={{ mt: 2, display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+                <Button
+                    variant="outlined"
+                    onClick={onCancel}
+                    disabled={cancelDisabled}
+                >
+                    {t('cancel')}
+                </Button>
+                <Button
+                    variant="contained"
+                    onClick={() => void onSave()}
+                    disabled={saveDisabled}
+                >
+                    {saveLabel}
+                </Button>
+            </Box>
+        </Box>
     );
 });

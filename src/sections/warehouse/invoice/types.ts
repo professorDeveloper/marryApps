@@ -120,4 +120,6 @@ export type InvoiceFormLineItemsSectionProps = {
     invoiceCancelDisabled: boolean;
     invoiceSaveDisabled: boolean;
     saveLabel: string;
+    metaFieldsOpen?: boolean;
+    tableHeight?: string | number;
 };

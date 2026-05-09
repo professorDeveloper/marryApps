@@ -3,6 +3,8 @@ import type { Ingredient, SeparationActCalculationItemInput } from '../types';
 import { useTranslation } from 'react-i18next';
 import React, { useRef, useMemo, useState, useEffect, useCallback, startTransition } from 'react';
 
+import { Box, Button } from '@mui/material';
+
 import {
     formatPrice,
     type ColumnDef,
@@ -36,6 +38,8 @@ interface SeparationActsLineItemsProps {
     cancelDisabled?: boolean;
     saveDisabled?: boolean;
     saveLabel: string;
+    metaFieldsOpen?: boolean;
+    tableHeight?: string | number;
 }
 
 // ---------------------------------------------------------------------------
@@ -53,6 +57,8 @@ export const SeparationActsLineItems = React.memo(function SeparationActsLineIte
     cancelDisabled = false,
     saveDisabled = false,
     saveLabel,
+    metaFieldsOpen,
+    tableHeight,
 }: SeparationActsLineItemsProps) {
     const { t } = useTranslation('menu');
 
@@ -277,25 +283,40 @@ export const SeparationActsLineItems = React.memo(function SeparationActsLineIte
 
     // ── Render ────────────────────────────────────────────────────────────
     return (
-        <ItemPickerSection
-            items={pickerItems}
-            loading={ingredientsLoading}
-            transferredItems={transferredItems}
-            excludedIdSet={excludedIdSet}
-            columns={columns}
-            onValueChange={handleValueChange}
-            onQuickAdd={handleQuickAdd}
-            onMoveRight={handleMoveRight}
-            onRemoveRow={handleRemoveRow}
-            onRemoveMany={handleRemoveMany}
-            summaryEntries={summaryEntries}
-            totalLabel={t('calculation.total', 'Total')}
-            totalValue={`${formatPrice(totals.totalAmount)} UZS`}
-            onCancel={onCancel}
-            onSave={onSave}
-            cancelDisabled={cancelDisabled}
-            saveDisabled={saveDisabled}
-            saveLabel={saveLabel}
-        />
+        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+            <ItemPickerSection
+                items={pickerItems}
+                loading={ingredientsLoading}
+                transferredItems={transferredItems}
+                excludedIdSet={excludedIdSet}
+                columns={columns}
+                onValueChange={handleValueChange}
+                onQuickAdd={handleQuickAdd}
+                onMoveRight={handleMoveRight}
+                onRemoveRow={handleRemoveRow}
+                onRemoveMany={handleRemoveMany}
+                summaryEntries={summaryEntries}
+                totalLabel={t('calculation.total', 'Total')}
+                totalValue={`${formatPrice(totals.totalAmount)} UZS`}
+                metaFieldsOpen={metaFieldsOpen}
+                tableHeight={tableHeight}
+            />
+            <Box sx={{ mt: 2, display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+                <Button
+                    variant="outlined"
+                    onClick={onCancel}
+                    disabled={cancelDisabled}
+                >
+                    Cancel
+                </Button>
+                <Button
+                    variant="contained"
+                    onClick={() => void onSave()}
+                    disabled={saveDisabled}
+                >
+                    {saveLabel}
+                </Button>
+            </Box>
+        </Box>
     );
 });

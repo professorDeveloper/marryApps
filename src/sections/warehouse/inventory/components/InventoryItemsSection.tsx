@@ -3,6 +3,8 @@ import type { ColumnDef, PickerItem, SummaryEntry } from 'src/sections/warehouse
 
 import React, { useRef, useMemo, useEffect, useCallback, startTransition } from 'react';
 
+import { Box, Button } from '@mui/material';
+
 import { useGetInventoryStatus } from 'src/actions/ingredient-reports';
 
 import { useIngredients } from 'src/sections/warehouse/invoice';
@@ -27,6 +29,7 @@ export const InventoryItemsSection = React.memo(function InventoryItemsSection({
     saveDisabled,
     isSaving,
     metaFieldsOpen,
+    tableHeight,
 }: InventoryItemsSectionProps) {
     const { ingredients, loading: ingredientsLoading, refreshIngredients } = useIngredients();
     const {
@@ -320,28 +323,42 @@ export const InventoryItemsSection = React.memo(function InventoryItemsSection({
     };
 
     return (
-        <ItemPickerSection
-            items={pickerItems}
-            loading={ingredientsLoading}
-            transferredItems={transferredItems}
-            excludedIdSet={excludedIdSet}
-            columns={columns}
-            onValueChange={handleValueChange}
-            onQuickAdd={handleQuickAdd}
-            onMoveRight={handleMoveRight}
-            onRemoveRow={handleRemoveRow}
-            onRemoveMany={handleRemoveMany}
-            onAddNewItem={onOpenIngredientDialog}
-            summaryEntries={summaryEntries}
-            totalLabel="Total"
-            totalValue={totalValue}
-            onNavigateFocus={handleNavigateFocus}
-            onCancel={onCancel}
-            onSave={onSave}
-            cancelDisabled={cancelDisabled}
-            saveDisabled={saveDisabled}
-            saveLabel="Save"
-            metaFieldsOpen={metaFieldsOpen}
-        />
+        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+            <ItemPickerSection
+                items={pickerItems}
+                loading={ingredientsLoading}
+                transferredItems={transferredItems}
+                excludedIdSet={excludedIdSet}
+                columns={columns}
+                onValueChange={handleValueChange}
+                onQuickAdd={handleQuickAdd}
+                onMoveRight={handleMoveRight}
+                onRemoveRow={handleRemoveRow}
+                onRemoveMany={handleRemoveMany}
+                onAddNewItem={onOpenIngredientDialog}
+                summaryEntries={summaryEntries}
+                totalLabel="Total"
+                totalValue={totalValue}
+                onNavigateFocus={handleNavigateFocus}
+                metaFieldsOpen={metaFieldsOpen}
+                tableHeight={tableHeight}
+            />
+            <Box sx={{ mt: 2, display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+                <Button
+                    variant="outlined"
+                    onClick={onCancel}
+                    disabled={cancelDisabled}
+                >
+                    Cancel
+                </Button>
+                <Button
+                    variant="contained"
+                    onClick={() => void onSave()}
+                    disabled={saveDisabled || isSaving}
+                >
+                    {isSaving ? 'Saving...' : 'Save'}
+                </Button>
+            </Box>
+        </Box>
     );
 });

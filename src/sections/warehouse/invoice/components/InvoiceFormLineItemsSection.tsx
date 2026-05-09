@@ -4,6 +4,8 @@ import type { ColumnDef, PickerItem, SummaryEntry } from 'src/sections/warehouse
 import { useTranslation } from 'react-i18next';
 import React, { useRef, useMemo, useEffect, useCallback, startTransition } from 'react';
 
+import { Box, Button } from '@mui/material';
+
 import {
     formatPrice,
     ItemPickerSection,
@@ -26,6 +28,8 @@ export const InvoiceFormLineItemsSection = React.memo(function InvoiceFormLineIt
     invoiceCancelDisabled,
     invoiceSaveDisabled,
     saveLabel,
+    metaFieldsOpen,
+    tableHeight,
 }: InvoiceFormLineItemsSectionProps) {
     const { t } = useTranslation('menu');
     const { ingredients, loading: ingredientsLoading, refreshIngredients } = useIngredients();
@@ -293,27 +297,42 @@ export const InvoiceFormLineItemsSection = React.memo(function InvoiceFormLineIt
     };
 
     return (
-        <ItemPickerSection
-            items={pickerItems}
-            loading={ingredientsLoading}
-            transferredItems={transferredItems}
-            excludedIdSet={excludedIdSet}
-            columns={columns}
-            onValueChange={handleValueChange}
-            onQuickAdd={handleQuickAdd}
-            onMoveRight={handleMoveRight}
-            onRemoveRow={handleRemoveRow}
-            onRemoveMany={handleRemoveMany}
-            onAddNewItem={onOpenIngredientDialog}
-            summaryEntries={summaryEntries}
-            totalLabel={t('warehouse.invoiceDetails.totalAmount')}
-            totalValue={totalValue}
-            onNavigateFocus={handleNavigateFocus}
-            onCancel={onInvoiceCancel}
-            onSave={onInvoiceSave}
-            cancelDisabled={invoiceCancelDisabled}
-            saveDisabled={invoiceSaveDisabled}
-            saveLabel={saveLabel}
-        />
+        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+            <ItemPickerSection
+                items={pickerItems}
+                loading={ingredientsLoading}
+                transferredItems={transferredItems}
+                excludedIdSet={excludedIdSet}
+                columns={columns}
+                onValueChange={handleValueChange}
+                onQuickAdd={handleQuickAdd}
+                onMoveRight={handleMoveRight}
+                onRemoveRow={handleRemoveRow}
+                onRemoveMany={handleRemoveMany}
+                onAddNewItem={onOpenIngredientDialog}
+                summaryEntries={summaryEntries}
+                totalLabel={t('warehouse.invoiceDetails.totalAmount')}
+                totalValue={totalValue}
+                onNavigateFocus={handleNavigateFocus}
+                metaFieldsOpen={metaFieldsOpen}
+                tableHeight={tableHeight}
+            />
+            <Box sx={{ mt: 2, display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+                <Button
+                    variant="outlined"
+                    onClick={onInvoiceCancel}
+                    disabled={invoiceCancelDisabled}
+                >
+                    {t('cancel')}
+                </Button>
+                <Button
+                    variant="contained"
+                    onClick={() => void onInvoiceSave()}
+                    disabled={invoiceSaveDisabled}
+                >
+                    {saveLabel}
+                </Button>
+            </Box>
+        </Box>
     );
 });

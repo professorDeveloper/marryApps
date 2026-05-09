@@ -80,6 +80,8 @@ export interface AvailableItemsPanelProps {
     onAddNewItem?: () => void;
     /** Whether the meta fields accordion is open (affects height calculation) */
     metaFieldsOpen?: boolean;
+    /** Base height for the panel (adjusted by metaFieldsOpen) */
+    tableHeight?: string | number;
 }
 
 export interface AddedItemsPanelProps {
@@ -99,15 +101,10 @@ export interface AddedItemsPanelProps {
     totalLabel?: string;
     /** Formatted grand-total value */
     totalValue?: string;
-    /** Cancel button handler */
-    onCancel?: () => void;
-    /** Save button handler */
-    onSave?: () => void | Promise<void>;
-    cancelDisabled?: boolean;
-    saveDisabled?: boolean;
-    saveLabel?: string;
     /** Whether the meta fields accordion is open (affects height calculation) */
     metaFieldsOpen?: boolean;
+    /** Base height for the panel (adjusted by metaFieldsOpen) */
+    tableHeight?: string | number;
 }
 
 // ---------------------------------------------------------------------------
@@ -168,15 +165,10 @@ export interface ItemPickerSectionProps {
     /** Formatted grand-total value */
     totalValue: string;
 
-    /** Cancel button handler */
-    onCancel?: () => void;
-    /** Save button handler */
-    onSave?: () => void | Promise<void>;
-    cancelDisabled?: boolean;
-    saveDisabled?: boolean;
-    saveLabel?: string;
     /** Keyboard navigation handler for moving focus between rows and columns */
     onNavigateFocus?: (direction: 'up' | 'down' | 'left' | 'right', currentRowIndex: number, currentColumnKey: string) => void;
     /** Whether the meta fields accordion is open (affects height calculation) */
     metaFieldsOpen?: boolean;
+    /** Base height for the panels (adjusted by metaFieldsOpen) */
+    tableHeight?: string | number;
 }

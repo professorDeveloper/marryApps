@@ -33,14 +33,9 @@ export const ItemPickerSection = React.memo(function ItemPickerSection({
     totalLabel,
     totalValue,
 
-    // Actions
-    onCancel,
-    onSave,
-    cancelDisabled,
-    saveDisabled,
-    saveLabel,
     onNavigateFocus,
     metaFieldsOpen,
+    tableHeight,
 }: ItemPickerSectionProps) {
     const [rightSearchTerm, setRightSearchTerm] = useState('');
 
@@ -70,6 +65,7 @@ export const ItemPickerSection = React.memo(function ItemPickerSection({
                 onQuickAdd={onQuickAdd}
                 onAddNewItem={onAddNewItem}
                 metaFieldsOpen={metaFieldsOpen}
+                tableHeight={tableHeight}
             />
 
             <AddedItemsPanel
@@ -86,12 +82,8 @@ export const ItemPickerSection = React.memo(function ItemPickerSection({
                 summaryEntries={summaryEntries}
                 totalLabel={totalLabel}
                 totalValue={totalValue}
-                onCancel={onCancel}
-                onSave={onSave}
-                cancelDisabled={cancelDisabled}
-                saveDisabled={saveDisabled}
-                saveLabel={saveLabel}
                 metaFieldsOpen={metaFieldsOpen}
+                tableHeight={tableHeight}
             />
         </Box>
     );

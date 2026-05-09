@@ -28,6 +28,7 @@ export const AvailableItemsPanel = React.memo<AvailableItemsPanelProps>(({
     onMoveRight,
     onAddNewItem,
     metaFieldsOpen,
+    tableHeight,
 }) => {
     const { t } = useTranslation('menu');
 
@@ -88,10 +89,25 @@ export const AvailableItemsPanel = React.memo<AvailableItemsPanelProps>(({
 
     const virtualRows = rowVirtualizer.getVirtualItems();
     const isAllSelected = filtered.length > 0 && filtered.length === selectedItems.size;
+
+    // Calculate maxHeight based on tableHeight and metaFieldsOpen
+    const calculatedMaxHeight = useMemo(() => {
+        if (tableHeight) {
+            // If tableHeight is provided, use it as base and adjust with metaFieldsOpen
+            const baseHeight = typeof tableHeight === 'number' ? `${tableHeight}px` : tableHeight;
+            if (metaFieldsOpen) {
+                return `calc(${baseHeight} - 200px)`;
+            }
+            return baseHeight;
+        }
+        // Fall back to current behavior if tableHeight not provided
+        return metaFieldsOpen ? 'calc(100vh - 320px)' : LIST_MAX_HEIGHT;
+    }, [tableHeight, metaFieldsOpen]);
+
     return (
         <Paper sx={{ 
             p: 2,
-            maxHeight: metaFieldsOpen ? 'calc(100vh - 320px)' : LIST_MAX_HEIGHT,
+            maxHeight: calculatedMaxHeight,
             display: 'flex',
             flexDirection: 'column',
          }}>

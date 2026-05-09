@@ -262,6 +262,7 @@ const InvoiceFormView = React.memo(function InvoiceFormView() {
                         submitting || ingredientsLoading || pageLoading || !hasLineItems
                     }
                     saveLabel={saveLabel}
+                    metaFieldsOpen={isInfoOpen}
                 />
             </Box>
 
