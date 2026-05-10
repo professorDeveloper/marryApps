@@ -33,7 +33,12 @@ func (s *SupplierS) CreateSupplier(ctx context.Context, req *model.CreateSupplie
 		Location:    req.Location,
 	}
 
-	supplier, err := s.repo.Tenant(ctx).CreateSupplier(ctx, params)
+	queries, err := s.repo.TenantQueries(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("tenant context not ready: %w", err)
+	}
+
+	supplier, err := queries.CreateSupplier(ctx, params)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create supplier: %w", err)
 	}
@@ -114,8 +119,13 @@ func (s *SupplierS) UpdateSupplier(ctx context.Context, id string, req *model.Up
 		return nil, fmt.Errorf("invalid supplier id: %w", err)
 	}
 
+	queries, err := s.repo.TenantQueries(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("tenant context not ready: %w", err)
+	}
+
 	// Fetch current supplier
-	supplier, err := s.repo.Tenant(ctx).GetSupplierByID(ctx, supplierID)
+	supplier, err := queries.GetSupplierByID(ctx, supplierID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get supplier: %w", err)
 	}
@@ -143,7 +153,7 @@ func (s *SupplierS) UpdateSupplier(ctx context.Context, id string, req *model.Up
 		Location:    location,
 	}
 
-	updated, err := s.repo.Tenant(ctx).UpdateSupplier(ctx, params)
+	updated, err := queries.UpdateSupplier(ctx, params)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update supplier: %w", err)
 	}
@@ -158,7 +168,12 @@ func (s *SupplierS) DeleteSupplier(ctx context.Context, id string) error {
 		return fmt.Errorf("invalid supplier id: %w", err)
 	}
 
-	err = s.repo.Tenant(ctx).DeleteSupplier(ctx, supplierID)
+	queries, err := s.repo.TenantQueries(ctx)
+	if err != nil {
+		return fmt.Errorf("tenant context not ready: %w", err)
+	}
+
+	err = queries.DeleteSupplier(ctx, supplierID)
 	if err != nil {
 		return fmt.Errorf("failed to delete supplier: %w", err)
 	}
@@ -173,7 +188,12 @@ func (s *SupplierS) RestoreSupplier(ctx context.Context, id string) (*model.Supp
 		return nil, fmt.Errorf("invalid supplier id: %w", err)
 	}
 
-	supplier, err := s.repo.Tenant(ctx).RestoreSupplier(ctx, supplierID)
+	queries, err := s.repo.TenantQueries(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("tenant context not ready: %w", err)
+	}
+
+	supplier, err := queries.RestoreSupplier(ctx, supplierID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to restore supplier: %w", err)
 	}
