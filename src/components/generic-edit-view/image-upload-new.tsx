@@ -38,6 +38,9 @@ const ImageUploadComponent: FC<ImageUploadFieldProps> = ({
     const [uploadLoading, setUploadLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    // Calculate dynamic width based on height (4:3 aspect ratio)
+    const dynamicWidth = Math.round(height * 1.15);
+
     // Use SWR hook for image URL
     const { imageUrl: displayUrl, loading: imageLoading } = useImageUrl(value);
     const loading = uploadLoading || imageLoading;
@@ -101,19 +104,19 @@ const ImageUploadComponent: FC<ImageUploadFieldProps> = ({
                     display: 'flex',
                     position: 'relative',
                     '&:hover .upload-box': {
-                        borderColor: error ? 'error.main' : 'primary.main',
+                        borderColor: error ? 'error.main' : 'var(--color-primary-400)',
                         bgcolor: displayUrl ? 'transparent' : 'action.hover',
                         animation: 'borderPulse 1.5s infinite',
                     },
                     '@keyframes borderPulse': {
                         '0%': {
-                            borderColor: error ? 'error.main' : 'primary.main',
+                            borderColor: error ? 'error.main' : 'var(--color-primary-200)',
                         },
                         '50%': {
-                            borderColor: error ? 'error.light' : 'primary.light',
+                            borderColor: error ? 'error.light' : 'var(--color-primary-300)',
                         },
                         '100%': {
-                            borderColor: error ? 'error.main' : 'primary.main',
+                            borderColor: error ? 'error.main' : 'var(--color-primary-400)',
                         },
                     },
                 }}
@@ -138,7 +141,7 @@ const ImageUploadComponent: FC<ImageUploadFieldProps> = ({
                         <Box
                             sx={{
                                 position: 'relative',
-                                width: 120,
+                                width: dynamicWidth,
                                 height: height,
                                 display: 'flex',
                                 alignItems: 'center',
@@ -163,7 +166,7 @@ const ImageUploadComponent: FC<ImageUploadFieldProps> = ({
                             className="upload-box"
                             sx={{
                                 position: 'relative',
-                                width: 120,
+                                width: dynamicWidth,
                                 height: height,
                                 bgcolor: displayUrl ? 'transparent' : 'action.hover',
                                 borderTopRightRadius: 1,
@@ -178,6 +181,9 @@ const ImageUploadComponent: FC<ImageUploadFieldProps> = ({
                                 borderColor: error ? 'error.main' : 'divider',
                                 transition: 'all 0.2s ease-in-out',
                                 cursor: loading ? 'wait' : 'pointer',
+                                '&:hover .remove-button': {
+                                    opacity: 1,
+                                },
                             }}
                             role="button"
                             tabIndex={loading ? -1 : 0}
@@ -189,15 +195,62 @@ const ImageUploadComponent: FC<ImageUploadFieldProps> = ({
                         >
                             {displayUrl ? (
                                 <Box
-                                    component="img"
-                                    src={displayUrl}
-                                    alt="Preview"
                                     sx={{
+                                        position: 'relative',
                                         width: '100%',
                                         height: '100%',
-                                        objectFit: 'cover',
                                     }}
-                                />
+                                >
+                                    <Box
+                                        component="img"
+                                        src={displayUrl}
+                                        alt="Preview"
+                                        sx={{
+                                            width: '100%',
+                                            height: '100%',
+                                            objectFit: 'cover',
+                                        }}
+                                    />
+                                    {/* Remove button - appears on hover */}
+                                    <Box
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleRemove();
+                                        }}
+                                        sx={{
+                                            position: 'absolute',
+                                            top: 4,
+                                            right: 4,
+                                            width: 28,
+                                            height: 28,
+                                            borderRadius: '50%',
+                                            bgcolor: 'rgba(0, 0, 0, 0.6)',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            cursor: 'pointer',
+                                            opacity: 0,
+                                            transition: 'opacity 0.2s ease-in-out',
+                                            border: '1px solid var(--color-primary-400)',
+                                            '&:hover': {
+                                                bgcolor: 'var(--color-primary-400)',
+                                                opacity: 1,
+                                            },
+                                        }}
+                                        className="remove-button"
+                                    >
+                                        <Iconify 
+                                            icon="solar:close-circle-bold" 
+                                            sx={{ 
+                                                fontSize: 16, 
+                                                color: 'white',
+                                                '&:hover': {
+                                                    color: 'white',
+                                                }
+                                            }} 
+                                        />
+                                    </Box>
+                                </Box>
                             ) : (
                                 <Stack alignItems="center" spacing={1}>
                                     <Iconify icon="eva:cloud-upload-fill" sx={{ fontSize: 32, color: 'text.secondary' }} />

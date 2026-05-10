@@ -830,3 +830,40 @@ h1, h2, h3, h4 { font-feature-settings: 'cv11', 'ss01', 'cv01'; }
 [data-color-scheme="dark"] .data-table thead tr { background: #141626; }
 [data-color-scheme="dark"] .data-table tbody tr { background-color: #1a1d2e; }
 [data-color-scheme="dark"] .data-table tbody tr:hover { background: #141626; }
+
+/* MealItemPicker rows (avoid per-row MUI sx cost) */
+.meal-picker-available-row {
+  display: grid;
+  grid-template-columns: 48px 1fr;
+  align-items: center;
+  padding: 6px 0;
+  margin: 0;
+  border-bottom: 1px solid var(--color-border);
+  cursor: pointer;
+  box-sizing: border-box;
+  font-family: var(--font-sans);
+  background: var(--color-surface-0);
+}
+.meal-picker-available-row:hover {
+  background: var(--color-surface-0);
+}
+.meal-picker-added-row {
+  display: grid;
+  grid-template-columns: 48px 1fr 170px 140px 160px 56px;
+  align-items: center;
+  column-gap: 8px;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--color-border);
+  box-sizing: border-box;
+  font-family: var(--font-sans);
+  background: var(--color-surface-0);
+}
+.meal-picker-added-row:hover {
+  background: var(--color-surface-1);
+}
+.meal-picker-added-row.is-selected {
+  background: var(--color-surface-1);
+}
+.meal-picker-added-row.is-selected:hover {
+  background: var(--color-surface-2);
+}

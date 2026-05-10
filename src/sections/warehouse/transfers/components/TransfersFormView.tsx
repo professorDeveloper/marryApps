@@ -17,6 +17,12 @@ import { Box, Button, Typography, CircularProgress } from '@mui/material';
 import { paths } from 'src/routes/paths';
 
 import { useTransfersAPI } from 'src/hooks/use-transfers-api';
+import { useAppDispatch } from 'src/store';
+import {
+    PICKER_FORM_NAMES,
+    transfersFormPickerActions,
+    mapBatchItemsToPickerItems,
+} from 'src/store/slices/pickerFormSlices';
 
 import { fetcher, endpoints } from 'src/lib/axios';
 
@@ -56,6 +62,8 @@ const TransfersFormView = React.memo(function TransfersFormView({
     const { t } = useTranslation('menu');
     const navigate = useNavigate();
     const { id } = useParams<{ id: string }>();
+    const dispatch = useAppDispatch();
+    const formName = PICKER_FORM_NAMES.transfersForm;
 
     // ── API hooks ─────────────────────────────────────────────────────────
     const {
@@ -71,6 +79,7 @@ const TransfersFormView = React.memo(function TransfersFormView({
     const [pageLoading, setPageLoading] = useState(!isNew);
     const [submitting, setSubmitting] = useState(false);
     const [isInfoOpen, setIsInfoOpen] = useState(true);
+    const [tableHeight, setTableHeight] = useState(730);
 
     const [branches, setBranches] = useState<Branch[]>([]);
     const [storages, setStorages] = useState<Storage[]>([]);
@@ -99,6 +108,20 @@ const TransfersFormView = React.memo(function TransfersFormView({
 
     const lineItemsApiRef = useRef<TransfersLineItemsApi | null>(null);
     const listsFetchedRef = useRef(false);
+
+    // ── Calculate table height based on viewport ───────────────────────────
+    useEffect(() => {
+        const calculateHeight = () => {
+            const viewportHeight = window.innerHeight;
+            const reservedSpace = isInfoOpen ? 460 : 220;
+            const calculatedHeight = Math.max(300, viewportHeight - reservedSpace);
+            setTableHeight(calculatedHeight);
+        };
+
+        calculateHeight();
+        window.addEventListener('resize', calculateHeight);
+        return () => window.removeEventListener('resize', calculateHeight);
+    }, [isInfoOpen]);
 
     // ── Effective transfer ID ─────────────────────────────────────────────
     const effectiveTransferId = id || transfer?.id;
@@ -203,6 +226,13 @@ const TransfersFormView = React.memo(function TransfersFormView({
                 });
                 if (data.items) {
                     lineItemsApiRef.current?.restoreFromPersisted(data.items);
+                    dispatch(
+                        transfersFormPickerActions.setFormState({
+                            formName,
+                            items: mapBatchItemsToPickerItems(data.items),
+                            meta: { isNew, transferId: id ?? null, source: 'hydrate' },
+                        })
+                    );
                 }
             } catch (e) {
                 console.error(e);
@@ -216,7 +246,14 @@ const TransfersFormView = React.memo(function TransfersFormView({
         return () => {
             cancelled = true;
         };
-    }, [isNew, id, getTransferById, navigate, t]);
+    }, [dispatch, formName, getTransferById, id, isNew, navigate, t]);
+
+    useEffect(
+        () => () => {
+            dispatch(transfersFormPickerActions.resetFormState({ formName }));
+        },
+        [dispatch, formName]
+    );
 
     // ── Form field handlers ───────────────────────────────────────────────
     const handleDateChange = useCallback(
@@ -291,6 +328,17 @@ const TransfersFormView = React.memo(function TransfersFormView({
 
         try {
             setSubmitting(true);
+            dispatch(
+                transfersFormPickerActions.setFormState({
+                    formName,
+                    items: mapBatchItemsToPickerItems(batchData as Array<Record<string, unknown>>),
+                    meta: {
+                        isNew,
+                        transferId: effectiveTransferId ?? null,
+                        source: 'submit',
+                    },
+                })
+            );
 
             if (isNew && !effectiveTransferId) {
                 await createTransferBatch(payload);
@@ -306,7 +354,7 @@ const TransfersFormView = React.memo(function TransfersFormView({
         } finally {
             setSubmitting(false);
         }
-    }, [formData, isNew, effectiveTransferId, createTransferBatch, updateTransferItemsBatch, navigate, t]);
+    }, [formData, isNew, effectiveTransferId, createTransferBatch, updateTransferItemsBatch, navigate, t, dispatch, formName]);
 
     // ── Cancel ────────────────────────────────────────────────────────────
     const handleCancel = useCallback(() => {
@@ -410,6 +458,8 @@ const TransfersFormView = React.memo(function TransfersFormView({
                     cancelDisabled={ingredientsLoading || pageLoading}
                     saveDisabled={submitting || ingredientsLoading || pageLoading || !hasLineItems}
                     saveLabel={saveLabel}
+                    metaFieldsOpen={isInfoOpen}
+                    tableHeight={tableHeight}
                 />
 
                 {/* Edit mode: not found state */}

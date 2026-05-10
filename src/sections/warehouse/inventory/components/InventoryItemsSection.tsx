@@ -1,7 +1,7 @@
 import type { IngredientReportLookup, InventoryItemsSectionProps } from '../types';
 import type { ColumnDef, PickerItem, SummaryEntry } from 'src/sections/warehouse/utils/components/item-picker';
 
-import React, { useRef, useMemo, useEffect, useCallback, startTransition } from 'react';
+import React, { useRef, useMemo, useEffect, useCallback } from 'react';
 
 import { Box, Button } from '@mui/material';
 
@@ -260,9 +260,7 @@ export const InventoryItemsSection = React.memo(function InventoryItemsSection({
 
     const handleMoveRight = useCallback(
         (ids: string[]) => {
-            startTransition(() => {
-                moveRight(ids);
-            });
+            moveRight(ids);
         },
         [moveRight]
     );
@@ -274,9 +272,7 @@ export const InventoryItemsSection = React.memo(function InventoryItemsSection({
 
     const handleRemoveMany = useCallback(
         (ids: string[]) => {
-            startTransition(() => {
-                removeIds(ids);
-            });
+            removeIds(ids);
         },
         [removeIds]
     );

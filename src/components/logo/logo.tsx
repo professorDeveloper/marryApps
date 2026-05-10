@@ -238,7 +238,7 @@ const Logo = ({ className = "", size = "15%", style, disabled, forceRestart, sho
         &&
         (<span
           style={{
-            color: 'var(--color-primary-500)',
+            color: 'var(--color-primary-400)',
             fontFamily: 'Poppins, sans-serif',
             fontWeight: 700,
             fontSize: typeof size === 'number' ? `${size * 0.35}px` : 'clamp(10px, 4vw, 24px)',

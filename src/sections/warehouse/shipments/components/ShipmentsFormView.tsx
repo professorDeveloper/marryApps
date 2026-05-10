@@ -27,6 +27,12 @@ import { paths } from 'src/routes/paths';
 import { useStorageAPI } from 'src/hooks/use-storage-api';
 import { useSupplierAPI } from 'src/hooks/use-supplier-api';
 import { useShipmentsAPI } from 'src/hooks/use-shipments-api';
+import { useAppDispatch } from 'src/store';
+import {
+    PICKER_FORM_NAMES,
+    shipmentsFormPickerActions,
+    mapBatchItemsToPickerItems,
+} from 'src/store/slices/pickerFormSlices';
 
 import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 
@@ -64,6 +70,8 @@ const ShipmentsFormView = React.memo(function ShipmentsFormView({
     const { t } = useTranslation('menu');
     const navigate = useNavigate();
     const { id } = useParams<{ id: string }>();
+    const dispatch = useAppDispatch();
+    const formName = PICKER_FORM_NAMES.shipmentsForm;
 
     // ── API hooks ─────────────────────────────────────────────────────────
     const {
@@ -84,6 +92,7 @@ const ShipmentsFormView = React.memo(function ShipmentsFormView({
     const [pageLoading, setPageLoading] = useState(!isNew);
     const [submitting, setSubmitting] = useState(false);
     const [isInfoOpen, setIsInfoOpen] = useState(true);
+    const [tableHeight, setTableHeight] = useState(730);
 
     const [storages, setStorages] = useState<SelectOption[]>([]);
     const [suppliers, setSuppliers] = useState<SelectOption[]>([]);
@@ -103,6 +112,20 @@ const ShipmentsFormView = React.memo(function ShipmentsFormView({
 
     const lineItemsApiRef = useRef<ShipmentsLineItemsApi | null>(null);
     const listsFetchedRef = useRef(false);
+
+    // ── Calculate table height based on viewport ───────────────────────────
+    useEffect(() => {
+        const calculateHeight = () => {
+            const viewportHeight = window.innerHeight;
+            const reservedSpace = isInfoOpen ? 460 : 220;
+            const calculatedHeight = Math.max(300, viewportHeight - reservedSpace);
+            setTableHeight(calculatedHeight);
+        };
+
+        calculateHeight();
+        window.addEventListener('resize', calculateHeight);
+        return () => window.removeEventListener('resize', calculateHeight);
+    }, [isInfoOpen]);
 
     // ── Effective shipment ID ─────────────────────────────────────────────
     const effectiveShipmentId = id || batchResponse?.data?.shipment?.id;
@@ -151,6 +174,13 @@ const ShipmentsFormView = React.memo(function ShipmentsFormView({
                 });
                 if (data.data.items) {
                     lineItemsApiRef.current?.restoreFromPersisted(data.data.items);
+                    dispatch(
+                        shipmentsFormPickerActions.setFormState({
+                            formName,
+                            items: mapBatchItemsToPickerItems(data.data.items),
+                            meta: { isNew, shipmentId: id ?? null, source: 'hydrate' },
+                        })
+                    );
                 }
             } catch (e) {
                 console.error(e);
@@ -164,7 +194,14 @@ const ShipmentsFormView = React.memo(function ShipmentsFormView({
         return () => {
             cancelled = true;
         };
-    }, [isNew, id, getShipmentById, navigate, t]);
+    }, [dispatch, formName, getShipmentById, id, isNew, navigate, t]);
+
+    useEffect(
+        () => () => {
+            dispatch(shipmentsFormPickerActions.resetFormState({ formName }));
+        },
+        [dispatch, formName]
+    );
 
     // ── Form field handlers ───────────────────────────────────────────────
     const handleDateChange = useCallback(
@@ -215,6 +252,17 @@ const ShipmentsFormView = React.memo(function ShipmentsFormView({
 
         try {
             setSubmitting(true);
+            dispatch(
+                shipmentsFormPickerActions.setFormState({
+                    formName,
+                    items: mapBatchItemsToPickerItems(batchData as Array<Record<string, unknown>>),
+                    meta: {
+                        isNew,
+                        shipmentId: effectiveShipmentId ?? null,
+                        source: 'submit',
+                    },
+                })
+            );
 
             if (isNew && !effectiveShipmentId) {
                 const result = await createShipmentBatch(payload);
@@ -234,7 +282,7 @@ const ShipmentsFormView = React.memo(function ShipmentsFormView({
         } finally {
             setSubmitting(false);
         }
-    }, [formData, isNew, effectiveShipmentId, createShipmentBatch, getShipmentById, t]);
+    }, [formData, isNew, effectiveShipmentId, createShipmentBatch, getShipmentById, t, dispatch, formName]);
 
     // ── Cancel ────────────────────────────────────────────────────────────
     const handleCancel = useCallback(() => {
@@ -397,6 +445,8 @@ const ShipmentsFormView = React.memo(function ShipmentsFormView({
                             cancelDisabled={ingredientsLoading || pageLoading}
                             saveDisabled={submitting || ingredientsLoading || pageLoading || !hasLineItems}
                             saveLabel={saveLabel}
+                            metaFieldsOpen={isInfoOpen}
+                            tableHeight={tableHeight}
                         />
                     </>
                 )}

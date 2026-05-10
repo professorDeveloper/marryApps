@@ -52,8 +52,8 @@ export const ItemRoot = styled(ButtonBase, { shouldForwardProp })<StyledState>((
     }),
     ...(active && {
       color: 'var(--color-primary-500)',
-      backgroundColor: 'rgba(255, 77, 26, 0.3) !important',
-      boxShadow: '0 0 20px rgba(255, 77, 26, 0.3), 0 0 20px rgba(255, 77, 26, 0.1)',
+      backgroundColor: 'color-mix(in srgb, var(--color-primary-400) 30%, transparent) !important',
+      boxShadow: '0 0 20px color-mix(in srgb, var(--color-primary-400) 30%, transparent), 0 0 20px color-mix(in srgb, var(--color-primary-400) 10%, transparent)',
       borderLeft: '3px solid var(--color-primary-500)',
     }),
   };
@@ -66,8 +66,8 @@ export const ItemRoot = styled(ButtonBase, { shouldForwardProp })<StyledState>((
     }),
     ...(active && {
       color: 'var(--color-primary-500)',
-      backgroundColor: 'rgba(255, 77, 26, 0.3) !important',
-      boxShadow: '0 0 20px rgba(255, 77, 26, 0.3), 0 0 20px rgba(255, 77, 26, 0.1)',
+      backgroundColor: 'color-mix(in srgb, var(--color-primary-400) 30%, transparent) !important',
+      boxShadow: '0 0 20px color-mix(in srgb, var(--color-primary-400) 30%, transparent), 0 0 20px color-mix(in srgb, var(--color-primary-400) 10%, transparent)',
     }),
   };
 

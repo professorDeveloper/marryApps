@@ -22,6 +22,8 @@ import {
   Chip,
 } from '@mui/material';
 
+import { DataGrid } from '@mui/x-data-grid';
+
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
 
@@ -676,36 +678,64 @@ export function ShipmentsListView() {
                 </Table>
               </TableContainer>
 
-              <TableContainer>
-                <Table size="small">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>#</TableCell>
-                      <TableCell>{t('warehouse.ingredient', 'Ingredient')}</TableCell>
-                      <TableCell>{t('calculation.quantity', 'Qty')}</TableCell>
-                      <TableCell>{t('shipments.pricePerUnit', 'Price / Unit')}</TableCell>
-                      <TableCell>{t('shipments.total', 'Total')}</TableCell>
-                      <TableCell>{t('shipments.stockBefore', 'Stock Before')}</TableCell>
-                      <TableCell>{t('shipments.stockAfter', 'Stock After')}</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {items.map((item, index) => (
-                      <TableRow key={item.id || `${item.ingredient_id}-${index}`}>
-                        <TableCell>{index + 1}</TableCell>
-                        <TableCell>
-                          {ingredientsMap[item.ingredient_id] || item.ingredient_id}
-                        </TableCell>
-                        <TableCell>{item.quantity}</TableCell>
-                        <TableCell>{item.price_per_unit}</TableCell>
-                        <TableCell>{item.total_amount}</TableCell>
-                        <TableCell>{item.stock_before}</TableCell>
-                        <TableCell>{item.stock_after}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
+              {items.length === 0 ? (
+                <Box sx={{ py: 2, textAlign: 'center' }}>
+                  <Typography variant="body2" color="text.secondary">
+                    {t('common.noData')}
+                  </Typography>
+                </Box>
+              ) : (
+                <Box sx={{ height: 500, width: '100%' }}>
+                  <DataGrid
+                    rows={items.map((item, index) => ({ ...item, rowIndex: index + 1 }))}
+                    getRowId={(row) => row.id || String(row.rowIndex)}
+                    columns={[
+                      { field: 'rowIndex', headerName: '#', width: 50 },
+                      { field: 'ingredient_id', headerName: t('warehouse.ingredient', 'Ingredient'), flex: 1, renderCell: (params: any) => ingredientsMap[params.value] || params.value },
+                      { field: 'quantity', headerName: t('calculation.quantity', 'Qty'), width: 100 },
+                      { field: 'price_per_unit', headerName: t('shipments.pricePerUnit', 'Price / Unit'), width: 150 },
+                      { field: 'total_amount', headerName: t('shipments.total', 'Total'), width: 150 },
+                      { field: 'stock_before', headerName: t('shipments.stockBefore', 'Stock Before'), width: 120 },
+                      { field: 'stock_after', headerName: t('shipments.stockAfter', 'Stock After'), width: 120 },
+                    ]}
+                    autoHeight
+                    disableRowSelectionOnClick
+                    disableColumnFilter
+                    disableColumnMenu
+                    disableColumnSelector
+                    disableDensitySelector
+                    hideFooterSelectedRowCount
+                    pagination
+                    pageSizeOptions={[10, 25, 50, 100]}
+                    initialState={{
+                      pagination: {
+                        paginationModel: { page: 0, pageSize: 50 },
+                      },
+                    }}
+                    sx={{
+                      '& .MuiDataGrid-toolbarContainer, & .MuiDataGrid-toolbarContainer button': {
+                        display: 'none !important',
+                      },
+                      '& .MuiDataGrid-columnHeaders': {
+                        backgroundColor: 'background.paper',
+                      },
+                      '& .MuiDataGrid-menuIcon': {
+                        display: 'none !important',
+                      },
+                      '& .MuiDataGrid-columnHeader:focus, & .MuiDataGrid-cell:focus': {
+                        outline: 'none !important',
+                      },
+                      '& .MuiDataGrid-columnSeparator': {
+                        display: 'none',
+                      },
+                    }}
+                    slots={{
+                      toolbar: () => null,
+                      columnMenu: () => null,
+                    }}
+                  />
+                </Box>
+              )}
 
               <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 3 }}>
                 <Typography variant="body2">

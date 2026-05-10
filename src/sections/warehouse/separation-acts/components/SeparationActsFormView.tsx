@@ -32,6 +32,12 @@ import { paths } from 'src/routes/paths';
 import { useStorageAPI } from 'src/hooks/use-storage-api';
 import { useDeductionsAPI } from 'src/hooks/use-deductions-api';
 import { useSeparationActsAPI } from 'src/hooks/use-separation-acts-api';
+import { useAppDispatch } from 'src/store';
+import {
+    PICKER_FORM_NAMES,
+    separationActsFormPickerActions,
+    mapBatchItemsToPickerItems,
+} from 'src/store/slices/pickerFormSlices';
 
 import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 
@@ -69,6 +75,8 @@ const SeparationActsFormView = React.memo(function SeparationActsFormView({
     const { t } = useTranslation('menu');
     const navigate = useNavigate();
     const { id } = useParams<{ id: string }>();
+    const dispatch = useAppDispatch();
+    const formName = PICKER_FORM_NAMES.separationActsForm;
 
     // ── API hooks ─────────────────────────────────────────────────────────
     const { getDeductionGroups } = useDeductionsAPI();
@@ -89,6 +97,7 @@ const SeparationActsFormView = React.memo(function SeparationActsFormView({
     const [pageLoading, setPageLoading] = useState(!isNew);
     const [submitting, setSubmitting] = useState(false);
     const [isInfoOpen, setIsInfoOpen] = useState(true);
+    const [tableHeight, setTableHeight] = useState(730);
 
     const [storages, setStorages] = useState<SelectOption[]>([]);
     const [groups, setGroups] = useState<SelectOption[]>([]);
@@ -110,6 +119,20 @@ const SeparationActsFormView = React.memo(function SeparationActsFormView({
 
     const lineItemsApiRef = useRef<SeparationActsLineItemsApi | null>(null);
     const listsFetchedRef = useRef(false);
+
+    // ── Calculate table height based on viewport ───────────────────────────
+    useEffect(() => {
+        const calculateHeight = () => {
+            const viewportHeight = window.innerHeight;
+            const reservedSpace = isInfoOpen ? 460 : 220;
+            const calculatedHeight = Math.max(300, viewportHeight - reservedSpace);
+            setTableHeight(calculatedHeight);
+        };
+
+        calculateHeight();
+        window.addEventListener('resize', calculateHeight);
+        return () => window.removeEventListener('resize', calculateHeight);
+    }, [isInfoOpen]);
 
     // ── Effective separation act ID ────────────────────────────────────────
     const effectiveActId = id || batchResponse?.data?.act?.id;
@@ -160,6 +183,13 @@ const SeparationActsFormView = React.memo(function SeparationActsFormView({
                 });
                 if (data.data.items) {
                     lineItemsApiRef.current?.restoreFromPersisted(data.data.items);
+                    dispatch(
+                        separationActsFormPickerActions.setFormState({
+                            formName,
+                            items: mapBatchItemsToPickerItems(data.data.items),
+                            meta: { isNew, separationActId: id ?? null, source: 'hydrate' },
+                        })
+                    );
                 }
             } catch (e) {
                 console.error(e);
@@ -173,7 +203,14 @@ const SeparationActsFormView = React.memo(function SeparationActsFormView({
         return () => {
             cancelled = true;
         };
-    }, [isNew, id, getSeparationActById, navigate, t]);
+    }, [dispatch, formName, getSeparationActById, id, isNew, navigate, t]);
+
+    useEffect(
+        () => () => {
+            dispatch(separationActsFormPickerActions.resetFormState({ formName }));
+        },
+        [dispatch, formName]
+    );
 
     // ── Form field handlers ───────────────────────────────────────────────
     const handleDateChange = useCallback(
@@ -256,6 +293,17 @@ const SeparationActsFormView = React.memo(function SeparationActsFormView({
 
         try {
             setSubmitting(true);
+            dispatch(
+                separationActsFormPickerActions.setFormState({
+                    formName,
+                    items: mapBatchItemsToPickerItems(transformedItems as Array<Record<string, unknown>>),
+                    meta: {
+                        isNew,
+                        separationActId: effectiveActId ?? null,
+                        source: 'submit',
+                    },
+                })
+            );
 
             if (isNew && !effectiveActId) {
                 const result = await createSeparationActBatch(payload);
@@ -275,7 +323,7 @@ const SeparationActsFormView = React.memo(function SeparationActsFormView({
         } finally {
             setSubmitting(false);
         }
-    }, [formData, isNew, effectiveActId, ingredients, createSeparationActBatch, getSeparationActById, t]);
+    }, [formData, isNew, effectiveActId, ingredients, createSeparationActBatch, getSeparationActById, t, dispatch, formName]);
 
     // ── Cancel ────────────────────────────────────────────────────────────
     const handleCancel = useCallback(() => {
@@ -446,6 +494,8 @@ const SeparationActsFormView = React.memo(function SeparationActsFormView({
                             cancelDisabled={ingredientsLoading || pageLoading}
                             saveDisabled={submitting || ingredientsLoading || pageLoading || !hasLineItems}
                             saveLabel={saveLabel}
+                            metaFieldsOpen={isInfoOpen}
+                            tableHeight={tableHeight}
                         />
                     </>
                 )}

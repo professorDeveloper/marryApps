@@ -2,7 +2,7 @@ import type { MealItem } from '../types';
 
 import React from 'react';
 
-import { Box, Chip, Checkbox, Typography } from '@mui/material';
+import { Chip, Checkbox, Typography } from '@mui/material';
 
 import { compositeKey } from '../types';
 
@@ -15,48 +15,39 @@ interface AvailableRowProps {
     compoundLabel: string;
 }
 
-const ROW_SX = {
-    display: 'grid',
-    gridTemplateColumns: '48px 1fr',
-    alignItems: 'center',
-    py: 0.75,
-    m: 0,
-    borderBottom: 1,
-    borderColor: 'var(--color-border)',
-    cursor: 'pointer',
-    '&:hover': { bgcolor: 'var(--color-primary-soft)' },
-    boxSizing: 'border-box',
-    fontFamily: '"Inter", sans-serif',
-} as const;
-
-const CB_CELL_SX = { display: 'flex', justifyContent: 'center' } as const;
-const CONTENT_CELL_SX = {
-    minWidth: 0,
-    display: 'flex',
-    alignItems: 'center',
-    gap: 1,
-} as const;
-const TEXT_COL_SX = {
+const CB_CELL_STYLE: React.CSSProperties = { display: 'flex', justifyContent: 'center' };
+const CONTENT_CELL_STYLE: React.CSSProperties = { minWidth: 0, display: 'flex', alignItems: 'center', gap: 8 };
+const TEXT_COL_STYLE: React.CSSProperties = {
     minWidth: 0,
     flex: 1,
     display: 'flex',
     alignItems: 'flex-start',
-    gap: 0.5,
+    gap: 4,
     flexDirection: 'column',
-} as const;
-const NAME_SX = { lineHeight: 1.2 } as const;
-const MEAS_SX = { lineHeight: 1 } as const;
-const CHIP_SX = {
-    fontSize: '0.65rem',
-    height: 16,
-    minWidth: 32,
+};
+const NAME_STYLE: React.CSSProperties = { lineHeight: 1.2 };
+const MEAS_STYLE: React.CSSProperties = { lineHeight: 1 };
+const getChipSx = (type: 'ingredient' | 'compound') => ({
+    fontSize: '0.75rem',
+    height: 24,
+    minWidth: 40,
     fontFamily: '"Inter", sans-serif',
-    '& .MuiChip-label': { px: 0.5 },
-    '&.MuiChip-outlined': {
-        borderColor: 'var(--color-border)',
-        color: 'var(--color-text)',
+    fontWeight: 600,
+    borderRadius: 1.5,
+    '& .MuiChip-label': { px: 1 },
+    '&.MuiChip-filled': {
+        // Ingredient - warm orange tint
+        ...(type === 'ingredient' && {
+            bgcolor: 'rgba(255, 77, 26, 0.15)',
+            color: 'rgba(255, 77, 26, 0.9)',
+        }),
+        // Compound - cool blue tint
+        ...(type === 'compound' && {
+            bgcolor: 'rgba(46, 144, 250, 0.15)',
+            color: 'rgba(46, 144, 250, 0.9)',
+        }),
     },
-} as const;
+} as const);
 
 export const AvailableRow = React.memo(function AvailableRow({
     item,
@@ -79,8 +70,8 @@ export const AvailableRow = React.memo(function AvailableRow({
     const stopClick = React.useCallback((e: React.MouseEvent) => e.stopPropagation(), []);
 
     return (
-        <Box onClick={handleClick} sx={ROW_SX}>
-            <Box sx={CB_CELL_SX}>
+        <div onClick={handleClick} className="meal-picker-available-row">
+            <div style={CB_CELL_STYLE}>
                 <Checkbox
                     size="small"
                     checked={isSelected}
@@ -88,23 +79,23 @@ export const AvailableRow = React.memo(function AvailableRow({
                     onClick={stopClick}
                     inputProps={{ 'aria-label': 'select available row' }}
                 />
-            </Box>
-            <Box sx={CONTENT_CELL_SX}>
-                <Box sx={TEXT_COL_SX}>
-                    <Typography variant="body2" noWrap sx={NAME_SX} fontFamily='"Inter", sans-serif'>
+            </div>
+            <div style={CONTENT_CELL_STYLE}>
+                <div style={TEXT_COL_STYLE}>
+                    <Typography variant="body2" noWrap style={NAME_STYLE} fontFamily='"Inter", sans-serif'>
                         {item.name}
                     </Typography>
-                    <Typography variant="caption" color="text.secondary" noWrap sx={MEAS_SX} fontFamily='"Inter", sans-serif'>
+                    <Typography variant="caption" color="text.secondary" noWrap style={MEAS_STYLE} fontFamily='"Inter", sans-serif'>
                         {item.measurement || '—'}
                     </Typography>
-                </Box>
+                </div>
                 <Chip
                     size="small"
                     label={item.type === 'ingredient' ? ingredientLabel : compoundLabel}
-                    variant="outlined"
-                    sx={CHIP_SX}
+                    variant="filled"
+                    sx={getChipSx(item.type)}
                 />
-            </Box>
-        </Box>
+            </div>
+        </div>
     );
 });

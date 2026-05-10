@@ -43,7 +43,7 @@ export const GeneralInformation = React.memo(function GeneralInformation({
                     border: '1px solid',
                     borderColor: 'var(--color-border)',
                     borderRadius: 1,
-                    bgcolor: 'var(--color-surface-2)',
+                    bgcolor: 'var(--color-surface-1)',
                     '&:before': {
                         display: 'none',
                     },

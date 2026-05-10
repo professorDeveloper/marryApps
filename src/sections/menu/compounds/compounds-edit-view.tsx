@@ -8,6 +8,12 @@ import { Box, Stack, Button, CircularProgress } from '@mui/material';
 
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
+import { useAppDispatch } from 'src/store';
+import {
+    PICKER_FORM_NAMES,
+    compoundFormPickerActions,
+    mapMealCalculationsToPickerItems,
+} from 'src/store/slices/pickerFormSlices';
 
 // Hooks and Actions
 import { useGetCompound, useGetCompoundWithCalculations } from 'src/hooks/use-compounds';
@@ -29,6 +35,8 @@ import { CompoundGeneralInformation } from './components/CompoundGeneralInformat
 export function CompoundEditView({ compoundId, isNew = false }: CompoundEditViewProps) {
     const { t } = useTranslation('menu');
     const router = useRouter();
+    const dispatch = useAppDispatch();
+    const formName = PICKER_FORM_NAMES.compoundEditForm;
     const [activeTab, setActiveTab] = useState(0);
 
     // --- General info state ────────────────────────────────────────────────
@@ -44,6 +52,7 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
     const [isInfoOpen, setIsInfoOpen] = useState(true);
     const [isMealItemsOpen, setIsMealItemsOpen] = useState(true);
     const [submitting, setSubmitting] = useState(false);
+    const [tableHeight, setTableHeight] = useState(730);
 
     // --- Data Fetching ─────────────────────────────────────────────────────
     const { compound, compoundLoading } = useGetCompound(isNew ? '' : compoundId || '');
@@ -57,10 +66,24 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
     // --- Cache key for MealItemPicker ──────────────────────────────────────
     const mealItemPickerCacheKey = isNew ? 'compound_new' : `compound_${compoundId}`;
 
+    // --- Calculate table height based on viewport ───────────────────────────
+    useEffect(() => {
+        const calculateHeight = () => {
+            const viewportHeight = window.innerHeight;
+            const reservedSpace = isInfoOpen ? 460 : 220;
+            const calculatedHeight = Math.max(300, viewportHeight - reservedSpace);
+            setTableHeight(calculatedHeight);
+        };
+
+        calculateHeight();
+        window.addEventListener('resize', calculateHeight);
+        return () => window.removeEventListener('resize', calculateHeight);
+    }, [isInfoOpen]);
+
     // --- Clear cache on unmount (when navigating away from this view) ───────
     useEffect(() => () => {
-            MealItemPickerCache.clear(mealItemPickerCacheKey);
-        }, [mealItemPickerCacheKey]);
+        MealItemPickerCache.clear(mealItemPickerCacheKey);
+    }, [mealItemPickerCacheKey]);
 
     // --- Memoize measurement options ---
     const measurementOptions = useMemo(() =>
@@ -102,7 +125,24 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
             }));
 
         mealItemsApiRef.current.restoreFromPersisted(ingredientCalcs, compoundCalcs);
-    }, [compoundWithCalculations]);
+        dispatch(
+            compoundFormPickerActions.setFormState({
+                formName,
+                items: mapMealCalculationsToPickerItems({
+                    ingredient_calculations: ingredientCalcs,
+                    compound_calculations: compoundCalcs,
+                }),
+                meta: { isNew, compoundId: compoundId ?? null, source: 'hydrate' },
+            })
+        );
+    }, [compoundWithCalculations, compoundId, dispatch, formName, isNew]);
+
+    useEffect(
+        () => () => {
+            dispatch(compoundFormPickerActions.resetFormState({ formName }));
+        },
+        [dispatch, formName]
+    );
 
     const handleTabChange = useCallback((_: any, newValue: number) => {
         setActiveTab(newValue);
@@ -148,11 +188,22 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
 
         setSubmitting(true);
         try {
+            const calculations = mealItemsApiRef.current?.getCalculations() ?? {
+                ingredient_calculations: [],
+                compound_calculations: [],
+            };
+            dispatch(
+                compoundFormPickerActions.setFormState({
+                    formName,
+                    items: mapMealCalculationsToPickerItems(calculations),
+                    meta: { isNew, compoundId: compoundId ?? null, source: 'submit' },
+                })
+            );
             await handleSubmit(compoundPayload);
         } finally {
             setSubmitting(false);
         }
-    }, [name, ingredientGroupId, compoundPayload, handleSubmit]);
+    }, [name, ingredientGroupId, compoundPayload, handleSubmit, dispatch, formName, isNew, compoundId]);
 
     const breadcrumbs = [
         { name: t('overview.menu.title', 'Menu'), href: paths.menu.root },
@@ -166,19 +217,19 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
     // Calculate summary for meal items accordion
     const mealItemsSummary = useMemo(() => {
         if (!mealItemsApiRef.current) return { ingredientCount: 0, compoundCount: 0, totalCost: 0 };
-        
+
         const calculations = mealItemsApiRef.current.getCalculations();
         const ingredientCount = calculations.ingredient_calculations.length;
         const compoundCount = calculations.compound_calculations.length;
-        
+
         // Calculate total cost (this would need actual pricing data)
         const totalCost = 0; // Placeholder - would need to calculate based on actual prices
-        
+
         return { ingredientCount, compoundCount, totalCost };
     }, [mealItemsApiRef.current]);
 
     return (
-        <Box sx={{ px: 4, m: 0 }}>
+        <Box sx={{ px: 4, m: 0, mt:2 }}>
             <Box
                 sx={{
                     position: 'relative',
@@ -225,37 +276,16 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
                     onToggle={handleInfoToggle}
                 />
 
-
                 {/* Meal Items Accordion */}
-                <GeneralInformation
-                    title={t('mealsProducts.title', 'Meal Items')}
-                    isOpen={isMealItemsOpen}
-                    onToggle={handleMealItemsToggle}
-                    disabled={sectionsDisabled}
-                    summaryValues={[
-                        `${mealItemsSummary.ingredientCount} ${t('mealsProducts.filterIngredients', 'Ingredients')}`,
-                        `${mealItemsSummary.compoundCount} ${t('mealsProducts.filterSemiFinished', 'Compounds')}`,
-                        `${t('total', 'Total')}: ${mealItemsSummary.totalCost}`
-                    ]}
-                >
-                    <Box sx={{ mx: -2, my: -2 }}>
-                        <MealItemPicker
-                            apiRef={mealItemsApiRef}
-                            onCancel={() => {}} // No-op - handled outside
-                            onSave={() => {}} // No-op - handled outside
-                            cancelDisabled // Disable internal buttons
-                            saveDisabled // Disable internal buttons
-                            saveLabel={saveLabel}
-                            hideActionBar // Hide internal action bar
-                            isVisible={isMealItemsOpen}
-                            tableHeight={730}
-                            cacheKey={mealItemPickerCacheKey}
-                        />
-                    </Box>
-                </GeneralInformation>
+                <MealItemPicker
+                    apiRef={mealItemsApiRef}
+                    isVisible={isMealItemsOpen}
+                    tableHeight={tableHeight}
+                    cacheKey={mealItemPickerCacheKey}
+                />
 
                 {/* Action buttons - outside accordion */}
-                <Stack direction="row" spacing={1} justifyContent="flex-end">
+                <Stack direction="row" spacing={1} justifyContent="flex-end" sx={{ mt: -7 }}>
                     <Button
                         variant="outlined"
                         color="inherit"

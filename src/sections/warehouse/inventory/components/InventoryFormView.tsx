@@ -13,6 +13,12 @@ import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks/use-router';
 
 import { useInventoryAPI } from 'src/hooks/use-inventory-api';
+import { useAppDispatch } from 'src/store';
+import {
+    PICKER_FORM_NAMES,
+    inventoryFormPickerActions,
+    mapBatchItemsToPickerItems,
+} from 'src/store/slices/pickerFormSlices';
 
 import { useGetStorages } from 'src/actions/departments';
 
@@ -26,6 +32,8 @@ const InventoryFormView = React.memo(function InventoryFormView() {
     const isNew = !id;
     const { t } = useTranslation('menu');
     const router = useRouter();
+    const dispatch = useAppDispatch();
+    const formName = PICKER_FORM_NAMES.inventoryForm;
     
     const {
         getInventoryById,
@@ -49,10 +57,25 @@ const InventoryFormView = React.memo(function InventoryFormView() {
     const [ingredientsLoading, setIngredientsLoading] = useState(true);
     const [isIngredientDialogOpen, setIsIngredientDialogOpen] = useState(false);
     const [isInfoOpen, setIsInfoOpen] = useState(true);
+    const [tableHeight, setTableHeight] = useState(730);
     const [createdInventoryId, setCreatedInventoryId] = useState<string | undefined>();
     
     const itemsApiRef = useRef<InventoryItemsApi | null>(null);
     const effectiveId = id || createdInventoryId;
+
+    // ── Calculate table height based on viewport ───────────────────────────
+    useEffect(() => {
+        const calculateHeight = () => {
+            const viewportHeight = window.innerHeight;
+            const reservedSpace = isInfoOpen ? 460 : 220;
+            const calculatedHeight = Math.max(300, viewportHeight - reservedSpace);
+            setTableHeight(calculatedHeight);
+        };
+
+        calculateHeight();
+        window.addEventListener('resize', calculateHeight);
+        return () => window.removeEventListener('resize', calculateHeight);
+    }, [isInfoOpen]);
     /** Latest description text (avoids stale closure on save when debounce hasn’t flushed). */
     const descriptionLiveRef = useRef(description);
     useEffect(() => {
@@ -108,6 +131,13 @@ const InventoryFormView = React.memo(function InventoryFormView() {
                 pendingItemsRef.current = items;
                 // Try immediate restore (may work if child already mounted)
                 itemsApiRef.current?.restoreFromPersisted(items);
+                dispatch(
+                    inventoryFormPickerActions.setFormState({
+                        formName,
+                        items: mapBatchItemsToPickerItems(items ?? []),
+                        meta: { isNew, inventoryId: id ?? null, source: 'hydrate' },
+                    })
+                );
             } catch {
                 if (!cancelled) toast.error(t('error.loadFailed'));
             } finally {
@@ -117,7 +147,14 @@ const InventoryFormView = React.memo(function InventoryFormView() {
         
         load();
         return () => { cancelled = true; };
-    }, [isNew, id]);
+    }, [dispatch, formName, getInventoryById, getInventoryItems, id, isNew, router, t]);
+
+    useEffect(
+        () => () => {
+            dispatch(inventoryFormPickerActions.resetFormState({ formName }));
+        },
+        [dispatch, formName]
+    );
     
     const { storages } = useGetStorages();
 
@@ -150,6 +187,13 @@ const InventoryFormView = React.memo(function InventoryFormView() {
         setSubmitting(true);
         try {
             debouncedSetDescription.flush();
+            dispatch(
+                inventoryFormPickerActions.setFormState({
+                    formName,
+                    items: mapBatchItemsToPickerItems(batchData as Array<Record<string, unknown>>),
+                    meta: { isNew, inventoryId: effectiveId ?? null, source: 'submit' },
+                })
+            );
             const formPayload: IInventoryFormData = {
                 date,
                 status: status as IInventoryFormData['status'],
@@ -179,6 +223,8 @@ const InventoryFormView = React.memo(function InventoryFormView() {
         storageId, date, status, isNew, createdInventoryId, effectiveId,
         createInventoryBatch, updateInventory, updateInventoryItemsBatch, applyInventory, t,
         debouncedSetDescription,
+        dispatch,
+        formName,
     ]);
 
     const handleCancel = useCallback(() => {
@@ -235,6 +281,7 @@ const InventoryFormView = React.memo(function InventoryFormView() {
                     saveDisabled={submitting || ingredientsLoading || pageLoading || !hasItems}
                     isSaving={submitting}
                     metaFieldsOpen={isInfoOpen}
+                    tableHeight={tableHeight}
                 />
 
             </Box>

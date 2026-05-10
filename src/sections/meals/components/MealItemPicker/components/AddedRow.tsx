@@ -3,11 +3,22 @@ import type { MealItemRow, MealItemType } from '../types';
 import React from 'react';
 
 import CloseIcon from '@mui/icons-material/Close';
-import { Box, Stack, Checkbox, Typography, IconButton } from '@mui/material';
+import { Stack, Checkbox, Typography, IconButton } from '@mui/material';
 
 import { TypeBadge } from './TypeBadge';
 // import { fCurrency } from 'src/utils/format-number'; // Removed to show numbers without currency
 import { compositeKey } from '../types';
+
+const INT_FORMATTER = new Intl.NumberFormat('en-US', {
+    useGrouping: true,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+});
+const DEC2_FORMATTER = new Intl.NumberFormat('en-US', {
+    useGrouping: true,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+});
 
 interface AddedRowProps {
     row: MealItemRow;
@@ -38,36 +49,11 @@ const INPUT_STYLE: React.CSSProperties = {
 const INPUT_WITH_UNIT: React.CSSProperties = { ...INPUT_STYLE, paddingRight: 52 };
 const INPUT_NO_UNIT: React.CSSProperties = { ...INPUT_STYLE, paddingRight: 8 };
 
-const ROW_BASE_SX = {
-    display: 'grid',
-    gridTemplateColumns: '48px 1fr 170px 140px 160px 56px',
-    alignItems: 'center',
-    columnGap: 1,
-    px: 1,
-    py: 0.5,
-    borderBottom: 1,
-    borderColor: 'var(--color-border)',
-    boxSizing: 'border-box',
-    fontFamily: '"Inter", sans-serif',
-} as const;
-
-const ROW_SELECTED_SX = {
-    ...ROW_BASE_SX,
-    bgcolor: 'var(--color-primary-soft)',
-    '&:hover': { bgcolor: 'var(--color-primary-ring)' },
-} as const;
-
-const ROW_UNSELECTED_SX = {
-    ...ROW_BASE_SX,
-    bgcolor: 'var(--color-surface-0)',
-    '&:hover': { bgcolor: 'var(--color-primary-soft)' },
-} as const;
-
-const CELL_CENTER_SX = { display: 'flex', justifyContent: 'center' } as const;
-const NAME_CELL_SX = { minWidth: 0 } as const;
-const NAME_STACK_SX = { minWidth: 0 } as const;
-const NAME_TEXT_SX = { minWidth: 0 } as const;
-const RIGHT_SX = { textAlign: 'right' } as const;
+const CELL_CENTER_STYLE: React.CSSProperties = { display: 'flex', justifyContent: 'center' };
+const NAME_CELL_STYLE: React.CSSProperties = { minWidth: 0 };
+const NAME_STACK_STYLE: React.CSSProperties = { minWidth: 0 };
+const NAME_TEXT_STYLE: React.CSSProperties = { minWidth: 0 };
+const RIGHT_STYLE: React.CSSProperties = { textAlign: 'right' };
 const QTY_WRAPPER_STYLE: React.CSSProperties = { position: 'relative', width: 140 };
 const UNIT_STYLE: React.CSSProperties = {
     position: 'absolute',
@@ -109,22 +95,18 @@ export const AddedRow = React.memo(function AddedRow({
     }, [row.quantity, isFocused]);
 
     // Format number with spaces for display
-    const formatNumberWithSpaces = (num: number | string | undefined | null): string => {
+    const formatNumberWithSpaces = React.useCallback((num: number | string | undefined | null): string => {
         if (num === undefined || num === null || num === 0) return '';
         const stringValue = String(num);
 
         const numericValue = parseFloat(stringValue);
-        if (isNaN(numericValue)) return stringValue;
+        if (!Number.isFinite(numericValue)) return stringValue;
 
         // Check if the value has decimal places
         const hasDecimals = numericValue % 1 !== 0;
-
-        return new Intl.NumberFormat('en-US', {
-            useGrouping: true,
-            minimumFractionDigits: hasDecimals ? 2 : 0,
-            maximumFractionDigits: hasDecimals ? 2 : 0,
-        }).format(numericValue).replace(/,/g, ' ');
-    };
+        const formatted = (hasDecimals ? DEC2_FORMATTER : INT_FORMATTER).format(numericValue);
+        return formatted.replace(/,/g, ' ');
+    }, []);
 
     const displayValue = isFocused ? localValue : formatNumberWithSpaces(localValue);
 
@@ -211,19 +193,19 @@ export const AddedRow = React.memo(function AddedRow({
     );
 
     return (
-        <Box sx={isSelected ? ROW_SELECTED_SX : ROW_UNSELECTED_SX}>
-            <Box sx={CELL_CENTER_SX}>
+        <div className={`meal-picker-added-row${isSelected ? ' is-selected' : ''}`}>
+            <div style={CELL_CENTER_STYLE}>
                 <Checkbox
                     size="small"
                     checked={isSelected}
                     onChange={handleSelect}
                     inputProps={{ 'aria-label': 'select added row' }}
                 />
-            </Box>
+            </div>
 
-            <Box sx={NAME_CELL_SX}>
-                <Stack direction="row" spacing={1} alignItems="center" sx={NAME_STACK_SX}>
-                    <Typography variant="body2" noWrap sx={NAME_TEXT_SX} fontFamily='"Inter", sans-serif'>
+            <div style={NAME_CELL_STYLE}>
+                <Stack direction="row" spacing={1} alignItems="center" sx={NAME_STACK_STYLE}>
+                    <Typography variant="body2" noWrap sx={NAME_TEXT_STYLE} fontFamily='"Inter", sans-serif'>
                         {row.name}
                     </Typography>
                     <TypeBadge
@@ -235,9 +217,9 @@ export const AddedRow = React.memo(function AddedRow({
                 <Typography variant="caption" color="text.secondary" noWrap sx={{ fontFamily: '"Inter", sans-serif' }}>
                     {row.measurement || '—'}
                 </Typography>
-            </Box>
+            </div>
 
-            <Box sx={CELL_CENTER_SX}>
+            <div style={CELL_CENTER_STYLE}>
                 <div style={QTY_WRAPPER_STYLE}>
                     <input
                         type="text"
@@ -252,20 +234,20 @@ export const AddedRow = React.memo(function AddedRow({
                     />
                     {row.measurement ? <span style={UNIT_STYLE}>{row.measurement}</span> : null}
                 </div>
-            </Box>
+            </div>
 
-            <Typography variant="body2" sx={{ ...RIGHT_SX, fontFamily: '"Inter", sans-serif' }}>
+            <Typography variant="body2" style={RIGHT_STYLE} sx={{ fontFamily: '"Inter", sans-serif' }}>
                 {pricePerUnit.toFixed(2)}
             </Typography>
-            <Typography variant="body2" sx={{ ...RIGHT_SX, fontFamily: '"Inter", sans-serif' }}>
+            <Typography variant="body2" style={RIGHT_STYLE} sx={{ fontFamily: '"Inter", sans-serif' }}>
                 {totalPrice.toFixed(2)}
             </Typography>
 
-            <Box sx={CELL_CENTER_SX}>
+            <div style={CELL_CENTER_STYLE}>
                 <IconButton size="small" color="error" onClick={handleRemove} aria-label="remove">
                     <CloseIcon fontSize="small" />
                 </IconButton>
-            </Box>
-        </Box>
+            </div>
+        </div>
     );
 });

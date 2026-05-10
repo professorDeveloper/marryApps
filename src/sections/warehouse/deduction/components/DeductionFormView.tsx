@@ -15,6 +15,12 @@ import { Box, Button, Typography, CircularProgress } from '@mui/material';
 import { paths } from 'src/routes/paths';
 
 import { useDeductionsAPI } from 'src/hooks/use-deductions-api';
+import { useAppDispatch } from 'src/store';
+import {
+    PICKER_FORM_NAMES,
+    deductionFormPickerActions,
+    mapBatchItemsToPickerItems,
+} from 'src/store/slices/pickerFormSlices';
 
 import { fetcher, endpoints } from 'src/lib/axios';
 
@@ -61,6 +67,8 @@ const DeductionFormView = React.memo(function DeductionFormView({
     const { t } = useTranslation('menu');
     const navigate = useNavigate();
     const { id } = useParams<{ id: string }>();
+    const dispatch = useAppDispatch();
+    const formName = PICKER_FORM_NAMES.deductionForm;
 
     // ── API hooks ─────────────────────────────────────────────────────────
     const {
@@ -77,6 +85,7 @@ const DeductionFormView = React.memo(function DeductionFormView({
     const [pageLoading, setPageLoading] = useState(!isNew);
     const [submitting, setSubmitting] = useState(false);
     const [isInfoOpen, setIsInfoOpen] = useState(true);
+    const [tableHeight, setTableHeight] = useState(730);
 
     const [storages, setStorages] = useState<SelectOption[]>([]);
     const [groups, setGroups] = useState<SelectOption[]>([]);
@@ -95,6 +104,20 @@ const DeductionFormView = React.memo(function DeductionFormView({
 
     const lineItemsApiRef = useRef<DeductionLineItemsApi | null>(null);
     const listsFetchedRef = useRef(false);
+
+    // ── Calculate table height based on viewport ───────────────────────────
+    useEffect(() => {
+        const calculateHeight = () => {
+            const viewportHeight = window.innerHeight;
+            const reservedSpace = isInfoOpen ? 460 : 220;
+            const calculatedHeight = Math.max(300, viewportHeight - reservedSpace);
+            setTableHeight(calculatedHeight);
+        };
+
+        calculateHeight();
+        window.addEventListener('resize', calculateHeight);
+        return () => window.removeEventListener('resize', calculateHeight);
+    }, [isInfoOpen]);
 
     // ── Effective deduction ID ────────────────────────────────────────────
     const effectiveDeductionId = id || deduction?.id || createdDeductionId;
@@ -160,6 +183,13 @@ const DeductionFormView = React.memo(function DeductionFormView({
                 });
                 if (data.items) {
                     lineItemsApiRef.current?.restoreFromPersisted(data.items);
+                    dispatch(
+                        deductionFormPickerActions.setFormState({
+                            formName,
+                            items: mapBatchItemsToPickerItems(data.items),
+                            meta: { isNew, deductionId: id ?? null, source: 'hydrate' },
+                        })
+                    );
                 }
             } catch (e) {
                 console.error(e);
@@ -173,7 +203,14 @@ const DeductionFormView = React.memo(function DeductionFormView({
         return () => {
             cancelled = true;
         };
-    }, [isNew, id, getDeductionById, navigate, t]);
+    }, [dispatch, formName, getDeductionById, id, isNew, navigate, t]);
+
+    useEffect(
+        () => () => {
+            dispatch(deductionFormPickerActions.resetFormState({ formName }));
+        },
+        [dispatch, formName]
+    );
 
     // ── Form field handlers ───────────────────────────────────────────────
     const handleDateChange = useCallback(
@@ -230,6 +267,17 @@ const DeductionFormView = React.memo(function DeductionFormView({
         try {
             setSubmitting(true);
             const targetId = createdDeductionId || id;
+            dispatch(
+                deductionFormPickerActions.setFormState({
+                    formName,
+                    items: mapBatchItemsToPickerItems(batchData as Array<Record<string, unknown>>),
+                    meta: {
+                        isNew,
+                        deductionId: targetId ?? null,
+                        source: 'submit',
+                    },
+                })
+            );
 
             if (isNew && !targetId) {
                 const result = await createDeduction(payload);
@@ -261,6 +309,8 @@ const DeductionFormView = React.memo(function DeductionFormView({
         updateDeductionItemsBatch,
         navigate,
         t,
+        dispatch,
+        formName,
     ]);
 
     // ── Cancel ────────────────────────────────────────────────────────────
@@ -347,6 +397,8 @@ const DeductionFormView = React.memo(function DeductionFormView({
                     cancelDisabled={ingredientsLoading || pageLoading}
                     saveDisabled={submitting || ingredientsLoading || pageLoading || !hasLineItems}
                     saveLabel={saveLabel}
+                    metaFieldsOpen={isInfoOpen}
+                    tableHeight={tableHeight}
                 />
 
                 {/* Edit mode: not found state */}

@@ -11,6 +11,12 @@ import { useRouter } from 'src/routes/hooks/use-router';
 import { useInvoiceAPI } from 'src/hooks/use-invoice-api';
 import { useStorageAPI } from 'src/hooks/use-storage-api';
 import { useSupplierAPI } from 'src/hooks/use-supplier-api';
+import { useAppDispatch } from 'src/store';
+import {
+    PICKER_FORM_NAMES,
+    invoiceFormPickerActions,
+    mapBatchItemsToPickerItems,
+} from 'src/store/slices/pickerFormSlices';
 
 import { fetcher } from 'src/lib/axios';
 
@@ -34,6 +40,8 @@ const InvoiceFormView = React.memo(function InvoiceFormView() {
         updateInvoice,
     } = useInvoiceAPI();
     const router = useRouter();
+    const dispatch = useAppDispatch();
+    const formName = PICKER_FORM_NAMES.invoiceForm;
     const { getSuppliers } = useSupplierAPI();
     const { getStorages } = useStorageAPI();
 
@@ -51,6 +59,7 @@ const InvoiceFormView = React.memo(function InvoiceFormView() {
 
     const [isIngredientDialogOpen, setIsIngredientDialogOpen] = useState(false);
     const [isInfoOpen, setIsInfoOpen] = useState(true);
+    const [tableHeight, setTableHeight] = useState(730);
     const openIngredientDialog = useCallback(() => setIsIngredientDialogOpen(true), []);
 
     const lineItemsApiRef = useRef<InvoiceLineItemsApi | null>(null);
@@ -63,6 +72,20 @@ const InvoiceFormView = React.memo(function InvoiceFormView() {
     const handleIngredientsLoadingChange = useCallback((loading: boolean) => {
         setIngredientsLoading(loading);
     }, []);
+
+    // ── Calculate table height based on viewport ───────────────────────────
+    useEffect(() => {
+        const calculateHeight = () => {
+            const viewportHeight = window.innerHeight;
+            const reservedSpace = isInfoOpen ? 460 : 220;
+            const calculatedHeight = Math.max(300, viewportHeight - reservedSpace);
+            setTableHeight(calculatedHeight);
+        };
+
+        calculateHeight();
+        window.addEventListener('resize', calculateHeight);
+        return () => window.removeEventListener('resize', calculateHeight);
+    }, [isInfoOpen]);
 
     useEffect(() => {
         if (listsFetchedRef.current) return;
@@ -111,6 +134,13 @@ const InvoiceFormView = React.memo(function InvoiceFormView() {
                 const raw = Array.isArray(response) ? response : response?.data;
                 const details = Array.isArray(raw) ? raw : raw ? [raw] : [];
                 lineItemsApiRef.current?.restoreFromPersisted(details.filter(Boolean));
+                dispatch(
+                    invoiceFormPickerActions.setFormState({
+                        formName,
+                        items: mapBatchItemsToPickerItems(details.filter(Boolean)),
+                        meta: { isNew, invoiceId: invoiceId ?? null, source: 'hydrate' },
+                    })
+                );
             } catch (e) {
                 console.error(e);
                 if (!cancelled) toast.error(t('error.loadFailed'));
@@ -123,7 +153,14 @@ const InvoiceFormView = React.memo(function InvoiceFormView() {
         return () => {
             cancelled = true;
         };
-    }, [isNew, invoiceId, getInvoiceById, t]);
+    }, [dispatch, formName, getInvoiceById, invoiceId, isNew, t]);
+
+    useEffect(
+        () => () => {
+            dispatch(invoiceFormPickerActions.resetFormState({ formName }));
+        },
+        [dispatch, formName]
+    );
 
     const handleSubmitBatch = useCallback(async () => {
         const api = lineItemsApiRef.current;
@@ -151,6 +188,13 @@ const InvoiceFormView = React.memo(function InvoiceFormView() {
 
         try {
             setSubmitting(true);
+            dispatch(
+                invoiceFormPickerActions.setFormState({
+                    formName,
+                    items: mapBatchItemsToPickerItems(batchData as Array<Record<string, unknown>>),
+                    meta: { isNew, invoiceId, source: 'submit' },
+                })
+            );
 
             if (isNew) {
                 await createInvoiceBatch({
@@ -206,6 +250,8 @@ const InvoiceFormView = React.memo(function InvoiceFormView() {
         updateInvoiceDetailsBatch,
         updateInvoice,
         router,
+        dispatch,
+        formName,
     ]);
 
     const handleInvoiceCancel = useCallback(() => {
@@ -263,6 +309,7 @@ const InvoiceFormView = React.memo(function InvoiceFormView() {
                     }
                     saveLabel={saveLabel}
                     metaFieldsOpen={isInfoOpen}
+                    tableHeight={tableHeight}
                 />
             </Box>
 

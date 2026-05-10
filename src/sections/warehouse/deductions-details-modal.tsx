@@ -12,6 +12,8 @@ import {
   TableContainer,
 } from '@mui/material';
 
+import { DataGrid } from '@mui/x-data-grid';
+
 import { GenericViewModal } from 'src/components/generic-view-view';
 
 interface DeductionIngredientMovement {
@@ -188,75 +190,79 @@ export function DeductionsDetailsModal({
               </Table>
             </TableContainer> */}
 
-            <TableContainer
-              sx={{
-                backgroundColor: 'var(--color-surface-1)',
-                border: '1px solid var(--color-border)',
-                borderRadius: 2,
-              }}
-            >
-              <Table size="small">
-                <TableHead>
-                  <TableRow
-                    sx={{
-                      '& .MuiTableCell-head': {
-                        color: 'primary.main',
-                        textTransform: 'uppercase',
-                        letterSpacing: 1.5,
-                        fontWeight: 800,
-                        fontSize: '0.7rem',
-                        borderBottom: '2px solid var(--color-border-strong)',
-                        backgroundColor: 'var(--color-primary-soft)',
-                        fontFamily: 'var(--font-mono)',
-                      },
-                    }}
-                  >
-                    <TableCell>#</TableCell>
-                    <TableCell>{t('warehouse.ingredient', 'Ingredient')}</TableCell>
-                    <TableCell>{t('deductions.quantity', 'Quantity')}</TableCell>
-                    <TableCell>{t('calculation.pricePerUnit', 'Price / Unit')}</TableCell>
-                    <TableCell>{t('calculation.remaining', 'Amount')}</TableCell>
-                    <TableCell>{t('shipments.stockBefore', 'Stock before')}</TableCell>
-                    <TableCell>{t('shipments.stockAfter', 'Stock after')}</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {detailRows.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={7}>
-                        <Typography variant="body2" color="text.secondary" sx={{ fontFamily: 'var(--font-mono)' }}>
-                          {t('deductions.noItemsSelected', 'No items selected')}
-                        </Typography>
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    detailRows.map((row, index) => (
-                      <TableRow
-                        key={row.id}
-                        sx={{
-                          '&:hover': {
-                            backgroundColor: 'var(--color-primary-soft)',
-                          },
-                          '& .MuiTableCell-root': {
-                            fontFamily: 'var(--font-mono)',
-                            borderBottom: '1px solid var(--color-border)',
-                            color: 'text.primary',
-                          },
-                        }}
-                      >
-                        <TableCell>{index + 1}</TableCell>
-                        <TableCell>{ingredientsMap[row.ingredientId] || row.ingredientId}</TableCell>
-                        <TableCell>{row.quantity}</TableCell>
-                        <TableCell>{formatAmount(row.pricePerUnit)}</TableCell>
-                        <TableCell>{formatAmount(row.amount)}</TableCell>
-                        <TableCell>{row.stockBefore}</TableCell>
-                        <TableCell>{row.stockAfter}</TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
+            {detailRows.length === 0 ? (
+              <Box sx={{ py: 2, textAlign: 'center' }}>
+                <Typography variant="body2" color="text.secondary" sx={{ fontFamily: 'var(--font-mono)' }}>
+                  {t('deductions.noItemsSelected', 'No items selected')}
+                </Typography>
+              </Box>
+            ) : (
+              <Box sx={{ height: 500, width: '100%' }}>
+                <DataGrid
+                  rows={detailRows.map((row, index) => ({ ...row, rowIndex: index + 1 }))}
+                  getRowId={(row) => row.id || String(row.rowIndex)}
+                  columns={[
+                    { field: 'rowIndex', headerName: '#', width: 50 },
+                    { field: 'ingredientId', headerName: t('warehouse.ingredient', 'Ingredient'), flex: 1, renderCell: (params: any) => ingredientsMap[params.value] || params.value },
+                    { field: 'quantity', headerName: t('deductions.quantity', 'Quantity'), width: 120 },
+                    { field: 'pricePerUnit', headerName: t('calculation.pricePerUnit', 'Price / Unit'), width: 150, renderCell: (params: any) => formatAmount(params.value) },
+                    { field: 'amount', headerName: t('calculation.remaining', 'Amount'), width: 150, renderCell: (params: any) => formatAmount(params.value) },
+                    { field: 'stockBefore', headerName: t('shipments.stockBefore', 'Stock before'), width: 120 },
+                    { field: 'stockAfter', headerName: t('shipments.stockAfter', 'Stock after'), width: 120 },
+                  ]}
+                  autoHeight
+                  disableRowSelectionOnClick
+                  disableColumnFilter
+                  disableColumnMenu
+                  disableColumnSelector
+                  disableDensitySelector
+                  hideFooterSelectedRowCount
+                  pagination
+                  pageSizeOptions={[10, 25, 50, 100]}
+                  initialState={{
+                    pagination: {
+                      paginationModel: { page: 0, pageSize: 50 },
+                    },
+                  }}
+                  sx={{
+                    '& .MuiDataGrid-toolbarContainer, & .MuiDataGrid-toolbarContainer button': {
+                      display: 'none !important',
+                    },
+                    '& .MuiDataGrid-columnHeaders': {
+                      backgroundColor: 'var(--color-primary-soft)',
+                      color: 'primary.main',
+                      textTransform: 'uppercase',
+                      letterSpacing: 1.5,
+                      fontWeight: 800,
+                      fontSize: '0.7rem',
+                      borderBottom: '2px solid var(--color-border-strong)',
+                      fontFamily: 'var(--font-mono)',
+                    },
+                    '& .MuiDataGrid-menuIcon': {
+                      display: 'none !important',
+                    },
+                    '& .MuiDataGrid-columnHeader:focus, & .MuiDataGrid-cell:focus': {
+                      outline: 'none !important',
+                    },
+                    '& .MuiDataGrid-columnSeparator': {
+                      display: 'none',
+                    },
+                    '& .MuiDataGrid-cell': {
+                      fontFamily: 'var(--font-mono)',
+                      borderBottom: '1px solid var(--color-border)',
+                      color: 'text.primary',
+                    },
+                    '& .MuiDataGrid-row:hover': {
+                      backgroundColor: 'var(--color-primary-soft)',
+                    },
+                  }}
+                  slots={{
+                    toolbar: () => null,
+                    columnMenu: () => null,
+                  }}
+                />
+              </Box>
+            )}
 
             {/* <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 3 }}>
               <Typography variant="body2">

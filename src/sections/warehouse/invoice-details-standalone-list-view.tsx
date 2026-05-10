@@ -460,18 +460,17 @@ export function InvoiceDetailsStandaloneListView() {
                 label: t('invoices.totalAmount', 'Total Amount'),
                 sortable: true,
                 width: '1fr',
-                align: 'left' as const,
+                align: 'right' as const,
                 mono: true,
                 getValue: (row: any) => Number(row?.total_amount || 0),
                 renderCell: ({ value }: { value: unknown }) => {
                     const amount = Number(value ?? 0);
                     return (
                         <Box sx={CELL_SX}>
-                            {amount.toLocaleString()} UZS
+                            {amount.toLocaleString().replace(/,/g, ' ')}
                         </Box>
                     );
                 },
-                total: { aggregation: 'sum' as const },
             },
             {
                 key: 'status',
@@ -703,7 +702,7 @@ export function InvoiceDetailsStandaloneListView() {
                         }
                     }}
                     defaultConfig={{
-                        order: ['supplier', 'supplier_phone', 'storage_id', 'total_amount', 'status', 'date', 'actions'],
+                        order: ['supplier', 'supplier_phone', 'storage_id', 'total_amount',  'status', 'date','actions'],
                         visibility: {
                             supplier: true,
                             supplier_phone: true,

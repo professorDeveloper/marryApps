@@ -31,6 +31,12 @@ import { paths } from 'src/routes/paths';
 import { useStorageAPI } from 'src/hooks/use-storage-api';
 import { useDeductionsAPI } from 'src/hooks/use-deductions-api';
 import { useOutgoingInvoicesAPI } from 'src/hooks/use-outgoing-invoices-api';
+import { useAppDispatch } from 'src/store';
+import {
+    PICKER_FORM_NAMES,
+    outgoingInvoiceFormPickerActions,
+    mapBatchItemsToPickerItems,
+} from 'src/store/slices/pickerFormSlices';
 
 import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 
@@ -51,6 +57,8 @@ const OutgoingInvoiceFormView = React.memo(function OutgoingInvoiceFormView() {
     const navigate = useNavigate();
     const { id } = useParams<{ id: string }>();
     const isNew = !id;
+    const dispatch = useAppDispatch();
+    const formName = PICKER_FORM_NAMES.outgoingInvoiceForm;
 
     // ── API hooks ─────────────────────────────────────────────────────────
     const { getDeductionGroups } = useDeductionsAPI();
@@ -86,8 +94,24 @@ const OutgoingInvoiceFormView = React.memo(function OutgoingInvoiceFormView() {
     const [batchResponse, setBatchResponse] = useState<OutgoingInvoiceBatchApiResponse | null>(null);
     const [hasLineItems, setHasLineItems] = useState(false);
 
+    const [tableHeight, setTableHeight] = useState(730);
+
     const lineItemsApiRef = useRef<OutgoingInvoiceLineItemsApi | null>(null);
     const listsFetchedRef = useRef(false);
+
+    // ── Calculate table height based on viewport ───────────────────────────
+    useEffect(() => {
+        const calculateHeight = () => {
+            const viewportHeight = window.innerHeight;
+            const reservedSpace = isInfoOpen ? 460 : 220;
+            const calculatedHeight = Math.max(300, viewportHeight - reservedSpace);
+            setTableHeight(calculatedHeight);
+        };
+
+        calculateHeight();
+        window.addEventListener('resize', calculateHeight);
+        return () => window.removeEventListener('resize', calculateHeight);
+    }, [isInfoOpen]);
 
     // ── Ingredients map (for batch response table) ────────────────────────
     const ingredientsMap = useMemo(() => {
@@ -124,7 +148,18 @@ const OutgoingInvoiceFormView = React.memo(function OutgoingInvoiceFormView() {
             quantity: item.quantity,
         }));
         lineItemsApiRef.current?.restoreFromPersisted(mappedItems);
-    }, []);
+        dispatch(
+            outgoingInvoiceFormPickerActions.setFormState({
+                formName,
+                items: mapBatchItemsToPickerItems(mappedItems),
+                meta: {
+                    isNew,
+                    outgoingInvoiceId: response.data.invoice.id ?? id ?? null,
+                    source: 'hydrate',
+                },
+            })
+        );
+    }, [dispatch, formName, id, isNew]);
 
     // ── Load existing invoice (edit mode) ─────────────────────────────────
     useEffect(() => {
@@ -157,6 +192,13 @@ const OutgoingInvoiceFormView = React.memo(function OutgoingInvoiceFormView() {
             cancelled = true;
         };
     }, [isNew, id, getOutgoingInvoiceById, mapResponseToState, navigate, t]);
+
+    useEffect(
+        () => () => {
+            dispatch(outgoingInvoiceFormPickerActions.resetFormState({ formName }));
+        },
+        [dispatch, formName]
+    );
 
     // ── Form field handlers ───────────────────────────────────────────────
     const handleDateChange = useCallback(
@@ -207,6 +249,17 @@ const OutgoingInvoiceFormView = React.memo(function OutgoingInvoiceFormView() {
 
         try {
             setSubmitting(true);
+            dispatch(
+                outgoingInvoiceFormPickerActions.setFormState({
+                    formName,
+                    items: mapBatchItemsToPickerItems(batchData as Array<Record<string, unknown>>),
+                    meta: {
+                        isNew,
+                        outgoingInvoiceId: id ?? batchResponse?.data?.invoice?.id ?? null,
+                        source: 'submit',
+                    },
+                })
+            );
             const response = await createOutgoingInvoiceBatch({
                 date: normalizeDateForApi(formData.date),
                 description: formData.description || '',
@@ -220,7 +273,7 @@ const OutgoingInvoiceFormView = React.memo(function OutgoingInvoiceFormView() {
         } finally {
             setSubmitting(false);
         }
-    }, [createOutgoingInvoiceBatch, formData, mapResponseToState, normalizeDateForApi, t]);
+    }, [batchResponse?.data?.invoice?.id, createOutgoingInvoiceBatch, dispatch, formData, formName, id, isNew, mapResponseToState, normalizeDateForApi, t]);
 
     // ── Cancel (navigate back) ────────────────────────────────────────────
     const handleCancel = useCallback(() => {
@@ -307,6 +360,8 @@ const OutgoingInvoiceFormView = React.memo(function OutgoingInvoiceFormView() {
                         cancelDisabled={ingredientsLoading || pageLoading}
                         saveDisabled={submitting || ingredientsLoading || pageLoading || !hasLineItems}
                         saveLabel={saveLabel}
+                        metaFieldsOpen={isInfoOpen}
+                        tableHeight={tableHeight}
                     />
                 )}
 

@@ -43,89 +43,91 @@ export const InventoryMetaFields = React.memo(function InventoryMetaFields({
     ) as string[];
 
     return (
-        <GeneralInformation
-            title={t('inventory.details', 'Details')}
-            isOpen={isOpen}
-            onToggle={onToggle}
-            disabled={disabled}
-            summaryValues={summaryValues}
-        >
-            <Box
-                sx={{
-                    display: 'grid',
-                    gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
-                    gap: 2,
-                    alignItems: 'stretch',   // 👈 important
-                }}
+        <Box sx={{ mt: 2 }}>
+            <GeneralInformation
+                title={t('inventory.details', 'Details')}
+                isOpen={isOpen}
+                onToggle={onToggle}
+                disabled={disabled}
+                summaryValues={summaryValues}
             >
                 <Box
                     sx={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: 2
+                        display: 'grid',
+                        gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
+                        gap: 2,
+                        alignItems: 'stretch',   // 👈 important
                     }}
                 >
-                    <DateTimePicker
-                        label={t('inventory.dateTime', 'Date & Time')}
-                        value={dateValue}
-                        onChange={(newDateTime) => {
-                            onDateChange(newDateTime ? newDateTime.format('YYYY-MM-DDTHH:mm:ss') : '');
+                    <Box
+                        sx={{
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: 2
                         }}
-                        format="DD.MM.YYYY HH:mm"
-                        ampm={false}
-                        disabled={disabled}
-                        slotProps={{
-                            textField: {
-                                size: 'small',
-                                inputProps: { readOnly: true },
-                                sx: { cursor: 'pointer' },
-                            },
+                    >
+                        <DateTimePicker
+                            label={t('inventory.dateTime', 'Date & Time')}
+                            value={dateValue}
+                            onChange={(newDateTime) => {
+                                onDateChange(newDateTime ? newDateTime.format('YYYY-MM-DDTHH:mm:ss') : '');
+                            }}
+                            format="DD.MM.YYYY HH:mm"
+                            ampm={false}
+                            disabled={disabled}
+                            slotProps={{
+                                textField: {
+                                    size: 'small',
+                                    inputProps: { readOnly: true },
+                                    sx: { cursor: 'pointer' },
+                                },
+                            }}
+                        />
+                        <TextField
+                            select
+                            label={t('inventory.storage', 'Storage')}
+                            value={storageId}
+                            onChange={(e) => onStorageChange(e.target.value)}
+                            size="small"
+                            SelectProps={{ native: true }}
+                            disabled={disabled || storages.length === 0}
+                        >
+                            <option value="" />
+                            {storages.map((s) => (
+                                <option key={s.id} value={s.id}>
+                                    {s.name}
+                                </option>
+                            ))}
+                        </TextField>
+                        <TextField
+                            select
+                            label={t('inventory.status', 'Status')}
+                            value={status}
+                            onChange={(e) => onStatusChange(e.target.value)}
+                            size="small"
+                            SelectProps={{ native: true }}
+                            disabled={disabled}
+                        >
+                            <option value="deleted">{t('inventory.deleted', 'Deleted')}</option>
+                            <option value="draft">{t('inventory.draft', 'Draft')}</option>
+                            <option value="active">{t('inventory.active', 'Active')}</option>
+                        </TextField>
+                    </Box>
+                    <Box
+                        sx={{
+                            height: '100%',
+                            display: 'flex',
                         }}
-                    />
-                    <TextField
-                        select
-                        label={t('inventory.storage', 'Storage')}
-                        value={storageId}
-                        onChange={(e) => onStorageChange(e.target.value)}
-                        size="small"
-                        SelectProps={{ native: true }}
-                        disabled={disabled || storages.length === 0}
                     >
-                        <option value="" />
-                        {storages.map((s) => (
-                            <option key={s.id} value={s.id}>
-                                {s.name}
-                            </option>
-                        ))}
-                    </TextField>
-                    <TextField
-                        select
-                        label={t('inventory.status', 'Status')}
-                        value={status}
-                        onChange={(e) => onStatusChange(e.target.value)}
-                        size="small"
-                        SelectProps={{ native: true }}
-                        disabled={disabled}
-                    >
-                        <option value="deleted">{t('inventory.deleted', 'Deleted')}</option>
-                        <option value="draft">{t('inventory.draft', 'Draft')}</option>
-                        <option value="active">{t('inventory.active', 'Active')}</option>
-                    </TextField>
+                        <InventoryDescriptionField
+                            value={description}
+                            onLiveChange={onDescriptionChange}
+                            label={t('inventory.description', 'Description')}
+                            disabled={disabled}
+                        />
+                    </Box>
                 </Box>
-                <Box
-                    sx={{
-                        height: '100%',
-                        display: 'flex',
-                    }}
-                >
-                    <InventoryDescriptionField
-                        value={description}
-                        onLiveChange={onDescriptionChange}
-                        label={t('inventory.description', 'Description')}
-                        disabled={disabled}
-                    />
-                </Box>
-            </Box>
-        </GeneralInformation>
+            </GeneralInformation>
+        </Box>
     );
 });

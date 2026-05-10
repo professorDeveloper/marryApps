@@ -2,7 +2,7 @@ import type { InvoiceLineItemsApi, InvoiceFormLineItemsSectionProps } from '../t
 import type { ColumnDef, PickerItem, SummaryEntry } from 'src/sections/warehouse/utils/components/item-picker';
 
 import { useTranslation } from 'react-i18next';
-import React, { useRef, useMemo, useEffect, useCallback, startTransition } from 'react';
+import React, { useRef, useMemo, useEffect, useCallback } from 'react';
 
 import { Box, Button } from '@mui/material';
 
@@ -166,16 +166,12 @@ export const InvoiceFormLineItemsSection = React.memo(function InvoiceFormLineIt
                 label: t('warehouse.invoiceDetails.totalQty'),
                 value: transferredItems.reduce((acc, item) => acc + (Number(item.quantity) || 0), 0).toFixed(2),
             },
-            {
-                label: t('warehouse.invoiceDetails.totalAmount'),
-                value: formatPrice(transferredItems.reduce((acc, item) => acc + (Number(item.total) || 0), 0)),
-            },
         ],
         [transferredItems, t]
     );
 
     const totalValue = useMemo(
-        () => formatPrice(transferredItems.reduce((acc, item) => acc + (Number(item.total) || 0), 0)),
+        () => transferredItems.reduce((acc, item) => acc + (Number(item.total) || 0), 0).toFixed(2),
         [transferredItems]
     );
 
@@ -189,10 +185,7 @@ export const InvoiceFormLineItemsSection = React.memo(function InvoiceFormLineIt
 
     const handleMoveRight = useCallback(
         (ids: string[]) => {
-            // Always defer: keeps pointer/keyboard feedback smooth while picker state reconciles.
-            startTransition(() => {
-                moveRight(ids);
-            });
+            moveRight(ids);
         },
         [moveRight]
     );
@@ -206,9 +199,7 @@ export const InvoiceFormLineItemsSection = React.memo(function InvoiceFormLineIt
 
     const handleRemoveMany = useCallback(
         (ids: string[]) => {
-            startTransition(() => {
-                removeIngredientIds(ids);
-            });
+            removeIngredientIds(ids);
         },
         [removeIngredientIds]
     );

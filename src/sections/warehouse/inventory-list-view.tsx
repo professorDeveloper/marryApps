@@ -24,6 +24,8 @@ import {
     Chip,
 } from '@mui/material';
 
+import { DataGrid } from '@mui/x-data-grid';
+
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
 
@@ -685,6 +687,67 @@ export function InventoryListView() {
                 slideDirection="left"
                 maxWidth="lg"
                 renderContent={() => {
+                    const columns = [
+                        { field: 'id', headerName: '#', width: 50 },
+                        { field: 'ingredient_name', headerName: t('calculation.productName', 'Product'), flex: 1 },
+                        { field: 'ingredient_measurement', headerName: t('calculation.unit', 'Unit'), width: 100 },
+                        { field: 'system_quantity', headerName: t('calculation.systemQty', 'System Qty'), width: 120, renderCell: (params: any) => <Box sx={{ textAlign: 'right', width: '100%' }}>{params.value ?? '-'}</Box> },
+                        { field: 'counted_quantity', headerName: t('calculation.countedQty', 'Counted Qty'), width: 120, renderCell: (params: any) => <Box sx={{ textAlign: 'right', width: '100%' }}>{params.value ?? '-'}</Box> },
+                        { 
+                            field: 'difference_quantity', 
+                            headerName: t('calculation.difference', 'Difference'), 
+                            width: 120,
+                            renderCell: (params: any) => (
+                                <Box sx={{ textAlign: 'right', width: '100%' }}>
+                                    <Typography
+                                        variant="body2"
+                                        sx={{
+                                            color:
+                                                params.value > 0
+                                                    ? 'success.main'
+                                                    : params.value < 0
+                                                        ? 'error.main'
+                                                        : 'text.secondary',
+                                        }}
+                                    >
+                                        {params.value ?? '-'}
+                                    </Typography>
+                                </Box>
+                            )
+                        },
+                        { field: 'price_per_unit', headerName: t('calculation.pricePerUnit', 'Price/Unit'), width: 120, renderCell: (params: any) => <Box sx={{ textAlign: 'right', width: '100%' }}>{formatAmount(params.value)}</Box> },
+                        { 
+                            field: 'surplus_amount', 
+                            headerName: t('calculation.surplus', 'Surplus'), 
+                            width: 120,
+                            renderCell: (params: any) => (
+                                <Box sx={{ textAlign: 'right', width: '100%' }}>
+                                    <Typography sx={{ color: 'success.main', fontWeight: 600 }}>
+                                        {formatAmount(params.value)}
+                                    </Typography>
+                                </Box>
+                            )
+                        },
+                        { 
+                            field: 'shortage_amount', 
+                            headerName: t('calculation.shortage', 'Shortage'), 
+                            width: 120,
+                            renderCell: (params: any) => (
+                                <Box sx={{ textAlign: 'right', width: '100%' }}>
+                                    <Typography sx={{ color: 'error.main', fontWeight: 600 }}>
+                                        {formatAmount(params.value)}
+                                    </Typography>
+                                </Box>
+                            )
+                        },
+                        { field: 'remaining_amount', headerName: t('calculation.remaining', 'Remaining'), width: 120, renderCell: (params: any) => <Box sx={{ textAlign: 'right', width: '100%' }}>{formatAmount(params.value)}</Box> },
+                    ];
+
+                    const rows = inventoryItems.map((item, index) => ({
+                        id: index + 1,
+                        ...item,
+                    }));
+
                     if (inventoryItems.length === 0) {
                         return (
                             <Box sx={{ py: 2, textAlign: 'center' }}>
@@ -696,62 +759,47 @@ export function InventoryListView() {
                     }
 
                     return (
-                        <TableContainer>
-                            <Table size="small">
-                                <TableHead>
-                                    <TableRow>
-                                        <TableCell>#</TableCell>
-                                        <TableCell>{t('calculation.productName', 'Product')}</TableCell>
-                                        <TableCell>{t('calculation.unit', 'Unit')}</TableCell>
-                                        <TableCell align="right">{t('calculation.systemQty', 'System Qty')}</TableCell>
-                                        <TableCell align="right">{t('calculation.countedQty', 'Counted Qty')}</TableCell>
-                                        <TableCell align="right">{t('calculation.difference', 'Difference')}</TableCell>
-                                        <TableCell align="right">{t('calculation.pricePerUnit', 'Price/Unit')}</TableCell>
-                                        <TableCell align="right">{t('calculation.surplus', 'Surplus')}</TableCell>
-                                        <TableCell align="right">{t('calculation.shortage', 'Shortage')}</TableCell>
-                                        <TableCell align="right">{t('calculation.remaining', 'Remaining')}</TableCell>
-                                    </TableRow>
-                                </TableHead>
-                                <TableBody>
-                                    {inventoryItems.map((item, index) => (
-                                        <TableRow key={item.inventory_item_id || `${item.ingredient_id}-${index}`}>
-                                            <TableCell>{index + 1}</TableCell>
-                                            <TableCell>{item.ingredient_name || '-'}</TableCell>
-                                            <TableCell>{item.ingredient_measurement || '-'}</TableCell>
-                                            <TableCell align="right">{item.system_quantity ?? '-'}</TableCell>
-                                            <TableCell align="right">{item.counted_quantity ?? '-'}</TableCell>
-                                            <TableCell align="right">
-                                                <Typography
-                                                    variant="body2"
-                                                    sx={{
-                                                        color:
-                                                            item.difference_quantity > 0
-                                                                ? 'success.main'
-                                                                : item.difference_quantity < 0
-                                                                    ? 'error.main'
-                                                                    : 'text.secondary',
-                                                    }}
-                                                >
-                                                    {item.difference_quantity ?? '-'}
-                                                </Typography>
-                                            </TableCell>
-                                            <TableCell align="right">
-                                                {formatAmount(item.price_per_unit)}
-                                            </TableCell>
-                                            <TableCell align="right" sx={{ color: 'success.main', fontWeight: 600 }}>
-                                                {formatAmount(item.surplus_amount)}
-                                            </TableCell>
-                                            <TableCell align="right" sx={{ color: 'error.main', fontWeight: 600 }}>
-                                                {formatAmount(item.shortage_amount)}
-                                            </TableCell>
-                                            <TableCell align="right">
-                                                {formatAmount(item.remaining_amount)}
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </TableContainer>
+                        <Box sx={{ height: 500, width: '100%' }}>
+                            <DataGrid
+                                rows={rows}
+                                columns={columns}
+                                autoHeight
+                                disableRowSelectionOnClick
+                                disableColumnFilter
+                                disableColumnMenu
+                                disableColumnSelector
+                                disableDensitySelector
+                                hideFooterSelectedRowCount
+                                pagination
+                                pageSizeOptions={[10, 25, 50, 100]}
+                                initialState={{
+                                    pagination: {
+                                        paginationModel: { page: 0, pageSize: 50 },
+                                    },
+                                }}
+                                sx={{
+                                    '& .MuiDataGrid-toolbarContainer, & .MuiDataGrid-toolbarContainer button': {
+                                        display: 'none !important',
+                                    },
+                                    '& .MuiDataGrid-columnHeaders': {
+                                        backgroundColor: 'background.paper',
+                                    },
+                                    '& .MuiDataGrid-menuIcon': {
+                                        display: 'none !important',
+                                    },
+                                    '& .MuiDataGrid-columnHeader:focus, & .MuiDataGrid-cell:focus': {
+                                        outline: 'none !important',
+                                    },
+                                    '& .MuiDataGrid-columnSeparator': {
+                                        display: 'none',
+                                    },
+                                }}
+                                slots={{
+                                    toolbar: () => null,
+                                    columnMenu: () => null,
+                                }}
+                            />
+                        </Box>
                     );
                 }}
             />

@@ -5,6 +5,12 @@ import { Box, Stack, Button, CircularProgress } from '@mui/material';
 
 import { paths } from 'src/routes/paths';
 import { useRouter, useParams } from 'src/routes/hooks';
+import { useAppDispatch } from 'src/store';
+import {
+  PICKER_FORM_NAMES,
+  modifierFormPickerActions,
+  mapMealCalculationsToPickerItems,
+} from 'src/store/slices/pickerFormSlices';
 
 import {
   useGetModifier,
@@ -32,6 +38,8 @@ export function ModifierEditView({ isNew = false }: ModifierEditViewProps) {
   const id = (params.id as string | undefined) || undefined;
   const router = useRouter();
   const { t } = useTranslation('menu');
+  const dispatch = useAppDispatch();
+  const formName = PICKER_FORM_NAMES.modifierEditForm;
 
   // ── General info state ──────────────────────────────────────
   const [name, setName] = useState('');
@@ -44,6 +52,7 @@ export function ModifierEditView({ isNew = false }: ModifierEditViewProps) {
   const [isInfoOpen, setIsInfoOpen] = useState(true);
   const [isMealItemsOpen, setIsMealItemsOpen] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [tableHeight, setTableHeight] = useState(730);
 
   // ── Picker ref ──────────────────────────────────────────────
   const mealItemsApiRef = useRef<MealItemPickerApi | null>(null);
@@ -56,6 +65,20 @@ export function ModifierEditView({ isNew = false }: ModifierEditViewProps) {
   );
 
   const pageLoading = !isNew && modifierLoading;
+
+  // ── Calculate table height based on viewport ───────────────────────────
+  useEffect(() => {
+    const calculateHeight = () => {
+      const viewportHeight = window.innerHeight;
+      const reservedSpace = isInfoOpen ? 460 : 220;
+      const calculatedHeight = Math.max(300, viewportHeight - reservedSpace);
+      setTableHeight(calculatedHeight);
+    };
+
+    calculateHeight();
+    window.addEventListener('resize', calculateHeight);
+    return () => window.removeEventListener('resize', calculateHeight);
+  }, [isInfoOpen]);
 
   // ── Clear picker cache on unmount ───────────────────────────
   useEffect(
@@ -94,7 +117,24 @@ export function ModifierEditView({ isNew = false }: ModifierEditViewProps) {
       }));
 
     mealItemsApiRef.current.restoreFromPersisted(ingredientCalcs, compoundCalcs);
-  }, [modifierWithCalculations]);
+    dispatch(
+      modifierFormPickerActions.setFormState({
+        formName,
+        items: mapMealCalculationsToPickerItems({
+          ingredient_calculations: ingredientCalcs,
+          compound_calculations: compoundCalcs,
+        }),
+        meta: { isNew, modifierId: id ?? null, source: 'hydrate' },
+      })
+    );
+  }, [dispatch, formName, id, isNew, modifierWithCalculations]);
+
+  useEffect(
+    () => () => {
+      dispatch(modifierFormPickerActions.resetFormState({ formName }));
+    },
+    [dispatch, formName]
+  );
 
   const { handleSubmit } = useModifierForm({
     isNew,
@@ -117,6 +157,17 @@ export function ModifierEditView({ isNew = false }: ModifierEditViewProps) {
     }
     setSubmitting(true);
     try {
+      const calculations = mealItemsApiRef.current?.getCalculations() ?? {
+        ingredient_calculations: [],
+        compound_calculations: [],
+      };
+      dispatch(
+        modifierFormPickerActions.setFormState({
+          formName,
+          items: mapMealCalculationsToPickerItems(calculations),
+          meta: { isNew, modifierId: id ?? null, source: 'submit' },
+        })
+      );
       await handleSubmit({
         name,
         code,
@@ -129,7 +180,7 @@ export function ModifierEditView({ isNew = false }: ModifierEditViewProps) {
     } finally {
       setSubmitting(false);
     }
-  }, [name, code, description, isActive, pictureUrl, handleSubmit, t]);
+  }, [name, code, description, isActive, pictureUrl, handleSubmit, t, dispatch, formName, isNew, id]);
 
   const handleNavigateFocus = useCallback((direction: 'up' | 'down' | 'left' | 'right', currentRowIndex: number, currentColumnKey: string) => {
     // Modifiers form only has one editable column (quantity), so horizontal navigation is not applicable
@@ -209,14 +260,8 @@ export function ModifierEditView({ isNew = false }: ModifierEditViewProps) {
         <Box sx={{ mx: 0, my: -2 }}>
           <MealItemPicker
             apiRef={mealItemsApiRef}
-            onCancel={() => { }}
-            onSave={() => { }}
-            cancelDisabled
-            saveDisabled
-            saveLabel={saveLabel}
-            hideActionBar
             isVisible={isMealItemsOpen}
-            metaFieldsOpen={isInfoOpen}
+            tableHeight={tableHeight}
             cacheKey={mealItemPickerCacheKey}
             onNavigateFocus={handleNavigateFocus}
           />

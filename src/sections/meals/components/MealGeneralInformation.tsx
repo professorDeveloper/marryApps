@@ -73,7 +73,7 @@ export const MealGeneralInformation = React.memo(function MealGeneralInformation
             <Box
                 sx={{
                     display: 'grid',
-                    gridTemplateColumns: { xs: '1fr', md: '1fr 1.2fr' }, // 🔥 better balance
+                    gridTemplateColumns: { xs: '1fr', md: '1fr 1.2fr' },
                     gap: 2,
                     alignItems: 'stretch',
                 }}
@@ -110,31 +110,7 @@ export const MealGeneralInformation = React.memo(function MealGeneralInformation
                         size="small"
                         disabled={disabled}
                     />
-
-                    <TextField
-                        label={t('mealsProducts.price')}
-                        value={price}
-                        onChange={(e) => onPriceChange(e.target.value)}
-                        size="small"
-                        type="number"
-                        required
-                        disabled={disabled}
-                    />
-                </Box>
-
-                {/* ================= RIGHT COLUMN ================= */}
-                <Box
-                    sx={{
-                        display: 'grid',
-                        // Column 1 is flexible, Column 2 is for the image
-                        gridTemplateColumns: '1fr auto',
-                        // 4 rows to match the left column's 4 fields
-                        gridTemplateRows: 'auto auto 1fr 1fr',
-                        gap: 2,
-                        height: '100%',
-                    }}
-                >
-                    {/* Category - Row 1, Col 1 (Left) */}
+                       {/* Category - Row 1, Col 1 (Left) */}
                     <TextField
                         select
                         label={t('mealsProducts.category')}
@@ -152,7 +128,34 @@ export const MealGeneralInformation = React.memo(function MealGeneralInformation
                         ))}
                     </TextField>
 
-                    {/* Cooking Time - Row 2, Col 1 (Left) */}
+                  
+                </Box>
+
+                {/* ================= RIGHT COLUMN ================= */}
+                <Box
+                    sx={{
+                        display: 'grid',
+                        // Two equal columns for description and image
+                        gridTemplateColumns: '1.4fr 1fr',
+                        // 3 rows: price, cooking time + description split, image
+                        gridTemplateRows: 'auto 1fr 1fr',
+                        gap: 2,
+                        height: '100%',
+                    }}
+                >
+                   {/* Price - Full width */}
+                   <TextField
+                        label={t('mealsProducts.price')}
+                        value={price}
+                        onChange={(e) => onPriceChange(e.target.value)}
+                        size="small"
+                        type="number"
+                        required
+                        disabled={disabled}
+                        sx={{ gridColumn: '1 / -1', gridRow: 1 }}
+                    />
+
+                    {/* Cooking Time - Row 2, Col 1 */}
                     <TextField
                         label={t('mealsProducts.cookingTime')}
                         value={cookTime}
@@ -160,18 +163,8 @@ export const MealGeneralInformation = React.memo(function MealGeneralInformation
                         size="small"
                         sx={{ gridColumn: 1, gridRow: 2 }}
                     />
-
-                    {/* Image Upload - Row 1 & 2, Col 2 (Right side) */}
-                    <Box sx={{ gridColumn: 2, gridRow: '1 / 3' }}>
-                        <ImageUpload
-                            label={t('mealsProducts.imageUrl')}
-                            value={pictureUrl || null}
-                            onChange={onPictureUrlChange}
-                            height={112} // Matches height of 2 small text fields + gap
-                        />
-                    </Box>
-
-                    {/* Description - Row 3 & 4, Full Width */}
+                    
+                    {/* Description - Row 2 & 3, Col 1 */}
                     <TextField
                         label={t('mealsProducts.description')}
                         value={description}
@@ -179,15 +172,29 @@ export const MealGeneralInformation = React.memo(function MealGeneralInformation
                         size="small"
                         multiline
                         sx={{
-                            gridColumn: '1 / -1',
-                            gridRow: '3 / 5',
+                            gridColumn: 1,
+                            gridRow: '3 / 7',
                             height: '100%',
+                            
                             '& .MuiInputBase-root': {
                                 height: '100%',
                                 alignItems: 'flex-start',
                             },
                         }}
                     />
+                    
+                    {/* Image Upload - Row 2 & 3, Col 2 */}
+                    <Box sx={{ gridColumn: 2, gridRow: '2 / 7' }}>
+                        <ImageUpload
+                            label={t('mealsProducts.imageUrl')}
+                            value={pictureUrl || null}
+                            onChange={onPictureUrlChange}
+                            onRemove={() => onPictureUrlChange('')}
+                            height={150}
+                        />
+                    </Box>
+
+                 
                 </Box>
             </Box>
         </GeneralInformation>
