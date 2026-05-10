@@ -7,7 +7,7 @@ import type {
 } from '../types';
 
 import { useTranslation } from 'react-i18next';
-import React, { useRef, useMemo, useState, useEffect, useCallback } from 'react';
+import React, { useRef, useMemo, useState, useEffect, useLayoutEffect, useCallback } from 'react';
 
 import { Box, Stack, Button } from '@mui/material';
 
@@ -34,19 +34,12 @@ interface PendingCalc {
 
 export interface MealItemPickerProps {
     apiRef: React.RefObject<MealItemPickerApi | null>;
-    onCancel: () => void;
-    onSave: () => void | Promise<void>;
-    cancelDisabled?: boolean;
-    saveDisabled?: boolean;
-    saveLabel: string;
-    hideActionBar?: boolean;
     isVisible?: boolean;
     menuPrice?: string;
     showProfitMargin?: boolean;
     tableHeight?: string | number;
     cacheKey?: string;
     onNavigateFocus?: (direction: 'up' | 'down' | 'left' | 'right', currentRowIndex: number, currentColumnKey: string) => void;
-    metaFieldsOpen?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -77,20 +70,15 @@ function applyFilter(
 
 export const MealItemPicker = React.memo(function MealItemPicker({
     apiRef,
-    onCancel,
-    onSave,
-    cancelDisabled = false,
-    saveDisabled = false,
-    saveLabel,
-    hideActionBar = false,
     isVisible = true,
     menuPrice,
     showProfitMargin = false,
     tableHeight = 700,
     cacheKey,
     onNavigateFocus,
-    metaFieldsOpen,
 }: MealItemPickerProps) {
+    const renderStartedAtRef = useRef<number>(performance.now());
+    renderStartedAtRef.current = performance.now();
     const { t } = useTranslation('menu');
     // Only fetch meal items when this tab is visible to avoid unnecessary requests
     const { items, loading, refresh } = useMealItems(isVisible);
@@ -247,6 +235,7 @@ export const MealItemPicker = React.memo(function MealItemPicker({
     }, [itemsByKey]);
 
     const handleAdd = useCallback((it: MealItem) => {
+        const startedAt = performance.now();
         const key = compositeKey(it.type, it.id);
         setAddedRowsMap((prev) => {
             if (prev.has(key)) return prev;
@@ -274,6 +263,7 @@ export const MealItemPicker = React.memo(function MealItemPicker({
     }, []);
 
     const handleRemove = useCallback((type: MealItemType, id: string) => {
+        const startedAt = performance.now();
         const key = compositeKey(type, id);
         setAddedRowsMap((prev) => {
             if (!prev.has(key)) return prev;
@@ -289,6 +279,9 @@ export const MealItemPicker = React.memo(function MealItemPicker({
             next.delete(key);
             return next;
         });
+        // #region agent log
+        fetch('http://127.0.0.1:7493/ingest/af3dd71e-d3ee-4e8f-b31b-05d1110c3b8b',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'933603'},body:JSON.stringify({sessionId:'933603',runId:'pre-fix',hypothesisId:'H5',location:'MealItemPicker.tsx:264',message:'meal_picker_remove_cost',data:{itemId:id,itemType:type,addedRowsCount:addedRowsMapRef.current.size,selectedCount:addedSelectedRef.current.size,durationMs:Number((performance.now()-startedAt).toFixed(3))},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
     }, []);
 
     const handleRemoveSelected = useCallback(() => {
@@ -466,6 +459,11 @@ export const MealItemPicker = React.memo(function MealItemPicker({
         };
     }, [cacheKey, addedRowsMap]);
 
+    useLayoutEffect(() => {
+        const durationMs = performance.now() - renderStartedAtRef.current;
+        if (durationMs < 80) return;
+    });
+
     // ── Render ──────────────────────────────────────────────────────────
     return (
         <Stack spacing={2} sx={{ height: '100%', fontFamily: '"Inter", sans-serif' }}>
@@ -496,7 +494,6 @@ export const MealItemPicker = React.memo(function MealItemPicker({
                     ingredientLabel={ingredientLabel}
                     compoundLabel={compoundLabel}
                     tableHeight={tableHeight}
-                    metaFieldsOpen={metaFieldsOpen}
                 />
 
                 {/* ADDED TABLE */}
@@ -525,30 +522,8 @@ export const MealItemPicker = React.memo(function MealItemPicker({
                     showProfitMargin={showProfitMargin}
                     tableHeight={tableHeight}
                     onNavigateFocus={onNavigateFocus}
-                    metaFieldsOpen={metaFieldsOpen}
                 />
             </Box>
-
-            {/* Action bar */}
-            {!hideActionBar && (
-                <Stack direction="row" spacing={1} justifyContent="flex-end">
-                    <Button
-                        variant="outlined"
-                        color="inherit"
-                        onClick={onCancel}
-                        disabled={cancelDisabled}
-                    >
-                        {t('cancel', 'Cancel')}
-                    </Button>
-                    <Button
-                        variant="contained"
-                        onClick={() => onSave()}
-                        disabled={saveDisabled}
-                    >
-                        {saveLabel}
-                    </Button>
-                </Stack>
-            )}
         </Stack>
     );
 });

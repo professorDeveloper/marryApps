@@ -2,7 +2,7 @@ import type { AddedItemsPanelProps } from '../types';
 
 import { useTranslation } from 'react-i18next';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import React, { useRef, useMemo, useState, useEffect, useCallback } from 'react';
+import React, { useRef, useMemo, useState, useEffect, useCallback, useLayoutEffect } from 'react';
 
 import SearchIcon from '@mui/icons-material/Search';
 import DeleteSweepIcon from '@mui/icons-material/DeleteSweep';
@@ -36,7 +36,10 @@ export const AddedItemsPanel = React.memo<AddedItemsPanelProps>(({
     metaFieldsOpen,
     tableHeight,
 }) => {
+    const renderStartedAtRef = useRef<number>(performance.now());
+    renderStartedAtRef.current = performance.now();
     const { t } = useTranslation('menu');
+    const commitSeqRef = useRef(0);
 
     const [batchRemoveArmed, setBatchRemoveArmed] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
@@ -75,41 +78,37 @@ export const AddedItemsPanel = React.memo<AddedItemsPanelProps>(({
 
     const virtualRows = rowVirtualizer.getVirtualItems();
 
+    useLayoutEffect(() => {
+        const seq = ++commitSeqRef.current;
+    });
+
     const headerLabels = useMemo(
         () => columns.map((col) => ({ key: col.key, header: col.header, align: col.align })),
         [columns]
     );
 
-    // Calculate height based on tableHeight and metaFieldsOpen
-    const calculatedHeight = useMemo(() => {
-        if (tableHeight) {
-            // If tableHeight is provided, use it as base and adjust with metaFieldsOpen
-            const baseHeight = typeof tableHeight === 'number' ? `${tableHeight}px` : tableHeight;
-            if (metaFieldsOpen) {
-                return `calc(${baseHeight} - 200px)`;
+        // Calculate maxHeight based on tableHeight and metaFieldsOpen
+        const calculatedMaxHeight = useMemo(() => {
+            if (tableHeight) {
+                // If tableHeight is provided, use it as base and adjust with metaFieldsOpen
+                const baseHeight = typeof tableHeight === 'number' ? `${tableHeight}px` : tableHeight;
+                if (metaFieldsOpen) {
+                    return `calc(${baseHeight} - 200px)`;
+                }
+                return baseHeight;
             }
-            return baseHeight;
-        }
-        // Fall back to current behavior if tableHeight not provided
-        return summaryEntries
-            ? (metaFieldsOpen ? 'calc(100vh - 400px)' : 'calc(100vh - 200px)')
-            : LIST_MAX_HEIGHT;
-    }, [tableHeight, metaFieldsOpen, summaryEntries]);
-
+            // Fall back to current behavior if tableHeight not provided
+            return metaFieldsOpen ? 'calc(100vh - 320px)' : LIST_MAX_HEIGHT;
+        }, [tableHeight, metaFieldsOpen]);
+    
     return (
-        <Paper
-            sx={{
-                display: "flex",
-                flexDirection: "column",
-                height: calculatedHeight,
-                backgroundColor:"transparent"
-            }}
-        >
             <Paper sx={{
                 p: 2,
                 display: 'flex',
                 flexDirection: 'column',
-                height: "90%",
+                height: calculatedMaxHeight,
+                bgcolor: 'var(--color-surface-1)',
+
 
             }}>
                 <Box
@@ -227,8 +226,8 @@ export const AddedItemsPanel = React.memo<AddedItemsPanelProps>(({
                             </Typography>
                         </Box>
                     ) : (
-                        <Box
-                            sx={{
+                        <div
+                            style={{
                                 height: rowVirtualizer.getTotalSize(),
                                 width: '100%',
                                 position: 'relative',
@@ -237,10 +236,10 @@ export const AddedItemsPanel = React.memo<AddedItemsPanelProps>(({
                             {virtualRows.map((vi) => {
                                 const item = items[vi.index];
                                 return (
-                                    <Box
+                                    <div
                                         key={item.id}
                                         data-index={vi.index}
-                                        sx={{
+                                        style={{
                                             position: 'absolute',
                                             top: 0,
                                             left: 0,
@@ -259,88 +258,82 @@ export const AddedItemsPanel = React.memo<AddedItemsPanelProps>(({
                                             gridTemplate={gridTemplate}
                                             onNavigateFocus={onNavigateFocus}
                                         />
-                                    </Box>
+                                    </div>
                                 );
                             })}
-                        </Box>
+                        </div>
                     )}
                 </Box>
 
-                {/* Summary row */}
-                <Divider sx={{ my: 2 }} />
-                <Box sx={{ mt: 'auto' }}>
+                {/* Total Section */}
+                {((summaryEntries && summaryEntries.length > 0) || (totalLabel && totalValue)) && (
                     <Box
                         sx={{
-                            display: 'grid',
-                            gridTemplateColumns: gridTemplate,
-                            columnGap: 1,
-                            alignItems: 'center',
-                            px: 1,
+                            display: 'flex',
+                            flexWrap: 'wrap',
+                            gap: 2,
+                            px: 2,
                             py: 1,
-                            bgcolor: 'var(--color-surface-1)',
-                            borderRadius: 1,
-                            mt: 1,
+                            bgcolor: 'background.paper',
+                            borderTop: 2,
+                            borderColor: 'primary.main',
                         }}
                     >
-                        <Box />
-                        <Box />
-                        {summaryEntries?.map((entry) => (
-                            <Box
-                                key={entry.label}
-                                sx={{
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'center',
-                                }}
-                            >
-                                <Typography variant="caption" color="text.secondary">
-                                    {entry.label}
-                                </Typography>
-                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                    {entry.value}
-                                </Typography>
-                            </Box>
-                        ))}
-                        <Box />
-                    </Box>
-
-                    {/* Total row */}
-                    {totalLabel && totalValue && (
-                        <Box
-                            sx={{
-                                display: 'grid',
-                                gridTemplateColumns: gridTemplate,
-                                columnGap: 1,
-                                alignItems: 'center',
-                                px: 1,
-                                py: 1,
-                                bgcolor: 'var(--color-surface-1)',
-                                borderRadius: 1,
-                                mt: 1,
-                            }}
-                        >
-                            <Box />
-                            <Typography variant="caption" color="text.secondary">
-                                {totalLabel}
+                        <Box sx={{ 
+                            bgcolor: 'rgba(46, 144, 250, 0.15)',
+                            p: 1, 
+                            borderRadius: 1,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1,
+                            flex: 1,
+                            minWidth: 'fit-content'
+                        }}>
+                            <Typography variant="body2" sx={{ fontWeight: 600, color: 'rgba(46, 144, 250, 0.9)' }}>
+                                {summaryEntries?.[0]?.label || 'Products'}:
                             </Typography>
-                            <Box
-                                sx={{
-                                    gridColumn: `span ${columns.length}`,
-                                    display: 'flex',
-                                    justifyContent: 'flex-end',
-                                }}
-                            >
-                                <Typography variant="h6" sx={{ fontWeight: 800 }}>
-                                    {totalValue}
-                                </Typography>
-                            </Box>
-                            <Box />
+                            <Typography variant="body2" sx={{ fontWeight: 700, color: 'rgba(46, 144, 250, 0.9)' }}>
+                                {summaryEntries?.[0]?.value || '0'}
+                            </Typography>
                         </Box>
-                    )}
-
-
-                </Box>
+                        <Box sx={{ 
+                            bgcolor: 'rgba(33, 150, 243, 0.15)',
+                            p: 1, 
+                            borderRadius: 1,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1,
+                            flex: 1,
+                            minWidth: 'fit-content'
+                        }}>
+                            <Typography variant="body2" sx={{ fontWeight: 600, color: 'rgba(33, 150, 243, 0.9)' }}>
+                                {summaryEntries?.[1]?.label || 'Total Qty'}:
+                            </Typography>
+                            <Typography variant="body2" sx={{ fontWeight: 700, color: 'rgba(33, 150, 243, 0.9)' }}>
+                                {summaryEntries?.[1]?.value || '0'}
+                            </Typography>
+                        </Box>
+                        <Box sx={{ 
+                            bgcolor: 'rgba(76, 175, 80, 0.15)',
+                            p: 1.5, 
+                            borderRadius: 1,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1,
+                            border: 1,
+                            borderColor: 'rgba(76, 175, 80, 0.3)',
+                            flex: 1,
+                            minWidth: 'fit-content'
+                        }}>
+                            <Typography variant="body2" sx={{ fontWeight: 600, color: 'rgba(76, 175, 80, 0.9)' }}>
+                                {totalLabel || 'Total Amount'}:
+                            </Typography>
+                            <Typography variant="h5" sx={{ fontWeight: 800, color: 'rgba(76, 175, 80, 0.9)' }}>
+                                {totalValue}
+                            </Typography>
+                        </Box>
+                    </Box>
+                )}
             </Paper>
-        </Paper>
     );
 });

@@ -1,7 +1,7 @@
 import type { Ingredient, Transfer, TransferBatchItemInput } from '../types';
 
 import { useTranslation } from 'react-i18next';
-import React, { useRef, useMemo, useState, useEffect, useCallback, startTransition } from 'react';
+import React, { useRef, useMemo, useState, useEffect, useCallback } from 'react';
 
 import { Box, Button } from '@mui/material';
 
@@ -195,45 +195,44 @@ export const TransfersLineItems = React.memo(function TransfersLineItems({
     );
 
     const handleMoveRight = useCallback((ids: string[]) => {
+        const startedAt = performance.now();
         if (ids.length === 0) return;
         const unique = [...new Set(ids)];
-        const apply = () => {
-            setTransferredIds((prev) => {
-                const existing = new Set(prev);
-                const toAdd = unique.filter((id) => !existing.has(id));
-                return toAdd.length > 0 ? [...prev, ...toAdd] : prev;
-            });
-            setQuantities((prev) => {
-                const next = { ...prev };
-                unique.forEach((id) => {
-                    if (next[id] == null) next[id] = 1;
-                });
-                return next;
-            });
-        };
-        startTransition(apply);
-    }, []);
-
-    const handleRemoveRow = useCallback((id: string) => {
-        setTransferredIds((prev) => prev.filter((x) => x !== id));
+        setTransferredIds((prev) => {
+            const existing = new Set(prev);
+            const toAdd = unique.filter((id) => !existing.has(id));
+            return toAdd.length > 0 ? [...prev, ...toAdd] : prev;
+        });
         setQuantities((prev) => {
             const next = { ...prev };
-            delete next[id];
+            unique.forEach((id) => {
+                if (next[id] == null) next[id] = 1;
+            });
             return next;
         });
-    }, []);
+    }, [transferredIds.length]);
+
+    const handleRemoveRow = useCallback((id: string) => {
+        const startedAt = performance.now();
+        const next = [...transferredIds];
+        const idx = next.indexOf(id);
+        if (idx !== -1) {
+            next.splice(idx, 1);
+            setTransferredIds(next);
+            const nextQuantities = { ...quantities };
+            delete nextQuantities[id];
+            setQuantities(nextQuantities);
+        }
+    }, [transferredIds, quantities]);
 
     const handleRemoveMany = useCallback((ids: string[]) => {
         const removeSet = new Set(ids);
-        const apply = () => {
-            setTransferredIds((prev) => prev.filter((x) => !removeSet.has(x)));
-            setQuantities((prev) => {
-                const next = { ...prev };
-                ids.forEach((id) => delete next[id]);
-                return next;
-            });
-        };
-        startTransition(apply);
+        setTransferredIds((prev) => prev.filter((x) => !removeSet.has(x)));
+        setQuantities((prev) => {
+            const next = { ...prev };
+            ids.forEach((id) => delete next[id]);
+            return next;
+        });
     }, []);
 
     const handleValueChange = useCallback((id: string, key: string, value: string) => {

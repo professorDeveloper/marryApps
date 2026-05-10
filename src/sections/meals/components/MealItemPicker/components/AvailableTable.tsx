@@ -40,7 +40,6 @@ interface AvailableTableProps {
     ingredientLabel: string;
     compoundLabel: string;
     tableHeight?: string | number;
-    metaFieldsOpen?: boolean;
 }
 
 export const AvailableTable = React.memo(function AvailableTable({
@@ -60,8 +59,9 @@ export const AvailableTable = React.memo(function AvailableTable({
     ingredientLabel,
     compoundLabel,
     tableHeight,
-    metaFieldsOpen,
 }: AvailableTableProps) {
+    const renderStartedAtRef = React.useRef<number>(performance.now());
+    renderStartedAtRef.current = performance.now();
     const { t } = useTranslation('menu');
     const scrollRef = React.useRef<HTMLDivElement>(null);
 
@@ -69,15 +69,30 @@ export const AvailableTable = React.memo(function AvailableTable({
         count: rows.length,
         getScrollElement: () => scrollRef.current,
         estimateSize: () => AVAILABLE_ROW_ESTIMATE_PX,
-        overscan: 10,
+        overscan: 6,
     });
 
-    const calculatedHeight = metaFieldsOpen !== undefined 
-        ? (metaFieldsOpen ? 'calc(100vh - 320px)' : 'calc(100vh - 200px)')
-        : tableHeight;
+    
+    React.useLayoutEffect(() => {
+        const durationMs = performance.now() - renderStartedAtRef.current;
+        if (durationMs < 80) return;
+    });
 
     return (
-        <Paper variant="outlined" sx={{ p: 2, position: 'relative', display: 'flex', flexDirection: 'column', height: calculatedHeight, borderColor: 'var(--color-border)', bgcolor: 'var(--color-surface-0)', fontFamily: '"Inter", sans-serif' }}>
+        <Paper
+         variant="outlined" 
+         sx={{ p: 2,
+          position: 'relative', 
+          display: 'flex', 
+          flexDirection: 'column', 
+          height: typeof tableHeight === 'number' ? tableHeight + 42 : 'auto', 
+          borderColor: 'var(--color-border)', 
+          bgcolor: 'var(--color-surface-1)', 
+          fontFamily: '"Inter", sans-serif',
+          mb:2.5,
+        
+          
+          }}>
             <Stack
                 direction={{ xs: 'column' }}
                 spacing={1}
@@ -114,7 +129,7 @@ export const AvailableTable = React.memo(function AvailableTable({
                     onChange={(e) => onSearchChange(e.target.value)}
                     sx={{
                         '& .MuiOutlinedInput-root': {
-                            bgcolor: 'var(--color-surface-1)',
+                            bgcolor: 'var(--color-surface-2)',
                         },
                     }}
                     InputProps={{
@@ -129,7 +144,7 @@ export const AvailableTable = React.memo(function AvailableTable({
             {/* Virtualized list */}
             <Box
                 ref={scrollRef}
-                sx={{ flex: 1, minHeight: 0, overflow: 'auto', position: 'relative' }}
+                sx={{ flex: 1, minHeight: 0, overflow: 'auto', position: 'relative', WebkitOverflowScrolling: 'touch' }}
             >
                 {loading ? (
                     <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
@@ -153,15 +168,17 @@ export const AvailableTable = React.memo(function AvailableTable({
                             const item = rows[vi.index];
                             const key = compositeKey(item.type, item.id);
                             return (
-                                <Box
+                                <div
                                     key={key}
                                     data-index={vi.index}
-                                    sx={{
+                                    style={{
                                         position: 'absolute',
                                         top: 0,
                                         left: 0,
                                         width: '100%',
-                                        transform: `translateY(${vi.start}px)`,
+                                        transform: `translate3d(0, ${vi.start}px, 0)`,
+                                        willChange: 'transform',
+                                        contain: 'layout paint style',
                                     }}
                                 >
                                     <AvailableRow
@@ -172,7 +189,7 @@ export const AvailableTable = React.memo(function AvailableTable({
                                         ingredientLabel={ingredientLabel}
                                         compoundLabel={compoundLabel}
                                     />
-                                </Box>
+                                </div>
                             );
                         })}
                     </Box>

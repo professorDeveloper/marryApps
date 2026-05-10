@@ -10,6 +10,7 @@ import { ErrorBoundary } from './routes/components';
 
 // ----------------------------------------------------------------------
 
+
 const router = createBrowserRouter([
   {
     Component: () => (

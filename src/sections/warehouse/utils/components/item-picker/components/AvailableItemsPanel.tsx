@@ -2,7 +2,7 @@ import type { AvailableItemsPanelProps } from '../types';
 
 import { useTranslation } from 'react-i18next';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import React, { useRef, useMemo, useState, useEffect, useCallback } from 'react';
+import React, { useRef, useMemo, useState, useEffect, useCallback, useLayoutEffect } from 'react';
 
 import Add from '@mui/icons-material/Add';
 import SearchIcon from '@mui/icons-material/Search';
@@ -30,25 +30,57 @@ export const AvailableItemsPanel = React.memo<AvailableItemsPanelProps>(({
     metaFieldsOpen,
     tableHeight,
 }) => {
+    const renderStartedAtRef = useRef<number>(performance.now());
+    renderStartedAtRef.current = performance.now();
     const { t } = useTranslation('menu');
+    const commitSeqRef = useRef(0);
 
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
     const scrollRef = useRef<HTMLDivElement>(null);
+    const selectedCountRef = useRef(0);
+    const filteredCountRef = useRef(0);
 
     const filtered = useMemo(
-        () =>
-            items.filter(
-                (item) =>
-                    !excludedIdSet.has(item.id) &&
-                    item.name.toLowerCase().includes(searchTerm.toLowerCase())
-            ),
+        () => {
+            const query = searchTerm.trim().toLowerCase();
+            return items.filter((item) => {
+                if (excludedIdSet.has(item.id)) return false;
+                if (!query) return true;
+                return item.name.toLowerCase().includes(query);
+            });
+        },
         [items, excludedIdSet, searchTerm]
     );
 
     useEffect(() => {
-        setSelectedItems(new Set());
-    }, [searchTerm, items, excludedIdSet]);
+        filteredCountRef.current = filtered.length;
+    }, [filtered.length]);
+
+    useEffect(() => {
+        selectedCountRef.current = selectedItems.size;
+    }, [selectedItems.size]);
+
+    useEffect(() => {
+        if (!searchTerm) return;
+        setSelectedItems((prev) => (prev.size === 0 ? prev : new Set()));
+    }, [searchTerm, items.length, excludedIdSet.size]);
+
+    useEffect(() => {
+        setSelectedItems((prev) => {
+            if (prev.size === 0) return prev;
+            let changed = false;
+            const next = new Set<string>();
+            prev.forEach((id) => {
+                if (!excludedIdSet.has(id)) {
+                    next.add(id);
+                } else {
+                    changed = true;
+                }
+            });
+            return changed ? next : prev;
+        });
+    }, [excludedIdSet]);
 
     const handleRowActivate = useCallback(
         (itemId: string) => {
@@ -90,6 +122,10 @@ export const AvailableItemsPanel = React.memo<AvailableItemsPanelProps>(({
     const virtualRows = rowVirtualizer.getVirtualItems();
     const isAllSelected = filtered.length > 0 && filtered.length === selectedItems.size;
 
+    useLayoutEffect(() => {
+        const seq = ++commitSeqRef.current;
+    });
+
     // Calculate maxHeight based on tableHeight and metaFieldsOpen
     const calculatedMaxHeight = useMemo(() => {
         if (tableHeight) {
@@ -110,6 +146,7 @@ export const AvailableItemsPanel = React.memo<AvailableItemsPanelProps>(({
             maxHeight: calculatedMaxHeight,
             display: 'flex',
             flexDirection: 'column',
+            bgcolor: 'var(--color-surface-1)',
          }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                 <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
@@ -192,8 +229,8 @@ export const AvailableItemsPanel = React.memo<AvailableItemsPanelProps>(({
                         <CircularProgress size={26} />
                     </Box>
                 ) : filtered.length > 0 ? (
-                    <Box
-                        sx={{
+                    <div
+                        style={{
                             height: rowVirtualizer.getTotalSize(),
                             width: '100%',
                             position: 'relative',
@@ -202,10 +239,10 @@ export const AvailableItemsPanel = React.memo<AvailableItemsPanelProps>(({
                         {virtualRows.map((vi) => {
                             const item = filtered[vi.index];
                             return (
-                                <Box
+                                <div
                                     key={item.id}
                                     data-index={vi.index}
-                                    sx={{
+                                    style={{
                                         position: 'absolute',
                                         top: 0,
                                         left: 0,
@@ -219,10 +256,10 @@ export const AvailableItemsPanel = React.memo<AvailableItemsPanelProps>(({
                                         onToggleSelect={handleToggleSelect}
                                         onRowActivate={handleRowActivate}
                                     />
-                                </Box>
+                                </div>
                             );
                         })}
-                    </Box>
+                    </div>
                 ) : (
                     <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
                         {t('noData')}

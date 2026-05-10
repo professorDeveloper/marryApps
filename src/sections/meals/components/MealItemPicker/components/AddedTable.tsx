@@ -75,8 +75,9 @@ export const AddedTable = React.memo(function AddedTable({
     showProfitMargin = false,
     tableHeight,
     onNavigateFocus,
-    metaFieldsOpen,
 }: AddedTableProps) {
+    const renderStartedAtRef = React.useRef<number>(performance.now());
+    renderStartedAtRef.current = performance.now();
     const { t } = useTranslation('menu');
     const scrollRef = React.useRef<HTMLDivElement>(null);
 
@@ -90,19 +91,21 @@ export const AddedTable = React.memo(function AddedTable({
         return { profit, margin };
     }, [showProfitMargin, menuPrice, totalCost]);
 
-    const calculatedHeight = metaFieldsOpen !== undefined
-        ? (metaFieldsOpen ? 'calc(100vh - 400px)' : 'calc(100vh - 200px)')
-        : tableHeight;
 
     const virtualizer = useVirtualizer({
         count: rows.length,
         getScrollElement: () => scrollRef.current,
         estimateSize: () => ADDED_ROW_ESTIMATE_PX,
-        overscan: 10,
+        overscan: 6,
+    });
+
+    React.useLayoutEffect(() => {
+        const durationMs = performance.now() - renderStartedAtRef.current;
+        if (durationMs < 80) return;
     });
 
     return (
-        <Paper variant="outlined" sx={{ p: 1.5, display: 'flex', flexDirection: 'column', height: calculatedHeight, borderColor: 'var(--color-border)', bgcolor: 'var(--color-surface-0)', fontFamily: '"Inter", sans-serif' }}>
+        <Paper variant="outlined" sx={{ p: 1.5, display: 'flex', flexDirection: 'column', height: tableHeight, borderColor: 'var(--color-border)', bgcolor: 'var(--color-surface-1)', fontFamily: '"Inter", sans-serif' }}>
             <Stack
                 direction="row"
                 spacing={1}
@@ -168,7 +171,6 @@ export const AddedTable = React.memo(function AddedTable({
                     py: 1,
                     borderBottom: 1,
                     borderColor: 'var(--color-border)',
-                    bgcolor: 'var(--color-primary-soft)',
                     flexShrink: 0,
                 }}
             >
@@ -199,7 +201,7 @@ export const AddedTable = React.memo(function AddedTable({
             {/* Virtualized list */}
             <Box
                 ref={scrollRef}
-                sx={{ flex: 1, minHeight: 0, overflow: 'auto', position: 'relative' }}
+                sx={{ flex: 1, minHeight: 0, overflow: 'auto', position: 'relative', WebkitOverflowScrolling: 'touch' }}
             >
                 {rows.length === 0 ? (
                     <Box sx={{ py: 6, textAlign: 'center', opacity: 0.6 }}>
@@ -219,15 +221,17 @@ export const AddedTable = React.memo(function AddedTable({
                             const row = rows[vi.index];
                             const key = compositeKey(row.type, row.id);
                             return (
-                                <Box
+                                <div
                                     key={key}
                                     data-index={vi.index}
-                                    sx={{
+                                    style={{
                                         position: 'absolute',
                                         top: 0,
                                         left: 0,
                                         width: '100%',
-                                        transform: `translateY(${vi.start}px)`,
+                                        transform: `translate3d(0, ${vi.start}px, 0)`,
+                                        willChange: 'transform',
+                                        contain: 'layout paint style',
                                     }}
                                 >
                                     <AddedRow
@@ -243,7 +247,7 @@ export const AddedTable = React.memo(function AddedTable({
                                         totalRows={rows.length}
                                         onNavigateFocus={onNavigateFocus}
                                     />
-                                </Box>
+                                </div>
                             );
                         })}
                     </Box>

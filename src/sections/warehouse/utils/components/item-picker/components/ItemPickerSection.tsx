@@ -42,11 +42,13 @@ export const ItemPickerSection = React.memo(function ItemPickerSection({
     const gridTemplate = useMemo(() => buildGridTemplate(columns), [columns]);
 
     const filteredTransferred = useMemo(() => {
-        if (!rightSearchTerm) return transferredItems;
-        const query = rightSearchTerm.toLowerCase();
-        return transferredItems.filter((item) =>
-            item.name.toLowerCase().includes(query)
-        );
+        const startedAt = performance.now();
+        const next = !rightSearchTerm
+            ? transferredItems
+            : transferredItems.filter((item) =>
+                item.name.toLowerCase().includes(rightSearchTerm.toLowerCase())
+            );
+        return next;
     }, [transferredItems, rightSearchTerm]);
 
     return (
