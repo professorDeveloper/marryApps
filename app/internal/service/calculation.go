@@ -1372,3 +1372,426 @@ func toCalculationResponseAny(row any) *model.CalculationResponse {
 		UpdatedAt:           timestampToTime(f.UpdatedAt),
 	}
 }
+
+// ── TX-scoped private helpers ─────────────────────────────────────────────────
+// These functions execute within an already-open transaction (txCtx + q).
+// They never call getTenantMutationQueries and never open or commit a transaction.
+
+// insertIngredientCalcInTx inserts a single ingredient calculation for a compound
+// inside the caller's transaction. Price is read from ingredient.price_per_unit.
+func insertIngredientCalcInTx(
+	txCtx context.Context,
+	q *pg.Queries,
+	compoundID uuid.UUID,
+	ingredientID uuid.UUID,
+	quantity float64,
+) (pg.Calculation, error) {
+	ingredient, err := q.GetIngredientByID(txCtx, ingredientID)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return pg.Calculation{}, fmt.Errorf("ingredient not found")
+		}
+		return pg.Calculation{}, fmt.Errorf("failed to fetch ingredient: %w", err)
+	}
+
+	var priceFloat float64
+	if ingredient.PricePerUnit.Valid {
+		priceFloat, _ = strconv.ParseFloat(numericToStr(ingredient.PricePerUnit), 64)
+	}
+
+	measurementUnit := ""
+	if ingredient.Measurement.Valid {
+		measurementUnit = string(ingredient.Measurement.MeasurementType)
+	}
+
+	return q.CreateCalculation(txCtx, pg.CreateCalculationParams{
+		ID:                  uuid.New(),
+		GoodID:              pgtype.UUID{Valid: false},
+		CompoundID:          pgtype.UUID{Bytes: compoundID, Valid: true},
+		IngredientID:        pgtype.UUID{Bytes: ingredientID, Valid: true},
+		ComponentCompoundID: pgtype.UUID{Valid: false},
+		Quantity:            stringToNumeric(fmt.Sprintf("%g", quantity)),
+		MeasurementUnit:     measurementUnit,
+		PricePerUnit:        stringToNumeric(fmt.Sprintf("%.2f", priceFloat)),
+		TotalCost:           stringToNumeric(fmt.Sprintf("%.2f", quantity*priceFloat)),
+	})
+}
+
+// insertCompoundCalcInTx inserts a compound-to-compound calculation inside the
+// caller's transaction. Price is read from the child compound's price field.
+func insertCompoundCalcInTx(
+	txCtx context.Context,
+	q *pg.Queries,
+	parentID uuid.UUID,
+	childID uuid.UUID,
+	quantity float64,
+) (pg.Calculation, error) {
+	child, err := q.GetCompoundByID(txCtx, childID)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return pg.Calculation{}, fmt.Errorf("child compound not found")
+		}
+		return pg.Calculation{}, fmt.Errorf("failed to fetch child compound: %w", err)
+	}
+
+	priceFloat, _ := strconv.ParseFloat(numericToStr(child.Price), 64)
+
+	return q.CreateCalculation(txCtx, pg.CreateCalculationParams{
+		ID:                  uuid.New(),
+		GoodID:              pgtype.UUID{Valid: false},
+		CompoundID:          pgtype.UUID{Bytes: parentID, Valid: true},
+		IngredientID:        pgtype.UUID{Valid: false},
+		ComponentCompoundID: pgtype.UUID{Bytes: childID, Valid: true},
+		Quantity:            stringToNumeric(fmt.Sprintf("%g", quantity)),
+		MeasurementUnit:     "compound",
+		PricePerUnit:        stringToNumeric(fmt.Sprintf("%.2f", priceFloat)),
+		TotalCost:           stringToNumeric(fmt.Sprintf("%.2f", quantity*priceFloat)),
+	})
+}
+
+// recalcCompoundPriceInTx recomputes a compound's price and cost fields from its
+// current calculations, entirely within the caller's transaction. Must be called
+// after all calculations for this compound have been inserted.
+func recalcCompoundPriceInTx(txCtx context.Context, q *pg.Queries, compoundID uuid.UUID) error {
+	rawCost, err := q.GetTotalCostByCompoundID(txCtx, pgtype.UUID{Bytes: compoundID, Valid: true})
+	if err != nil && err != pgx.ErrNoRows {
+		return fmt.Errorf("failed to sum calculation costs: %w", err)
+	}
+
+	totalCost, _ := strconv.ParseFloat(anyNumericToStr(rawCost), 64)
+	priceStr := fmt.Sprintf("%.2f", totalCost)
+
+	if _, err := q.UpdateCompoundPrice(txCtx, pg.UpdateCompoundPriceParams{
+		ID:    compoundID,
+		Price: stringToNumeric(priceStr),
+	}); err != nil {
+		return fmt.Errorf("failed to update compound price: %w", err)
+	}
+
+	if _, err := q.UpdateCompoundCostFields(txCtx, pg.UpdateCompoundCostFieldsParams{
+		ID:           compoundID,
+		CostPrice:    stringToNumeric(priceStr),
+		Profit:       stringToNumeric("0"),
+		ProfitMargin: stringToNumeric("0"),
+	}); err != nil {
+		return fmt.Errorf("failed to update compound cost fields: %w", err)
+	}
+
+	return nil
+}
+
+// ── public atomic methods ─────────────────────────────────────────────────────
+
+// CreateCompoundWithCalculations creates a compound and all its calculations in a
+// single atomic transaction. The compound price is calculated once after all
+// calculations are inserted, following the same pattern as CreateInvoiceDetailsBatch.
+func (c *CalculationS) CreateCompoundWithCalculations(
+	ctx context.Context,
+	req *model.CreateCompoundWithCalculationsRequest,
+) (*model.CompoundWithCalculationsResponse, error) {
+	q, txCtx, tx, ownsTx, err := c.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	// ── 1. Create compound (price starts at zero; recalculated at step 4) ────
+	compoundID := uuid.New()
+
+	nameI18nUUID := pgtype.UUID{}
+	if req.Compound.NameI18n != nil && *req.Compound.NameI18n != "" {
+		parsed, err := uuid.Parse(*req.Compound.NameI18n)
+		if err != nil {
+			return nil, fmt.Errorf("invalid name_i18n: %w", err)
+		}
+		nameI18nUUID = pgtype.UUID{Bytes: parsed, Valid: true}
+	}
+
+	descI18nUUID := pgtype.UUID{}
+	if req.Compound.DescriptionI18n != nil && *req.Compound.DescriptionI18n != "" {
+		parsed, err := uuid.Parse(*req.Compound.DescriptionI18n)
+		if err != nil {
+			return nil, fmt.Errorf("invalid description_i18n: %w", err)
+		}
+		descI18nUUID = pgtype.UUID{Bytes: parsed, Valid: true}
+	}
+
+	measurement := pg.NullMeasurementType{}
+	if req.Compound.Measurement != nil && *req.Compound.Measurement != "" {
+		measurement = pg.NullMeasurementType{
+			MeasurementType: pg.MeasurementType(*req.Compound.Measurement),
+			Valid:            true,
+		}
+	}
+
+	igUUID := pgtype.UUID{}
+	if req.Compound.IngredientGroupID != nil && *req.Compound.IngredientGroupID != "" {
+		parsed, err := uuid.Parse(*req.Compound.IngredientGroupID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid ingredient_group_id: %w", err)
+		}
+		igUUID = pgtype.UUID{Bytes: parsed, Valid: true}
+	}
+
+	if _, err := q.CreateCompound(txCtx, pg.CreateCompoundParams{
+		ID:                compoundID,
+		Name:              req.Compound.Name,
+		NameI18n:          nameI18nUUID,
+		Description:       req.Compound.Description,
+		DescriptionI18n:   descI18nUUID,
+		Quantity:          stringToNumeric(fmt.Sprintf("%g", req.Compound.Quantity)),
+		Measurement:       measurement,
+		Price:             pgtype.Numeric{},
+		PictureUrl:        req.Compound.PictureUrl,
+		ColorCode:         req.Compound.ColorCode,
+		IngredientGroupID: igUUID,
+	}); err != nil {
+		return nil, fmt.Errorf("failed to create compound: %w", err)
+	}
+
+	// ── 2. Insert ingredient calculations (all in same TX) ────────────────────
+	calculations := make([]model.CalculationResponse, 0, len(req.IngredientCalculations)+len(req.CompoundCalculations))
+
+	for i, item := range req.IngredientCalculations {
+		ingredientID, err := uuid.Parse(item.IngredientID)
+		if err != nil {
+			return nil, fmt.Errorf("ingredient_calculations[%d]: invalid ingredient_id: %w", i, err)
+		}
+		qty, err := strconv.ParseFloat(item.Quantity, 64)
+		if err != nil {
+			return nil, fmt.Errorf("ingredient_calculations[%d]: invalid quantity: %w", i, err)
+		}
+
+		calc, err := insertIngredientCalcInTx(txCtx, q, compoundID, ingredientID, qty)
+		if err != nil {
+			return nil, fmt.Errorf("ingredient_calculations[%d]: %w", i, err)
+		}
+		if r := toCalculationResponseAny(calc); r != nil {
+			calculations = append(calculations, *r)
+		}
+	}
+
+	// ── 3. Insert compound-to-compound calculations (all in same TX) ──────────
+	for i, item := range req.CompoundCalculations {
+		childID, err := uuid.Parse(item.CompoundID)
+		if err != nil {
+			return nil, fmt.Errorf("compound_calculations[%d]: invalid compound_id: %w", i, err)
+		}
+		qty, err := strconv.ParseFloat(item.Quantity, 64)
+		if err != nil {
+			return nil, fmt.Errorf("compound_calculations[%d]: invalid quantity: %w", i, err)
+		}
+
+		calc, err := insertCompoundCalcInTx(txCtx, q, compoundID, childID, qty)
+		if err != nil {
+			return nil, fmt.Errorf("compound_calculations[%d]: %w", i, err)
+		}
+		if r := toCalculationResponseAny(calc); r != nil {
+			calculations = append(calculations, *r)
+		}
+	}
+
+	// ── 4. Recalculate compound price once, after all calculations ────────────
+	if err := recalcCompoundPriceInTx(txCtx, q, compoundID); err != nil {
+		return nil, fmt.Errorf("failed to recalculate compound price: %w", err)
+	}
+
+	// ── 5. Fetch final compound state for response ────────────────────────────
+	finalCompound, err := q.GetCompoundByID(txCtx, compoundID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch created compound: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit: %w", err)
+		}
+	}
+
+	return &model.CompoundWithCalculationsResponse{
+		Compound:     compoundToResponseAny(finalCompound),
+		Calculations: calculations,
+	}, nil
+}
+
+// UpdateCompoundWithCalculations updates a compound and atomically replaces all its
+// calculations in a single transaction. Old calculations are deleted, new ones
+// inserted, and the price is recalculated once at the end — no intermediate
+// recalculations, no nested transactions.
+func (c *CalculationS) UpdateCompoundWithCalculations(
+	ctx context.Context,
+	compoundID string,
+	req *model.UpdateCompoundWithCalculationsRequest,
+) (*model.CompoundWithCalculationsResponse, error) {
+	id, err := uuid.Parse(compoundID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid compound_id: %w", err)
+	}
+
+	q, txCtx, tx, ownsTx, err := c.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	// ── 1. Fetch existing compound for field-merge semantics ──────────────────
+	existing, err := q.GetCompoundByID(txCtx, id)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, fmt.Errorf("compound not found")
+		}
+		return nil, fmt.Errorf("failed to fetch compound: %w", err)
+	}
+
+	// ── 2. Merge fields (nil means keep existing, same as UpdateCompound) ─────
+	finalName := existing.Name
+	if req.Compound.Name != nil && *req.Compound.Name != "" {
+		finalName = *req.Compound.Name
+	}
+
+	finalNameI18n := existing.NameI18n
+	if req.Compound.NameI18n != nil && *req.Compound.NameI18n != "" {
+		parsed, err := uuid.Parse(*req.Compound.NameI18n)
+		if err != nil {
+			return nil, fmt.Errorf("invalid name_i18n: %w", err)
+		}
+		finalNameI18n = pgtype.UUID{Bytes: parsed, Valid: true}
+	}
+
+	finalDescription := existing.Description
+	if req.Compound.Description != nil {
+		finalDescription = req.Compound.Description
+	}
+
+	finalDescI18n := existing.DescriptionI18n
+	if req.Compound.DescriptionI18n != nil && *req.Compound.DescriptionI18n != "" {
+		parsed, err := uuid.Parse(*req.Compound.DescriptionI18n)
+		if err != nil {
+			return nil, fmt.Errorf("invalid description_i18n: %w", err)
+		}
+		finalDescI18n = pgtype.UUID{Bytes: parsed, Valid: true}
+	}
+
+	finalQuantity := existing.Quantity
+	if req.Compound.Quantity != nil {
+		finalQuantity = stringToNumeric(fmt.Sprintf("%g", *req.Compound.Quantity))
+	}
+
+	finalMeasurement := existing.Measurement
+	if req.Compound.Measurement != nil && *req.Compound.Measurement != "" {
+		finalMeasurement = pg.NullMeasurementType{
+			MeasurementType: pg.MeasurementType(*req.Compound.Measurement),
+			Valid:            true,
+		}
+	}
+
+	finalPictureUrl := existing.PictureUrl
+	if req.Compound.PictureUrl != nil {
+		finalPictureUrl = req.Compound.PictureUrl
+	}
+
+	finalColorCode := existing.ColorCode
+	if req.Compound.ColorCode != nil {
+		finalColorCode = req.Compound.ColorCode
+	}
+
+	finalIngGroupID := existing.IngredientGroupID
+	if req.Compound.IngredientGroupID != nil && *req.Compound.IngredientGroupID != "" {
+		parsed, err := uuid.Parse(*req.Compound.IngredientGroupID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid ingredient_group_id: %w", err)
+		}
+		finalIngGroupID = pgtype.UUID{Bytes: parsed, Valid: true}
+	}
+
+	// ── 3. Persist compound field changes ─────────────────────────────────────
+	// Price is intentionally kept as existing.Price here; recalcCompoundPriceInTx
+	// will overwrite it with the correct value at step 6.
+	if _, err := q.UpdateCompound(txCtx, pg.UpdateCompoundParams{
+		ID:                id,
+		Name:              finalName,
+		NameI18n:          finalNameI18n,
+		Description:       finalDescription,
+		DescriptionI18n:   finalDescI18n,
+		Quantity:          finalQuantity,
+		Measurement:       finalMeasurement,
+		Price:             existing.Price,
+		PictureUrl:        finalPictureUrl,
+		ColorCode:         finalColorCode,
+		IngredientGroupID: finalIngGroupID,
+	}); err != nil {
+		return nil, fmt.Errorf("failed to update compound: %w", err)
+	}
+
+	// ── 4. Delete old calculations ────────────────────────────────────────────
+	if err := q.DeleteCalculationsByCompoundID(txCtx, pgtype.UUID{Bytes: id, Valid: true}); err != nil {
+		return nil, fmt.Errorf("failed to delete old calculations: %w", err)
+	}
+
+	// ── 5. Insert new calculations (all in same TX) ───────────────────────────
+	calculations := make([]model.CalculationResponse, 0, len(req.IngredientCalculations)+len(req.CompoundCalculations))
+
+	for i, item := range req.IngredientCalculations {
+		ingredientID, err := uuid.Parse(item.IngredientID)
+		if err != nil {
+			return nil, fmt.Errorf("ingredient_calculations[%d]: invalid ingredient_id: %w", i, err)
+		}
+		qty, err := strconv.ParseFloat(item.Quantity, 64)
+		if err != nil {
+			return nil, fmt.Errorf("ingredient_calculations[%d]: invalid quantity: %w", i, err)
+		}
+
+		calc, err := insertIngredientCalcInTx(txCtx, q, id, ingredientID, qty)
+		if err != nil {
+			return nil, fmt.Errorf("ingredient_calculations[%d]: %w", i, err)
+		}
+		if r := toCalculationResponseAny(calc); r != nil {
+			calculations = append(calculations, *r)
+		}
+	}
+
+	for i, item := range req.CompoundCalculations {
+		childID, err := uuid.Parse(item.CompoundID)
+		if err != nil {
+			return nil, fmt.Errorf("compound_calculations[%d]: invalid compound_id: %w", i, err)
+		}
+		qty, err := strconv.ParseFloat(item.Quantity, 64)
+		if err != nil {
+			return nil, fmt.Errorf("compound_calculations[%d]: invalid quantity: %w", i, err)
+		}
+
+		calc, err := insertCompoundCalcInTx(txCtx, q, id, childID, qty)
+		if err != nil {
+			return nil, fmt.Errorf("compound_calculations[%d]: %w", i, err)
+		}
+		if r := toCalculationResponseAny(calc); r != nil {
+			calculations = append(calculations, *r)
+		}
+	}
+
+	// ── 6. Recalculate compound price once, after all calculations ────────────
+	if err := recalcCompoundPriceInTx(txCtx, q, id); err != nil {
+		return nil, fmt.Errorf("failed to recalculate compound price: %w", err)
+	}
+
+	// ── 7. Fetch final compound state for response ────────────────────────────
+	finalCompound, err := q.GetCompoundByID(txCtx, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch updated compound: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit: %w", err)
+		}
+	}
+
+	return &model.CompoundWithCalculationsResponse{
+		Compound:     compoundToResponseAny(finalCompound),
+		Calculations: calculations,
+	}, nil
+}

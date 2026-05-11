@@ -378,27 +378,7 @@ func (h *Handler) RecalculateCompoundPrice(c echo.Context) error {
 // CreateCompoundWithCalculations creates a new compound with calculations in one transaction
 // @Summary Create compound with multiple ingredients and child compounds (One Save)
 // @Description Create a new compound with its ingredient/child compound calculations in one atomic transaction.
-// @Description
-// @Description **How it works:**
-// @Description - Create the compound first
-// @Description - Then create all ingredient calculations (price from invoice_detail)
-// @Description - Then create all child compound calculations (price from child compound's price)
-// @Description - If any calculation fails, everything is rolled back (compound won't be created)
-// @Description - Compound price is auto-calculated as sum of all calculation total_costs
-// @Description
-// @Description **Example Request:**
-// @Description ```json
-// @Description {
-// @Description   "compound": { "name": "Pizza Dough", "quantity": 1, "measurement": "kg" },
-// @Description   "ingredient_calculations": [
-// @Description     { "ingredient_id": "flour-uuid", "quantity": "0.5" },
-// @Description     { "ingredient_id": "water-uuid", "quantity": "0.3" }
-// @Description   ],
-// @Description   "compound_calculations": [
-// @Description     { "compound_id": "yeast-mix-uuid", "quantity": "1" }
-// @Description   ]
-// @Description }
-// @Description ```
+// @Description The compound price is auto-calculated as sum of all calculation total_costs.
 // @Tags compounds
 // @Accept json
 // @Produce json
@@ -413,149 +393,46 @@ func (h *Handler) RecalculateCompoundPrice(c echo.Context) error {
 func (h *Handler) CreateCompoundWithCalculations(c echo.Context) error {
 	var req model.CreateCompoundWithCalculationsRequest
 	if err := c.Bind(&req); err != nil {
-		log.Printf("Failed to bind create compound with calculations request: %v", err)
-		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
-			"Invalid request format",
-			err.Error(),
-			http.StatusBadRequest,
-		))
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("Invalid request format", err.Error(), http.StatusBadRequest))
 	}
 
-	// Validate compound request
 	if req.Compound.Name == "" {
-		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
-			"Compound name is required",
-			"missing required field: compound.name",
-			http.StatusBadRequest,
-		))
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("Compound name is required", "missing required field: compound.name", http.StatusBadRequest))
 	}
 
-	// Validate ingredient calculations
 	for i, calc := range req.IngredientCalculations {
-		if calc.IngredientID == "" {
+		if calc.IngredientID == "" || calc.Quantity == "" {
 			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
 				"Invalid ingredient calculation",
-				"ingredient_calculations["+strconv.Itoa(i)+"]: ingredient_id is required",
-				http.StatusBadRequest,
-			))
-		}
-		if calc.Quantity == "" {
-			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
-				"Invalid ingredient calculation",
-				"ingredient_calculations["+strconv.Itoa(i)+"]: quantity is required",
+				"ingredient_calculations["+strconv.Itoa(i)+"]: ingredient_id and quantity are required",
 				http.StatusBadRequest,
 			))
 		}
 	}
 
-	// Validate compound calculations
 	for i, calc := range req.CompoundCalculations {
-		if calc.CompoundID == "" {
+		if calc.CompoundID == "" || calc.Quantity == "" {
 			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
 				"Invalid compound calculation",
-				"compound_calculations["+strconv.Itoa(i)+"]: compound_id is required",
-				http.StatusBadRequest,
-			))
-		}
-		if calc.Quantity == "" {
-			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
-				"Invalid compound calculation",
-				"compound_calculations["+strconv.Itoa(i)+"]: quantity is required",
+				"compound_calculations["+strconv.Itoa(i)+"]: compound_id and quantity are required",
 				http.StatusBadRequest,
 			))
 		}
 	}
 
-	ctx := c.Request().Context()
-
-	// Step 1: Create the compound
-	compoundResp, err := h.service.Compound().CreateCompound(
-		ctx,
-		req.Compound.Name,
-		req.Compound.NameI18n,
-		req.Compound.Description,
-		req.Compound.DescriptionI18n,
-		req.Compound.Measurement,
-		req.Compound.Quantity,
-		nil, // price will be auto-calculated from calculations
-		req.Compound.PictureUrl,
-		req.Compound.ColorCode,
-		req.Compound.IngredientGroupID,
-	)
+	resp, err := h.service.Calculation().CreateCompoundWithCalculations(c.Request().Context(), &req)
 	if err != nil {
-		log.Printf("CreateCompoundWithCalculations: failed to create compound: %v", err)
-		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
-			"Failed to create compound",
-			err.Error(),
-			http.StatusInternalServerError,
-		))
+		log.Printf("CreateCompoundWithCalculations failed: %v", err)
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Failed to create compound with calculations", err.Error(), http.StatusInternalServerError))
 	}
 
-	var calculations []model.CalculationResponse
-
-	// Step 2: Create ingredient calculations
-	for i, calc := range req.IngredientCalculations {
-		calcResp, calcErr := h.service.Calculation().CreateCalculationForCompound(ctx, compoundResp.ID, calc.IngredientID, calc.Quantity)
-		if calcErr != nil {
-			log.Printf("CreateCompoundWithCalculations: failed to create ingredient calculation[%d]: %v", i, calcErr)
-			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
-				"Failed to create ingredient calculation",
-				"ingredient_calculations["+strconv.Itoa(i)+"]: "+calcErr.Error(),
-				http.StatusInternalServerError,
-			))
-		}
-		if calcResp != nil {
-			calculations = append(calculations, *calcResp)
-		}
-	}
-
-	// Step 3: Create child compound calculations
-	for i, calc := range req.CompoundCalculations {
-		calcResp, calcErr := h.service.Calculation().CreateCalculationCompoundToCompound(ctx, compoundResp.ID, calc.CompoundID, calc.Quantity)
-		if calcErr != nil {
-			log.Printf("CreateCompoundWithCalculations: failed to create compound calculation[%d]: %v", i, calcErr)
-			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
-				"Failed to create compound calculation",
-				"compound_calculations["+strconv.Itoa(i)+"]: "+calcErr.Error(),
-				http.StatusInternalServerError,
-			))
-		}
-		if calcResp != nil {
-			calculations = append(calculations, *calcResp)
-		}
-	}
-
-	// Fetch updated compound (price should be auto-calculated now)
-	updatedCompound, err := h.service.Compound().GetCompoundByID(ctx, compoundResp.ID)
-	if err != nil {
-		log.Printf("CreateCompoundWithCalculations: failed to fetch updated compound: %v", err)
-		// Use original response if fetch fails
-		updatedCompound = compoundResp
-	}
-
-	response := model.CompoundWithCalculationsResponse{
-		Compound:     updatedCompound,
-		Calculations: calculations,
-	}
-
-	return c.JSON(http.StatusCreated, model.NewSuccessResponse(
-		"Compound created successfully",
-		response,
-		http.StatusCreated,
-	))
+	return c.JSON(http.StatusCreated, model.NewSuccessResponse("Compound created successfully", resp, http.StatusCreated))
 }
 
 // UpdateCompoundWithCalculations updates a compound and replaces all calculations in one transaction
 // @Summary Update compound with multiple ingredients and child compounds (One Save)
-// @Description Update a compound and replace all its ingredient/child compound calculations in one atomic transaction.
-// @Description
-// @Description **How it works:**
-// @Description - Update the compound first
-// @Description - Delete all existing calculations for this compound
-// @Description - Create the new ingredient calculations (price from invoice_detail)
-// @Description - Create the new child compound calculations (price from child compound's price)
-// @Description - If any step fails, everything is rolled back
-// @Description - Compound price is auto-calculated as sum of all calculation total_costs
+// @Description Update a compound and atomically replace all its calculations in one transaction.
+// @Description Old calculations are deleted, new ones inserted, price recalculated once at the end.
 // @Tags compounds
 // @Accept json
 // @Produce json
@@ -571,141 +448,41 @@ func (h *Handler) CreateCompoundWithCalculations(c echo.Context) error {
 func (h *Handler) UpdateCompoundWithCalculations(c echo.Context) error {
 	compoundID := c.Param("id")
 	if compoundID == "" {
-		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
-			"compound id is required",
-			"missing path parameter: id",
-			http.StatusBadRequest,
-		))
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("compound id is required", "missing path parameter: id", http.StatusBadRequest))
 	}
 
 	var req model.UpdateCompoundWithCalculationsRequest
 	if err := c.Bind(&req); err != nil {
-		log.Printf("Failed to bind update compound with calculations request: %v", err)
-		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
-			"Invalid request format",
-			err.Error(),
-			http.StatusBadRequest,
-		))
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("Invalid request format", err.Error(), http.StatusBadRequest))
 	}
 
-	// Validate ingredient calculations
 	for i, calc := range req.IngredientCalculations {
-		if calc.IngredientID == "" {
+		if calc.IngredientID == "" || calc.Quantity == "" {
 			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
 				"Invalid ingredient calculation",
-				"ingredient_calculations["+strconv.Itoa(i)+"]: ingredient_id is required",
-				http.StatusBadRequest,
-			))
-		}
-		if calc.Quantity == "" {
-			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
-				"Invalid ingredient calculation",
-				"ingredient_calculations["+strconv.Itoa(i)+"]: quantity is required",
+				"ingredient_calculations["+strconv.Itoa(i)+"]: ingredient_id and quantity are required",
 				http.StatusBadRequest,
 			))
 		}
 	}
 
-	// Validate compound calculations
 	for i, calc := range req.CompoundCalculations {
-		if calc.CompoundID == "" {
+		if calc.CompoundID == "" || calc.Quantity == "" {
 			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
 				"Invalid compound calculation",
-				"compound_calculations["+strconv.Itoa(i)+"]: compound_id is required",
-				http.StatusBadRequest,
-			))
-		}
-		if calc.Quantity == "" {
-			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
-				"Invalid compound calculation",
-				"compound_calculations["+strconv.Itoa(i)+"]: quantity is required",
+				"compound_calculations["+strconv.Itoa(i)+"]: compound_id and quantity are required",
 				http.StatusBadRequest,
 			))
 		}
 	}
 
-	ctx := c.Request().Context()
-
-	compoundResp, err := h.service.Compound().UpdateCompound(
-		ctx,
-		compoundID,
-		req.Compound.Name,
-		req.Compound.NameI18n,
-		req.Compound.Description,
-		req.Compound.DescriptionI18n,
-		req.Compound.Measurement,
-		req.Compound.Quantity,
-		nil,
-		req.Compound.PictureUrl,
-		req.Compound.ColorCode,
-		req.Compound.IngredientGroupID,
-	)
+	resp, err := h.service.Calculation().UpdateCompoundWithCalculations(c.Request().Context(), compoundID, &req)
 	if err != nil {
-		log.Printf("UpdateCompoundWithCalculations: failed to update compound: %v", err)
-		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
-			"Failed to update compound",
-			err.Error(),
-			http.StatusInternalServerError,
-		))
+		log.Printf("UpdateCompoundWithCalculations failed for compound %s: %v", compoundID, err)
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Failed to update compound with calculations", err.Error(), http.StatusInternalServerError))
 	}
 
-	if err := h.service.Calculation().DeleteCalculationsByCompoundID(ctx, compoundID); err != nil {
-		log.Printf("UpdateCompoundWithCalculations: failed to delete old calculations: %v", err)
-		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
-			"Failed to delete old calculations",
-			err.Error(),
-			http.StatusInternalServerError,
-		))
-	}
-
-	var calculations []model.CalculationResponse
-
-	for i, calc := range req.IngredientCalculations {
-		calcResp, calcErr := h.service.Calculation().CreateCalculationForCompound(ctx, compoundID, calc.IngredientID, calc.Quantity)
-		if calcErr != nil {
-			log.Printf("UpdateCompoundWithCalculations: failed to create ingredient calculation[%d]: %v", i, calcErr)
-			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
-				"Failed to create ingredient calculation",
-				"ingredient_calculations["+strconv.Itoa(i)+"]: "+calcErr.Error(),
-				http.StatusInternalServerError,
-			))
-		}
-		if calcResp != nil {
-			calculations = append(calculations, *calcResp)
-		}
-	}
-
-	for i, calc := range req.CompoundCalculations {
-		calcResp, calcErr := h.service.Calculation().CreateCalculationCompoundToCompound(ctx, compoundID, calc.CompoundID, calc.Quantity)
-		if calcErr != nil {
-			log.Printf("UpdateCompoundWithCalculations: failed to create compound calculation[%d]: %v", i, calcErr)
-			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
-				"Failed to create compound calculation",
-				"compound_calculations["+strconv.Itoa(i)+"]: "+calcErr.Error(),
-				http.StatusInternalServerError,
-			))
-		}
-		if calcResp != nil {
-			calculations = append(calculations, *calcResp)
-		}
-	}
-
-	updatedCompound, cErr := h.service.Compound().GetCompoundByID(ctx, compoundID)
-	if cErr != nil {
-		log.Printf("UpdateCompoundWithCalculations: failed to fetch updated compound: %v", cErr)
-		updatedCompound = compoundResp
-	}
-
-	response := model.CompoundWithCalculationsResponse{
-		Compound:     updatedCompound,
-		Calculations: calculations,
-	}
-
-	return c.JSON(http.StatusOK, model.NewSuccessResponse(
-		"Compound updated successfully",
-		response,
-		http.StatusOK,
-	))
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Compound updated successfully", resp, http.StatusOK))
 }
 
 // ==================== COMPOUNDS WITH LANGUAGE HANDLERS ====================
