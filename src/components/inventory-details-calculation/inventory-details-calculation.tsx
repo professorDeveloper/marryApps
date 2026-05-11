@@ -261,7 +261,7 @@ export function InventoryDetailsCalculation({
                 }
 
                 const batchResult = await createInventoryBatch({
-                    date: formData.date || new Date().toISOString().split('T')[0],
+                    counted_date: formData.counted_date || new Date().toISOString().split('T')[0],
                     status: formData.status || 'active',
                     storage_id: formData.storage_id,
                     description: formData.description || '',

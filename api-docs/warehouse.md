@@ -2,7 +2,7 @@
 
 > **Module:** warehouse  
 > **Base URL:** https://api.maryai.uz/  
-> **Last Updated:** 2026-05-04T12:38:52.479Z
+> **Last Updated:** 2026-05-11T03:54:32.007Z
 
 ---
 

@@ -195,7 +195,7 @@ const InventoryFormView = React.memo(function InventoryFormView() {
                 })
             );
             const formPayload: IInventoryFormData = {
-                date,
+                counted_date: date,
                 status: status as IInventoryFormData['status'],
                 storage_id: storageId,
                 description: descriptionLiveRef.current,
