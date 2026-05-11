@@ -410,6 +410,9 @@ type CalculationI interface {
 	GetGoodWithCalculations(ctx context.Context, goodID string) (*model.GoodCalculationResponse, error)
 	GetCompoundWithCalculations(ctx context.Context, compoundID string) (*model.CompoundCalculationResponse, error)
 
+	CreateCompoundWithCalculations(ctx context.Context, req *model.CreateCompoundWithCalculationsRequest) (*model.CompoundWithCalculationsResponse, error)
+	UpdateCompoundWithCalculations(ctx context.Context, compoundID string, req *model.UpdateCompoundWithCalculationsRequest) (*model.CompoundWithCalculationsResponse, error)
+
 	CreateModifierCalculationForIngredient(ctx context.Context, modifierID, ingredientID, quantity string) (*model.ModifierCalculationResponse, error)
 	CreateModifierCalculationForCompound(ctx context.Context, modifierID, childCompoundID, quantity string) (*model.ModifierCalculationResponse, error)
 	GetModifierCalculationByID(ctx context.Context, calculationID string) (*model.ModifierCalculationResponse, error)
