@@ -299,7 +299,8 @@ func (c *CalculationS) updateCompoundPriceFromCalculations(ctx context.Context, 
 	}
 
 	// Also update the compound's cost_price, profit, profit_margin fields
-	err = c.UpdateCompoundCostFields(ctx, compoundID)
+	// Use the existing transaction context to avoid nested transactions
+	err = c.UpdateCompoundCostFields(txCtx, compoundID)
 	if err != nil {
 		return err
 	}
@@ -381,6 +382,7 @@ func (c *CalculationS) UpdateGoodCostFields(ctx context.Context, goodID string) 
 // UpdateCompoundCostFields recalculates and stores cost_price for a compound
 // For compounds: price = total_cost (auto-calculated), no profit/profit_margin
 // Compounds are intermediate products, not sold directly to customers
+// If called from within an existing transaction, reuses that transaction to avoid nested transactions
 func (c *CalculationS) UpdateCompoundCostFields(ctx context.Context, compoundID string) error {
 	q, txCtx, tx, ownsTx, err := c.getTenantMutationQueries(ctx)
 	if err != nil {
@@ -396,7 +398,7 @@ func (c *CalculationS) UpdateCompoundCostFields(ctx context.Context, compoundID 
 	}
 
 	// Calculate total cost from calculations
-	totalCostStr, err := c.GetTotalCostByCompoundID(ctx, compoundID)
+	totalCostStr, err := c.GetTotalCostByCompoundID(txCtx, compoundID)
 	if err != nil {
 		return fmt.Errorf("failed to get total cost: %w", err)
 	}
@@ -596,7 +598,8 @@ func (c *CalculationS) CreateCalculationCompoundToCompound(ctx context.Context, 
 	}
 
 	// Note: Parent compound's price will be auto-updated by trigger after this calculation is inserted
-	if err := c.updateCompoundPriceFromCalculations(ctx, parentCompoundID); err != nil {
+	// Use the existing transaction context to avoid nested transactions
+	if err := c.updateCompoundPriceFromCalculations(txCtx, parentCompoundID); err != nil {
 		log.Printf("CreateCalculationCompoundToCompound: failed to update parent compound price: %v", err)
 	}
 
@@ -824,7 +827,7 @@ func (c *CalculationS) createCalculationInternal(ctx context.Context, goodID, co
 
 	// If this calculation is for a compound, update its price (total component cost)
 	if compoundID != nil && *compoundID != "" {
-		if err := c.updateCompoundPriceFromCalculations(ctx, *compoundID); err != nil {
+		if err := c.updateCompoundPriceFromCalculations(txCtx, *compoundID); err != nil {
 			log.Printf("CreateCalculationForCompound: failed to update compound price: %v", err)
 		}
 	}
@@ -1049,7 +1052,7 @@ func (c *CalculationS) UpdateCalculation(ctx context.Context, calculationID stri
 	}
 
 	if calculation.CompoundID.Valid {
-		if err := c.updateCompoundPriceFromCalculations(ctx, calculation.CompoundID.String()); err != nil {
+		if err := c.updateCompoundPriceFromCalculations(txCtx, calculation.CompoundID.String()); err != nil {
 			log.Printf("UpdateCalculation: failed to update compound price: %v", err)
 		}
 	}
@@ -1100,7 +1103,7 @@ func (c *CalculationS) DeleteCalculation(ctx context.Context, calculationID stri
 	}
 
 	if calc.CompoundID.Valid {
-		if err := c.updateCompoundPriceFromCalculations(ctx, calc.CompoundID.String()); err != nil {
+		if err := c.updateCompoundPriceFromCalculations(txCtx, calc.CompoundID.String()); err != nil {
 			log.Printf("DeleteCalculation: failed to update compound price: %v", err)
 		}
 	}
