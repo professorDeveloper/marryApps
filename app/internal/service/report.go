@@ -84,49 +84,52 @@ func (s *ReportS) GoodsReport(ctx context.Context,
 		Column8:     strOrEmpty(tableID),
 	}
 
-	queries, err := s.repo.TenantQueries(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
-	}
+	var result *model.GoodsReportResponse
+	err = withTenantRead(ctx, s.repo, func(txCtx context.Context, q *pg.Queries) error {
+		rows, err := q.GoodsReport(txCtx, params)
+		if err != nil {
+			return fmt.Errorf("failed to get goods report: %w", err)
+		}
+		totalsRow, err := q.GoodsReportTotals(txCtx, totalsParams)
+		if err != nil {
+			return fmt.Errorf("failed to get goods report totals: %w", err)
+		}
 
-	rows, err := queries.GoodsReport(ctx, params)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get goods report: %w", err)
-	}
-	totalsRow, err := queries.GoodsReportTotals(ctx, totalsParams)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get goods report totals: %w", err)
-	}
+		data := make([]model.GoodsReportRow, 0, len(rows))
+		for _, r := range rows {
+			data = append(data, model.GoodsReportRow{
+				GoodID:       r.GoodID,
+				Name:         r.Name,
+				TotalQty:     r.TotalQty,
+				AvgSellPrice: pgNumericToStr(r.AvgSellPrice),
+				TotalSell:    ifaceToStr(r.TotalSell),
+				AvgCostPrice: pgNumericToStr(r.AvgCostPrice),
+				TotalCost:    ifaceToStr(r.TotalCost),
+				AvgMarkup:    pgNumericToStr(r.AvgMarkup),
+				TotalMarkup:  ifaceToStr(r.TotalMarkup),
+				AvgMarkupPct: pgNumericToStr(r.AvgMarkupPct),
+			})
+		}
 
-	data := make([]model.GoodsReportRow, 0, len(rows))
-	for _, r := range rows {
-		data = append(data, model.GoodsReportRow{
-			GoodID:       r.GoodID,
-			Name:         r.Name,
-			TotalQty:     r.TotalQty,
-			AvgSellPrice: pgNumericToStr(r.AvgSellPrice),
-			TotalSell:    ifaceToStr(r.TotalSell),
-			AvgCostPrice: pgNumericToStr(r.AvgCostPrice),
-			TotalCost:    ifaceToStr(r.TotalCost),
-			AvgMarkup:    pgNumericToStr(r.AvgMarkup),
-			TotalMarkup:  ifaceToStr(r.TotalMarkup),
-			AvgMarkupPct: pgNumericToStr(r.AvgMarkupPct),
-		})
+		result = &model.GoodsReportResponse{
+			Data: data,
+			Totals: model.GoodsReportTotals{
+				TotalQty:     totalsRow.TotalQty,
+				TotalSell:    ifaceToStr(totalsRow.TotalSell),
+				TotalCost:    ifaceToStr(totalsRow.TotalCost),
+				TotalMarkup:  ifaceToStr(totalsRow.TotalMarkup),
+				AvgMarkupPct: pgNumericToStr(totalsRow.AvgMarkupPct),
+				TotalCount:   totalsRow.TotalCount,
+			},
+			Limit:  limit,
+			Offset: offset,
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
-
-	return &model.GoodsReportResponse{
-		Data: data,
-		Totals: model.GoodsReportTotals{
-			TotalQty:     totalsRow.TotalQty,
-			TotalSell:    ifaceToStr(totalsRow.TotalSell),
-			TotalCost:    ifaceToStr(totalsRow.TotalCost),
-			TotalMarkup:  ifaceToStr(totalsRow.TotalMarkup),
-			AvgMarkupPct: pgNumericToStr(totalsRow.AvgMarkupPct),
-			TotalCount:   totalsRow.TotalCount,
-		},
-		Limit:  limit,
-		Offset: offset,
-	}, nil
+	return result, nil
 }
 
 func (s *ReportS) GoodOrdersReport(ctx context.Context,
@@ -171,62 +174,65 @@ func (s *ReportS) GoodOrdersReport(ctx context.Context,
 		Column6:     strOrEmpty(tableID),
 	}
 
-	queries, err := s.repo.TenantQueries(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
-	}
-
-	rows, err := queries.GoodOrdersReport(ctx, params)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get good orders report: %w", err)
-	}
-	totalsRow, err := queries.GoodOrdersReportTotals(ctx, totalsParams)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get good orders report totals: %w", err)
-	}
-
-	data := make([]model.GoodOrdersReportRow, 0, len(rows))
-	for _, r := range rows {
-		row := model.GoodOrdersReportRow{
-			OrderID:      r.OrderID,
-			BillNo:       r.BillNo,
-			BillStatus:   r.BillStatus,
-			WaiterName:   r.WaiterName,
-			HallName:     r.HallName,
-			TableNumber:  ifaceToStr(r.TableNumber),
-			TotalQty:     r.TotalQty,
-			AvgSellPrice: pgNumericToStr(r.AvgSellPrice),
-			TotalSell:    ifaceToStr(r.TotalSell),
-			AvgCostPrice: pgNumericToStr(r.AvgCostPrice),
-			TotalCost:    ifaceToStr(r.TotalCost),
-			AvgMarkup:    pgNumericToStr(r.AvgMarkup),
-			TotalMarkup:  ifaceToStr(r.TotalMarkup),
-			AvgMarkupPct: pgNumericToStr(r.AvgMarkupPct),
+	var result *model.GoodOrdersReportResponse
+	err = withTenantRead(ctx, s.repo, func(txCtx context.Context, q *pg.Queries) error {
+		rows, err := q.GoodOrdersReport(txCtx, params)
+		if err != nil {
+			return fmt.Errorf("failed to get good orders report: %w", err)
 		}
-		if r.OpenedAt.Valid {
-			t := r.OpenedAt.Time.Format(time.RFC3339)
-			row.OpenedAt = &t
+		totalsRow, err := q.GoodOrdersReportTotals(txCtx, totalsParams)
+		if err != nil {
+			return fmt.Errorf("failed to get good orders report totals: %w", err)
 		}
-		if r.ClosedAt.Valid {
-			t := r.ClosedAt.Time.Format(time.RFC3339)
-			row.ClosedAt = &t
-		}
-		data = append(data, row)
-	}
 
-	return &model.GoodOrdersReportResponse{
-		Data: data,
-		Totals: model.GoodOrdersReportTotals{
-			TotalQty:     totalsRow.TotalQty,
-			TotalSell:    ifaceToStr(totalsRow.TotalSell),
-			TotalCost:    ifaceToStr(totalsRow.TotalCost),
-			TotalMarkup:  ifaceToStr(totalsRow.TotalMarkup),
-			AvgMarkupPct: pgNumericToStr(totalsRow.AvgMarkupPct),
-			TotalOrders:  totalsRow.TotalOrders,
-		},
-		Limit:  limit,
-		Offset: offset,
-	}, nil
+		data := make([]model.GoodOrdersReportRow, 0, len(rows))
+		for _, r := range rows {
+			row := model.GoodOrdersReportRow{
+				OrderID:      r.OrderID,
+				BillNo:       r.BillNo,
+				BillStatus:   r.BillStatus,
+				WaiterName:   r.WaiterName,
+				HallName:     r.HallName,
+				TableNumber:  ifaceToStr(r.TableNumber),
+				TotalQty:     r.TotalQty,
+				AvgSellPrice: pgNumericToStr(r.AvgSellPrice),
+				TotalSell:    ifaceToStr(r.TotalSell),
+				AvgCostPrice: pgNumericToStr(r.AvgCostPrice),
+				TotalCost:    ifaceToStr(r.TotalCost),
+				AvgMarkup:    pgNumericToStr(r.AvgMarkup),
+				TotalMarkup:  ifaceToStr(r.TotalMarkup),
+				AvgMarkupPct: pgNumericToStr(r.AvgMarkupPct),
+			}
+			if r.OpenedAt.Valid {
+				t := r.OpenedAt.Time.Format(time.RFC3339)
+				row.OpenedAt = &t
+			}
+			if r.ClosedAt.Valid {
+				t := r.ClosedAt.Time.Format(time.RFC3339)
+				row.ClosedAt = &t
+			}
+			data = append(data, row)
+		}
+
+		result = &model.GoodOrdersReportResponse{
+			Data: data,
+			Totals: model.GoodOrdersReportTotals{
+				TotalQty:     totalsRow.TotalQty,
+				TotalSell:    ifaceToStr(totalsRow.TotalSell),
+				TotalCost:    ifaceToStr(totalsRow.TotalCost),
+				TotalMarkup:  ifaceToStr(totalsRow.TotalMarkup),
+				AvgMarkupPct: pgNumericToStr(totalsRow.AvgMarkupPct),
+				TotalOrders:  totalsRow.TotalOrders,
+			},
+			Limit:  limit,
+			Offset: offset,
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
 }
 
 // withSavepoint wraps fn in a PostgreSQL SAVEPOINT.
