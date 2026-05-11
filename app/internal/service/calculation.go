@@ -598,10 +598,6 @@ func (c *CalculationS) CreateCalculationCompoundToCompound(ctx context.Context, 
 	}
 
 	// Note: Parent compound's price will be auto-updated by trigger after this calculation is inserted
-	// Use the existing transaction context to avoid nested transactions
-	if err := c.updateCompoundPriceFromCalculations(txCtx, parentCompoundID); err != nil {
-		log.Printf("CreateCalculationCompoundToCompound: failed to update parent compound price: %v", err)
-	}
 
 	if ownsTx {
 		if err := tx.Commit(ctx); err != nil {
@@ -825,13 +821,6 @@ func (c *CalculationS) createCalculationInternal(ctx context.Context, goodID, co
 		return nil, fmt.Errorf("failed to create calculation: %w", err)
 	}
 
-	// If this calculation is for a compound, update its price (total component cost)
-	if compoundID != nil && *compoundID != "" {
-		if err := c.updateCompoundPriceFromCalculations(txCtx, *compoundID); err != nil {
-			log.Printf("CreateCalculationForCompound: failed to update compound price: %v", err)
-		}
-	}
-
 	// If this calculation is for a good, update its cost fields (cost_price, profit, profit_margin)
 	if goodID != nil && *goodID != "" {
 		if err := c.UpdateGoodCostFields(ctx, *goodID); err != nil {
@@ -1051,12 +1040,6 @@ func (c *CalculationS) UpdateCalculation(ctx context.Context, calculationID stri
 		return nil, fmt.Errorf("failed to update calculation: %w", err)
 	}
 
-	if calculation.CompoundID.Valid {
-		if err := c.updateCompoundPriceFromCalculations(txCtx, calculation.CompoundID.String()); err != nil {
-			log.Printf("UpdateCalculation: failed to update compound price: %v", err)
-		}
-	}
-
 	// Update good's cost fields if this calculation is for a good
 	if calculation.GoodID.Valid {
 		if err := c.UpdateGoodCostFields(ctx, calculation.GoodID.String()); err != nil {
@@ -1100,12 +1083,6 @@ func (c *CalculationS) DeleteCalculation(ctx context.Context, calculationID stri
 	if err := q.DeleteCalculation(txCtx, id); err != nil {
 		log.Printf("DeleteCalculation failed: %v", err)
 		return fmt.Errorf("failed to delete calculation: %w", err)
-	}
-
-	if calc.CompoundID.Valid {
-		if err := c.updateCompoundPriceFromCalculations(txCtx, calc.CompoundID.String()); err != nil {
-			log.Printf("DeleteCalculation: failed to update compound price: %v", err)
-		}
 	}
 
 	// Update good's cost fields if this calculation was for a good
