@@ -274,7 +274,7 @@ func (c *CalculationS) updateCompoundPriceFromCalculations(ctx context.Context, 
 	}
 
 	// Compound price is treated as total component cost: SUM(calculation.total_cost)
-	totalCostStr, err := c.GetTotalCostByCompoundID(ctx, compoundID)
+	totalCostStr, err := c.GetTotalCostByCompoundID(txCtx, compoundID)
 	if err != nil {
 		return err
 	}
