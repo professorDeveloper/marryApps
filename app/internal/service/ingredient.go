@@ -408,6 +408,9 @@ func (i *IngredientS) GetIngredientReport(ctx context.Context, req model.GetIngr
 			Out:           numericToStr(r.OutQty),
 			Shortage:      numericToStr(r.ShortageQty),
 			Surplus:       numericToStr(r.SurplusQty),
+
+			BeginPrice: numericToStr(r.BeginPrice),
+			EndPrice:   numericToStr(r.EndPrice),
 		})
 	}
 
@@ -569,6 +572,9 @@ func (i *IngredientS) GetIngredientInventoryStatusReport(ctx context.Context, re
 			Out:           numericToStr(r.OutQty),
 			Shortage:      numericToStr(r.ShortageQty),
 			Surplus:       numericToStr(r.SurplusQty),
+
+			BeginPrice: numericToStr(r.BeginPrice),
+			EndPrice:   numericToStr(r.EndPrice),
 		})
 	}
 

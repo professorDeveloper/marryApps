@@ -4,11 +4,9 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"gitlab.yurtal.tech/company/maryai/back/internal/model"
@@ -36,59 +34,6 @@ type ReportS struct {
 
 func NewReportS(repo *repository.Repository) *ReportS {
 	return &ReportS{repo: repo}
-}
-
-// getTenantReadQueries returns tenant queries within a read-only transaction for read operations.
-// If a transaction already exists in context, it reuses it. Otherwise, it creates a new read-only transaction.
-// Returns: queries, enriched context, transaction, ownsTx (whether we created the tx), error
-func (s *ReportS) getTenantReadQueries(ctx context.Context) (*pg.Queries, context.Context, pgx.Tx, bool, error) {
-	if existingTx, ok := repository.TenantTxFromContext(ctx); ok && existingTx != nil {
-		// Reuse existing transaction - get queries from context or create from tx
-		if q, ok := repository.TenantQueriesFromContext(ctx); ok && q != nil {
-			return q, ctx, existingTx, false, nil
-		}
-		q := pg.New(existingTx)
-		txCtx := repository.WithTenantQueries(ctx, q)
-		return q, txCtx, existingTx, false, nil
-	}
-
-	// For read-only operations without an existing transaction, begin a read-only transaction
-	// This ensures the connection is not released before queries complete
-	tx, err := s.repo.PgRepo.TenantPool.BeginTx(ctx, pgx.TxOptions{AccessMode: pgx.ReadOnly})
-	if err != nil {
-		return nil, nil, nil, false, fmt.Errorf("failed to begin read-only transaction: %w", err)
-	}
-
-	brandID, _ := ctx.Value("brand_id").(string)
-	brandID = strings.TrimSpace(brandID)
-	if brandID == "" {
-		tx.Rollback(ctx)
-		return nil, nil, nil, false, fmt.Errorf("brand_id is missing in context")
-	}
-
-	schemaName := fmt.Sprintf("tenant_%s", brandID)
-	if _, err := tx.Exec(ctx, fmt.Sprintf(`SET LOCAL search_path TO "%s", public`, schemaName)); err != nil {
-		tx.Rollback(ctx)
-		return nil, nil, nil, false, fmt.Errorf("failed to set tenant search_path: %w", err)
-	}
-
-	if _, err := tx.Exec(ctx, "SET LOCAL app.brand_id = $1", brandID); err != nil {
-		tx.Rollback(ctx)
-		return nil, nil, nil, false, fmt.Errorf("failed to set app.brand_id: %w", err)
-	}
-
-	if branchID, _ := ctx.Value("branch_id").(string); strings.TrimSpace(branchID) != "" {
-		if _, err := tx.Exec(ctx, "SET LOCAL app.branch_id = $1", strings.TrimSpace(branchID)); err != nil {
-			tx.Rollback(ctx)
-			return nil, nil, nil, false, fmt.Errorf("failed to set app.branch_id: %w", err)
-		}
-	}
-
-	q := pg.New(tx)
-	txCtx := repository.WithTenantTx(ctx, tx)
-	txCtx = repository.WithTenantQueries(txCtx, q)
-
-	return q, txCtx, tx, true, nil
 }
 
 func (s *ReportS) GoodsReport(ctx context.Context,
@@ -139,28 +84,17 @@ func (s *ReportS) GoodsReport(ctx context.Context,
 		Column8:     strOrEmpty(tableID),
 	}
 
-	q, txCtx, tx, ownsTx, err := s.getTenantReadQueries(ctx)
+	queries, err := s.repo.TenantQueries(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
 	}
-	if ownsTx {
-		defer tx.Rollback(ctx)
-	}
 
-	rows, err := q.GoodsReport(txCtx, params)
+	rows, err := queries.GoodsReport(ctx, params)
 	if err != nil {
-		brandID, _ := ctx.Value("brand_id").(string)
-		branchID, _ := ctx.Value("branch_id").(string)
-		log.Printf("GoodsReport failed: start_date=%s end_date=%s limit=%d offset=%d brand_id=%s branch_id=%s error=%v",
-			startDate, endDate, limit, offset, brandID, branchID, err)
 		return nil, fmt.Errorf("failed to get goods report: %w", err)
 	}
-	totalsRow, err := q.GoodsReportTotals(txCtx, totalsParams)
+	totalsRow, err := queries.GoodsReportTotals(ctx, totalsParams)
 	if err != nil {
-		brandID, _ := ctx.Value("brand_id").(string)
-		branchID, _ := ctx.Value("branch_id").(string)
-		log.Printf("GoodsReportTotals failed: start_date=%s end_date=%s limit=%d offset=%d brand_id=%s branch_id=%s error=%v",
-			startDate, endDate, limit, offset, brandID, branchID, err)
 		return nil, fmt.Errorf("failed to get goods report totals: %w", err)
 	}
 
@@ -237,19 +171,16 @@ func (s *ReportS) GoodOrdersReport(ctx context.Context,
 		Column6:     strOrEmpty(tableID),
 	}
 
-	q, txCtx, tx, ownsTx, err := s.getTenantReadQueries(ctx)
+	queries, err := s.repo.TenantQueries(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get tenant queries: %w", err)
 	}
-	if ownsTx {
-		defer tx.Rollback(ctx)
-	}
 
-	rows, err := q.GoodOrdersReport(txCtx, params)
+	rows, err := queries.GoodOrdersReport(ctx, params)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get good orders report: %w", err)
 	}
-	totalsRow, err := q.GoodOrdersReportTotals(txCtx, totalsParams)
+	totalsRow, err := queries.GoodOrdersReportTotals(ctx, totalsParams)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get good orders report totals: %w", err)
 	}

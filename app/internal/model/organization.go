@@ -332,6 +332,9 @@ type IngredientReportItem struct {
 	Out           string `json:"out"`
 	Shortage      string `json:"shortage"`
 	Surplus       string `json:"surplus"`
+
+	BeginPrice string `json:"begin_price"`
+	EndPrice   string `json:"end_price"`
 }
 
 type GetIngredientReportMovementsRequest struct {

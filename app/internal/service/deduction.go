@@ -58,6 +58,13 @@ func (s *DeductionS) getTenantMutationQueries(ctx context.Context) (*pg.Queries,
 		return nil, nil, nil, false, fmt.Errorf("failed to set app.brand_id: %w", err)
 	}
 
+	if branchID, _ := ctx.Value("branch_id").(string); strings.TrimSpace(branchID) != "" {
+		if _, err := tx.Exec(ctx, "SET LOCAL app.branch_id = $1", strings.TrimSpace(branchID)); err != nil {
+			tx.Rollback(ctx)
+			return nil, nil, nil, false, fmt.Errorf("failed to set app.branch_id: %w", err)
+		}
+	}
+
 	q := pg.New(tx)
 	txCtx := repository.WithTenantQueries(ctx, q)
 	return q, txCtx, tx, true, nil

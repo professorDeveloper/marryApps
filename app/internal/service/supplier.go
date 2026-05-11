@@ -26,16 +26,24 @@ func NewSupplierS(repo *repository.Repository) *SupplierS {
 func (s *SupplierS) CreateSupplier(ctx context.Context, req *model.CreateSupplierRequest) (*model.SupplierResponse, error) {
 	id := uuid.New()
 
-	params := pg.CreateSupplierParams{
-		ID:          id,
-		Name:        req.Name,
-		PhoneNumber: req.PhoneNumber,
-		Location:    req.Location,
-	}
+	var supplier pg.Supplier
+	err := withTenantWrite(ctx, s.repo, func(tenantCtx context.Context, q *pg.Queries) error {
+		params := pg.CreateSupplierParams{
+			ID:          id,
+			Name:        req.Name,
+			PhoneNumber: req.PhoneNumber,
+			Location:    req.Location,
+		}
 
-	supplier, err := s.repo.Tenant(ctx).CreateSupplier(ctx, params)
+		var err error
+		supplier, err = q.CreateSupplier(tenantCtx, params)
+		if err != nil {
+			return fmt.Errorf("failed to create supplier: %w", err)
+		}
+		return nil
+	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to create supplier: %w", err)
+		return nil, err
 	}
 
 	return toSupplierResponse(supplier), nil
@@ -114,38 +122,45 @@ func (s *SupplierS) UpdateSupplier(ctx context.Context, id string, req *model.Up
 		return nil, fmt.Errorf("invalid supplier id: %w", err)
 	}
 
-	// Fetch current supplier
-	supplier, err := s.repo.Tenant(ctx).GetSupplierByID(ctx, supplierID)
+	var updated pg.Supplier
+	err = withTenantWrite(ctx, s.repo, func(tenantCtx context.Context, q *pg.Queries) error {
+		// Fetch current supplier
+		supplier, err := q.GetSupplierByID(tenantCtx, supplierID)
+		if err != nil {
+			return fmt.Errorf("failed to get supplier: %w", err)
+		}
+
+		// Update only provided fields
+		name := supplier.Name
+		if req.Name != nil {
+			name = *req.Name
+		}
+
+		phoneNumber := supplier.PhoneNumber
+		if req.PhoneNumber != nil {
+			phoneNumber = req.PhoneNumber
+		}
+
+		location := supplier.Location
+		if req.Location != nil {
+			location = req.Location
+		}
+
+		params := pg.UpdateSupplierParams{
+			ID:          supplierID,
+			Name:        name,
+			PhoneNumber: phoneNumber,
+			Location:    location,
+		}
+
+		updated, err = q.UpdateSupplier(tenantCtx, params)
+		if err != nil {
+			return fmt.Errorf("failed to update supplier: %w", err)
+		}
+		return nil
+	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get supplier: %w", err)
-	}
-
-	// Update only provided fields
-	name := supplier.Name
-	if req.Name != nil {
-		name = *req.Name
-	}
-
-	phoneNumber := supplier.PhoneNumber
-	if req.PhoneNumber != nil {
-		phoneNumber = req.PhoneNumber
-	}
-
-	location := supplier.Location
-	if req.Location != nil {
-		location = req.Location
-	}
-
-	params := pg.UpdateSupplierParams{
-		ID:          supplierID,
-		Name:        name,
-		PhoneNumber: phoneNumber,
-		Location:    location,
-	}
-
-	updated, err := s.repo.Tenant(ctx).UpdateSupplier(ctx, params)
-	if err != nil {
-		return nil, fmt.Errorf("failed to update supplier: %w", err)
+		return nil, err
 	}
 
 	return toSupplierResponse(updated), nil
@@ -158,9 +173,15 @@ func (s *SupplierS) DeleteSupplier(ctx context.Context, id string) error {
 		return fmt.Errorf("invalid supplier id: %w", err)
 	}
 
-	err = s.repo.Tenant(ctx).DeleteSupplier(ctx, supplierID)
+	err = withTenantWrite(ctx, s.repo, func(tenantCtx context.Context, q *pg.Queries) error {
+		err := q.DeleteSupplier(tenantCtx, supplierID)
+		if err != nil {
+			return fmt.Errorf("failed to delete supplier: %w", err)
+		}
+		return nil
+	})
 	if err != nil {
-		return fmt.Errorf("failed to delete supplier: %w", err)
+		return err
 	}
 
 	return nil
@@ -173,9 +194,17 @@ func (s *SupplierS) RestoreSupplier(ctx context.Context, id string) (*model.Supp
 		return nil, fmt.Errorf("invalid supplier id: %w", err)
 	}
 
-	supplier, err := s.repo.Tenant(ctx).RestoreSupplier(ctx, supplierID)
+	var supplier pg.Supplier
+	err = withTenantWrite(ctx, s.repo, func(tenantCtx context.Context, q *pg.Queries) error {
+		var err error
+		supplier, err = q.RestoreSupplier(tenantCtx, supplierID)
+		if err != nil {
+			return fmt.Errorf("failed to restore supplier: %w", err)
+		}
+		return nil
+	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to restore supplier: %w", err)
+		return nil, err
 	}
 
 	return toSupplierResponse(supplier), nil
