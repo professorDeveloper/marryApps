@@ -470,6 +470,21 @@ WITH goods_list AS (
             sqlc.narg('max_price')::numeric IS NULL
             OR g.price <= sqlc.narg('max_price')::numeric
           )
+      AND (
+            NOT EXISTS (
+                SELECT 1 FROM calculation tc
+                WHERE tc.good_id = g.id AND tc.deleted_at = 0
+            )
+            OR EXISTS (
+                SELECT 1
+                FROM categories c2
+                JOIN departments d2 ON c2.department_id = d2.id AND d2.deleted_at = 0
+                JOIN storages s2 ON s2.id = d2.storage_id
+                    AND s2.deleted_at = 0
+                    AND s2.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+                WHERE c2.id = g.category_id AND c2.deleted_at = 0
+            )
+          )
 )
 SELECT
     id,
@@ -579,6 +594,21 @@ WITH goods_list AS (
       AND (
             sqlc.narg('max_price')::numeric IS NULL
             OR g.price <= sqlc.narg('max_price')::numeric
+          )
+      AND (
+            NOT EXISTS (
+                SELECT 1 FROM calculation tc
+                WHERE tc.good_id = g.id AND tc.deleted_at = 0
+            )
+            OR EXISTS (
+                SELECT 1
+                FROM categories c2
+                JOIN departments d2 ON c2.department_id = d2.id AND d2.deleted_at = 0
+                JOIN storages s2 ON s2.id = d2.storage_id
+                    AND s2.deleted_at = 0
+                    AND s2.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+                WHERE c2.id = g.category_id AND c2.deleted_at = 0
+            )
           )
 )
 SELECT COUNT(*)
