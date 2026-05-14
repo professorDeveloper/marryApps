@@ -773,9 +773,9 @@ func (q *Queries) GetStorageByGoodID(ctx context.Context, goodID uuid.UUID) (pgt
 	const sql = `
 		SELECT d.storage_id
 		FROM goods g
-		JOIN categories c ON g.category_id = c.id AND c.deleted_at = 0
-		JOIN departments d ON c.department_id = d.id AND d.deleted_at = 0
-		JOIN storages s ON s.id = d.storage_id AND s.deleted_at = 0
+		JOIN departments d ON g.department_id = d.id AND d.deleted_at = 0
+		JOIN storages s ON s.id = d.storage_id
+			AND s.deleted_at = 0
 			AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 		WHERE g.id = $1 AND g.deleted_at = 0
 		LIMIT 1
