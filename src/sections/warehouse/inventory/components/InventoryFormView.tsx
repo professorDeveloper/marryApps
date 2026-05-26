@@ -1,6 +1,9 @@
 import type { InventoryItemsApi, IInventoryFormData } from '../types';
 
 import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+
+dayjs.extend(utc);
 import { toast } from 'sonner';
 import { debounce } from 'es-toolkit';
 import { useParams } from 'react-router';
@@ -45,7 +48,7 @@ const InventoryFormView = React.memo(function InventoryFormView() {
     } = useInventoryAPI();
     
     // Meta fields
-    const [date, setDate] = useState(dayjs().format('YYYY-MM-DDTHH:mm:ss'));
+    const [date, setDate] = useState(dayjs().format('YYYY-MM-DDTHH:mm:ssZ'));
     const [storageId, setStorageId] = useState('');
     const [status, setStatus] = useState('draft');
     const [description, setDescription] = useState('');
@@ -120,7 +123,7 @@ const InventoryFormView = React.memo(function InventoryFormView() {
                     router.push(paths.menu.inventory.root);
                     return;
                 }
-                setDate(dayjs(inventory.date).format('YYYY-MM-DDTHH:mm:ss'));
+                setDate(dayjs(inventory.date).format('YYYY-MM-DDTHH:mm:ssZ'));
                 setStorageId(inventory.storage_id || '');
                 setStatus(inventory.status || 'draft');
                 setDescription(inventory.description || '');
@@ -195,7 +198,7 @@ const InventoryFormView = React.memo(function InventoryFormView() {
                 })
             );
             const formPayload: IInventoryFormData = {
-                counted_date: date,
+                counted_at: date ? dayjs(date).utc().format('YYYY-MM-DDTHH:mm:ss[Z]') : '',
                 status: status as IInventoryFormData['status'],
                 storage_id: storageId,
                 description: descriptionLiveRef.current,

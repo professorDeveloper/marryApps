@@ -18,9 +18,15 @@ import {
 
 export type MealModifierIds = string[];
 
+export type MealModifierEntry = { modifier_id: string; quantity: number };
+
 export type MealModifiersApi = {
     getModifierIds: () => string[];
-    restoreFromPersisted: (modifierIds: string[] | undefined) => void;
+    getModifierEntries: () => MealModifierEntry[];
+    restoreFromPersisted: (
+        modifierIds: string[] | undefined,
+        quantitiesById?: Record<string, number | string>
+    ) => void;
     refreshModifiers: () => Promise<void>;
 };
 
@@ -61,6 +67,7 @@ export const MealModifiersSection = React.memo(function MealModifiersSection({
     });
 
     const [transferredIds, setTransferredIds] = useState<string[]>([]);
+    const [quantities, setQuantities] = useState<Record<string, string>>({});
 
     const modifiersById = useMemo(() => {
         const map = new Map<string, (typeof modifiers)[number]>();
@@ -98,12 +105,12 @@ export const MealModifiersSection = React.memo(function MealModifiersSection({
                 description: mod.description,
                 is_active: mod.is_active,
                 measurement: mod.is_active ? t('mealsProducts.status') : t('mealsProducts.status'),
+                quantity: quantities[mod.id] ?? '1',
             });
         }
         return out;
-    }, [transferredIds, modifiersById, t]);
+    }, [transferredIds, modifiersById, t, quantities]);
 
-    // No editable columns for modifiers - they are binary attached/detached
     const columns: ColumnDef[] = useMemo(
         () => [
             {
@@ -112,9 +119,24 @@ export const MealModifiersSection = React.memo(function MealModifiersSection({
                 width: 'minmax(150px, auto)',
                 align: 'left',
             },
+            {
+                key: 'quantity',
+                header: t('mealsProducts.quantity'),
+                width: 'minmax(120px, auto)',
+                align: 'right',
+                editable: true,
+                type: 'number',
+                step: '1',
+                min: '0',
+            },
         ],
         [t]
     );
+
+    const handleQuantityChange = useCallback((id: string, key: string, value: string) => {
+        if (key !== 'quantity') return;
+        setQuantities((prev) => ({ ...prev, [id]: value }));
+    }, []);
 
     const summaryEntries: SummaryEntry[] = useMemo(
         () => [
@@ -149,12 +171,30 @@ export const MealModifiersSection = React.memo(function MealModifiersSection({
 
     const handleRemoveRow = useCallback((id: string) => {
         setTransferredIds((prev) => prev.filter((x) => x !== id));
+        setQuantities((prev) => {
+            if (!(id in prev)) return prev;
+            const next = { ...prev };
+            delete next[id];
+            return next;
+        });
     }, []);
 
     const handleRemoveMany = useCallback((ids: string[]) => {
         const removeSet = new Set(ids);
         const apply = () => {
             setTransferredIds((prev) => prev.filter((x) => !removeSet.has(x)));
+            setQuantities((prev) => {
+                let changed = false;
+                const next: Record<string, string> = {};
+                for (const k of Object.keys(prev)) {
+                    if (removeSet.has(k)) {
+                        changed = true;
+                        continue;
+                    }
+                    next[k] = prev[k];
+                }
+                return changed ? next : prev;
+            });
         };
         startTransition(apply);
     }, []);
@@ -171,12 +211,35 @@ export const MealModifiersSection = React.memo(function MealModifiersSection({
             }
             return out;
         },
-        restoreFromPersisted: (modifierIds) => {
+        getModifierEntries: () => {
+            const seen = new Set<string>();
+            const out: MealModifierEntry[] = [];
+            for (const id of transferredIds) {
+                if (seen.has(id)) continue;
+                seen.add(id);
+                const raw = quantities[id];
+                const parsed = raw == null || raw === '' ? 1 : Number(raw);
+                out.push({ modifier_id: id, quantity: Number.isFinite(parsed) ? parsed : 1 });
+            }
+            return out;
+        },
+        restoreFromPersisted: (modifierIds, quantitiesById) => {
             if (!modifierIds || modifierIds.length === 0) {
                 setTransferredIds([]);
+                setQuantities({});
                 return;
             }
             setTransferredIds(modifierIds);
+            if (quantitiesById) {
+                const normalized: Record<string, string> = {};
+                for (const id of modifierIds) {
+                    const v = quantitiesById[id];
+                    if (v != null) normalized[id] = String(v);
+                }
+                setQuantities(normalized);
+            } else {
+                setQuantities({});
+            }
         },
         refreshModifiers: async () => {
             // The useGetModifiers hook handles its own caching/revalidation
@@ -191,7 +254,7 @@ export const MealModifiersSection = React.memo(function MealModifiersSection({
                 transferredItems={transferredItems}
                 excludedIdSet={excludedIdSet}
                 columns={columns}
-                onValueChange={() => {}} // No editable values for modifiers
+                onValueChange={handleQuantityChange}
                 onQuickAdd={handleQuickAdd}
                 onMoveRight={handleMoveRight}
                 onRemoveRow={handleRemoveRow}

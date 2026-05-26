@@ -181,9 +181,9 @@ export function InventoryListView() {
         });
     }, [getStorages]);
 
-    const loadInventories = useCallback(async () => {
+    const loadInventories = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
         try {
-            setLoading(true);
+            if (!silent) setLoading(true);
             const response = await getInventories({
                 search: debouncedSearchQuery,
                 limit: paginationModel.pageSize,
@@ -200,7 +200,7 @@ export function InventoryListView() {
         } catch (error) {
             console.error('Error loading inventories:', error);
         } finally {
-            setLoading(false);
+            if (!silent) setLoading(false);
         }
     }, [debouncedSearchQuery, getInventories, paginationModel.page, paginationModel.pageSize, draftFilters, sort]);
 
@@ -225,9 +225,9 @@ export function InventoryListView() {
         async (id: string) => {
             try {
                 await deleteInventory(id);
-                await loadInventories();
                 setDeleteConfirmOpen(false);
                 setDeleteId(null);
+                await loadInventories({ silent: true });
             } catch (error) {
                 console.error('Error deleting inventory:', error);
             }

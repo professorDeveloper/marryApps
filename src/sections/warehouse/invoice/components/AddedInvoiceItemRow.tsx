@@ -1,7 +1,7 @@
 import type { AddedInvoiceItemRowProps } from '../types';
 
-import { t } from 'i18next';
 import React, { memo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { Box, Typography, IconButton } from '@mui/material';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
@@ -52,6 +52,7 @@ export const AddedInvoiceItemRow = memo(function AddedInvoiceItemRow({
     onRemoveRow,
     removeTitle,
 }: AddedInvoiceItemRowProps) {
+    const { t } = useTranslation('menu');
     const handleQty = useCallback(
         (e: React.ChangeEvent<HTMLInputElement>) => onQuantityChange(id, e.target.value),
         [onQuantityChange, id]
@@ -118,7 +119,7 @@ export const AddedInvoiceItemRow = memo(function AddedInvoiceItemRow({
                             pointerEvents: "none", // important!
                         }}
                     >
-                        {t(`units.${measurement}`)}
+                        {measurement ? t(`units.${measurement}`, { defaultValue: measurement }) : ''}
                     </span>
                 </div>
             </Box>

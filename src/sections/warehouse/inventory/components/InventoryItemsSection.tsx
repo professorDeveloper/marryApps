@@ -2,6 +2,7 @@ import type { IngredientReportLookup, InventoryItemsSectionProps } from '../type
 import type { ColumnDef, PickerItem, SummaryEntry } from 'src/sections/warehouse/utils/components/item-picker';
 
 import React, { useRef, useMemo, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { Box, Button } from '@mui/material';
 
@@ -33,6 +34,7 @@ export const InventoryItemsSection = React.memo(function InventoryItemsSection({
     metaFieldsOpen,
     tableHeight,
 }: InventoryItemsSectionProps) {
+    const { t } = useTranslation('menu');
     const { data: metadata, isLoading: ingredientsLoading, mutate: refetchMetadata } = useMetadata([
         { entity: MetadataEntity.INGREDIENTS, fields: INGREDIENT_FIELDS },
     ]);
@@ -184,7 +186,7 @@ export const InventoryItemsSection = React.memo(function InventoryItemsSection({
                 step: '1',
                 min: '0',
                 align: 'center',
-                suffix: (item) => item.measurement || '',
+                suffix: (item) => (item.measurement ? t(`units.${item.measurement}`, { defaultValue: item.measurement }) : ''),
             },
             {
                 key: 'difference',
@@ -211,7 +213,7 @@ export const InventoryItemsSection = React.memo(function InventoryItemsSection({
                 },
             },
         ],
-        []
+        [t]
     );
 
     // Summary entries from inventory summary logic

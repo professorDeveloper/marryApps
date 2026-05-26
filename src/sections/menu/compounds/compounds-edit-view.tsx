@@ -37,7 +37,6 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
     const router = useRouter();
     const dispatch = useAppDispatch();
     const formName = PICKER_FORM_NAMES.compoundEditForm;
-    const [activeTab, setActiveTab] = useState(0);
 
     // --- General info state ────────────────────────────────────────────────
     const [name, setName] = useState('');
@@ -143,10 +142,6 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
         },
         [dispatch, formName]
     );
-
-    const handleTabChange = useCallback((_: any, newValue: number) => {
-        setActiveTab(newValue);
-    }, []);
 
     const handleInfoToggle = useCallback(() => {
         setIsInfoOpen((prev) => !prev);

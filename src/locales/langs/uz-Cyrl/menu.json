@@ -63,6 +63,12 @@
   "view": "Кўриш",
   "details": "Тафсилотлар",
   "actions": "Ҳаракатлари",
+  "ingredient": "Ингредиент",
+  "quantity": "Миқдор",
+  "price_per_unit": "Бирлик нархи",
+  "total_price": "Умумий нарх",
+  "deleteConfirm": "Ҳақиқатан ҳам ўчирмоқчимисиз?",
+  "deleteMessage": "Бу амални қайтариб бўлмайди.",
   "blog": {
     "title": "Блог",
     "caption": "Созланган клавиатура ёрлиқлари."
@@ -204,6 +210,7 @@
     "nameRu": "Номи (русча)",
     "nameUz": "Номи (ўзбекча)",
     "deleteConfirm": "Сиз ушбу категорияни ўчиришни истайсизми?",
+    "deleteConfirmation": "Сиз ушбу категорияни ўчиришни истайсизми?",
     "deleteMessage": "Бу ҳаракатни бекор қилиш мумкин эмас ва уни қайтариб бўлмайди.",
     "cancel": "Бекор қилиш",
     "confirm": "Тасдиқлаш",
@@ -361,7 +368,11 @@
     "availableItems": "Мавжуд элементлар",
     "pricePerUnit": "Бирлик нархи",
     "totalPrice": "Жами нарх",
-    "summaryItems": "Элементлар"
+    "summaryItems": "Элементлар",
+    "minPrice": "Мин. нарх",
+    "maxPrice": "Макс. нарх",
+    "filterIngredients": "Ингредиентлар",
+    "filterSemiFinished": "Ярим тайёр маҳсулотлар"
   },
   "modifiers": {
     "title": "Модификаторлар",
@@ -401,7 +412,9 @@
       "categories": "Категориялар",
       "semifinished": "Ярим тайёр маҳсулотлар",
       "meals": "Таомлар",
-      "modifiers": "Модификаторлар"
+      "modifiers": "Модификаторлар",
+      "ingredients": "Ингредиентлар",
+      "ingredient-group": "Ингредиент гуруҳлари"
     },
     "warehouse": {
       "title": "Омбор",
@@ -549,6 +562,7 @@
     "goHome": "Бош саҳифага ўтиш"
   },
   "common": {
+    "all": "Ҳаммаси",
     "name": "Номи",
     "type": "Тури",
     "measurement": "Ўлчов",
@@ -583,10 +597,16 @@
     "create": "Яратиш",
     "update": "Янгилаш",
     "amount": "Сумма",
-    "unit": "Ўлчов бирлиги"
+    "unit": "Ўлчов бирлиги",
+    "storage": "Омбор",
+    "department": "Бўлим",
+    "paymentType": "Тўлов тури"
   },
   "warehouse": {
     "title": "Захира",
+    "noData": "Маълумот йўқ",
+    "noDataSubtitle": "Мавжуд маълумот йўқ",
+    "ingredientGroups": "Ингредиент гуруҳлари",
     "list": "Рўйхат",
     "view": "Кўриш",
     "invoices": {
@@ -778,6 +798,7 @@
   },
   "invoices": {
     "title": "Етказиб берувчилар",
+    "supplier": "Етказиб берувчи",
     "new": "Янги етказиб берувчи",
     "edit": "Етказиб берувчини таҳрирлаш",
     "basicInfo": "Асосий маълумот",
@@ -1526,7 +1547,7 @@
     "modifiers": "Модификаторлар",
     "ingredients": "Ингредиентлар",
     "semifinished": "Ярим тайёр маҳсулотлар",
-    "finance": "Молия",
+    "finance": "Операциялар",
     "invoices": "Киримлар",
     "expensesInvoices": "Чиқим фактуралари",
     "separationActs": "Ажратиш актлари",

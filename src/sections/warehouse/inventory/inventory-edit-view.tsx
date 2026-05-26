@@ -59,7 +59,7 @@ export function InventoryEditView({ isNew = false }: InventoryEditViewProps) {
 
     // Form state
     const [formData, setFormData] = useState<Record<string, any>>({
-        counted_date: dayjs().format('YYYY-MM-DDTHH:mm:ss'),
+        counted_at: dayjs().format('YYYY-MM-DDTHH:mm:ssZ'),
         status: 'draft',
         storage_id: '',
         description: '',
@@ -80,7 +80,7 @@ export function InventoryEditView({ isNew = false }: InventoryEditViewProps) {
             if (data) {
                 setInventory(data);
                 setFormData({
-                    counted_date: dayjs(data.date).format('YYYY-MM-DDTHH:mm:ss'),
+                    counted_at: dayjs(data.date).format('YYYY-MM-DDTHH:mm:ssZ'),
                     status: data.status,
                     storage_id: data.storage_id,
                     description: data.description || '',
@@ -105,7 +105,7 @@ export function InventoryEditView({ isNew = false }: InventoryEditViewProps) {
                     if (data) {
                         setInventory(data);
                         setFormData({
-                            counted_date: dayjs(data.date).format('YYYY-MM-DDTHH:mm:ss'),
+                            counted_at: dayjs(data.date).format('YYYY-MM-DDTHH:mm:ssZ'),
                             status: data.status,
                             storage_id: data.storage_id,
                             description: data.description || '',
@@ -204,7 +204,7 @@ export function InventoryEditView({ isNew = false }: InventoryEditViewProps) {
                 columns: 2,
                 fields: [
                     {
-                        key: 'counted_date',
+                        key: 'counted_at',
                         label: t('inventory.date'),
                         type: 'date' as const,
                         required: true,

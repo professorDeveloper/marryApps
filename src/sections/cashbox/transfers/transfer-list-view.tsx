@@ -38,8 +38,8 @@ export function TransactionsListView() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [openConfirm, setOpenConfirm] = useState(false);
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
+  const loadData = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
+    if (!silent) setLoading(true);
     try {
       const [transfersData, groupsData, branchesData, storagesData] = await Promise.all([
         getTransfers(),
@@ -78,7 +78,7 @@ export function TransactionsListView() {
         )
       );
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [getTransferGroups, getTransfers]);
 
@@ -199,7 +199,7 @@ export function TransactionsListView() {
         }}
         onSuccess={() => {
           setDeleteId(null);
-          loadData();
+          loadData({ silent: true });
         }}
       />
     </>

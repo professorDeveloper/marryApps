@@ -1,6 +1,7 @@
 import type { MealItemRow, MealItemType } from '../types';
 
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 import CloseIcon from '@mui/icons-material/Close';
 import { Stack, Checkbox, Typography, IconButton } from '@mui/material';
@@ -42,12 +43,19 @@ const INPUT_STYLE: React.CSSProperties = {
     borderRadius: 8,
     outline: 'none',
     background: 'var(--bg)',
-    color: 'inherit',
+    color: 'var(--text)',
     boxSizing: 'border-box',
     fontFamily: '"Inter", sans-serif',
+    transition: 'border-color 0.15s, box-shadow 0.15s',
+};
+const INPUT_FOCUS_STYLE: React.CSSProperties = {
+    borderColor: 'var(--border-strong)',
+    boxShadow: '0 0 0 2px rgba(99, 102, 241, 0.18)',
 };
 const INPUT_WITH_UNIT: React.CSSProperties = { ...INPUT_STYLE, paddingRight: 52 };
 const INPUT_NO_UNIT: React.CSSProperties = { ...INPUT_STYLE, paddingRight: 8 };
+const INPUT_WITH_UNIT_FOCUS: React.CSSProperties = { ...INPUT_WITH_UNIT, ...INPUT_FOCUS_STYLE };
+const INPUT_NO_UNIT_FOCUS: React.CSSProperties = { ...INPUT_NO_UNIT, ...INPUT_FOCUS_STYLE };
 
 const CELL_CENTER_STYLE: React.CSSProperties = { display: 'flex', justifyContent: 'center' };
 const NAME_CELL_STYLE: React.CSSProperties = { minWidth: 0 };
@@ -81,6 +89,10 @@ export const AddedRow = React.memo(function AddedRow({
     totalRows,
     onNavigateFocus,
 }: AddedRowProps) {
+    const { t } = useTranslation('menu');
+    const measurementLabel = row.measurement
+        ? t(`units.${row.measurement}`, { defaultValue: row.measurement })
+        : '';
     const totalPrice = pricePerUnit * (row.quantity ?? 0);
     const key = compositeKey(row.type, row.id);
 
@@ -215,7 +227,7 @@ export const AddedRow = React.memo(function AddedRow({
                     />
                 </Stack>
                 <Typography variant="caption" color="text.secondary" noWrap sx={{ fontFamily: '"Inter", sans-serif' }}>
-                    {row.measurement || '—'}
+                    {measurementLabel || '—'}
                 </Typography>
             </div>
 
@@ -230,9 +242,13 @@ export const AddedRow = React.memo(function AddedRow({
                         onBlur={handleBlur}
                         inputMode="decimal"
                         placeholder="0"
-                        style={row.measurement ? INPUT_WITH_UNIT : INPUT_NO_UNIT}
+                        style={
+                            row.measurement
+                                ? (isFocused ? INPUT_WITH_UNIT_FOCUS : INPUT_WITH_UNIT)
+                                : (isFocused ? INPUT_NO_UNIT_FOCUS : INPUT_NO_UNIT)
+                        }
                     />
-                    {row.measurement ? <span style={UNIT_STYLE}>{row.measurement}</span> : null}
+                    {row.measurement ? <span style={UNIT_STYLE}>{measurementLabel}</span> : null}
                 </div>
             </div>
 

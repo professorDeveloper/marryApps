@@ -216,17 +216,20 @@ export function ShipmentsListView() {
     );
   }, [getStorages, getSuppliers]);
 
-  const loadShipments = useCallback(async () => {
-    setLoading(true);
-    try {
-      const cleanedFilters = cleanFilters(filters as Record<string, unknown>);
-      const response = await getShipments(cleanedFilters as ShipmentFilters);
-      setRows(response.data);
-      setTotal(response.total);
-    } finally {
-      setLoading(false);
-    }
-  }, [filters, getShipments]);
+  const loadShipments = useCallback(
+    async ({ silent = false }: { silent?: boolean } = {}) => {
+      if (!silent) setLoading(true);
+      try {
+        const cleanedFilters = cleanFilters(filters as Record<string, unknown>);
+        const response = await getShipments(cleanedFilters as ShipmentFilters);
+        setRows(response.data);
+        setTotal(response.total);
+      } finally {
+        if (!silent) setLoading(false);
+      }
+    },
+    [filters, getShipments]
+  );
 
   useEffect(() => {
     loadBaseData();
@@ -651,7 +654,7 @@ export function ShipmentsListView() {
               if (!deleteId) return;
               await deleteShipment(deleteId);
               setDeleteId(null);
-              await loadShipments();
+              await loadShipments({ silent: true });
             }}
           >
             {t('common.delete')}

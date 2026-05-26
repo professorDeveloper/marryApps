@@ -254,8 +254,14 @@ export function useDeleteIngredient() {
                     endpoints.ingredient.delete(ingredientId)
                 );
 
-                // Revalidate ingredients list
-                await mutate(endpoints.ingredient.list);
+                // Revalidate ingredients list (match all paginated/search keys)
+                await mutate(
+                    (key) =>
+                        key === endpoints.ingredient.list ||
+                        (Array.isArray(key) && key[0] === endpoints.ingredient.list),
+                    undefined,
+                    { revalidate: true }
+                );
 
                 toast.success('Ingredient deleted successfully');
                 return response;

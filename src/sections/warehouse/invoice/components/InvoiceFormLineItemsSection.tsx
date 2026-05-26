@@ -147,7 +147,7 @@ export const InvoiceFormLineItemsSection = React.memo(function InvoiceFormLineIt
                 step: '1',
                 min: '0',
                 align: 'center',
-                suffix: (item) => item.measurement || '',
+                suffix: (item) => (item.measurement ? t(`units.${item.measurement}`, { defaultValue: item.measurement }) : ''),
             },
             {
                 key: 'price_per_unit',

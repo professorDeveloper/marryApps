@@ -244,8 +244,8 @@ export function TransfersListView() {
     []
   );
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
+  const loadData = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
+    if (!silent) setLoading(true);
     try {
       const [transfersData, groupsData, branchesData, storagesData] = await Promise.all([
         getTransfers({
@@ -367,7 +367,7 @@ export function TransfersListView() {
         storagesMapMerged
       );
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [getTransferGroups, getTransfers, paginationModel.page, paginationModel.pageSize, draftFilters]);
 
@@ -435,7 +435,7 @@ export function TransfersListView() {
     await deleteTransfer(deleteId);
     setOpenConfirm(false);
     setDeleteId(null);
-    await loadData();
+    await loadData({ silent: true });
   }, [deleteId, deleteTransfer, loadData]);
 
   const filtersValue = useMemo(() => {

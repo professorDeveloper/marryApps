@@ -24,7 +24,7 @@ export interface ColumnDef {
     /** When true the cell renders an <input> instead of plain text */
     editable?: boolean;
     /** Input type (only relevant when editable) */
-    type?: 'number' | 'text';
+    type?: 'number' | 'text' | 'checkbox';
     /** Step attribute for number inputs */
     step?: string;
     /** Min attribute for number inputs */

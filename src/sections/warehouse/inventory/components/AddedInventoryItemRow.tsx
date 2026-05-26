@@ -1,6 +1,7 @@
 import type { AddedInventoryItemRowProps } from '../types';
 
 import React, { memo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { Box, Typography, IconButton } from '@mui/material';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
@@ -52,6 +53,8 @@ export const AddedInventoryItemRow = memo(function AddedInventoryItemRow({
     onRemoveRow,
     removeTitle,
 }: AddedInventoryItemRowProps) {
+    const { t } = useTranslation('menu');
+    const measurementLabel = measurement ? t(`units.${measurement}`, { defaultValue: measurement }) : '';
     const handleQty = useCallback(
         (e: React.ChangeEvent<HTMLInputElement>) => onQuantityChange(id, e.target.value),
         [onQuantityChange, id]
@@ -81,7 +84,7 @@ export const AddedInventoryItemRow = memo(function AddedInventoryItemRow({
                     {name}
                 </Typography>
                 <Typography variant="caption" color="text.secondary" noWrap>
-                    {measurement}
+                    {measurementLabel}
                 </Typography>
             </Box>
 

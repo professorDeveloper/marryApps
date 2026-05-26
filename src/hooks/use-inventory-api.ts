@@ -38,7 +38,7 @@ const buildFallbackInventory = (
 ): IInventory => ({
     id: inventoryId,
     number: 0,
-    date: formData.counted_date,
+    date: formData.counted_at,
     storage_id: formData.storage_id,
     description: formData.description || '',
     status: formData.status,

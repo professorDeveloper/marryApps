@@ -5,6 +5,10 @@ import type {
     IInventoryItemInput,
 } from 'src/types/inventory';
 
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+
+dayjs.extend(utc);
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
@@ -261,7 +265,9 @@ export function InventoryDetailsCalculation({
                 }
 
                 const batchResult = await createInventoryBatch({
-                    counted_date: formData.counted_date || new Date().toISOString().split('T')[0],
+                    counted_at: formData.counted_at
+                        ? dayjs(formData.counted_at).utc().format('YYYY-MM-DDTHH:mm:ss[Z]')
+                        : dayjs().utc().format('YYYY-MM-DDTHH:mm:ss[Z]'),
                     status: formData.status || 'active',
                     storage_id: formData.storage_id,
                     description: formData.description || '',

@@ -84,7 +84,9 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
     const modifierPickerApiRef = useRef<MealModifiersApi | null>(null);
 
     // ── Track initial modifiers for comparison ────────────────────────────
-    const [initialModifierIds, setInitialModifierIds] = useState<string[]>([]);
+    const [initialModifierEntries, setInitialModifierEntries] = useState<
+        { modifier_id: string; quantity: number }[]
+    >([]);
 
 
 
@@ -157,15 +159,22 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
     // ── Hydrate modifiers from loaded good modifiers ──────────────────────
     useEffect(() => {
         if (!goodModifiers || goodModifiers.length === 0) {
-            setInitialModifierIds([]);
+            setInitialModifierEntries([]);
             modifierPickerApiRef.current?.restoreFromPersisted([]);
             return;
         }
-        // Extract modifier IDs from the response
         // The response could be either IGoodModifier[] or IModifierItem[]
-        const modifierIds = goodModifiers.map((m: any) => m.modifier_id || m.id);
-        setInitialModifierIds(modifierIds);
-        modifierPickerApiRef.current?.restoreFromPersisted(modifierIds);
+        const entries = goodModifiers.map((m: any) => ({
+            modifier_id: m.modifier_id || m.id,
+            quantity: typeof m.quantity === 'number' ? m.quantity : Number(m.quantity) || 1,
+        }));
+        const ids = entries.map((e) => e.modifier_id);
+        const quantitiesById: Record<string, number> = {};
+        entries.forEach((e) => {
+            quantitiesById[e.modifier_id] = e.quantity;
+        });
+        setInitialModifierEntries(entries);
+        modifierPickerApiRef.current?.restoreFromPersisted(ids, quantitiesById);
     }, [goodModifiers]);
 
     // ── Set default category when categories are loaded ───────────────────
@@ -286,8 +295,9 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
                 })
             );
 
-            // Get current modifier IDs from the picker
-            const currentModifierIds = modifierPickerApiRef.current?.getModifierIds() ?? [];
+            // Get current modifier entries (id + quantity) from the picker
+            const currentModifierEntries =
+                modifierPickerApiRef.current?.getModifierEntries() ?? [];
 
             const goodPayload = {
                 name,
@@ -321,7 +331,11 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
 
             // Sync modifiers after saving the meal
             if (savedMealId) {
-                await syncModifiers(savedMealId, currentModifierIds, isNew ? [] : initialModifierIds);
+                await syncModifiers(
+                    savedMealId,
+                    currentModifierEntries,
+                    isNew ? [] : initialModifierEntries
+                );
             }
 
             router.push(paths.menu.meals.root);
@@ -344,7 +358,7 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
         descriptionI18n,
         isNew,
         mealId,
-        initialModifierIds,
+        initialModifierEntries,
         createMealWithCalculations,
         updateMealWithCalculations,
         createTranslation,
@@ -441,21 +455,18 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
                             />
                         </Tabs>
 
-                        {/* Tab content with full height */}
+                        {/* Tab content with full height — always mounted, visibility toggled to preserve state */}
                         <Box sx={{ flex: 1, minHeight: 0 }}>
-                            {activeTab === 0 && (
-                                <Box sx={{ height: '100%' }}>
-                                    <MealItemPicker
-                                        apiRef={mealItemsApiRef}
-                                        isVisible={isMealItemsOpen}
-                                        menuPrice={price}
-                                        tableHeight={tableHeight}
-                                        showProfitMargin
-                                    />
-                                </Box>
-                            )}
-                        {activeTab === 1 && (
-                            <Box sx={{ height: '100%' }}>
+                            <Box sx={{ height: '100%', display: activeTab === 0 ? 'block' : 'none' }}>
+                                <MealItemPicker
+                                    apiRef={mealItemsApiRef}
+                                    isVisible={isMealItemsOpen && activeTab === 0}
+                                    menuPrice={price}
+                                    tableHeight={tableHeight}
+                                    showProfitMargin
+                                />
+                            </Box>
+                            <Box sx={{ height: '100%', display: activeTab === 1 ? 'block' : 'none' }}>
                                 <MealModifiersSection
                                     apiRef={modifierPickerApiRef}
                                     isVisible={isMealItemsOpen && activeTab === 1}
@@ -468,12 +479,9 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
                                     saveLabel={saveLabel}
                                 />
                             </Box>
-                        )}
-                        {activeTab === 2 && (
-                            <Box sx={{ height: '100%' }}>
+                            <Box sx={{ height: '100%', display: activeTab === 2 ? 'block' : 'none' }}>
                                 {React.createElement(MealRelatedSection)}
                             </Box>
-                        )}
                         </Box>
                     </Box>
                 {/* </GeneralInformation> */}

@@ -370,6 +370,34 @@ export const MealItemPicker = React.memo(function MealItemPicker({
         []
     );
 
+    const handleNavigateFocus = useCallback(
+        (direction: 'up' | 'down' | 'left' | 'right', currentRowIndex: number, currentColumnKey: string) => {
+            const editableColumns = ['quantity'];
+            const currentColumnIndex = editableColumns.indexOf(currentColumnKey);
+
+            if (direction === 'left' || direction === 'right') {
+                // Only one editable column — nothing to hop to.
+                return;
+            }
+
+            const targetRowIndex = direction === 'down' ? currentRowIndex + 1 : currentRowIndex - 1;
+            const inputs = document.querySelectorAll(
+                'input[inputMode="decimal"]'
+            ) as NodeListOf<HTMLInputElement>;
+            const targetRowInputs = Array.from(inputs).filter((input) => {
+                const wrapper = input.closest('[data-index]');
+                if (!wrapper) return false;
+                return parseInt(wrapper.getAttribute('data-index') || '0', 10) === targetRowIndex;
+            });
+            const targetInput = targetRowInputs[currentColumnIndex];
+            if (targetInput) {
+                targetInput.focus();
+                targetInput.select();
+            }
+        },
+        []
+    );
+
     // Handle added row selection
     const handleAddedSelectChange = useCallback(
         (key: string, checked: boolean) => {
@@ -529,7 +557,7 @@ export const MealItemPicker = React.memo(function MealItemPicker({
                     menuPrice={menuPrice}
                     showProfitMargin={showProfitMargin}
                     tableHeight={tableHeight}
-                    onNavigateFocus={onNavigateFocus}
+                    onNavigateFocus={onNavigateFocus ?? handleNavigateFocus}
                 />
             </Box>
         </Stack>

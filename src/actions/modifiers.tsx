@@ -246,8 +246,14 @@ export function useDeleteModifier() {
       try {
         await deleter(endpoints.modifier.delete(modifierId));
 
-        // Revalidate modifiers list
-        await mutate(endpoints.modifier.list);
+        // Revalidate modifiers list (match all paginated/search keys)
+        await mutate(
+          (key) =>
+            key === endpoints.modifier.list ||
+            (Array.isArray(key) && key[0] === endpoints.modifier.list),
+          undefined,
+          { revalidate: true }
+        );
 
         return true;
       } catch (error) {

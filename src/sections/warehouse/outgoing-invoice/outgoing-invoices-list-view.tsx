@@ -214,17 +214,20 @@ export function OutgoingInvoicesListView() {
     );
   }, [getStorages, getDeductionGroups]);
 
-  const loadOutgoingInvoices = useCallback(async () => {
-    setLoading(true);
-    try {
-      const cleanedFilters = cleanFilters(filters as Record<string, unknown>);
-      const response = await getOutgoingInvoices(cleanedFilters as OutgoingInvoiceFilters);
-      setRows(response.data);
-      setTotal(response.total);
-    } finally {
-      setLoading(false);
-    }
-  }, [filters, getOutgoingInvoices]);
+  const loadOutgoingInvoices = useCallback(
+    async ({ silent = false }: { silent?: boolean } = {}) => {
+      if (!silent) setLoading(true);
+      try {
+        const cleanedFilters = cleanFilters(filters as Record<string, unknown>);
+        const response = await getOutgoingInvoices(cleanedFilters as OutgoingInvoiceFilters);
+        setRows(response.data);
+        setTotal(response.total);
+      } finally {
+        if (!silent) setLoading(false);
+      }
+    },
+    [filters, getOutgoingInvoices]
+  );
 
   useEffect(() => {
     loadBaseData();
@@ -618,7 +621,7 @@ export function OutgoingInvoicesListView() {
               if (!deleteId) return;
               await deleteOutgoingInvoice(deleteId);
               setDeleteId(null);
-              await loadOutgoingInvoices();
+              await loadOutgoingInvoices({ silent: true });
             }}
           >
             {t('common.delete')}

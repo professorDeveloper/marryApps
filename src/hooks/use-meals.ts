@@ -632,8 +632,14 @@ export function useDeleteMeal() {
             try {
                 await deleter(endpoints.meals.delete(id));
 
-                // Revalidate meals list
-                await mutate(endpoints.meals.list);
+                // Revalidate meals list (match all paginated/search keys)
+                await mutate(
+                    (key) =>
+                        key === endpoints.meals.list ||
+                        (Array.isArray(key) && key[0] === endpoints.meals.list),
+                    undefined,
+                    { revalidate: true }
+                );
 
                 toast.success('Meal deleted successfully');
             } catch (error) {
@@ -657,8 +663,14 @@ export function useDeleteMeals() {
             try {
                 await Promise.all(ids.map((id) => deleter(endpoints.meals.delete(id))));
 
-                // Revalidate meals list
-                await mutate(endpoints.meals.list);
+                // Revalidate meals list (match all paginated/search keys)
+                await mutate(
+                    (key) =>
+                        key === endpoints.meals.list ||
+                        (Array.isArray(key) && key[0] === endpoints.meals.list),
+                    undefined,
+                    { revalidate: true }
+                );
 
                 toast.success('Meals deleted successfully');
             } catch (error) {

@@ -218,16 +218,19 @@ export function SeparationActsListView() {
     );
   }, [getStorages, getDeductionGroups]);
 
-  const loadSeparationActs = useCallback(async () => {
-    setLoading(true);
-    try {
-      const cleanedFilters = cleanFilters(filters as Record<string, unknown>);
-      const response = await getSeparationActs(cleanedFilters as SeparationActFilters);
-      setRows(response.data);
-    } finally {
-      setLoading(false);
-    }
-  }, [filters, getSeparationActs]);
+  const loadSeparationActs = useCallback(
+    async ({ silent = false }: { silent?: boolean } = {}) => {
+      if (!silent) setLoading(true);
+      try {
+        const cleanedFilters = cleanFilters(filters as Record<string, unknown>);
+        const response = await getSeparationActs(cleanedFilters as SeparationActFilters);
+        setRows(response.data);
+      } finally {
+        if (!silent) setLoading(false);
+      }
+    },
+    [filters, getSeparationActs]
+  );
 
   useEffect(() => {
     loadBaseData();
@@ -568,7 +571,7 @@ export function SeparationActsListView() {
               if (!deleteId) return;
               await deleteSeparationAct(deleteId);
               setDeleteId(null);
-              await loadSeparationActs();
+              await loadSeparationActs({ silent: true });
             }}
           >
             {t('common.delete')}

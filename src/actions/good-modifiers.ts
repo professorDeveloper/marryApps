@@ -33,9 +33,12 @@ export interface IGoodModifier {
     good_id: string;
     modifier_id: string;
     modifier?: IModifierItem;
+    quantity?: number;
     created_at: string;
     updated_at: string;
 }
+
+export type GoodModifierEntry = { modifier_id: string; quantity: number };
 
 // ============================================================================
 // HOOKS
@@ -85,10 +88,16 @@ export function useGetGoodModifiers(goodId: string | undefined) {
 /**
  * Attach modifier to good
  */
-export async function attachModifierToGood(goodId: string, modifierId: string): Promise<void> {
+export async function attachModifierToGood(
+    goodId: string,
+    modifierId: string,
+    quantity?: number
+): Promise<void> {
     try {
         const url = endpoints.meals.attachModifier?.(goodId) || `/api/v1/goods/${goodId}/modifiers`;
-        await poster(url, { modifier_id: modifierId });
+        const payload: { modifier_id: string; quantity?: number } = { modifier_id: modifierId };
+        if (quantity != null) payload.quantity = quantity;
+        await poster(url, payload);
     } catch (error) {
         console.error('Failed to attach modifier to good:', error);
         throw error;
@@ -114,42 +123,36 @@ export async function detachModifierFromGood(goodId: string, modifierId: string)
  */
 export async function syncGoodModifiers(
     goodId: string,
-    currentModifierIds: string[],
-    previousModifierIds: string[]
+    currentEntries: GoodModifierEntry[],
+    previousEntries: GoodModifierEntry[]
 ): Promise<{ attached: number; detached: number }> {
-    const currentSet = new Set(currentModifierIds);
-    const previousSet = new Set(previousModifierIds);
+    const currentMap = new Map(currentEntries.map((e) => [e.modifier_id, e.quantity]));
+    const previousMap = new Map(previousEntries.map((e) => [e.modifier_id, e.quantity]));
 
-    // Find modifiers to attach (in current but not in previous)
-    const toAttach = currentModifierIds.filter((id) => !previousSet.has(id));
-
-    // Find modifiers to detach (in previous but not in current)
-    const toDetach = previousModifierIds.filter((id) => !currentSet.has(id));
+    const toAttach = currentEntries.filter((e) => !previousMap.has(e.modifier_id));
+    const toDetach = previousEntries.filter((e) => !currentMap.has(e.modifier_id));
 
     let attached = 0;
     let detached = 0;
 
-    // Attach new modifiers
-    for (const modifierId of toAttach) {
+    for (const { modifier_id, quantity } of toAttach) {
         try {
-            await attachModifierToGood(goodId, modifierId);
+            await attachModifierToGood(goodId, modifier_id, quantity);
             attached++;
         } catch (error) {
-            toast.error(`Failed to attach modifier: ${modifierId}`);
+            toast.error(`Failed to attach modifier: ${modifier_id}`);
         }
     }
 
-    // Detach removed modifiers
-    for (const modifierId of toDetach) {
+    for (const { modifier_id } of toDetach) {
         try {
-            await detachModifierFromGood(goodId, modifierId);
+            await detachModifierFromGood(goodId, modifier_id);
             detached++;
         } catch (error) {
-            toast.error(`Failed to detach modifier: ${modifierId}`);
+            toast.error(`Failed to detach modifier: ${modifier_id}`);
         }
     }
 
-    // Revalidate the modifiers list
     const url = endpoints.meals.modifiers?.(goodId) || `/api/v1/goods/${goodId}/modifiers`;
     await mutate(url);
 
@@ -161,9 +164,13 @@ export async function syncGoodModifiers(
  */
 export function useSyncGoodModifiers() {
     const syncModifiers = useCallback(
-        async (goodId: string, currentModifierIds: string[], previousModifierIds: string[]) => {
+        async (
+            goodId: string,
+            currentEntries: GoodModifierEntry[],
+            previousEntries: GoodModifierEntry[]
+        ) => {
             try {
-                const result = await syncGoodModifiers(goodId, currentModifierIds, previousModifierIds);
+                const result = await syncGoodModifiers(goodId, currentEntries, previousEntries);
                 if (result.attached > 0 || result.detached > 0) {
                     toast.success(`Modifiers updated: ${result.attached} added, ${result.detached} removed`);
                 }

@@ -38,8 +38,8 @@ export function DeductionGroupsListView() {
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
 
-    const fetchGroups = useCallback(async () => {
-        setLoading(true);
+    const fetchGroups = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
+        if (!silent) setLoading(true);
         try {
             const data = await getDeductionGroups();
             setGroups(data);
@@ -47,7 +47,7 @@ export function DeductionGroupsListView() {
             console.error('Error loading groups:', error);
             toast.error(t('deductions.loadError'));
         } finally {
-            setLoading(false);
+            if (!silent) setLoading(false);
         }
     }, [getDeductionGroups, t]);
 
@@ -62,10 +62,10 @@ export function DeductionGroupsListView() {
 
         try {
             await deleteDeductionGroup(selectedGroupId);
-            setGroups(groups.filter((g) => g.id !== selectedGroupId));
             setDeleteDialogOpen(false);
             setSelectedGroupId(null);
             toast.success(t('deductions.groupDeleted'));
+            await fetchGroups({ silent: true });
         } catch (error) {
             console.error('Delete failed:', error);
         }

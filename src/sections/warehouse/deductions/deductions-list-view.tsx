@@ -130,8 +130,8 @@ export function DeductionsListView() {
     );
 
     // Fetch deductions and groups
-    const fetchData = useCallback(async () => {
-        setLoading(true);
+    const fetchData = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
+        if (!silent) setLoading(true);
         try {
             if (!staticLookupCache) {
                 if (!staticLookupPromise) {
@@ -205,7 +205,7 @@ export function DeductionsListView() {
             console.error('Error fetching data:', error);
             // Continue anyway - deduction object may have storage_name and group_name
         } finally {
-            setLoading(false);
+            if (!silent) setLoading(false);
         }
     }, [getDeductions, getDeductionGroups, paginationModel.page, paginationModel.pageSize, searchQuery, startDate, endDate, sortState, filterValues]);
 
@@ -224,9 +224,9 @@ export function DeductionsListView() {
 
         try {
             await deleteDeduction(selectedDeleteId);
-            await fetchData();
             setDeleteDialogOpen(false);
             setSelectedDeleteId(null);
+            await fetchData({ silent: true });
         } catch (error) {
             console.error('Delete failed:', error);
         }

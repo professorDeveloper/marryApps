@@ -71,6 +71,10 @@
   "view": "Ko'rish",
   "details": "Tafsilotlar",
   "actions": "Harakatlar",
+  "ingredient": "Ingredient",
+  "quantity": "Miqdor",
+  "price_per_unit": "Birlik narxi",
+  "total_price": "Umumiy narx",
   "blog": {
     "title": "Blog",
     "caption": "Sozlangan klaviatura yorliqlari."
@@ -205,6 +209,7 @@
     "name_i18n": "Nomi (tarjima)",
     "storageDepartmentTitle": "Ombor va bo'lim",
     "deleteConfirm": "Fayllar o'chirilsinmi?",
+    "deleteConfirmation": "Ushbu kategoriyani o'chirishni xohlaysizmi?",
     "deleteMessage": "Tanlangan fayllar tizimdan butunlay o‘chiriladi va ushbu amalni bekor qilish yoki fayllarni tiklash mumkin emas.",
     "cancel": "Bekor qilish",
     "nameEn": "Nomi (inglizcha)",
@@ -362,7 +367,12 @@
     "newTitle": "Yangi taom qo'shish",
     "storageDepartmentTitle": "Ombor va bo'lim",
     "nameUz": "Nomi (o'zbekcha)",
-    "confirm": "Tasdiqlash"
+    "confirm": "Tasdiqlash",
+    "storage": "Ombor",
+    "minPrice": "Min. narx",
+    "maxPrice": "Maks. narx",
+    "filterIngredients": "Ingredientlar",
+    "filterSemiFinished": "Yarim tayyor mahsulotlar"
   },
   "modifiers": {
     "title": "Modifikatorlar",
@@ -402,7 +412,9 @@
       "categories": "Kategoriyalar",
       "semifinished": "Yarim tayyor mahsulotlar",
       "meals": "Taomlar",
-      "modifiers": "Modifikatorlar"
+      "modifiers": "Modifikatorlar",
+      "ingredients": "Ingredientlar",
+      "ingredient-group": "Ingredient guruhlari"
     },
     "warehouse": {
       "title": "Ombor",
@@ -550,6 +562,7 @@
     "goHome": "Bosh sahifaga o'tish"
   },
   "common": {
+    "all": "Hammasi",
     "name": "Nomi",
     "type": "Turi",
     "nameRequired": "Nomi majburiy",
@@ -583,10 +596,16 @@
     "actions": "Harakatlar",
     "create": "Yaratish",
     "update": "Yangilash",
-    "amount": "Summa"
+    "amount": "Summa",
+    "storage": "Ombor",
+    "department": "Bo'lim",
+    "paymentType": "To'lov turi"
   },
   "warehouse": {
     "title": "Ombor",
+    "noData": "Ma'lumot yo'q",
+    "noDataSubtitle": "Mavjud ma'lumot yo'q",
+    "ingredientGroups": "Ingredient guruhlari",
     "list": "Royxat",
     "view": "Ko'rish",
     "delete": "O'chirish",
@@ -784,6 +803,7 @@
   },
   "invoices": {
     "title": "Yetkazib beruvchilar",
+    "supplier": "Yetkazib beruvchi",
     "new": "Yangi yetkazib beruvchi",
     "edit": "Yetkazib beruvchini tahrir qilish",
     "basicInfo": "Asosiy ma'lumot",
@@ -1539,7 +1559,7 @@
     "modifiers": "Modifikatorlar",
     "ingredients": "Ingredientlar",
     "semifinished": "Yarim tayyor mahsulotlar",
-    "finance": "Moliya",
+    "finance": "Operatsiyalar",
     "invoices": "Kirimlar",
     "expensesInvoices": "Chiqim fakturalari",
     "separationActs": "Ajratish aktlari",

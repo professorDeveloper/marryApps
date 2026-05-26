@@ -529,8 +529,14 @@ export function useDeleteCompound() {
             try {
                 await deleter(endpoints.compound.delete(compoundId));
 
-                // Revalidate compounds list
-                await mutate(endpoints.compound.list);
+                // Revalidate compounds list (match all paginated/search keys)
+                await mutate(
+                    (key) =>
+                        key === endpoints.compound.list ||
+                        (Array.isArray(key) && key[0] === endpoints.compound.list),
+                    undefined,
+                    { revalidate: true }
+                );
 
                 toast.success('Compound deleted successfully');
             } catch (error) {
@@ -554,8 +560,14 @@ export function useDeleteCompounds() {
             try {
                 await Promise.all(ids.map((id) => deleter(endpoints.compound.delete(id))));
 
-                // Revalidate compounds list
-                await mutate(endpoints.compound.list);
+                // Revalidate compounds list (match all paginated/search keys)
+                await mutate(
+                    (key) =>
+                        key === endpoints.compound.list ||
+                        (Array.isArray(key) && key[0] === endpoints.compound.list),
+                    undefined,
+                    { revalidate: true }
+                );
 
                 toast.success('Compounds deleted successfully');
             } catch (error) {

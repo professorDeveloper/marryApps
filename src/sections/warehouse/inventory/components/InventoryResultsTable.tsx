@@ -69,7 +69,7 @@ export const InventoryResultsTable = React.memo<InventoryResultsTableProps>(({ i
                                 {item.ingredient_name}
                             </Typography>
                             <Typography variant="caption" color="text.secondary">
-                                {item.ingredient_measurement}
+                                {item.ingredient_measurement ? t(`units.${item.ingredient_measurement}`, { defaultValue: item.ingredient_measurement }) : ''}
                             </Typography>
                             <Typography variant="body2" sx={{ textAlign: 'right' }}>
                                 {item.system_quantity}

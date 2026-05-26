@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 
 import {
     Box,
@@ -42,9 +42,9 @@ export function InvoicesListView() {
         return () => clearTimeout(timeout);
     }, [searchQuery]);
 
-    useEffect(() => {
-        const fetchData = async () => {
-            setLoading(true);
+    const loadSuppliers = useCallback(
+        async ({ silent = false }: { silent?: boolean } = {}) => {
+            if (!silent) setLoading(true);
             try {
                 const suppliers = await getSuppliers();
                 let filteredData = Array.isArray(suppliers)
@@ -65,20 +65,23 @@ export function InvoicesListView() {
 
                 setRows(filteredData);
             } finally {
-                setLoading(false);
+                if (!silent) setLoading(false);
             }
-        };
+        },
+        [getSuppliers, debouncedSearchQuery]
+    );
 
-        fetchData();
-    }, [getSuppliers, debouncedSearchQuery]);
+    useEffect(() => {
+        loadSuppliers();
+    }, [loadSuppliers]);
 
     const handleConfirmDelete = async () => {
         if (supplierToDelete) {
             try {
                 await deleteSuppliers([supplierToDelete]);
-                setRows((prev) => prev.filter((row) => row && row.id !== supplierToDelete));
                 setDeleteDialogOpen(false);
                 setSupplierToDelete(null);
+                await loadSuppliers({ silent: true });
             } catch (error) {
                 console.error('Failed to delete supplier:', error);
             }

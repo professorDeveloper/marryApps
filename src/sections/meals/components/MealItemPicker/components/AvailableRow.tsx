@@ -1,6 +1,7 @@
 import type { MealItem } from '../types';
 
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { Chip, Checkbox, Typography } from '@mui/material';
 
@@ -57,7 +58,11 @@ export const AvailableRow = React.memo(function AvailableRow({
     ingredientLabel,
     compoundLabel,
 }: AvailableRowProps) {
+    const { t } = useTranslation('menu');
     const key = compositeKey(item.type, item.id);
+    const measurementLabel = item.measurement
+        ? t(`units.${item.measurement}`, { defaultValue: item.measurement })
+        : '';
 
     const handleClick = React.useCallback(() => onAdd(item), [onAdd, item]);
     const handleCheckboxChange = React.useCallback(
@@ -86,7 +91,7 @@ export const AvailableRow = React.memo(function AvailableRow({
                         {item.name}
                     </Typography>
                     <Typography variant="caption" color="text.secondary" noWrap style={MEAS_STYLE} fontFamily='"Inter", sans-serif'>
-                        {item.measurement || '—'}
+                        {measurementLabel || '—'}
                     </Typography>
                 </div>
                 <Chip

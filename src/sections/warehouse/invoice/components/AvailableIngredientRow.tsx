@@ -1,6 +1,7 @@
 import type { AvailableIngredientRowProps } from '../types';
 
 import { memo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import AddIcon from '@mui/icons-material/Add';
 import { Box, Typography, IconButton } from '@mui/material';
@@ -18,7 +19,9 @@ export const AvailableIngredientRow = memo(function AvailableIngredientRow({
     onQuickAdd,
     quickAddTitle,
 }: AvailableIngredientRowProps) {
+    const { t } = useTranslation('menu');
     const { id, name, measurement } = ingredient;
+    const measurementLabel = measurement ? t(`units.${measurement}`, { defaultValue: measurement }) : '';
 
     const handleQuick = useCallback(() => onQuickAdd?.(id), [onQuickAdd, id]);
 
@@ -39,7 +42,7 @@ export const AvailableIngredientRow = memo(function AvailableIngredientRow({
                     {name}
                 </Typography>
                 <Typography variant="caption" color="text.secondary" noWrap>
-                    {measurement}
+                    {measurementLabel}
                 </Typography>
             </Box>
             {onQuickAdd ? (

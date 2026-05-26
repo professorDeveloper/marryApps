@@ -63,6 +63,12 @@
   "view": "Просмотр",
   "details": "Детали",
   "actions": "Действия",
+  "ingredient": "Ингредиент",
+  "quantity": "Количество",
+  "price_per_unit": "Цена за единицу",
+  "total_price": "Итоговая цена",
+  "deleteConfirm": "Вы уверены, что хотите удалить?",
+  "deleteMessage": "Это действие необратимо.",
   "blog": {
     "title": "Блог",
     "caption": "Настроенные горячие клавиши."
@@ -204,6 +210,7 @@
     "nameRu": "Название (русский)",
     "nameUz": "Название (узбекский)",
     "deleteConfirm": "Вы уверены, что хотите удалить эту категорию?",
+    "deleteConfirmation": "Вы уверены, что хотите удалить эту категорию?",
     "deleteMessage": "Это действие нельзя отменить и его нельзя будет вернуть.",
     "cancel": "Отмена",
     "confirm": "Подтвердить",
@@ -362,7 +369,11 @@
     "totalPrice": "Общая цена",
     "summaryItems": "Элементы",
     "newTitle": "Добавить новое блюдо",
-    "confirm": "Подтвердить"
+    "confirm": "Подтвердить",
+    "minPrice": "Мин. цена",
+    "maxPrice": "Макс. цена",
+    "filterIngredients": "Ингредиенты",
+    "filterSemiFinished": "Полуфабрикаты"
   },
   "modifiers": {
     "title": "Модификаторы",
@@ -402,7 +413,9 @@
       "categories": "Категории",
       "semifinished": "Полуфабрикаты",
       "meals": "Блюда",
-      "modifiers": "Модификаторы"
+      "modifiers": "Модификаторы",
+      "ingredients": "Ингредиенты",
+      "ingredient-group": "Группы ингредиентов"
     },
     "warehouse": {
       "title": "Склад",
@@ -550,6 +563,7 @@
     "goHome": "Перейти на главную"
   },
   "common": {
+    "all": "Все",
     "name": "Имя",
     "type": "Тип",
     "measurement": "Единица измерения",
@@ -584,10 +598,16 @@
     "create": "Создать",
     "update": "Обновить",
     "amount": "Сумма",
-    "unit": "Единица измерения"
+    "unit": "Единица измерения",
+    "storage": "Хранилище",
+    "department": "Отдел",
+    "paymentType": "Тип оплаты"
   },
   "warehouse": {
     "title": "Склад",
+    "noData": "Нет данных",
+    "noDataSubtitle": "Нет доступных данных",
+    "ingredientGroups": "Группы ингредиентов",
     "list": "Список",
     "view": "Просмотр",
     "invoices": {
@@ -782,10 +802,10 @@
   },
   "invoices": {
     "title": "Поставщики",
+    "supplier": "Поставщик",
     "new": "Новый поставщик",
     "edit": "Редактировать поставщика",
     "basicInfo": "Основная информация",
-    "supplier": "Поставщик",
     "information": "Общая информация",
     "groupInfo": "Информация о группе",
     "colorInfo": "Информация о цвете",
@@ -1532,7 +1552,7 @@
     "modifiers": "Модификаторы",
     "ingredients": "Ингредиенты",
     "semifinished": "Полуфабрикаты",
-    "finance": "Финансы",
+    "finance": "Операции",
     "invoices": "Накладные",
     "expensesInvoices": "Расходные накладные",
     "separationActs": "Акты разделки",
