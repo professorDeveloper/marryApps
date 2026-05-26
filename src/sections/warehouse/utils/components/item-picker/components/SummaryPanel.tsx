@@ -21,7 +21,7 @@ export const SummaryPanel = React.memo<SummaryPanelProps>(
         return (
             <Paper sx={{ p: 2 }}>
                 <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
-                    {t('warehouse.invoiceDetails.summary', 'Summary')}
+                    {t('warehouse.invoiceDetails.summary')}
                 </Typography>
 
                 {entries.map((entry) => (
@@ -66,7 +66,7 @@ export const SummaryPanel = React.memo<SummaryPanelProps>(
                             onClick={() => void onSave()}
                             disabled={saveDisabled}
                         >
-                            {saveLabel ?? t('common.save', 'Save')}
+                            {saveLabel ?? t('common.save')}
                         </Button>
                     )}
                 </Box>

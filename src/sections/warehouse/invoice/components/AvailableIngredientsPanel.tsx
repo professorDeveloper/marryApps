@@ -70,7 +70,7 @@ export const AvailableIngredientsPanel = React.memo<AvailableIngredientsPanelPro
         setBatchAddArmed(false);
     }, [onMoveRight, batchAddArmed]);
 
-    const quickAddTitle = t('warehouse.invoiceDetails.quickAdd', 'Add with one click');
+    const quickAddTitle = t('warehouse.invoiceDetails.quickAdd');
 
     const rowVirtualizer = useVirtualizer({
         count: filtered.length,
@@ -85,7 +85,7 @@ export const AvailableIngredientsPanel = React.memo<AvailableIngredientsPanelPro
         <Paper sx={{ p: 2 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                 <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                    {t('warehouse.invoiceDetails.availableIngredients', 'Available Items')}
+                    {t('warehouse.invoiceDetails.availableIngredients')}
                 </Typography>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, justifyContent: 'flex-end' }}>
                     <Button
@@ -95,8 +95,8 @@ export const AvailableIngredientsPanel = React.memo<AvailableIngredientsPanelPro
                         disabled={loading || filtered.length === 0}
                     >
                         {batchAddArmed
-                            ? t('warehouse.invoiceDetails.deselectAll', 'Deselect All')
-                            : t('warehouse.invoiceDetails.selectAll', 'Select All')}
+                            ? t('warehouse.invoiceDetails.deselectAll')
+                            : t('warehouse.invoiceDetails.selectAll')}
                     </Button>
                     <Button
                         size="small"
@@ -104,7 +104,7 @@ export const AvailableIngredientsPanel = React.memo<AvailableIngredientsPanelPro
                         onClick={onAddNewIngredient}
                         disabled={loading}
                     >
-                        {t('warehouse.add', 'Add')}
+                        {t('warehouse.add')}
                     </Button>
                 </Box>
             </Box>
@@ -184,7 +184,7 @@ export const AvailableIngredientsPanel = React.memo<AvailableIngredientsPanelPro
                 disabled={!batchAddArmed || loading || filtered.length === 0}
                 sx={{ mt: 1.5 }}
             >
-                {t('warehouse.invoiceDetails.addSelected', 'Add batch')}
+                {t('warehouse.invoiceDetails.addSelected')}
             </Button>
         </Paper>
     );

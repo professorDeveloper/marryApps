@@ -6,15 +6,19 @@ import React, { useRef, useMemo, useEffect, useCallback } from 'react';
 
 import { Box, Button } from '@mui/material';
 
+import { useMetadata } from 'src/hooks/use-metadata';
+import { MetadataEntity } from 'src/types/metadata';
+
 import {
     formatPrice,
     ItemPickerSection,
 } from 'src/sections/warehouse/utils/components/item-picker';
 
 import {
-    useIngredients,
     useTransferredItems,
 } from '..';
+
+const INGREDIENT_FIELDS = ['id', 'name', 'group_id', 'measurement', 'price_per_unit'];
 
 export type { InvoiceLineItemsApi };
 
@@ -32,7 +36,22 @@ export const InvoiceFormLineItemsSection = React.memo(function InvoiceFormLineIt
     tableHeight,
 }: InvoiceFormLineItemsSectionProps) {
     const { t } = useTranslation('menu');
-    const { ingredients, loading: ingredientsLoading, refreshIngredients } = useIngredients();
+    const { data: metadata, isLoading: ingredientsLoading, mutate: refetchMetadata } = useMetadata([
+        { entity: MetadataEntity.INGREDIENTS, fields: INGREDIENT_FIELDS },
+    ]);
+    const ingredients = useMemo(
+        () => (metadata.ingredients ?? []) as Array<{
+            id: string;
+            name: string;
+            group_id?: string;
+            measurement?: string;
+            price_per_unit?: string;
+        }>,
+        [metadata.ingredients]
+    );
+    const refreshIngredients = useCallback(async () => {
+        await refetchMetadata();
+    }, [refetchMetadata]);
     const {
         transferredIds,
         quantities,
@@ -82,6 +101,7 @@ export const InvoiceFormLineItemsSection = React.memo(function InvoiceFormLineIt
             id: ing.id,
             name: ing.name,
             measurement: ing.measurement,
+            group_id: ing.group_id,
         })),
         [ingredients]
     );
@@ -307,6 +327,7 @@ export const InvoiceFormLineItemsSection = React.memo(function InvoiceFormLineIt
                 onNavigateFocus={handleNavigateFocus}
                 metaFieldsOpen={metaFieldsOpen}
                 tableHeight={tableHeight}
+                filters={{ warehouse: { enabled: true }, group: { enabled: true } }}
             />
             <Box sx={{ mt: 2, display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
                 <Button

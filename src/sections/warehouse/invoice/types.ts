@@ -4,6 +4,7 @@ export interface Ingredient {
     measurement: string;
     price_per_unit: string;
     quantity?: number;
+    group_id?: string;
 }
 
 export interface InvoiceDetailItem {

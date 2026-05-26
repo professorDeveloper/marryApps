@@ -230,15 +230,15 @@ const ShipmentsFormView = React.memo(function ShipmentsFormView({
         const batchData = api?.getBatchData() ?? [];
 
         if (batchData.length === 0) {
-            toast.error(t('deductions.itemsRequired', 'Please add at least one item'));
+            toast.error(t('deductions.itemsRequired'));
             return;
         }
         if (!formData.storage_id) {
-            toast.error(t('deductions.storageRequired', 'Please select storage'));
+            toast.error(t('deductions.storageRequired'));
             return;
         }
         if (!formData.supplier_id) {
-            toast.error(t('warehouse.invoices.supplierRequired', 'Please select supplier'));
+            toast.error(t('warehouse.invoices.supplierRequired'));
             return;
         }
 
@@ -268,13 +268,13 @@ const ShipmentsFormView = React.memo(function ShipmentsFormView({
                 const result = await createShipmentBatch(payload);
                 if (result) {
                     setBatchResponse(result);
-                    toast.success(t('shipments.created', 'Shipment created successfully'));
+                    toast.success(t('shipments.created'));
                 }
             } else if (effectiveShipmentId) {
                 const result = await updateShipment(effectiveShipmentId, payload);
                 if (result) {
                     setBatchResponse(result);
-                    toast.success(t('shipments.updated', 'Shipment updated successfully'));
+                    toast.success(t('shipments.updated'));
                 }
             }
         } catch (error) {
@@ -295,11 +295,11 @@ const ShipmentsFormView = React.memo(function ShipmentsFormView({
         try {
             setActionLoading('confirm');
             await confirmShipment(effectiveShipmentId);
-            toast.success(t('shipments.confirmed', 'Shipment confirmed successfully'));
+            toast.success(t('shipments.confirmed'));
             navigate(paths.warehouse.shipments.root);
         } catch (error) {
             console.error('Error confirming shipment:', error);
-            toast.error(t('error.failed', 'Failed to confirm shipment'));
+            toast.error(t('error.failed'));
         } finally {
             setActionLoading(null);
         }
@@ -311,11 +311,11 @@ const ShipmentsFormView = React.memo(function ShipmentsFormView({
         try {
             setActionLoading('cancel');
             await cancelShipment(effectiveShipmentId);
-            toast.success(t('shipments.cancelled', 'Shipment cancelled successfully'));
+            toast.success(t('shipments.cancelled'));
             navigate(paths.warehouse.shipments.root);
         } catch (error) {
             console.error('Error cancelling shipment:', error);
-            toast.error(t('error.failed', 'Failed to cancel shipment'));
+            toast.error(t('error.failed'));
         } finally {
             setActionLoading(null);
         }
@@ -327,11 +327,11 @@ const ShipmentsFormView = React.memo(function ShipmentsFormView({
         try {
             setActionLoading('delete');
             await deleteShipment(effectiveShipmentId);
-            toast.success(t('shipments.deleted', 'Shipment deleted successfully'));
+            toast.success(t('shipments.deleted'));
             navigate(paths.warehouse.shipments.root);
         } catch (error) {
             console.error('Error deleting shipment:', error);
-            toast.error(t('error.failed', 'Failed to delete shipment'));
+            toast.error(t('error.failed'));
         } finally {
             setActionLoading(null);
         }
@@ -348,10 +348,10 @@ const ShipmentsFormView = React.memo(function ShipmentsFormView({
                 if (result) {
                     setBatchResponse(result);
                 }
-                toast.success(t('shipments.itemDeleted', 'Item deleted successfully'));
+                toast.success(t('shipments.itemDeleted'));
             } catch (error) {
                 console.error('Error deleting item:', error);
-                toast.error(t('error.failed', 'Failed to delete item'));
+                toast.error(t('error.failed'));
             } finally {
                 setDeletingItemId(null);
                 setDeleteItemDialog(null);
@@ -362,20 +362,20 @@ const ShipmentsFormView = React.memo(function ShipmentsFormView({
 
     // ── Derived ───────────────────────────────────────────────────────────
     const saveLabel = isNew
-        ? t('common.save', 'Save')
-        : t('common.save', 'Save');
+        ? t('common.save')
+        : t('common.save');
 
     const breadcrumbs = useMemo(
         () => [
             { name: t('app'), href: paths.menu.root },
             {
-                name: t('overview.warehouse.shipments', 'Shipments'),
+                name: t('overview.warehouse.shipments'),
                 href: paths.warehouse.shipments.root,
             },
             {
                 name: isNew
-                    ? t('shipments.new', 'New')
-                    : String(batchResponse?.data?.shipment?.number || t('common.edit', 'Edit')),
+                    ? t('shipments.new')
+                    : String(batchResponse?.data?.shipment?.number || t('common.edit')),
                 href: '',
             },
         ],
@@ -383,8 +383,8 @@ const ShipmentsFormView = React.memo(function ShipmentsFormView({
     );
 
     const heading = isNew
-        ? t('shipments.createNew', 'Create New Shipment')
-        : t('shipments.edit', 'Edit Shipment');
+        ? t('shipments.createNew')
+        : t('shipments.edit');
 
     const ingredientMap = useMemo(() => {
         const map = new Map<string, string>();
@@ -473,7 +473,7 @@ const ShipmentsFormView = React.memo(function ShipmentsFormView({
                         {/* Items Display */}
                         <Box sx={{ p: 2, bgcolor: 'background.paper', borderRadius: 1 }}>
                             <Typography variant="subtitle1" sx={{ mb: 2 }}>
-                                {t('shipments.items', 'Items')} ({batchResponse.data.items.length})
+                                {t('shipments.items')} ({batchResponse.data.items.length})
                             </Typography>
                             {batchResponse.data.items.length > 0 ? (
                                 <Stack spacing={1}>
@@ -515,21 +515,21 @@ const ShipmentsFormView = React.memo(function ShipmentsFormView({
                                                 {deletingItemId === item.id ? (
                                                     <CircularProgress size={16} />
                                                 ) : (
-                                                    t('common.delete', 'Delete')
+                                                    t('common.delete')
                                                 )}
                                             </Button>
                                         </Box>
                                     ))}
                                 </Stack>
                             ) : (
-                                <Typography color="text.secondary">{t('shipments.noItems', 'No items')}</Typography>
+                                <Typography color="text.secondary">{t('shipments.noItems')}</Typography>
                             )}
                         </Box>
 
                         {/* Action Buttons */}
                         <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
                             <Button variant="contained" onClick={handleCancel}>
-                                {t('common.back', 'Back')}
+                                {t('common.back')}
                             </Button>
                             {batchResponse.data.shipment.status === 'draft' && (
                                 <>
@@ -540,9 +540,9 @@ const ShipmentsFormView = React.memo(function ShipmentsFormView({
                                         onClick={handleConfirm}
                                     >
                                         {actionLoading === 'confirm' ? (
-                                            <CircularProgress size={18} sx={{ color: 'var(--color-text-on-primary)' }} />
+                                            <CircularProgress size={18} sx={{ color: 'var(--accent-fg)' }} />
                                         ) : (
-                                            t('common.confirm', 'Confirm')
+                                            t('common.confirm')
                                         )}
                                     </Button>
                                     <Button
@@ -551,15 +551,15 @@ const ShipmentsFormView = React.memo(function ShipmentsFormView({
                                         disabled={!!actionLoading}
                                         onClick={() => {
                                             const confirmed = window.confirm(
-                                                t('common.deleteConfirmMessage', 'Are you sure?')
+                                                t('common.deleteConfirmMessage')
                                             );
                                             if (confirmed) handleDeleteShipment();
                                         }}
                                     >
                                         {actionLoading === 'delete' ? (
-                                            <CircularProgress size={18} sx={{ color: 'var(--color-text-on-primary)' }} />
+                                            <CircularProgress size={18} sx={{ color: 'var(--accent-fg)' }} />
                                         ) : (
-                                            t('common.delete', 'Delete')
+                                            t('common.delete')
                                         )}
                                     </Button>
                                 </>
@@ -572,9 +572,9 @@ const ShipmentsFormView = React.memo(function ShipmentsFormView({
                                     onClick={handleCancelShipment}
                                 >
                                     {actionLoading === 'cancel' ? (
-                                        <CircularProgress size={18} sx={{ color: 'var(--color-text-on-primary)' }} />
+                                        <CircularProgress size={18} sx={{ color: 'var(--accent-fg)' }} />
                                     ) : (
-                                        t('common.cancel', 'Cancel')
+                                        t('common.cancel')
                                     )}
                                 </Button>
                             )}
@@ -586,14 +586,14 @@ const ShipmentsFormView = React.memo(function ShipmentsFormView({
                 {!isNew && !batchResponse && !pageLoading && (
                     <Box sx={{ py: 4 }}>
                         <Typography color="text.secondary">
-                            {t('error.notFound', 'Not found')}
+                            {t('error.notFound')}
                         </Typography>
                         <Button
                             sx={{ mt: 2 }}
                             variant="contained"
                             onClick={() => navigate(paths.warehouse.shipments.root)}
                         >
-                            {t('overview.warehouse.shipments', 'Shipments')}
+                            {t('overview.warehouse.shipments')}
                         </Button>
                     </Box>
                 )}
@@ -601,10 +601,10 @@ const ShipmentsFormView = React.memo(function ShipmentsFormView({
 
             {/* Delete Item Dialog */}
             <Dialog open={!!deleteItemDialog} onClose={() => setDeleteItemDialog(null)}>
-                <DialogTitle>{t('common.delete', 'Delete')}</DialogTitle>
+                <DialogTitle>{t('common.delete')}</DialogTitle>
                 <DialogContent>
                     <Typography>
-                        {t('shipments.deleteItemConfirm', 'Are you sure you want to delete this item?')}
+                        {t('shipments.deleteItemConfirm')}
                     </Typography>
                     {deleteItemDialog && (
                         <Typography variant="body2" sx={{ mt: 1, fontWeight: 500 }}>
@@ -614,7 +614,7 @@ const ShipmentsFormView = React.memo(function ShipmentsFormView({
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={() => setDeleteItemDialog(null)}>
-                        {t('common.cancel', 'Cancel')}
+                        {t('common.cancel')}
                     </Button>
                     <Button
                         variant="contained"
@@ -625,7 +625,7 @@ const ShipmentsFormView = React.memo(function ShipmentsFormView({
                             }
                         }}
                     >
-                        {t('common.delete', 'Delete')}
+                        {t('common.delete')}
                     </Button>
                 </DialogActions>
             </Dialog>

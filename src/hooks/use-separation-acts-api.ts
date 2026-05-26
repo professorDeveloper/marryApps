@@ -81,7 +81,7 @@ export function useSeparationActsAPI() {
         const axiosError = error as AxiosError<{ message?: string }>;
         const message =
           axiosError?.response?.data?.message
-          || t('separationActs.messages.fetchFailed', 'Failed to fetch separation acts');
+          || t('separationActs.messages.fetchFailed');
         toast.error(message);
         return {
           data: [],
@@ -103,13 +103,13 @@ export function useSeparationActsAPI() {
           endpoints.separationActs.batch,
           payload
         );
-        toast.success(t('separationActs.messages.created', 'Separation act created successfully'));
+        toast.success(t('separationActs.messages.created'));
         return normalizeBatchResponse(response);
       } catch (error) {
         const axiosError = error as AxiosError<{ message?: string }>;
         const message =
           axiosError?.response?.data?.message
-          || t('separationActs.messages.createFailed', 'Failed to create separation act');
+          || t('separationActs.messages.createFailed');
         toast.error(message);
         throw error;
       }
@@ -128,7 +128,7 @@ export function useSeparationActsAPI() {
         const axiosError = error as AxiosError<{ message?: string }>;
         const message =
           axiosError?.response?.data?.message
-          || t('separationActs.messages.fetchOneFailed', 'Failed to fetch separation act');
+          || t('separationActs.messages.fetchOneFailed');
         toast.error(message);
         return null;
       }
@@ -151,13 +151,13 @@ export function useSeparationActsAPI() {
           payload || {}
         );
         const normalized = response as SeparationActActionApiResponse;
-        toast.success(normalized.message || t('separationActs.messages.confirmed', 'Separation act confirmed'));
+        toast.success(normalized.message || t('separationActs.messages.confirmed'));
         return normalized;
       } catch (error) {
         const axiosError = error as AxiosError<{ message?: string }>;
         const message =
           axiosError?.response?.data?.message
-          || t('separationActs.messages.confirmFailed', 'Failed to confirm separation act');
+          || t('separationActs.messages.confirmFailed');
         toast.error(message);
         throw error;
       }
@@ -173,13 +173,13 @@ export function useSeparationActsAPI() {
           {}
         );
         const normalized = response as SeparationActActionApiResponse;
-        toast.success(normalized.message || t('separationActs.messages.cancelled', 'Separation act cancelled'));
+        toast.success(normalized.message || t('separationActs.messages.cancelled'));
         return normalized;
       } catch (error) {
         const axiosError = error as AxiosError<{ message?: string }>;
         const message =
           axiosError?.response?.data?.message
-          || t('separationActs.messages.cancelFailed', 'Failed to cancel separation act');
+          || t('separationActs.messages.cancelFailed');
         toast.error(message);
         throw error;
       }
@@ -191,12 +191,12 @@ export function useSeparationActsAPI() {
     async (id: string): Promise<void> => {
       try {
         await deleter(endpoints.separationActs.delete(id));
-        toast.success(t('separationActs.messages.deleted', 'Separation act deleted'));
+        toast.success(t('separationActs.messages.deleted'));
       } catch (error) {
         const axiosError = error as AxiosError<{ message?: string }>;
         const message =
           axiosError?.response?.data?.message
-          || t('separationActs.messages.deleteFailed', 'Failed to delete separation act');
+          || t('separationActs.messages.deleteFailed');
         toast.error(message);
         throw error;
       }
@@ -208,12 +208,12 @@ export function useSeparationActsAPI() {
     async (id: string, itemId: string): Promise<void> => {
       try {
         await deleter(endpoints.separationActs.deleteItem(id, itemId));
-        toast.success(t('separationActs.messages.itemDeleted', 'Separation act item deleted'));
+        toast.success(t('separationActs.messages.itemDeleted'));
       } catch (error) {
         const axiosError = error as AxiosError<{ message?: string }>;
         const message =
           axiosError?.response?.data?.message
-          || t('separationActs.messages.itemDeleteFailed', 'Failed to delete separation act item');
+          || t('separationActs.messages.itemDeleteFailed');
         toast.error(message);
         throw error;
       }
@@ -228,13 +228,13 @@ export function useSeparationActsAPI() {
           endpoints.separationActs.update(id),
           payload
         );
-        toast.success(t('separationActs.messages.updated', 'Separation act updated successfully'));
+        toast.success(t('separationActs.messages.updated'));
         return normalizeBatchResponse(response);
       } catch (error) {
         const axiosError = error as AxiosError<{ message?: string }>;
         const message =
           axiosError?.response?.data?.message
-          || t('separationActs.messages.updateFailed', 'Failed to update separation act');
+          || t('separationActs.messages.updateFailed');
         toast.error(message);
         throw error;
       }
@@ -249,13 +249,13 @@ export function useSeparationActsAPI() {
           endpoints.separationActs.items(id),
           payload
         );
-        toast.success(t('separationActs.messages.itemsAdded', 'Separation act items added successfully'));
+        toast.success(t('separationActs.messages.itemsAdded'));
         return normalizeBatchResponse(response);
       } catch (error) {
         const axiosError = error as AxiosError<{ message?: string }>;
         const message =
           axiosError?.response?.data?.message
-          || t('separationActs.messages.itemsAddFailed', 'Failed to add separation act items');
+          || t('separationActs.messages.itemsAddFailed');
         toast.error(message);
         throw error;
       }

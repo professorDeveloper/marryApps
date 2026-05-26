@@ -4,3 +4,4 @@ export { default as OutgoingInvoiceFormView } from './components/OutgoingInvoice
 
 export type { Ingredient, SelectOption, OutgoingInvoiceFormData } from './types';
 export type { OutgoingInvoiceLineItemsApi } from './components/OutgoingInvoiceLineItems';
+export { OutgoingInvoicesListView } from './outgoing-invoices-list-view';

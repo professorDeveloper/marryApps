@@ -117,7 +117,7 @@ export function DeductionsDetailsCalculation({
                 setIngredients(Array.isArray(ingredientsData?.data) ? ingredientsData.data : []);
             } catch (error) {
                 console.error('Error loading ingredients:', error);
-                toast.error(t('error.loadFailed', 'Failed to load data'));
+                toast.error(t('error.loadFailed'));
             } finally {
                 setLoading(false);
             }
@@ -224,23 +224,23 @@ export function DeductionsDetailsCalculation({
     // Handle save
     const handleSave = async () => {
         if (transferredItems.length === 0) {
-            toast.error(t('deductions.itemsRequired', 'Please add at least one item'));
+            toast.error(t('deductions.itemsRequired'));
             return;
         }
 
         if (!parentFormData?.storage_id) {
-            toast.error(t('deductions.storageRequired', 'Please select storage in Details tab'));
+            toast.error(t('deductions.storageRequired'));
             return;
         }
 
         if (!parentFormData?.act_group_id) {
-            toast.error(t('deductions.groupRequired', 'Please select group in Details tab'));
+            toast.error(t('deductions.groupRequired'));
             return;
         }
 
         // For existing deductions, ensure deductionId exists before delegating save
         if (!isNewDeduction && !deductionId) {
-            toast.error(t('deductions.deductionIdRequired', 'Deduction must be saved first'));
+            toast.error(t('deductions.deductionIdRequired'));
             return;
         }
 
@@ -249,7 +249,7 @@ export function DeductionsDetailsCalculation({
             await onSuccess?.();
         } catch (error) {
             console.error('Save failed:', error);
-            toast.error(t('deductions.saveFailed', 'Failed to save items'));
+            toast.error(t('deductions.saveFailed'));
         } finally {
             setSaving(false);
         }
@@ -288,13 +288,13 @@ export function DeductionsDetailsCalculation({
                 {/* LEFT PANEL: Available Ingredients */}
                 <Paper sx={{ p: 2 }}>
                     <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>
-                        {t('deductions.availableIngredients', 'Available Ingredients')}
+                        {t('deductions.availableIngredients')}
                     </Typography>
 
                     {/* Search */}
                     <TextField
                         size="small"
-                        placeholder={t('common.search', 'Search')}
+                        placeholder={t('common.search')}
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         InputProps={{
@@ -312,7 +312,7 @@ export function DeductionsDetailsCalculation({
                     <Box sx={{ maxHeight: 400, overflowY: 'auto' }}>
                         {filteredIngredients.length === 0 ? (
                             <Typography sx={{ p: 2, textAlign: 'center', color: 'text.secondary' }}>
-                                {t('deductions.noIngredients', 'No ingredients found')}
+                                {t('deductions.noIngredients')}
                             </Typography>
                         ) : (
                             filteredIngredients.map((ing) => (
@@ -365,20 +365,20 @@ export function DeductionsDetailsCalculation({
                         disabled={selectedIds.length === 0}
                         endIcon={<ChevronRightIcon />}
                     >
-                        {t('common.add', 'Add')}
+                        {t('common.add')}
                     </Button>
                 </Box>
 
                 {/* RIGHT PANEL: Transferred Items */}
                 <Paper sx={{ p: 2 }}>
                     <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>
-                        {t('deductions.selectedItems', 'Selected Items')} ({transferredItems.length})
+                        {t('deductions.selectedItems')} ({transferredItems.length})
                     </Typography>
 
                     <Box sx={{ maxHeight: 400, overflowY: 'auto' }}>
                         {transferredItems.length === 0 ? (
                             <Typography sx={{ p: 2, textAlign: 'center', color: 'text.secondary' }}>
-                                {t('deductions.noItemsSelected', 'No items selected')}
+                                {t('deductions.noItemsSelected')}
                             </Typography>
                         ) : (
                             transferredItems.map((item) => (
@@ -412,7 +412,7 @@ export function DeductionsDetailsCalculation({
                                     >
                                         <TextField
                                             size="small"
-                                            label={t('deductions.quantity', 'Quantity')}
+                                            label={t('deductions.quantity')}
                                             type="number"
                                             value={quantities[item.id] || ''}
                                             onChange={(e) => handleQuantityChange(item.id, e.target.value)}
@@ -428,7 +428,7 @@ export function DeductionsDetailsCalculation({
 
                                         <TextField
                                             size="small"
-                                            label={t('deductions.unitPrice', 'Unit Price')}
+                                            label={t('deductions.unitPrice')}
                                             type="number"
                                             disabled
                                             value={item.price_per_unit}
@@ -442,7 +442,7 @@ export function DeductionsDetailsCalculation({
 
                                     <Box sx={{ mt: 1, textAlign: 'right' }}>
                                         <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                                            {t('deductions.total', 'Total')}:{' '}
+                                            {t('deductions.total')}:{' '}
                                             {formatPrice(
                                                 (parseFloat(quantities[item.id] || '0') || 0) *
                                                 (parseFloat(item.price_per_unit) || 0)
@@ -463,7 +463,7 @@ export function DeductionsDetailsCalculation({
                     <Divider sx={{ mb: 3 }} />
 
                     <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>
-                        {t('deductions.summary', 'Deduction Summary')}
+                        {t('deductions.summary')}
                     </Typography>
 
                     <TableContainer component={Paper}>
@@ -471,16 +471,16 @@ export function DeductionsDetailsCalculation({
                             <TableHead>
                                 <TableRow sx={{ backgroundColor: theme.vars.palette.background.paper }}>
                                     <TableCell sx={{ fontWeight: 'bold' }}>
-                                        {t('deductions.ingredient', 'Ingredient')}
+                                        {t('deductions.ingredient')}
                                     </TableCell>
                                     <TableCell align="right" sx={{ fontWeight: 'bold' }}>
-                                        {t('deductions.quantity', 'Quantity')}
+                                        {t('deductions.quantity')}
                                     </TableCell>
                                     <TableCell align="right" sx={{ fontWeight: 'bold' }}>
-                                        {t('deductions.unitPrice', 'Unit Price')}
+                                        {t('deductions.unitPrice')}
                                     </TableCell>
                                     <TableCell align="right" sx={{ fontWeight: 'bold' }}>
-                                        {t('deductions.total', 'Total')}
+                                        {t('deductions.total')}
                                     </TableCell>
                                 </TableRow>
                             </TableHead>
@@ -504,7 +504,7 @@ export function DeductionsDetailsCalculation({
                                 {/* Totals Row */}
                                 <TableRow sx={{ backgroundColor: theme.vars.palette.action.hover }}>
                                     <TableCell colSpan={2} sx={{ fontWeight: 'bold' }}>
-                                        {t('deductions.total', 'Total')}
+                                        {t('deductions.total')}
                                     </TableCell>
                                     <TableCell />
                                     <TableCell align="right" sx={{ fontWeight: 'bold' }}>
@@ -527,10 +527,10 @@ export function DeductionsDetailsCalculation({
                     {saving ? (
                         <>
                             <CircularProgress size={20} sx={{ mr: 1 }} />
-                            {t('common.saving', 'Saving')}
+                            {t('common.saving')}
                         </>
                     ) : (
-                        t('common.save', 'Save')
+                        t('common.save')
                     )}
                 </Button>
             </Box>

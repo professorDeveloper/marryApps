@@ -68,7 +68,7 @@ export const SeparationActsMetaFields = React.memo(function SeparationActsMetaFi
 
     return (
         <GeneralInformation
-            title={t('separationActs.details', 'Separation Act Details')}
+            title={t('separationActs.details')}
             isOpen={isOpen}
             onToggle={onToggle}
             disabled={disabled}
@@ -82,7 +82,7 @@ export const SeparationActsMetaFields = React.memo(function SeparationActsMetaFi
                 }}
             >
                 <DatePicker
-                    label={`${t('deductions.date', 'Date')} *`}
+                    label={`${t('deductions.date')} *`}
                     value={dateValue}
                     onChange={(newDate) => {
                         onDateChange(newDate ? newDate.format('YYYY-MM-DD') : '');
@@ -100,14 +100,14 @@ export const SeparationActsMetaFields = React.memo(function SeparationActsMetaFi
 
                 <TextField
                     select
-                    label={`${t('deductions.storage', 'Storage')} *`}
+                    label={`${t('deductions.storage')} *`}
                     value={storageId}
                     onChange={(e) => onStorageChange(e.target.value)}
                     size="small"
                     SelectProps={{ native: true }}
                     disabled={disabled || storages.length === 0}
                 >
-                    <option value="">{t('deductions.selectStorage', 'Select Storage')}</option>
+                    <option value="">{t('deductions.selectStorage')}</option>
                     {storages.map((s) => (
                         <option key={s.id} value={s.id}>
                             {s.name}
@@ -117,14 +117,14 @@ export const SeparationActsMetaFields = React.memo(function SeparationActsMetaFi
 
                 <TextField
                     select
-                    label={`${t('deductions.group', 'Group')} *`}
+                    label={`${t('deductions.group')} *`}
                     value={groupId}
                     onChange={(e) => onGroupChange(e.target.value)}
                     size="small"
                     SelectProps={{ native: true }}
                     disabled={disabled || groups.length === 0}
                 >
-                    <option value="">{t('separationActs.selectGroup', 'Select Group')}</option>
+                    <option value="">{t('separationActs.selectGroup')}</option>
                     {groups.map((g) => (
                         <option key={g.id} value={g.id}>
                             {g.name}
@@ -134,14 +134,14 @@ export const SeparationActsMetaFields = React.memo(function SeparationActsMetaFi
 
                 <TextField
                     select
-                    label={`${t('separationActs.sourceIngredient', 'Source Ingredient')} *`}
+                    label={`${t('separationActs.sourceIngredient')} *`}
                     value={sourceIngredientId}
                     onChange={(e) => onSourceIngredientChange(e.target.value)}
                     size="small"
                     SelectProps={{ native: true }}
                     disabled={disabled || ingredients.length === 0}
                 >
-                    <option value="">{t('separationActs.selectSourceIngredient', 'Select Source Ingredient')}</option>
+                    <option value="">{t('separationActs.selectSourceIngredient')}</option>
                     {ingredients.map((ing) => (
                         <option key={ing.id} value={ing.id}>
                             {ing.name}
@@ -150,7 +150,7 @@ export const SeparationActsMetaFields = React.memo(function SeparationActsMetaFi
                 </TextField>
 
                 <TextField
-                    label={`${t('separationActs.sourceQuantity', 'Source Quantity')} *`}
+                    label={`${t('separationActs.sourceQuantity')} *`}
                     type="number"
                     value={sourceQuantity}
                     onChange={(e) => onSourceQuantityChange(e.target.value)}
@@ -161,14 +161,14 @@ export const SeparationActsMetaFields = React.memo(function SeparationActsMetaFi
             </Box>
 
             <TextField
-                label={t('deductions.description', 'Description')}
+                label={t('deductions.description')}
                 value={description}
                 onChange={(e) => onDescriptionChange(e.target.value)}
                 size="small"
                 fullWidth
                 multiline
                 rows={3}
-                placeholder={t('separationActs.enterDescription', 'Enter description...')}
+                placeholder={t('separationActs.enterDescription')}
                 disabled={disabled}
                 sx={{ mt: 2 }}
             />

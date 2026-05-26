@@ -5,9 +5,10 @@ import React, { useRef, useMemo, useEffect, useCallback } from 'react';
 
 import { Box, Button } from '@mui/material';
 
+import { useMetadata } from 'src/hooks/use-metadata';
+import { MetadataEntity } from 'src/types/metadata';
 import { useGetInventoryStatus } from 'src/actions/ingredient-reports';
 
-import { useIngredients } from 'src/sections/warehouse/invoice';
 import {
     formatPrice,
     ItemPickerSection,
@@ -16,6 +17,7 @@ import {
 import { useInventoryItems } from '../hooks/useInventoryItems';
 
 const EMPTY_LOOKUP: IngredientReportLookup = {};
+const INGREDIENT_FIELDS = ['id', 'name', 'group_id', 'measurement'];
 export const InventoryItemsSection = React.memo(function InventoryItemsSection({
     apiRef,
     storageId,
@@ -31,7 +33,21 @@ export const InventoryItemsSection = React.memo(function InventoryItemsSection({
     metaFieldsOpen,
     tableHeight,
 }: InventoryItemsSectionProps) {
-    const { ingredients, loading: ingredientsLoading, refreshIngredients } = useIngredients();
+    const { data: metadata, isLoading: ingredientsLoading, mutate: refetchMetadata } = useMetadata([
+        { entity: MetadataEntity.INGREDIENTS, fields: INGREDIENT_FIELDS },
+    ]);
+    const ingredients = useMemo(
+        () => (metadata.ingredients ?? []) as Array<{
+            id: string;
+            name: string;
+            group_id?: string;
+            measurement?: string;
+        }>,
+        [metadata.ingredients]
+    );
+    const refreshIngredients = useCallback(async () => {
+        await refetchMetadata();
+    }, [refetchMetadata]);
     const {
         transferredIds,
         quantities,
@@ -111,6 +127,7 @@ export const InventoryItemsSection = React.memo(function InventoryItemsSection({
             id: ing.id,
             name: ing.name,
             measurement: ing.measurement,
+            group_id: ing.group_id,
         })),
         [ingredients]
     );
@@ -338,6 +355,7 @@ export const InventoryItemsSection = React.memo(function InventoryItemsSection({
                 onNavigateFocus={handleNavigateFocus}
                 metaFieldsOpen={metaFieldsOpen}
                 tableHeight={tableHeight}
+                filters={{ warehouse: { enabled: true }, group: { enabled: true } }}
             />
             <Box sx={{ mt: 2, display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
                 <Button

@@ -131,10 +131,10 @@ export const InvoiceMetaFields = React.memo(function InvoiceMetaFields({
                     SelectProps={{ native: true }}
                     disabled={disabled}
                 >
-                    <option value="pending">{t('warehouse.invoices.pending', 'Pending')}</option>
-                    <option value="arrived">{t('warehouse.invoices.arrived', 'Arrived')}</option>
-                    <option value="received">{t('warehouse.invoices.received', 'Received')}</option>
-                    <option value="cancelled">{t('warehouse.invoices.cancelled', 'Cancelled')}</option>
+                    <option value="pending">{t('warehouse.invoices.pending')}</option>
+                    <option value="arrived">{t('warehouse.invoices.arrived')}</option>
+                    <option value="received">{t('warehouse.invoices.received')}</option>
+                    <option value="cancelled">{t('warehouse.invoices.cancelled')}</option>
                 </TextField>
             </Box>
         </GeneralInformation>

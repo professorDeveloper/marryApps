@@ -14,3 +14,8 @@ export type {
   FilterState,
   DataTableProps,
 } from './types';
+export type {
+  DataTablePaginationProps,
+  DataTableSearchProps,
+  DataTablePeriodFilterProps,
+} from './components/DataTable';

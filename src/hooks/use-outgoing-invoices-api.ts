@@ -73,7 +73,7 @@ export function useOutgoingInvoicesAPI() {
         const axiosError = error as AxiosError<{ message?: string }>;
         const message =
           axiosError?.response?.data?.message
-          || t('outgoingInvoices.messages.fetchFailed', 'Failed to fetch outgoing invoices');
+          || t('outgoingInvoices.messages.fetchFailed');
         toast.error(message);
         return { data: [], total_sum: '0', limit: 1000, offset: 0, total: 0 };
       }
@@ -88,13 +88,13 @@ export function useOutgoingInvoicesAPI() {
           endpoints.outgoingInvoices.batch,
           payload
         );
-        toast.success(t('outgoingInvoices.messages.created', 'Outgoing invoice created successfully'));
+        toast.success(t('outgoingInvoices.messages.created'));
         return normalizeBatchResponse(response);
       } catch (error) {
         const axiosError = error as AxiosError<{ message?: string }>;
         const message =
           axiosError?.response?.data?.message
-          || t('outgoingInvoices.messages.createFailed', 'Failed to create outgoing invoice');
+          || t('outgoingInvoices.messages.createFailed');
         toast.error(message);
         throw error;
       }
@@ -113,7 +113,7 @@ export function useOutgoingInvoicesAPI() {
         const axiosError = error as AxiosError<{ message?: string }>;
         const message =
           axiosError?.response?.data?.message
-          || t('outgoingInvoices.messages.fetchOneFailed', 'Failed to fetch outgoing invoice');
+          || t('outgoingInvoices.messages.fetchOneFailed');
         toast.error(message);
         return null;
       }
@@ -129,13 +129,13 @@ export function useOutgoingInvoicesAPI() {
           {}
         );
         const normalized = response as OutgoingInvoiceActionApiResponse;
-        toast.success(normalized.message || t('outgoingInvoices.messages.confirmed', 'Outgoing invoice confirmed'));
+        toast.success(normalized.message || t('outgoingInvoices.messages.confirmed'));
         return normalized;
       } catch (error) {
         const axiosError = error as AxiosError<{ message?: string }>;
         const message =
           axiosError?.response?.data?.message
-          || t('outgoingInvoices.messages.confirmFailed', 'Failed to confirm outgoing invoice');
+          || t('outgoingInvoices.messages.confirmFailed');
         toast.error(message);
         throw error;
       }
@@ -151,13 +151,13 @@ export function useOutgoingInvoicesAPI() {
           {}
         );
         const normalized = response as OutgoingInvoiceActionApiResponse;
-        toast.success(normalized.message || t('outgoingInvoices.messages.cancelled', 'Outgoing invoice cancelled'));
+        toast.success(normalized.message || t('outgoingInvoices.messages.cancelled'));
         return normalized;
       } catch (error) {
         const axiosError = error as AxiosError<{ message?: string }>;
         const message =
           axiosError?.response?.data?.message
-          || t('outgoingInvoices.messages.cancelFailed', 'Failed to cancel outgoing invoice');
+          || t('outgoingInvoices.messages.cancelFailed');
         toast.error(message);
         throw error;
       }
@@ -169,12 +169,12 @@ export function useOutgoingInvoicesAPI() {
     async (id: string): Promise<void> => {
       try {
         await deleter(endpoints.outgoingInvoices.delete(id));
-        toast.success(t('outgoingInvoices.messages.deleted', 'Outgoing invoice deleted'));
+        toast.success(t('outgoingInvoices.messages.deleted'));
       } catch (error) {
         const axiosError = error as AxiosError<{ message?: string }>;
         const message =
           axiosError?.response?.data?.message
-          || t('outgoingInvoices.messages.deleteFailed', 'Failed to delete outgoing invoice');
+          || t('outgoingInvoices.messages.deleteFailed');
         toast.error(message);
         throw error;
       }
@@ -186,12 +186,12 @@ export function useOutgoingInvoicesAPI() {
     async (id: string, itemId: string): Promise<void> => {
       try {
         await deleter(endpoints.outgoingInvoices.deleteItem(id, itemId));
-        toast.success(t('outgoingInvoices.messages.itemDeleted', 'Outgoing invoice item deleted'));
+        toast.success(t('outgoingInvoices.messages.itemDeleted'));
       } catch (error) {
         const axiosError = error as AxiosError<{ message?: string }>;
         const message =
           axiosError?.response?.data?.message
-          || t('outgoingInvoices.messages.itemDeleteFailed', 'Failed to delete outgoing invoice item');
+          || t('outgoingInvoices.messages.itemDeleteFailed');
         toast.error(message);
         throw error;
       }
@@ -206,13 +206,13 @@ export function useOutgoingInvoicesAPI() {
           endpoints.outgoingInvoices.update(id),
           payload
         );
-        toast.success(t('outgoingInvoices.messages.updated', 'Outgoing invoice updated successfully'));
+        toast.success(t('outgoingInvoices.messages.updated'));
         return normalizeBatchResponse(response);
       } catch (error) {
         const axiosError = error as AxiosError<{ message?: string }>;
         const message =
           axiosError?.response?.data?.message
-          || t('outgoingInvoices.messages.updateFailed', 'Failed to update outgoing invoice');
+          || t('outgoingInvoices.messages.updateFailed');
         toast.error(message);
         throw error;
       }
@@ -227,13 +227,13 @@ export function useOutgoingInvoicesAPI() {
           endpoints.outgoingInvoices.items(id),
           payload
         );
-        toast.success(t('outgoingInvoices.messages.itemsAdded', 'Outgoing invoice items added successfully'));
+        toast.success(t('outgoingInvoices.messages.itemsAdded'));
         return normalizeBatchResponse(response);
       } catch (error) {
         const axiosError = error as AxiosError<{ message?: string }>;
         const message =
           axiosError?.response?.data?.message
-          || t('outgoingInvoices.messages.itemsAddFailed', 'Failed to add outgoing invoice items');
+          || t('outgoingInvoices.messages.itemsAddFailed');
         toast.error(message);
         throw error;
       }

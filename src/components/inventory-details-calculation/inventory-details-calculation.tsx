@@ -367,7 +367,7 @@ export function InventoryDetailsCalculation({
                         <Box sx={{ width: '100%', minWidth: '200px' }}>
                             <TextField
                                 fullWidth
-                                placeholder={t('calculation.search', 'Search...')}
+                                placeholder={t('calculation.search')}
                                 size="small"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -393,9 +393,9 @@ export function InventoryDetailsCalculation({
                                 color: 'text.primary',
                             }}
                         >
-                            <Box sx={{ width: '50%' }}>{t('calculation.productName', 'Product Name')}</Box>
-                            <Box sx={{ width: '20%' }}>{t('calculation.unit', 'Unit')}</Box>
-                            <Box sx={{ width: '30%', textAlign: 'right' }}>{t('calculation.price', 'Price')}</Box>
+                            <Box sx={{ width: '50%' }}>{t('calculation.productName')}</Box>
+                            <Box sx={{ width: '20%' }}>{t('calculation.unit')}</Box>
+                            <Box sx={{ width: '30%', textAlign: 'right' }}>{t('calculation.price')}</Box>
                         </Box>
                         <Divider />
                         <Box sx={{ maxHeight: 400, overflowY: 'auto' }}>
@@ -405,7 +405,7 @@ export function InventoryDetailsCalculation({
                                 </Box>
                             ) : availableIngredients.length === 0 ? (
                                 <Typography sx={{ p: 3, textAlign: 'center', color: 'text.secondary' }}>
-                                    {t('calculation.noProducts', 'No products found')}
+                                    {t('calculation.noProducts')}
                                 </Typography>
                             ) : (
                                 availableIngredients.map((ingredient) => (
@@ -485,7 +485,7 @@ export function InventoryDetailsCalculation({
                                 borderRadius: '15%',
                                 padding: '10px',
                             }}
-                            title={t('calculation.selectedProductsTransfer', 'Transfer selected')}
+                            title={t('calculation.selectedProductsTransfer')}
                         >
                             <ChevronRightIcon />
                         </IconButton>
@@ -513,7 +513,7 @@ export function InventoryDetailsCalculation({
                                 borderRadius: '15%',
                                 padding: '10px',
                             }}
-                            title={t('calculation.returnAllProducts', 'Return all')}
+                            title={t('calculation.returnAllProducts')}
                         >
                             <ChevronLeftIcon />
                         </IconButton>
@@ -525,7 +525,7 @@ export function InventoryDetailsCalculation({
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                         <TextField
                             fullWidth
-                            placeholder={t('calculation.search', 'Search...')}
+                            placeholder={t('calculation.search')}
                             size="small"
                             value={rightSearchTerm}
                             onChange={(e) => setRightSearchTerm(e.target.value)}
@@ -550,9 +550,9 @@ export function InventoryDetailsCalculation({
                                 color: 'text.primary',
                             }}
                         >
-                            <Box sx={{ width: '40%' }}>{t('calculation.productName', 'Product Name')}</Box>
-                            <Box sx={{ width: '30%' }}>{t('calculation.unitOfMeasurement', 'Unit')}</Box>
-                            <Box sx={{ width: '20%', textAlign: 'center' }}>{t('calculation.quantity', 'Qty')}</Box>
+                            <Box sx={{ width: '40%' }}>{t('calculation.productName')}</Box>
+                            <Box sx={{ width: '30%' }}>{t('calculation.unitOfMeasurement')}</Box>
+                            <Box sx={{ width: '20%', textAlign: 'center' }}>{t('calculation.quantity')}</Box>
                             <Box sx={{ width: '10%' }} />
                         </Box>
                         <Divider />
@@ -563,7 +563,7 @@ export function InventoryDetailsCalculation({
                                 </Box>
                             ) : transferredIngredients.length === 0 ? (
                                 <Typography sx={{ p: 3, textAlign: 'center', color: 'text.secondary' }}>
-                                    {t('calculation.noProductsSelected', 'No products selected')}
+                                    {t('calculation.noProductsSelected')}
                                 </Typography>
                             ) : (
                                 transferredIngredients.map((ingredient) => (
@@ -629,7 +629,7 @@ export function InventoryDetailsCalculation({
             {inventoryItems.length > 0 && (
                 <Box sx={{ mb: 4 }}>
                     {/* <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-                        {t('inventory.calculationResults', 'Calculation Results')}
+                        {t('inventory.calculationResults')}
                     </Typography> */}
                     <Paper sx={{ borderRadius: 2, overflow: 'hidden' }} elevation={1}>
                         <Box sx={{ overflowX: 'auto' }}>
@@ -645,15 +645,15 @@ export function InventoryDetailsCalculation({
                                     minWidth: 1200,
                                 }}
                             >
-                                <Box>{t('calculation.productName', 'Product')}</Box>
-                                <Box sx={{ textAlign: 'center' }}>{t('calculation.unit', 'Unit')}</Box>
-                                <Box sx={{ textAlign: 'right' }}>{t('calculation.systemQty', 'System Qty')}</Box>
-                                <Box sx={{ textAlign: 'right' }}>{t('calculation.countedQty', 'Counted Qty')}</Box>
-                                <Box sx={{ textAlign: 'right' }}>{t('calculation.difference', 'Difference')}</Box>
-                                <Box sx={{ textAlign: 'right' }}>{t('calculation.pricePerUnit', 'Price/Unit')}</Box>
-                                <Box sx={{ textAlign: 'right' }}>{t('calculation.surplus', 'Surplus')}</Box>
-                                <Box sx={{ textAlign: 'right' }}>{t('calculation.shortage', 'Shortage')}</Box>
-                                <Box sx={{ textAlign: 'right' }}>{t('calculation.remaining', 'Remaining')}</Box>
+                                <Box>{t('calculation.productName')}</Box>
+                                <Box sx={{ textAlign: 'center' }}>{t('calculation.unit')}</Box>
+                                <Box sx={{ textAlign: 'right' }}>{t('calculation.systemQty')}</Box>
+                                <Box sx={{ textAlign: 'right' }}>{t('calculation.countedQty')}</Box>
+                                <Box sx={{ textAlign: 'right' }}>{t('calculation.difference')}</Box>
+                                <Box sx={{ textAlign: 'right' }}>{t('calculation.pricePerUnit')}</Box>
+                                <Box sx={{ textAlign: 'right' }}>{t('calculation.surplus')}</Box>
+                                <Box sx={{ textAlign: 'right' }}>{t('calculation.shortage')}</Box>
+                                <Box sx={{ textAlign: 'right' }}>{t('calculation.remaining')}</Box>
                                 {/* <Box sx={{ textAlign: 'center' }}>Action</Box> */}
                             </Box>
                         </Box>
@@ -760,7 +760,7 @@ export function InventoryDetailsCalculation({
                             }}
                             sx={actionButtonSx}
                         >
-                            {t('common.back', 'Back')}
+                            {t('common.back')}
                         </Button>
                         <Button
                             // variant="contained"
@@ -833,7 +833,7 @@ export function InventoryDetailsCalculation({
                         }}
                         sx={actionButtonSx}
                     >
-                        {t('common.back', 'Back')}
+                        {t('common.back')}
                     </Button>
                 </Box>
             )}

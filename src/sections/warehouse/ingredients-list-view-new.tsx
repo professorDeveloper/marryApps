@@ -163,16 +163,16 @@ export function IngredientListView() {
             />
 
             <Dialog open={deleteDialogOpen} onClose={handleCancelDelete}>
-                <DialogTitle>{t('common.confirmDelete', 'Confirm Delete')}</DialogTitle>
+                <DialogTitle>{t('common.confirmDelete')}</DialogTitle>
                 <DialogContent>
-                    {t('common.deleteMessage', 'Are you sure you want to delete this ingredient?')}
+                    {t('common.deleteMessage')}
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={handleCancelDelete} color="inherit">
-                        {t('common.cancel', 'Cancel')}
+                        {t('common.cancel')}
                     </Button>
                     <Button onClick={handleConfirmDelete} color="error" variant="contained">
-                        {t('common.delete', 'Delete')}
+                        {t('common.delete')}
                     </Button>
                 </DialogActions>
             </Dialog>

@@ -2,11 +2,11 @@
 export const getMeasurementLabel = (value: string, t: any): string => {
   switch (value) {
     case 'kg':
-      return t('ingredients.measurementKg', 'kg');
+      return t('ingredients.measurementKg');
     case 'l':
-      return t('ingredients.measurementL', 'l');
+      return t('ingredients.measurementL');
     case 'piece':
-      return t('ingredients.measurementDona', 'piece');
+      return t('ingredients.measurementDona');
     default:
       return value;
   }
@@ -30,8 +30,8 @@ export const getIngredientInitials = (name: string): string => name
 
 export const getIngredientAvatarColor = (name: string): string => {
   const colors = [
-    'var(--color-primary-500)', 'var(--color-success-500)', 'var(--color-info-500)', 'var(--color-warning-500)', 'var(--color-secondary-500)',
-    'var(--color-danger-500)', 'var(--color-danger-600)', 'var(--color-danger-100)', 'var(--color-info-100)', 'var(--color-primary-600)'
+    'var(--accent)', 'var(--success)', '#60A5FA', 'var(--warning)', 'var(--text-2)',
+    'var(--danger)', 'var(--danger)', 'var(--danger)', 'color-mix(in oklch, #60A5FA 20%, transparent)', 'var(--accent)'
   ];
 
   let hash = 0;

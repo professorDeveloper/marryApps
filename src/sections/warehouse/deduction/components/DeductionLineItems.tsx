@@ -128,7 +128,7 @@ export const DeductionLineItems = React.memo(function DeductionLineItems({
         () => [
             {
                 key: 'quantity',
-                header: t('calculation.quantity', 'Quantity'),
+                header: t('calculation.quantity'),
                 width: 'minmax(120px, auto)',
                 editable: true,
                 type: 'number' as const,
@@ -139,14 +139,14 @@ export const DeductionLineItems = React.memo(function DeductionLineItems({
             },
             {
                 key: 'price_per_unit',
-                header: t('calculation.price', 'Price'),
+                header: t('calculation.price'),
                 width: 'minmax(120px, auto)',
                 editable: false,
                 align: 'right' as const,
             },
             {
                 key: 'total',
-                header: t('calculation.totalPrice', 'Total'),
+                header: t('calculation.totalPrice'),
                 width: 'minmax(120px, auto)',
                 editable: false,
                 align: 'right' as const,
@@ -173,11 +173,11 @@ export const DeductionLineItems = React.memo(function DeductionLineItems({
     const summaryEntries: SummaryEntry[] = useMemo(
         () => [
             {
-                label: t('warehouse.invoiceDetails.products', 'Products'),
+                label: t('warehouse.invoiceDetails.products'),
                 value: transferredItems.length,
             },
             {
-                label: t('warehouse.invoiceDetails.totalQty', 'Total Qty'),
+                label: t('warehouse.invoiceDetails.totalQty'),
                 value: formatPrice(totals.totalQty),
             },
         ],
@@ -296,7 +296,7 @@ export const DeductionLineItems = React.memo(function DeductionLineItems({
                 onRemoveRow={handleRemoveRow}
                 onRemoveMany={handleRemoveMany}
                 summaryEntries={summaryEntries}
-                totalLabel={t('calculation.total', 'Total')}
+                totalLabel={t('calculation.total')}
                 totalValue={`${formatPrice(totals.totalAmount)} UZS`}
                 metaFieldsOpen={metaFieldsOpen}
                 tableHeight={tableHeight}

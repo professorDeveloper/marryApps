@@ -57,7 +57,7 @@ export const AddedItemsPanel = React.memo<AddedItemsPanelProps>(({
         setBatchRemoveArmed(false);
     }, [onRemoveMany, batchRemoveArmed]);
 
-    const removeTitle = t('warehouse.invoiceDetails.removeLine', 'Remove line');
+    const removeTitle = t('warehouse.invoiceDetails.removeLine');
 
     const rowCount = transferredItems.length;
 
@@ -93,7 +93,7 @@ export const AddedItemsPanel = React.memo<AddedItemsPanelProps>(({
                 }}
             >
                 <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                    {t('warehouse.invoiceDetails.selectedItems', 'Added to Invoice')}
+                    {t('warehouse.invoiceDetails.selectedItems')}
                 </Typography>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1 }}>
                     <Button
@@ -104,8 +104,8 @@ export const AddedItemsPanel = React.memo<AddedItemsPanelProps>(({
                         disabled={transferredItems.length === 0}
                     >
                         {batchRemoveArmed
-                            ? t('warehouse.invoiceDetails.deselectAll', 'Deselect All')
-                            : t('warehouse.invoiceDetails.selectAll', 'Select All')}
+                            ? t('warehouse.invoiceDetails.deselectAll')
+                            : t('warehouse.invoiceDetails.selectAll')}
                     </Button>
                     <Button
                         size="small"
@@ -115,7 +115,7 @@ export const AddedItemsPanel = React.memo<AddedItemsPanelProps>(({
                         onClick={handleRemoveBatch}
                         disabled={!batchRemoveArmed || transferredItems.length === 0}
                     >
-                        {t('warehouse.invoiceDetails.removeBatch', 'Remove batch')}
+                        {t('warehouse.invoiceDetails.removeBatch')}
                     </Button>
                 </Box>
             </Box>
@@ -178,7 +178,7 @@ export const AddedItemsPanel = React.memo<AddedItemsPanelProps>(({
                 {rowCount === 0 ? (
                     <Box sx={{ py: 6, textAlign: 'center', opacity: 0.6 }}>
                         <Typography variant="body2">
-                            {t('warehouse.invoiceDetails.noItemsAdded', 'No items added')}
+                            {t('warehouse.invoiceDetails.noItemsAdded')}
                         </Typography>
                     </Box>
                 ) : (

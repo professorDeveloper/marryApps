@@ -235,15 +235,15 @@ const OutgoingInvoiceFormView = React.memo(function OutgoingInvoiceFormView() {
         const batchData = api?.getBatchData() ?? [];
 
         if (batchData.length === 0) {
-            toast.error(t('deductions.itemsRequired', 'Please add at least one item'));
+            toast.error(t('deductions.itemsRequired'));
             return;
         }
         if (!formData.storage_id) {
-            toast.error(t('deductions.storageRequired', 'Please select storage'));
+            toast.error(t('deductions.storageRequired'));
             return;
         }
         if (!formData.group_id) {
-            toast.error(t('outgoingInvoices.groupRequired', 'Please select group'));
+            toast.error(t('outgoingInvoices.groupRequired'));
             return;
         }
 
@@ -283,21 +283,21 @@ const OutgoingInvoiceFormView = React.memo(function OutgoingInvoiceFormView() {
     // ── Derived ───────────────────────────────────────────────────────────
     const outgoingInvoiceId = batchResponse?.data?.invoice?.id;
     const saveLabel = isNew
-        ? t('outgoingInvoices.saveInvoice', 'Save Invoice')
-        : t('common.save', 'Save');
+        ? t('outgoingInvoices.saveInvoice')
+        : t('common.save');
 
     const breadcrumbs = useMemo(
         () => [
-            { name: t('dashboard', 'Dashboard'), href: paths.dashboard.root },
-            { name: t('overview.warehouse.title', 'Warehouse'), href: paths.warehouse.root },
+            { name: t('dashboard'), href: paths.dashboard.root },
+            { name: t('overview.warehouse.title'), href: paths.warehouse.root },
             {
-                name: t('overview.warehouse.expensesInvoices', 'Expenses invoices'),
+                name: t('overview.warehouse.expensesInvoices'),
                 href: paths.warehouse.outgoingInvoices.root,
             },
             {
                 name: isNew
-                    ? t('common.create', 'Create')
-                    : t('common.edit', 'Edit'),
+                    ? t('common.create')
+                    : t('common.edit'),
                 href: '',
             },
         ],
@@ -305,8 +305,8 @@ const OutgoingInvoiceFormView = React.memo(function OutgoingInvoiceFormView() {
     );
 
     const heading = isNew
-        ? t('outgoingInvoices.create', 'Create outgoing invoice')
-        : t('outgoingInvoices.view', 'View outgoing invoice');
+        ? t('outgoingInvoices.create')
+        : t('outgoingInvoices.view');
 
     // ── Render ────────────────────────────────────────────────────────────
     return (
@@ -407,7 +407,7 @@ const OutgoingInvoiceFormView = React.memo(function OutgoingInvoiceFormView() {
                         onDelete={async () => {
                             if (!outgoingInvoiceId) return;
                             const confirmed = window.confirm(
-                                t('common.deleteConfirmMessage', 'Are you sure?')
+                                t('common.deleteConfirmMessage')
                             );
                             if (!confirmed) return;
                             try {
@@ -425,14 +425,14 @@ const OutgoingInvoiceFormView = React.memo(function OutgoingInvoiceFormView() {
                 {!isNew && !batchResponse && !pageLoading && (
                     <Box sx={{ py: 4 }}>
                         <Typography color="text.secondary">
-                            {t('outgoingInvoices.notFound', 'Outgoing invoice not found')}
+                            {t('outgoingInvoices.notFound')}
                         </Typography>
                         <Button
                             sx={{ mt: 2 }}
                             variant="contained"
                             onClick={() => navigate(paths.warehouse.outgoingInvoices.root)}
                         >
-                            {t('overview.warehouse.expensesInvoices', 'Expenses invoices')}
+                            {t('overview.warehouse.expensesInvoices')}
                         </Button>
                     </Box>
                 )}
@@ -476,29 +476,29 @@ const BatchResponseView = React.memo(function BatchResponseView({
         <Box>
             <Paper sx={{ p: 2, mb: 2 }}>
                 <Typography variant="h6" sx={{ mb: 1 }}>
-                    {t('outgoingInvoices.items', 'Items')}
+                    {t('outgoingInvoices.items')}
                 </Typography>
                 <TableContainer>
                     <Table size="small">
                         <TableHead>
                             <TableRow>
                                 <TableCell>#</TableCell>
-                                <TableCell>{t('warehouse.ingredient', 'Ingredient')}</TableCell>
-                                <TableCell>{t('calculation.quantity', 'Quantity')}</TableCell>
+                                <TableCell>{t('warehouse.ingredient')}</TableCell>
+                                <TableCell>{t('calculation.quantity')}</TableCell>
                                 <TableCell>
-                                    {t('outgoingInvoices.pricePerUnit', 'Price / Unit')}
+                                    {t('outgoingInvoices.pricePerUnit')}
                                 </TableCell>
                                 <TableCell>
-                                    {t('outgoingInvoices.totalAmount', 'Total Amount')}
+                                    {t('outgoingInvoices.totalAmount')}
                                 </TableCell>
                                 <TableCell>
-                                    {t('outgoingInvoices.stockBefore', 'Stock Before')}
+                                    {t('outgoingInvoices.stockBefore')}
                                 </TableCell>
                                 <TableCell>
-                                    {t('outgoingInvoices.stockAfter', 'Stock After')}
+                                    {t('outgoingInvoices.stockAfter')}
                                 </TableCell>
                                 <TableCell align="right">
-                                    {t('common.actions', 'Actions')}
+                                    {t('common.actions')}
                                 </TableCell>
                             </TableRow>
                         </TableHead>
@@ -545,9 +545,9 @@ const BatchResponseView = React.memo(function BatchResponseView({
                     onClick={onConfirm}
                 >
                     {actionLoading === 'confirm' ? (
-                        <CircularProgress size={18} sx={{ color: 'var(--color-text-on-primary)' }} />
+                        <CircularProgress size={18} sx={{ color: 'var(--accent-fg)' }} />
                     ) : (
-                        t('common.confirm', 'Confirm')
+                        t('common.confirm')
                     )}
                 </Button>
                 <Button
@@ -557,9 +557,9 @@ const BatchResponseView = React.memo(function BatchResponseView({
                     onClick={onCancelInvoice}
                 >
                     {actionLoading === 'cancel' ? (
-                        <CircularProgress size={18} sx={{ color: 'var(--color-text-on-primary)' }} />
+                        <CircularProgress size={18} sx={{ color: 'var(--accent-fg)' }} />
                     ) : (
-                        t('common.cancel', 'Cancel')
+                        t('common.cancel')
                     )}
                 </Button>
                 <Button
@@ -569,9 +569,9 @@ const BatchResponseView = React.memo(function BatchResponseView({
                     onClick={onDelete}
                 >
                     {actionLoading === 'delete' ? (
-                        <CircularProgress size={18} sx={{ color: 'var(--color-text-on-primary)' }} />
+                        <CircularProgress size={18} sx={{ color: 'var(--accent-fg)' }} />
                     ) : (
-                        t('common.delete', 'Delete')
+                        t('common.delete')
                     )}
                 </Button>
             </Box>

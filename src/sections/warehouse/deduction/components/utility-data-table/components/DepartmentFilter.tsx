@@ -26,28 +26,30 @@ export function DepartmentFilter({
       <TextField
         select
         size="small"
-        label={label}
+        label={label} 
         value={departmentId}
         onChange={(e) => onDepartmentChange(e.target.value)}
         disabled={disabled || departments.length === 0}
         sx={{
           minWidth: 150,
           '& .MuiInputBase-root': {
-            height: 34,
-            fontSize: 12.5,
-            backgroundColor: 'var(--color-surface-0)',
-            borderRadius: 1,
+            height: 36,
+            fontSize: 13.5,
+            backgroundColor: 'transparent',
+            borderRadius: '6px',
             fontFamily: 'var(--font-sans)',
           },
-          '& .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--color-border)' },
+          '& .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--border)' },
+          '& .MuiInputBase-root:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--border2)' },
           '& .MuiInputBase-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
-            borderColor: 'var(--color-primary)',
-            boxShadow: '0 0 0 3px var(--glow-md)',
+            borderColor: 'var(--brand)',
+            boxShadow: '0 0 0 2px var(--accent-soft)',
           },
+          '& .MuiInputLabel-root.Mui-focused': { color: 'var(--brand)' },
         }}
       >
         <MenuItem value="">
-          {t('all', 'All')}
+          {t('all')}
         </MenuItem>
         {departments.map((d) => (
           <MenuItem key={d.id} value={d.id}>

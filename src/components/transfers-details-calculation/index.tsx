@@ -114,7 +114,7 @@ export function TransfersDetailsCalculation({
         setIngredients(Array.isArray(response.data) ? response.data : []);
       } catch (error) {
         console.error(error);
-        toast.error(t('error.loadFailed', 'Failed to load ingredients'));
+        toast.error(t('error.loadFailed'));
       } finally {
         setLoading(false);
       }
@@ -256,7 +256,7 @@ export function TransfersDetailsCalculation({
 
   const handleSave = useCallback(async () => {
     if (!transferredIds.length) {
-      toast.error(t('deductions.itemsRequired', 'Please add at least one item'));
+      toast.error(t('deductions.itemsRequired'));
       return;
     }
     await onSave?.();
@@ -287,7 +287,7 @@ export function TransfersDetailsCalculation({
             fullWidth
             value={searchLeft}
             onChange={(e) => setSearchLeft(e.target.value)}
-            placeholder={t('calculation.search', 'Search...')}
+            placeholder={t('calculation.search')}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
@@ -308,16 +308,16 @@ export function TransfersDetailsCalculation({
                 fontSize: '0.875rem',
               }}
             >
-              <Box sx={{ width: '50%' }}>{t('calculation.productName', 'Product')}</Box>
-              <Box sx={{ width: '20%' }}>{t('calculation.unit', 'Unit')}</Box>
-              <Box sx={{ width: '15%', textAlign: 'center' }}>{t('calculation.quantity', 'Qty')}</Box>
-              <Box sx={{ width: '15%', textAlign: 'right' }}>{t('calculation.price', 'Price')}</Box>
+              <Box sx={{ width: '50%' }}>{t('calculation.productName')}</Box>
+              <Box sx={{ width: '20%' }}>{t('calculation.unit')}</Box>
+              <Box sx={{ width: '15%', textAlign: 'center' }}>{t('calculation.quantity')}</Box>
+              <Box sx={{ width: '15%', textAlign: 'right' }}>{t('calculation.price')}</Box>
             </Box>
             <Divider />
             <Box sx={{ maxHeight: 420, overflowY: 'auto' }}>
               {!availableIngredients.length ? (
                 <Typography sx={{ p: 3, textAlign: 'center', color: 'text.secondary' }}>
-                  {t('calculation.noProducts', 'No products')}
+                  {t('calculation.noProducts')}
                 </Typography>
               ) : (
                 availableIngredients.map((ingredient) => (
@@ -393,7 +393,7 @@ export function TransfersDetailsCalculation({
             fullWidth
             value={searchRight}
             onChange={(e) => setSearchRight(e.target.value)}
-            placeholder={t('calculation.search', 'Search...')}
+            placeholder={t('calculation.search')}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
@@ -414,17 +414,17 @@ export function TransfersDetailsCalculation({
                 fontSize: '0.875rem',
               }}
             >
-              <Box sx={{ width: '40%' }}>{t('calculation.productName', 'Product')}</Box>
-              <Box sx={{ width: '20%' }}>{t('calculation.unitOfMeasurement', 'Unit')}</Box>
-              <Box sx={{ width: '15%', textAlign: 'center' }}>{t('calculation.inStock', 'In stock')}</Box>
-              <Box sx={{ width: '15%', textAlign: 'center' }}>{t('calculation.quantity', 'Qty')}</Box>
+              <Box sx={{ width: '40%' }}>{t('calculation.productName')}</Box>
+              <Box sx={{ width: '20%' }}>{t('calculation.unitOfMeasurement')}</Box>
+              <Box sx={{ width: '15%', textAlign: 'center' }}>{t('calculation.inStock')}</Box>
+              <Box sx={{ width: '15%', textAlign: 'center' }}>{t('calculation.quantity')}</Box>
               <Box sx={{ width: '10%' }} />
             </Box>
             <Divider />
             <Box sx={{ maxHeight: 420, overflowY: 'auto', minHeight: 220 }}>
               {!selectedIngredients.length ? (
                 <Typography sx={{ p: 3, textAlign: 'center', color: 'text.secondary' }}>
-                  {t('calculation.noProductsSelected', 'No selected products')}
+                  {t('calculation.noProductsSelected')}
                 </Typography>
               ) : (
                 selectedIngredients.map((ingredient) => (
@@ -478,7 +478,7 @@ export function TransfersDetailsCalculation({
 
       <Paper sx={{ p: 2, mb: 3 }}>
         <Typography variant="subtitle2">
-          {t('calculation.total', 'Total')}: {formatPrice(totalAmount)} UZS
+          {t('calculation.total')}: {formatPrice(totalAmount)} UZS
         </Typography>
       </Paper>
 
@@ -492,10 +492,10 @@ export function TransfersDetailsCalculation({
           {saving ? (
             <>
               <CircularProgress size={20} sx={{ mr: 1 }} />
-              {t('common.saving', 'Saving...')}
+              {t('common.saving')}
             </>
           ) : (
-            t('common.save', 'Save')
+            t('common.save')
           )}
         </Button>
       </Box>

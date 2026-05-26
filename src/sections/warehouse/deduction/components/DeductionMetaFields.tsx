@@ -64,7 +64,7 @@ export const DeductionMetaFields = React.memo(function DeductionMetaFields({
 
     return (
         <GeneralInformation
-            title={t('deductions.details', 'Deduction Details')}
+            title={t('deductions.details')}
             isOpen={isOpen}
             onToggle={onToggle}
             disabled={disabled}
@@ -78,7 +78,7 @@ export const DeductionMetaFields = React.memo(function DeductionMetaFields({
                 }}
             >
                 <DatePicker
-                    label={`${t('deductions.date', 'Date')} *`}
+                    label={`${t('deductions.date')} *`}
                     value={date ? dayjs(date) : null}
                     onChange={(newDate) => {
                         onDateChange(newDate ? newDate.format('YYYY-MM-DD') : '');
@@ -96,14 +96,14 @@ export const DeductionMetaFields = React.memo(function DeductionMetaFields({
 
                 <TextField
                     select
-                    label={`${t('deductions.storage', 'Storage')} *`}
+                    label={`${t('deductions.storage')} *`}
                     value={storageId}
                     onChange={(e) => onStorageChange(e.target.value)}
                     size="small"
                     SelectProps={{ native: true }}
                     disabled={disabled || storages.length === 0}
                 >
-                    <option value="">{t('deductions.selectStorage', 'Select Storage')}</option>
+                    <option value="">{t('deductions.selectStorage')}</option>
                     {storages.map((s) => (
                         <option key={s.id} value={s.id}>
                             {s.name}
@@ -113,14 +113,14 @@ export const DeductionMetaFields = React.memo(function DeductionMetaFields({
 
                 <TextField
                     select
-                    label={`${t('deductions.group', 'Group')} *`}
+                    label={`${t('deductions.group')} *`}
                     value={groupId}
                     onChange={(e) => onGroupChange(e.target.value)}
                     size="small"
                     SelectProps={{ native: true }}
                     disabled={disabled || groups.length === 0}
                 >
-                    <option value="">{t('deductions.selectGroup', 'Select Group')}</option>
+                    <option value="">{t('deductions.selectGroup')}</option>
                     {groups.map((g) => (
                         <option key={g.id} value={g.id}>
                             {g.name}
@@ -130,7 +130,7 @@ export const DeductionMetaFields = React.memo(function DeductionMetaFields({
 
                 <TextField
                     select
-                    label={t('deductions.status', 'Status')}
+                    label={t('deductions.status')}
                     value={status}
                     onChange={(e) => onStatusChange(e.target.value)}
                     size="small"
@@ -146,7 +146,7 @@ export const DeductionMetaFields = React.memo(function DeductionMetaFields({
             </Box>
 
             <TextField
-                label={t('deductions.description', 'Description')}
+                label={t('deductions.description')}
                 value={description}
                 onChange={(e) => onDescriptionChange(e.target.value)}
                 size="small"

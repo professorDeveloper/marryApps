@@ -83,7 +83,7 @@ export const TransfersMetaFields = React.memo(function TransfersMetaFields({
 
     return (
         <GeneralInformation
-            title={t('transfers.details', 'Transfer Details')}
+            title={t('transfers.details')}
             isOpen={isOpen}
             onToggle={onToggle}
             disabled={disabled}
@@ -97,7 +97,7 @@ export const TransfersMetaFields = React.memo(function TransfersMetaFields({
                 }}
             >
                 <DatePicker
-                    label={`${t('deductions.date', 'Date')} *`}
+                    label={`${t('deductions.date')} *`}
                     value={date ? dayjs(date) : null}
                     onChange={(newDate) => {
                         onDateChange(newDate ? newDate.format('YYYY-MM-DD') : '');
@@ -115,14 +115,14 @@ export const TransfersMetaFields = React.memo(function TransfersMetaFields({
 
                 <TextField
                     select
-                    label={`${t('transfers.fromBranch', 'From Branch')} *`}
+                    label={`${t('transfers.fromBranch')} *`}
                     value={fromBranchId}
                     onChange={(e) => onFromBranchChange(e.target.value)}
                     size="small"
                     SelectProps={{ native: true }}
                     disabled={disabled || branches.length === 0}
                 >
-                    <option value="">{t('transfers.selectFromBranch', 'Select From Branch')}</option>
+                    <option value="">{t('transfers.selectFromBranch')}</option>
                     {branches.map((b) => (
                         <option key={b.id} value={b.id}>
                             {b.name}
@@ -132,14 +132,14 @@ export const TransfersMetaFields = React.memo(function TransfersMetaFields({
 
                 <TextField
                     select
-                    label={`${t('transfers.fromStorage', 'From Storage')} *`}
+                    label={`${t('transfers.fromStorage')} *`}
                     value={fromStorageId}
                     onChange={(e) => onFromStorageChange(e.target.value)}
                     size="small"
                     SelectProps={{ native: true }}
                     disabled={disabled || fromStorages.length === 0}
                 >
-                    <option value="">{t('transfers.selectFromStorage', 'Select From Storage')}</option>
+                    <option value="">{t('transfers.selectFromStorage')}</option>
                     {fromStorages.map((s) => (
                         <option key={s.id} value={s.id}>
                             {s.name}
@@ -149,14 +149,14 @@ export const TransfersMetaFields = React.memo(function TransfersMetaFields({
 
                 <TextField
                     select
-                    label={`${t('transfers.toBranch', 'To Branch')} *`}
+                    label={`${t('transfers.toBranch')} *`}
                     value={toBranchId}
                     onChange={(e) => onToBranchChange(e.target.value)}
                     size="small"
                     SelectProps={{ native: true }}
                     disabled={disabled || branches.length === 0}
                 >
-                    <option value="">{t('transfers.selectToBranch', 'Select To Branch')}</option>
+                    <option value="">{t('transfers.selectToBranch')}</option>
                     {branches.map((b) => (
                         <option key={b.id} value={b.id}>
                             {b.name}
@@ -166,14 +166,14 @@ export const TransfersMetaFields = React.memo(function TransfersMetaFields({
 
                 <TextField
                     select
-                    label={`${t('transfers.toStorage', 'To Storage')} *`}
+                    label={`${t('transfers.toStorage')} *`}
                     value={toStorageId}
                     onChange={(e) => onToStorageChange(e.target.value)}
                     size="small"
                     SelectProps={{ native: true }}
                     disabled={disabled || toStorages.length === 0}
                 >
-                    <option value="">{t('transfers.selectToStorage', 'Select To Storage')}</option>
+                    <option value="">{t('transfers.selectToStorage')}</option>
                     {toStorages.map((s) => (
                         <option key={s.id} value={s.id}>
                             {s.name}
@@ -183,14 +183,14 @@ export const TransfersMetaFields = React.memo(function TransfersMetaFields({
 
                 <TextField
                     select
-                    label={`${t('deductions.group', 'Group')} *`}
+                    label={`${t('deductions.group')} *`}
                     value={groupId}
                     onChange={(e) => onGroupChange(e.target.value)}
                     size="small"
                     SelectProps={{ native: true }}
                     disabled={disabled || groups.length === 0}
                 >
-                    <option value="">{t('transfers.selectGroup', 'Select Group')}</option>
+                    <option value="">{t('transfers.selectGroup')}</option>
                     {groups.map((g) => (
                         <option key={g.id} value={g.id}>
                             {g.name}
@@ -200,7 +200,7 @@ export const TransfersMetaFields = React.memo(function TransfersMetaFields({
 
                 <TextField
                     select
-                    label={t('deductions.status', 'Status')}
+                    label={t('deductions.status')}
                     value={status}
                     onChange={(e) => onStatusChange(e.target.value)}
                     size="small"
@@ -216,14 +216,14 @@ export const TransfersMetaFields = React.memo(function TransfersMetaFields({
             </Box>
 
             <TextField
-                label={t('deductions.description', 'Description')}
+                label={t('deductions.description')}
                 value={description}
                 onChange={(e) => onDescriptionChange(e.target.value)}
                 size="small"
                 fullWidth
                 multiline
                 rows={3}
-                placeholder={t('transfers.enterDescription', 'Enter description...')}
+                placeholder={t('transfers.enterDescription')}
                 disabled={disabled}
                 sx={{ mt: 2 }}
             />

@@ -1,11 +1,7 @@
 import type { DataTableColumn } from '../types/types';
 
-import { m } from 'framer-motion';
-
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
-
-import { ACCENT } from '../utils';
 
 export type DataTableTotalsFooterProps<T> = {
   gridTemplateColumns: string;
@@ -24,8 +20,6 @@ export function DataTableTotalsFooter<T>({
 }: DataTableTotalsFooterProps<T>) {
   return (
     <Box
-      component={m.div}
-      layout
       sx={{
         position: 'sticky',
         bottom: 0,
@@ -35,9 +29,9 @@ export function DataTableTotalsFooter<T>({
         alignItems: 'center',
         height: 44,
         px: 1,
- 
-         backgroundColor: 'var(--color-surface-1)',
-        borderTop: '1px solid var(--color-border)',
+
+        backgroundColor: 'var(--bg3)',
+        borderTop: '1px solid var(--border)',
       }}
     >
       {showCheckboxes && <Box />}
@@ -46,7 +40,7 @@ export function DataTableTotalsFooter<T>({
           sx={{
             fontFamily: 'var(--font-sans)',
             fontSize: 12.5,
-            color: 'var(--color-text)',
+            color: 'var(--text)',
             textAlign: 'center',
             fontWeight: 700,
             userSelect: 'none',
@@ -72,7 +66,7 @@ export function DataTableTotalsFooter<T>({
             sx={{
               fontSize: 12.5,
               fontWeight: 700,
-              color: col.total ? 'var(--color-text)' : 'var(--color-text-muted)',
+              color: col.total ? 'var(--text)' : 'var(--text3)',
               opacity: col.total ? 1 : 0.5,
               fontFamily: 'var(--font-sans)',
             }}

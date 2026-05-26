@@ -65,8 +65,10 @@ export function DataTableHeader<T>({
         py: 1.5,
         maxHeight: 52,
         px: 1,
-        backgroundColor: 'var(--color-surface-1)',
-        borderBottom: '2px solid var(--color-border)',
+        backgroundColor: 'transparent',
+        borderBottom: '1px solid var(--border)',
+        borderTopLeftRadius: '8px',
+        borderTopRightRadius: '8px',
         position: 'sticky',
         top: 0,
         zIndex: 2,
@@ -80,8 +82,8 @@ export function DataTableHeader<T>({
             onChange={toggleAllVisible}
             size="small"
             sx={{
-              color: 'var(--color-text-muted)',
-              '&.Mui-checked': { color: 'var(--color-primary)' },
+              color: 'var(--text3)',
+              '&.Mui-checked': { color: 'var(--brand)' },
             }}
           />
         </Box>
@@ -93,7 +95,7 @@ export function DataTableHeader<T>({
             sx={{
               // fontFamily: 'var(--font-sans)',
               fontSize: 12,
-              color: 'var(--color-primary)',
+              color: 'var(--text2)',
               textAlign: 'center',
               userSelect: 'none',
             }}
@@ -114,7 +116,7 @@ export function DataTableHeader<T>({
           <Box
             key={col.key}
             component={m.div}
-            layout
+            // layout
             draggable={canReorder}
             onDragStart={() => {
               headerDragKey.current = col.key;
@@ -147,12 +149,12 @@ export function DataTableHeader<T>({
                 sx={{
                   flex: col.headerActionsAlign === 'end' ? 1 : '0 1 auto',
                   minWidth: 0,
-                  fontSize: '0.8rem',
+                  fontSize: '11px',
                   lineHeight: 1.2,
-                  color: 'var(--color-primary)',
-                  fontWeight: 800,
+                  color: 'var(--text2)',
+                  fontWeight: 700,
                   textTransform: 'uppercase',
-                  letterSpacing: 1.5,
+                  letterSpacing: '.6px',
                   fontFamily: 'var(--font-sans)',
                   whiteSpace: 'normal',
                   wordBreak: 'normal',
@@ -184,8 +186,8 @@ export function DataTableHeader<T>({
                     sx={{
                       width: 24,
                       height: 24,
-                      color: isActiveSort ? ACCENT : 'var(--color-text-muted)',
-                      '&:hover': { color: ACCENT, backgroundColor: 'var(--glow-sm)', boxShadow: 'var(--glow-shadow-md)' },
+                      color: isActiveSort ? ACCENT : 'var(--text-3)',
+                      '&:hover': { color: ACCENT },
                     }}
                   >
                     {sort.key === col.key && sort.dir != null ? (
@@ -211,8 +213,8 @@ export function DataTableHeader<T>({
                     sx={{
                       width: 24,
                       height: 24,
-                      color: filterOn ? 'var(--color-primary)' : 'var(--color-text-muted)',
-                      '&:hover': { color: 'var(--color-primary)', backgroundColor: 'var(--glow-sm)', boxShadow: 'var(--glow-shadow-md)' },
+                      color: filterOn ? 'var(--brand)' : 'var(--text3)',
+                      '&:hover': { color: 'var(--brand)' },
                     }}
                   >
                     <FilterAltIcon sx={{ fontSize: 16 }} />
@@ -235,7 +237,7 @@ export function DataTableHeader<T>({
                 width: 8,
                 cursor: 'col-resize',
                 borderRadius: 1,
-                '&:hover': { backgroundColor: 'var(--glow-sm)', boxShadow: 'var(--glow-shadow-md)' },
+                
               }}
             />
           </Box>

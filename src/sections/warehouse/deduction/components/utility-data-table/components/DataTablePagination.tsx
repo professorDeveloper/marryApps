@@ -8,7 +8,6 @@ import Typography from '@mui/material/Typography';
 
 import { Iconify } from 'src/components/iconify';
 
-import { ACCENT, BORDER } from '../utils';
 
 export type DataTablePaginationProps = {
   page: number;
@@ -51,8 +50,10 @@ export function DataTablePagination({
         px: 2,
         py: 1,
    
-        backgroundColor: 'var(--color-surface-1)',
-        borderTop: '1px solid var(--color-border)',
+        backgroundColor: 'var(--bg2)',
+        borderTop: '1px solid var(--border)',
+        borderBottomLeftRadius: '8px',
+        borderBottomRightRadius: '8px',
         gap: 2,
         flexWrap: 'wrap',
       }}
@@ -62,7 +63,7 @@ export function DataTablePagination({
         <Typography
           sx={{
             fontSize: 12.5,
-            color: 'var(--color-text-muted)',
+            color: 'var(--text2)',
             fontFamily: 'var(--font-sans)',
             whiteSpace: 'nowrap',
           }}
@@ -80,13 +81,13 @@ export function DataTablePagination({
           sx={{
             height: 30,
             fontSize: 12.5,
-            color: 'var(--color-text)',
+            color: 'var(--text)',
             fontFamily: 'var(--font-sans)',
-            backgroundColor: 'var(--color-surface-0)',
+            backgroundColor: 'var(--bg3)',
             borderRadius: 1,
-            '& .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--color-border)' },
-            '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--color-primary)' },
-            '& .MuiSelect-icon': { color: 'var(--color-text-muted)' },
+            '& .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--border)' },
+            '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--brand)' },
+            '& .MuiSelect-icon': { color: 'var(--text2)' },
           }}
         >
           {rowsPerPageOptions.map((opt) => (
@@ -101,7 +102,7 @@ export function DataTablePagination({
       <Typography
         sx={{
           fontSize: 12.5,
-          color: 'var(--color-text-muted)',
+          color: 'var(--text2)',
           fontFamily: 'var(--font-sans)',
           whiteSpace: 'nowrap',
         }}
@@ -120,9 +121,9 @@ export function DataTablePagination({
           sx={{
             width: 28,
             height: 28,
-            color: 'var(--color-text-muted)',
-            '&:hover': { color: 'var(--color-primary)', backgroundColor: 'var(--glow-sm)', boxShadow: 'var(--glow-shadow-md)' },
-            '&.Mui-disabled': { color: 'var(--color-text-subtle)' },
+            color: 'var(--text2)',
+            '&:hover': { color: 'var(--brand)', backgroundColor: 'var(--brand-dim)', boxShadow: 'var(--shadow)' },
+            '&.Mui-disabled': { color: 'var(--text3)' },
           }}
         >
           <Iconify icon="carbon:chevron-left" width={16} />
@@ -134,7 +135,7 @@ export function DataTablePagination({
               key={`ellipsis-${idx}`}
               sx={{
                 fontSize: 12,
-                color: 'var(--color-text-subtle)',
+                color: 'var(--text3)',
                 px: 0.5,
                 userSelect: 'none',
               }}
@@ -154,12 +155,12 @@ export function DataTablePagination({
                 fontSize: 12,
                 fontWeight: p === page ? 700 : 400,
                 fontFamily: 'var(--font-sans)',
-                color: p === page ? 'var(--color-text-on-primary)' : 'var(--color-text-muted)',
-                backgroundColor: p === page ? 'var(--color-primary)' : 'transparent',
+                color: p === page ? '#fff' : 'var(--text2)',
+                backgroundColor: p === page ? 'var(--brand)' : 'transparent',
                 '&:hover': {
-                  backgroundColor: p === page ? 'var(--color-primary)' : 'var(--glow-sm)',
-                  color: p === page ? 'var(--color-text-on-primary)' : 'var(--color-primary)',
-                  boxShadow: 'var(--glow-shadow-md)',
+                  backgroundColor: p === page ? 'var(--brand)' : 'var(--brand-dim)',
+                  color: p === page ? '#fff' : 'var(--brand)',
+                  boxShadow: 'var(--shadow)',
                 },
               }}
             >
@@ -175,9 +176,9 @@ export function DataTablePagination({
           sx={{
             width: 28,
             height: 28,
-            color: 'var(--color-text-muted)',
-            '&:hover': { color: 'var(--color-primary)', backgroundColor: 'var(--glow-sm)', boxShadow: 'var(--glow-shadow-md)' },
-            '&.Mui-disabled': { color: 'var(--color-text-subtle)' },
+            color: 'var(--text2)',
+            '&:hover': { color: 'var(--brand)', backgroundColor: 'var(--brand-dim)', boxShadow: 'var(--shadow)' },
+            '&.Mui-disabled': { color: 'var(--text3)' },
           }}
         >
           <Iconify icon="carbon:chevron-right" width={16} />

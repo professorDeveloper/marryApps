@@ -27,15 +27,15 @@ export const InventoryResultsTable = React.memo<InventoryResultsTableProps>(({ i
                 }}
             >
                 {[
-                    t('calculation.productName', 'Product'),
-                    t('calculation.unit', 'Unit'),
-                    t('calculation.systemQty', 'System Qty'),
-                    t('calculation.countedQty', 'Counted Qty'),
-                    t('calculation.difference', 'Difference'),
-                    t('calculation.pricePerUnit', 'Price/Unit'),
-                    t('calculation.surplus', 'Surplus'),
-                    t('calculation.shortage', 'Shortage'),
-                    t('calculation.remaining', 'Remaining'),
+                    t('calculation.productName'),
+                    t('calculation.unit'),
+                    t('calculation.systemQty'),
+                    t('calculation.countedQty'),
+                    t('calculation.difference'),
+                    t('calculation.pricePerUnit'),
+                    t('calculation.surplus'),
+                    t('calculation.shortage'),
+                    t('calculation.remaining'),
                 ].map((label, i) => (
                     <Typography
                         key={i}

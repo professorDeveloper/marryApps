@@ -298,19 +298,19 @@ const TransfersFormView = React.memo(function TransfersFormView({
         const batchData = api?.getBatchData() ?? [];
 
         if (batchData.length === 0) {
-            toast.error(t('deductions.itemsRequired', 'Please add at least one item'));
+            toast.error(t('deductions.itemsRequired'));
             return;
         }
         if (!formData.from_branch_id || !formData.to_branch_id) {
-            toast.error(t('transfers.branchRequired', 'Please select both branches'));
+            toast.error(t('transfers.branchRequired'));
             return;
         }
         if (!formData.from_storage_id || !formData.to_storage_id) {
-            toast.error(t('deductions.storageRequired', 'Please select storages'));
+            toast.error(t('deductions.storageRequired'));
             return;
         }
         if (!formData.act_group_id) {
-            toast.error(t('deductions.groupRequired', 'Please select group'));
+            toast.error(t('deductions.groupRequired'));
             return;
         }
 
@@ -342,11 +342,11 @@ const TransfersFormView = React.memo(function TransfersFormView({
 
             if (isNew && !effectiveTransferId) {
                 await createTransferBatch(payload);
-                toast.success(t('transfers.created', 'Transfer created successfully'));
+                toast.success(t('transfers.created'));
                 navigate(paths.warehouse.transfers.root);
             } else if (effectiveTransferId) {
                 await updateTransferItemsBatch(effectiveTransferId, payload);
-                toast.success(t('transfers.updated', 'Transfer updated successfully'));
+                toast.success(t('transfers.updated'));
                 navigate(paths.warehouse.transfers.root);
             }
         } catch (error) {
@@ -364,29 +364,29 @@ const TransfersFormView = React.memo(function TransfersFormView({
     // ── Status options ────────────────────────────────────────────────────
     const statusOptions = useMemo(
         () => [
-            { value: 'active', label: t('transfers.active', 'Active') },
-            { value: 'draft', label: t('transfers.draft', 'Draft') },
-            { value: 'deleted', label: t('transfers.deleted', 'Deleted') },
+            { value: 'active', label: t('transfers.active') },
+            { value: 'draft', label: t('transfers.draft') },
+            { value: 'deleted', label: t('transfers.deleted') },
         ],
         [t]
     );
 
     // ── Derived ───────────────────────────────────────────────────────────
     const saveLabel = isNew
-        ? t('common.save', 'Save')
-        : t('common.save', 'Save');
+        ? t('common.save')
+        : t('common.save');
 
     const breadcrumbs = useMemo(
         () => [
             { name: t('app'), href: paths.menu.root },
             {
-                name: t('overview.warehouse.transfers', 'Transfers'),
+                name: t('overview.warehouse.transfers'),
                 href: paths.warehouse.transfers.root,
             },
             {
                 name: isNew
-                    ? t('transfers.new', 'New')
-                    : String(transfer?.id || t('common.edit', 'Edit')),
+                    ? t('transfers.new')
+                    : String(transfer?.id || t('common.edit')),
                 href: '',
             },
         ],
@@ -394,8 +394,8 @@ const TransfersFormView = React.memo(function TransfersFormView({
     );
 
     const heading = isNew
-        ? t('transfers.createNew', 'Create New Transfer')
-        : t('transfers.edit', 'Edit Transfer');
+        ? t('transfers.createNew')
+        : t('transfers.edit');
 
     // ── Render ────────────────────────────────────────────────────────────
     return (
@@ -466,14 +466,14 @@ const TransfersFormView = React.memo(function TransfersFormView({
                 {!isNew && !transfer && !pageLoading && (
                     <Box sx={{ py: 4 }}>
                         <Typography color="text.secondary">
-                            {t('error.notFound', 'Not found')}
+                            {t('error.notFound')}
                         </Typography>
                         <Button
                             sx={{ mt: 2 }}
                             variant="contained"
                             onClick={() => navigate(paths.warehouse.transfers.root)}
                         >
-                            {t('overview.warehouse.transfers', 'Transfers')}
+                            {t('overview.warehouse.transfers')}
                         </Button>
                     </Box>
                 )}

@@ -6,6 +6,9 @@ import React, { useRef, useMemo, useState, useEffect, useCallback, useLayoutEffe
 
 import Add from '@mui/icons-material/Add';
 import SearchIcon from '@mui/icons-material/Search';
+import SortByAlphaIcon from '@mui/icons-material/SortByAlpha';
+import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
+import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import {
     Box,
@@ -13,8 +16,11 @@ import {
     Button,
     Tooltip,
     Checkbox,
+    MenuItem,
+    TextField,
     Typography,
     IconButton,
+    InputAdornment,
     CircularProgress,
 } from '@mui/material';
 
@@ -29,6 +35,15 @@ export const AvailableItemsPanel = React.memo<AvailableItemsPanelProps>(({
     onAddNewItem,
     metaFieldsOpen,
     tableHeight,
+    filters,
+    warehouseOptions,
+    groupOptions,
+    selectedWarehouseId,
+    onWarehouseChange,
+    selectedGroupId,
+    onGroupChange,
+    warehouseAllowedIdSet,
+    warehouseFilterLoading,
 }) => {
     const renderStartedAtRef = useRef<number>(performance.now());
     renderStartedAtRef.current = performance.now();
@@ -36,6 +51,7 @@ export const AvailableItemsPanel = React.memo<AvailableItemsPanelProps>(({
     const commitSeqRef = useRef(0);
 
     const [searchTerm, setSearchTerm] = useState('');
+    const [sortDir, setSortDir] = useState<'asc' | 'desc' | null>('asc');
     const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
     const scrollRef = useRef<HTMLDivElement>(null);
     const selectedCountRef = useRef(0);
@@ -44,14 +60,26 @@ export const AvailableItemsPanel = React.memo<AvailableItemsPanelProps>(({
     const filtered = useMemo(
         () => {
             const query = searchTerm.trim().toLowerCase();
-            return items.filter((item) => {
+            const next = items.filter((item) => {
                 if (excludedIdSet.has(item.id)) return false;
+                if (warehouseAllowedIdSet && !warehouseAllowedIdSet.has(item.id)) return false;
                 if (!query) return true;
                 return item.name.toLowerCase().includes(query);
             });
+            if (!sortDir) return next;
+            const factor = sortDir === 'asc' ? 1 : -1;
+            return next.sort(
+                (a, b) =>
+                    factor *
+                    a.name.localeCompare(b.name, undefined, { sensitivity: 'base', numeric: true })
+            );
         },
-        [items, excludedIdSet, searchTerm]
+        [items, excludedIdSet, searchTerm, warehouseAllowedIdSet, sortDir]
     );
+
+    const cycleSort = useCallback(() => {
+        setSortDir((prev) => (prev === 'asc' ? 'desc' : prev === 'desc' ? null : 'asc'));
+    }, []);
 
     useEffect(() => {
         filteredCountRef.current = filtered.length;
@@ -97,7 +125,7 @@ export const AvailableItemsPanel = React.memo<AvailableItemsPanelProps>(({
             return next;
         });
     }, []);
-    
+
     const handleSelectAll = useCallback(() => {
         if (filtered.length != selectedItems.size) {
             setSelectedItems(new Set(filtered.map(item => item.id)));
@@ -141,16 +169,18 @@ export const AvailableItemsPanel = React.memo<AvailableItemsPanelProps>(({
     }, [tableHeight, metaFieldsOpen]);
 
     return (
-        <Paper sx={{ 
+        <Paper sx={{
             p: 2,
-            maxHeight: calculatedMaxHeight,
+            // maxHeight: calculatedMaxHeight,
+            height: typeof tableHeight === 'number' ? tableHeight + 42 : 'auto',
             display: 'flex',
             flexDirection: 'column',
-            bgcolor: 'var(--color-surface-1)',
-         }}>
+            bgcolor: 'var(--surface)',
+            position: 'relative',
+        }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                 <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                    {t('warehouse.invoiceDetails.availableIngredients', 'Available Items')}
+                    {t('warehouse.invoiceDetails.availableIngredients')}
                 </Typography>
                 {onAddNewItem && (
                     <Tooltip title={t('ingredients.add')}>
@@ -166,6 +196,58 @@ export const AvailableItemsPanel = React.memo<AvailableItemsPanelProps>(({
                 )}
 
             </Box>
+
+            {(filters?.warehouse?.enabled || filters?.group?.enabled) && (
+                <Box sx={{ display: 'flex', gap: 1, mb: 1.5 }}>
+                    {filters?.warehouse?.enabled && (
+                        <TextField
+                            select
+                            size="small"
+                            fullWidth
+                            label={t('warehouse.invoiceDetails.filterWarehouse')}
+                            value={selectedWarehouseId ?? ''}
+                            onChange={(e) => onWarehouseChange?.(e.target.value)}
+                            InputProps={
+                                warehouseFilterLoading
+                                    ? {
+                                        endAdornment: (
+                                            <InputAdornment position="end" sx={{ mr: 2 }}>
+                                                <CircularProgress size={14} />
+                                            </InputAdornment>
+                                        ),
+                                    }
+                                    : undefined
+                            }
+                            sx={{ flex: 1 }}
+                        >
+                            <MenuItem value="">
+                                <em>{t('warehouse.invoiceDetails.filterAll')}</em>
+                            </MenuItem>
+                            {(warehouseOptions ?? []).map((opt) => (
+                                <MenuItem key={opt.id} value={opt.id}>{opt.name}</MenuItem>
+                            ))}
+                        </TextField>
+                    )}
+                    {filters?.group?.enabled && (
+                        <TextField
+                            select
+                            size="small"
+                            fullWidth
+                            label={t('warehouse.invoiceDetails.filterGroup')}
+                            value={selectedGroupId ?? ''}
+                            onChange={(e) => onGroupChange?.(e.target.value)}
+                            sx={{ flex: 1 }}
+                        >
+                            <MenuItem value="">
+                                <em>{t('warehouse.invoiceDetails.filterAll')}</em>
+                            </MenuItem>
+                            {(groupOptions ?? []).map((opt) => (
+                                <MenuItem key={opt.id} value={opt.id}>{opt.name}</MenuItem>
+                            ))}
+                        </TextField>
+                    )}
+                </Box>
+            )}
 
             <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1.5 }}>
                 <Tooltip title={isAllSelected ? t('warehouse.invoiceDetails.deselectAll') : t('warehouse.invoiceDetails.selectAll')}>
@@ -186,11 +268,11 @@ export const AvailableItemsPanel = React.memo<AvailableItemsPanelProps>(({
                         alignItems: 'center',
                         flex: 1,
                         border: '1px solid',
-                        borderColor: 'var(--color-border)',
+                        borderColor: 'var(--border)',
                         borderRadius: 1,
                         px: 1,
                         '&:focus-within': {
-                            borderColor: 'var(--color-primary)',
+                            borderColor: 'var(--accent)',
                             outline: 'none',
                         },
                     }}
@@ -212,6 +294,26 @@ export const AvailableItemsPanel = React.memo<AvailableItemsPanelProps>(({
                     />
                     <SearchIcon sx={{ fontSize: 20, color: 'action.active' }} />
                 </Box>
+
+                <Tooltip
+                    title={
+                        sortDir === 'asc'
+                            ? t('warehouse.invoiceDetails.sortAsc') ?? 'A → Z'
+                            : sortDir === 'desc'
+                                ? t('warehouse.invoiceDetails.sortDesc') ?? 'Z → A'
+                                : t('warehouse.invoiceDetails.sortNone') ?? 'Unsorted'
+                    }
+                >
+                    <IconButton size="small" onClick={cycleSort}>
+                        {sortDir === 'asc' ? (
+                            <ArrowUpwardIcon fontSize="small" />
+                        ) : sortDir === 'desc' ? (
+                            <ArrowDownwardIcon fontSize="small" />
+                        ) : (
+                            <SortByAlphaIcon fontSize="small" />
+                        )}
+                    </IconButton>
+                </Tooltip>
 
             </Box>
 
@@ -267,21 +369,31 @@ export const AvailableItemsPanel = React.memo<AvailableItemsPanelProps>(({
                 )}
             </Box>
 
-            <Button
-                fullWidth
-                variant="contained"
-                endIcon={<ChevronRightIcon />}
-                onClick={() => {
-                    if (selectedItems.size > 0) {
-                        onMoveRight(Array.from(selectedItems));
-                        setSelectedItems(new Set());
-                    }
-                }}
-                disabled={loading || selectedItems.size === 0}
-                sx={{ mt: 1.5 }}
-            >
-                {t('warehouse.invoiceDetails.addSelected')} ({selectedItems.size})
-            </Button>
+            {selectedItems.size > 0 && (
+                <Box
+                    sx={{
+                        position: 'absolute',
+                        bottom: 16,
+                        right: 16,
+                        zIndex: 1,
+                    }}
+                >
+                    <Button
+                        variant="contained"
+                        size="small"
+                        onClick={() => {
+                            if (selectedItems.size > 0) {
+                                onMoveRight(Array.from(selectedItems));
+                                setSelectedItems(new Set());
+                            }
+                        }} sx={{
+                            boxShadow: 2,
+                        }}
+                    >
+                        {t('mealsProducts.addSelected')} ({selectedItems.size})
+                    </Button>
+                </Box>
+            )}
         </Paper>
     );
 });

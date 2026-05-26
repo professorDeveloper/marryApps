@@ -32,10 +32,10 @@ export function DataTableColumnMenu<T>({
         sx: {
           mt: 1,
           minWidth: 260,
-          backgroundColor: 'var(--color-surface-0)',
-          border: '1px solid var(--color-border)',
+          backgroundColor: 'var(--bg3)',
+          border: '1px solid var(--border)',
           backdropFilter: 'blur(12px)',
-          boxShadow: 'var(--glow-shadow-md)',
+          boxShadow: 'var(--shadow)',
         },
       }}
     >
@@ -44,13 +44,13 @@ export function DataTableColumnMenu<T>({
           px: 1.5,
           py: 1,
           fontSize: 12,
-          color: 'var(--color-text-muted)',
+          color: 'var(--text2)',
           fontFamily: 'var(--font-sans)',
         }}
       >
         Columns
       </Typography>
-      <Divider sx={{ borderColor: 'var(--color-border)' }} />
+      <Divider sx={{ borderColor: 'var(--border)' }} />
       {columns.map((c) => {
         const toggleable = c.toggleable !== false;
         const checked = visibility[c.key] !== false;
@@ -64,8 +64,8 @@ export function DataTableColumnMenu<T>({
             sx={{
               fontSize: 13,
               '&:hover': {
-                backgroundColor: 'var(--glow-sm)',
-                boxShadow: 'var(--glow-shadow-md)',
+                backgroundColor: 'var(--brand-dim)',
+                boxShadow: 'var(--shadow)',
               },
             }}
           >
@@ -74,8 +74,8 @@ export function DataTableColumnMenu<T>({
               checked={checked}
               sx={{
                 mr: 1,
-                color: 'var(--color-text-muted)',
-                '&.Mui-checked': { color: 'var(--color-primary)' },
+                color: 'var(--text2)',
+                '&.Mui-checked': { color: 'var(--brand)' },
               }}
             />
             {c.label}

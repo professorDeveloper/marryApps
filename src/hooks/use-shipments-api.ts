@@ -70,7 +70,7 @@ export function useShipmentsAPI() {
         return normalizeListResponse(response);
       } catch (error) {
         const axiosError = error as AxiosError<{ message?: string }>;
-        const message = axiosError?.response?.data?.message || t('shipments.messages.fetchFailed', 'Failed to fetch shipments');
+        const message = axiosError?.response?.data?.message || t('shipments.messages.fetchFailed');
         toast.error(message);
         return { data: [], limit: 1000, offset: 0, total: 0 };
       }
@@ -85,11 +85,11 @@ export function useShipmentsAPI() {
           endpoints.shipments.batch,
           payload
         );
-        toast.success(t('shipments.messages.created', 'Shipment created successfully'));
+        toast.success(t('shipments.messages.created'));
         return normalizeBatchResponse(response);
       } catch (error) {
         const axiosError = error as AxiosError<{ message?: string }>;
-        const message = axiosError?.response?.data?.message || t('shipments.messages.createFailed', 'Failed to create shipment');
+        const message = axiosError?.response?.data?.message || t('shipments.messages.createFailed');
         toast.error(message);
         throw error;
       }
@@ -106,7 +106,7 @@ export function useShipmentsAPI() {
         return normalizeBatchResponse(response);
       } catch (error) {
         const axiosError = error as AxiosError<{ message?: string }>;
-        const message = axiosError?.response?.data?.message || t('shipments.messages.fetchOneFailed', 'Failed to fetch shipment');
+        const message = axiosError?.response?.data?.message || t('shipments.messages.fetchOneFailed');
         toast.error(message);
         return null;
       }
@@ -122,11 +122,11 @@ export function useShipmentsAPI() {
           {}
         );
         const normalized = response as ShipmentActionApiResponse;
-        toast.success(normalized.message || t('shipments.messages.confirmed', 'Shipment confirmed'));
+        toast.success(normalized.message || t('shipments.messages.confirmed'));
         return normalized;
       } catch (error) {
         const axiosError = error as AxiosError<{ message?: string }>;
-        const message = axiosError?.response?.data?.message || t('shipments.messages.confirmFailed', 'Failed to confirm shipment');
+        const message = axiosError?.response?.data?.message || t('shipments.messages.confirmFailed');
         toast.error(message);
         throw error;
       }
@@ -142,11 +142,11 @@ export function useShipmentsAPI() {
           {}
         );
         const normalized = response as ShipmentActionApiResponse;
-        toast.success(normalized.message || t('shipments.messages.cancelled', 'Shipment cancelled'));
+        toast.success(normalized.message || t('shipments.messages.cancelled'));
         return normalized;
       } catch (error) {
         const axiosError = error as AxiosError<{ message?: string }>;
-        const message = axiosError?.response?.data?.message || t('shipments.messages.cancelFailed', 'Failed to cancel shipment');
+        const message = axiosError?.response?.data?.message || t('shipments.messages.cancelFailed');
         toast.error(message);
         throw error;
       }
@@ -158,10 +158,10 @@ export function useShipmentsAPI() {
     async (id: string): Promise<void> => {
       try {
         await deleter(endpoints.shipments.delete(id));
-        toast.success(t('shipments.messages.deleted', 'Shipment deleted'));
+        toast.success(t('shipments.messages.deleted'));
       } catch (error) {
         const axiosError = error as AxiosError<{ message?: string }>;
-        const message = axiosError?.response?.data?.message || t('shipments.messages.deleteFailed', 'Failed to delete shipment');
+        const message = axiosError?.response?.data?.message || t('shipments.messages.deleteFailed');
         toast.error(message);
         throw error;
       }
@@ -173,10 +173,10 @@ export function useShipmentsAPI() {
     async (id: string, itemId: string): Promise<void> => {
       try {
         await deleter(endpoints.shipments.deleteItem(id, itemId));
-        toast.success(t('shipments.messages.itemDeleted', 'Shipment item deleted'));
+        toast.success(t('shipments.messages.itemDeleted'));
       } catch (error) {
         const axiosError = error as AxiosError<{ message?: string }>;
-        const message = axiosError?.response?.data?.message || t('shipments.messages.itemDeleteFailed', 'Failed to delete shipment item');
+        const message = axiosError?.response?.data?.message || t('shipments.messages.itemDeleteFailed');
         toast.error(message);
         throw error;
       }
@@ -191,11 +191,11 @@ export function useShipmentsAPI() {
           endpoints.shipments.update(id),
           payload
         );
-        toast.success(t('shipments.messages.updated', 'Shipment updated successfully'));
+        toast.success(t('shipments.messages.updated'));
         return normalizeBatchResponse(response);
       } catch (error) {
         const axiosError = error as AxiosError<{ message?: string }>;
-        const message = axiosError?.response?.data?.message || t('shipments.messages.updateFailed', 'Failed to update shipment');
+        const message = axiosError?.response?.data?.message || t('shipments.messages.updateFailed');
         toast.error(message);
         throw error;
       }
@@ -210,11 +210,11 @@ export function useShipmentsAPI() {
           endpoints.shipments.items(id),
           payload
         );
-        toast.success(t('shipments.messages.itemsAdded', 'Shipment items added successfully'));
+        toast.success(t('shipments.messages.itemsAdded'));
         return normalizeBatchResponse(response);
       } catch (error) {
         const axiosError = error as AxiosError<{ message?: string }>;
-        const message = axiosError?.response?.data?.message || t('shipments.messages.itemsAddFailed', 'Failed to add shipment items');
+        const message = axiosError?.response?.data?.message || t('shipments.messages.itemsAddFailed');
         toast.error(message);
         throw error;
       }

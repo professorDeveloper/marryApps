@@ -124,7 +124,7 @@ export function ToolbarSearch({
                 <Iconify
                   icon="eva:search-fill"
                   width={18}
-                  sx={{ color: 'var(--color-text-muted)' }}
+                  sx={{ color: 'var(--text-3)' }}
                 />
               </InputAdornment>
             ),
@@ -135,16 +135,17 @@ export function ToolbarSearch({
           minWidth: 200,
           maxWidth: 320,
           '& .MuiInputBase-root': {
-            height: 34,
-            fontSize: 12.5,
-            backgroundColor: 'rgba(9,9,11,0.7)',
-            borderRadius: 1,
+            height: 36,
+            fontSize: 13.5,
+            backgroundColor: 'var(--bg2)',
+            borderRadius: '6px',
             fontFamily: 'var(--font-sans)',
           },
-          '& .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--color-border)' },
+          '& .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--border)' },
+          '& .MuiInputBase-root:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--border2)' },
           '& .MuiInputBase-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
-            borderColor: 'var(--color-primary)',
-            boxShadow: '0 0 0 3px var(--glow-md)',
+            borderColor: 'var(--border2)',
+            boxShadow: 'none',
           },
         }}
       />
@@ -266,9 +267,9 @@ export function ToolbarSearch({
           alignItems: 'flex-start',
           gap: 0.5,
           p: 0.5,
-          backgroundColor: 'var(--color-surface-1)',
+          backgroundColor: 'var(--surface)',
           borderRadius: 1,
-          border: '1px solid var(--color-border)',
+          border: '1px solid var(--border)',
           minWidth: 200,
           maxWidth: 600,
           position: 'relative',

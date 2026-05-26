@@ -53,7 +53,7 @@ export const ShipmentsMetaFields = React.memo(function ShipmentsMetaFields({
 
     return (
         <GeneralInformation
-            title={t('shipments.details', 'Shipment Details')}
+            title={t('shipments.details')}
             isOpen={isOpen}
             onToggle={onToggle}
             disabled={disabled}
@@ -67,7 +67,7 @@ export const ShipmentsMetaFields = React.memo(function ShipmentsMetaFields({
                 }}
             >
                 <DatePicker
-                    label={`${t('deductions.date', 'Date')} *`}
+                    label={`${t('deductions.date')} *`}
                     value={dateValue}
                     onChange={(newDate) => {
                         onDateChange(newDate ? newDate.format('YYYY-MM-DD') : '');
@@ -85,14 +85,14 @@ export const ShipmentsMetaFields = React.memo(function ShipmentsMetaFields({
 
                 <TextField
                     select
-                    label={`${t('deductions.storage', 'Warehouse')} *`}
+                    label={`${t('deductions.storage')} *`}
                     value={storageId}
                     onChange={(e) => onStorageChange(e.target.value)}
                     size="small"
                     SelectProps={{ native: true }}
                     disabled={disabled || storages.length === 0}
                 >
-                    <option value="">{t('deductions.selectStorage', 'Select Warehouse')}</option>
+                    <option value="">{t('deductions.selectStorage')}</option>
                     {storages.map((s) => (
                         <option key={s.id} value={s.id}>
                             {s.name}
@@ -102,14 +102,14 @@ export const ShipmentsMetaFields = React.memo(function ShipmentsMetaFields({
 
                 <TextField
                     select
-                    label={`${t('shipments.supplier', 'Supplier')} *`}
+                    label={`${t('shipments.supplier')} *`}
                     value={supplierId}
                     onChange={(e) => onSupplierChange(e.target.value)}
                     size="small"
                     SelectProps={{ native: true }}
                     disabled={disabled || suppliers.length === 0}
                 >
-                    <option value="">{t('shipments.selectSupplier', 'Select Supplier')}</option>
+                    <option value="">{t('shipments.selectSupplier')}</option>
                     {suppliers.map((s) => (
                         <option key={s.id} value={s.id}>
                             {s.name}
@@ -119,14 +119,14 @@ export const ShipmentsMetaFields = React.memo(function ShipmentsMetaFields({
             </Box>
 
             <TextField
-                label={t('deductions.description', 'Description')}
+                label={t('deductions.description')}
                 value={description}
                 onChange={(e) => onDescriptionChange(e.target.value)}
                 size="small"
                 fullWidth
                 multiline
                 rows={3}
-                placeholder={t('shipments.enterDescription', 'Enter description...')}
+                placeholder={t('shipments.enterDescription')}
                 disabled={disabled}
                 sx={{ mt: 2 }}
             />

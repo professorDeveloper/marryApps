@@ -49,12 +49,12 @@ export const InventorySummaryPanel = React.memo<InventorySummaryPanelProps>(({
     return (
         <Paper sx={{ p: 2 }}>
             <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
-                {t('warehouse.invoiceDetails.summary', 'Summary')}
+                {t('warehouse.invoiceDetails.summary')}
             </Typography>
 
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                 <Typography variant="body2" color="text.secondary">
-                    {t('warehouse.invoiceDetails.products', 'Products')}
+                    {t('warehouse.invoiceDetails.products')}
                 </Typography>
                 <Typography variant="body2" sx={{ fontWeight: 600 }}>
                     {itemCount}
@@ -65,7 +65,7 @@ export const InventorySummaryPanel = React.memo<InventorySummaryPanelProps>(({
 
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
                 <Typography variant="body2" color="text.secondary">
-                    {t('inventory.surplus', 'Surplus')}
+                    {t('inventory.surplus')}
                 </Typography>
                 <Typography variant="body2" sx={{ fontWeight: 600, color: 'success.main' }}>
                     {formatPrice(totals.surplus)}
@@ -74,7 +74,7 @@ export const InventorySummaryPanel = React.memo<InventorySummaryPanelProps>(({
 
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
                 <Typography variant="body2" color="text.secondary">
-                    {t('inventory.shortage', 'Shortage')}
+                    {t('inventory.shortage')}
                 </Typography>
                 <Typography variant="body2" sx={{ fontWeight: 600, color: 'error.main' }}>
                     {formatPrice(totals.shortage)}
@@ -83,7 +83,7 @@ export const InventorySummaryPanel = React.memo<InventorySummaryPanelProps>(({
 
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
                 <Typography variant="body2" color="text.secondary">
-                    {t('inventory.remaining', 'Remaining')}
+                    {t('inventory.remaining')}
                 </Typography>
                 <Typography variant="body2" sx={{ fontWeight: 600 }}>
                     {formatPrice(totals.remaining)}
@@ -111,7 +111,7 @@ export const InventorySummaryPanel = React.memo<InventorySummaryPanelProps>(({
                     {isSaving ? (
                         <CircularProgress size={18} sx={{ color: 'white' }} />
                     ) : (
-                        t('common.save', 'Save')
+                        t('common.save')
                     )}
                 </Button>
             </Box>

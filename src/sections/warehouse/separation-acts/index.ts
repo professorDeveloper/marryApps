@@ -4,3 +4,4 @@ export { default as SeparationActsFormView } from './components/SeparationActsFo
 
 export type { Ingredient, SelectOption, SeparationActFormData } from './types';
 export type { SeparationActsLineItemsApi } from './components/SeparationActsLineItems';
+export { SeparationActsListView } from './separation-acts-list-view';

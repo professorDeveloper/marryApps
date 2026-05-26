@@ -71,6 +71,16 @@ export interface AddedItemRowProps {
 // Panel-level prop types
 // ---------------------------------------------------------------------------
 
+export interface PickerFilterOption {
+    id: string;
+    name: string;
+}
+
+export interface PickerFiltersConfig {
+    warehouse?: { enabled: boolean };
+    group?: { enabled: boolean };
+}
+
 export interface AvailableItemsPanelProps {
     items: PickerItem[];
     loading?: boolean;
@@ -82,6 +92,18 @@ export interface AvailableItemsPanelProps {
     metaFieldsOpen?: boolean;
     /** Base height for the panel (adjusted by metaFieldsOpen) */
     tableHeight?: string | number;
+    /** Optional warehouse + group filter UI */
+    filters?: PickerFiltersConfig;
+    warehouseOptions?: PickerFilterOption[];
+    groupOptions?: PickerFilterOption[];
+    selectedWarehouseId?: string;
+    onWarehouseChange?: (id: string) => void;
+    selectedGroupId?: string;
+    onGroupChange?: (id: string) => void;
+    /** When set, available list is restricted to items whose id is in this set */
+    warehouseAllowedIdSet?: Set<string> | null;
+    /** Loading indicator for the warehouse-derived allowed-id set */
+    warehouseFilterLoading?: boolean;
 }
 
 export interface AddedItemsPanelProps {
@@ -171,4 +193,6 @@ export interface ItemPickerSectionProps {
     metaFieldsOpen?: boolean;
     /** Base height for the panels (adjusted by metaFieldsOpen) */
     tableHeight?: string | number;
+    /** Optional warehouse + ingredient-group filter UI in the Available panel */
+    filters?: PickerFiltersConfig;
 }

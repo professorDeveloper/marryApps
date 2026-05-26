@@ -125,8 +125,8 @@ const DeductionFormView = React.memo(function DeductionFormView({
     // ── Status options ────────────────────────────────────────────────────
     const statusOptions = useMemo(
         () => [
-            { value: 'active', label: t('deductions.active', 'Active') },
-            { value: 'draft', label: t('deductions.draft', 'Draft') },
+            { value: 'active', label: t('deductions.active') },
+            { value: 'draft', label: t('deductions.draft') },
         ],
         [t]
     );
@@ -243,15 +243,15 @@ const DeductionFormView = React.memo(function DeductionFormView({
         const batchData = api?.getBatchData() ?? [];
 
         if (batchData.length === 0) {
-            toast.error(t('deductions.itemsRequired', 'Please add at least one item'));
+            toast.error(t('deductions.itemsRequired'));
             return;
         }
         if (!formData.storage_id) {
-            toast.error(t('deductions.storageRequired', 'Please select storage'));
+            toast.error(t('deductions.storageRequired'));
             return;
         }
         if (!formData.act_group_id) {
-            toast.error(t('deductions.groupRequired', 'Please select group'));
+            toast.error(t('deductions.groupRequired'));
             return;
         }
 
@@ -284,14 +284,14 @@ const DeductionFormView = React.memo(function DeductionFormView({
                 if (result) {
                     setCreatedDeductionId(result.id);
                     setDeduction(result);
-                    toast.success(t('deductions.created', 'Deduction created successfully'));
+                    toast.success(t('deductions.created'));
                     navigate(paths.warehouse.deductions.root);
                 }
             } else if (targetId) {
                 const result = await updateDeductionItemsBatch(targetId, batchData);
                 if (result) {
                     setDeduction(result);
-                    toast.success(t('deductions.updated', 'Deduction updated successfully'));
+                    toast.success(t('deductions.updated'));
                     navigate(paths.warehouse.deductions.root);
                 }
             }
@@ -320,20 +320,20 @@ const DeductionFormView = React.memo(function DeductionFormView({
 
     // ── Derived ───────────────────────────────────────────────────────────
     const saveLabel = isNew
-        ? t('common.save', 'Save')
-        : t('common.save', 'Save');
+        ? t('common.save')
+        : t('common.save');
 
     const breadcrumbs = useMemo(
         () => [
             { name: t('app'), href: paths.menu.root },
             {
-                name: t('deductions.title', 'Deductions'),
+                name: t('deductions.title'),
                 href: paths.warehouse.deductions.root,
             },
             {
                 name: isNew
-                    ? t('deductions.new', 'New')
-                    : String(deduction?.number || t('common.edit', 'Edit')),
+                    ? t('deductions.new')
+                    : String(deduction?.number || t('common.edit')),
                 href: '',
             },
         ],
@@ -341,8 +341,8 @@ const DeductionFormView = React.memo(function DeductionFormView({
     );
 
     const heading = isNew
-        ? t('deductions.createNew', 'Create New Deduction')
-        : t('deductions.edit', 'Edit Deduction');
+        ? t('deductions.createNew')
+        : t('deductions.edit');
 
     // ── Render ────────────────────────────────────────────────────────────
     return (
@@ -405,14 +405,14 @@ const DeductionFormView = React.memo(function DeductionFormView({
                 {!isNew && !deduction && !pageLoading && (
                     <Box sx={{ py: 4 }}>
                         <Typography color="text.secondary">
-                            {t('error.notFound', 'Not found')}
+                            {t('error.notFound')}
                         </Typography>
                         <Button
                             sx={{ mt: 2 }}
                             variant="contained"
                             onClick={() => navigate(paths.warehouse.deductions.root)}
                         >
-                            {t('deductions.title', 'Deductions')}
+                            {t('deductions.title')}
                         </Button>
                     </Box>
                 )}

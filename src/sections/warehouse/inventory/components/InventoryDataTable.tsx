@@ -1,17 +1,17 @@
 import type { Inventory } from '../types';
 
 import dayjs from 'dayjs';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Button } from '@mui/material';
+import { Button, MenuItem, TextField } from '@mui/material';
 
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
 
 import { Iconify } from 'src/components/iconify';
 
-import { DataTable } from 'src/sections/warehouse/deduction/components/utility-data-table';
+import { DataTable } from 'src/sections/common/data-table';
 
 import { useInventory } from '../hooks/use-inventory';
 import { RouterLink } from 'src/routes/components';
@@ -95,6 +95,9 @@ export function InventoryDataTable({
     handleView: defaultView,
   } = useInventory();
 
+  const [storageFilter, setStorageFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+
   const handleEdit = onEdit || defaultEdit;
   const handleDelete = onDelete || defaultDelete;
   const handleView = onView || defaultView;
@@ -103,7 +106,7 @@ export function InventoryDataTable({
     () => [
       {
         key: 'number',
-        label: t('inventory.number', 'Number'),
+        label: t('inventory.number'),
         sortable: true,
         width: '0.8fr',
         align: 'left' as const,
@@ -111,7 +114,7 @@ export function InventoryDataTable({
       },
       {
         key: 'date',
-        label: t('inventory.date', 'Date'),
+        label: t('inventory.date'),
         sortable: true,
         width: '1fr',
         align: 'left' as const,
@@ -122,9 +125,8 @@ export function InventoryDataTable({
       },
       {
         key: 'storage_id',
-        label: t('inventory.storage', 'Storage'),
+        label: t('inventory.storage'),
         sortable: true,
-        filter: { type: 'multi' as const },
         width: '1.2fr',
         align: 'left' as const,
         getValue: (row: unknown) =>
@@ -132,7 +134,7 @@ export function InventoryDataTable({
       },
       {
         key: 'description',
-        label: t('inventory.description', 'Description'),
+        label: t('inventory.description'),
         sortable: true,
         width: '1.5fr',
         align: 'left' as const,
@@ -140,9 +142,8 @@ export function InventoryDataTable({
       },
       {
         key: 'status',
-        label: t('inventory.status', 'Status'),
+        label: t('inventory.status'),
         sortable: true,
-        filter: { type: 'multi' as const, options: ['active', 'draft', 'deleted'] },
         width: '0.8fr',
         align: 'left' as const,
         getValue: (row: unknown) => (row as Inventory)?.status || 'draft',
@@ -152,7 +153,7 @@ export function InventoryDataTable({
       },
       {
         key: 'remaining_amount',
-        label: t('inventory.remainingAmount', 'Remaining Amount'),
+        label: t('inventory.remainingAmount'),
         sortable: true,
         width: '1fr',
         align: 'right' as const,
@@ -165,7 +166,7 @@ export function InventoryDataTable({
       },
       {
         key: 'shortage_amount',
-        label: t('inventory.shortageAmount', 'Shortage Amount'),
+        label: t('inventory.shortageAmount'),
         sortable: true,
         width: '1fr',
         align: 'right' as const,
@@ -178,7 +179,7 @@ export function InventoryDataTable({
       },
       {
         key: 'surplus_amount',
-        label: t('inventory.surplusAmount', 'Surplus Amount'),
+        label: t('inventory.surplusAmount'),
         sortable: true,
         width: '1fr',
         align: 'right' as const,
@@ -191,7 +192,7 @@ export function InventoryDataTable({
       },
       {
         key: 'actions',
-        label: t('actions', 'Actions'),
+        label: t('actions'),
         sortable: false,
         filterable: false,
         width: '0.7fr',
@@ -209,23 +210,35 @@ export function InventoryDataTable({
     [t, handleEdit, handleDelete, handleView]
   );
 
+  const storageOptions = useMemo(
+    () => [...new Set(inventories.map((i: any) => i._expand?.storage_id?.name || i.storage_id).filter(Boolean))] as string[],
+    [inventories]
+  );
+
+  const filteredInventories = useMemo(
+    () => inventories.filter((i: any) => {
+      const storageName = i._expand?.storage_id?.name || i.storage_id || '';
+      const matchesStorage = !storageFilter || storageName === storageFilter;
+      const matchesStatus = !statusFilter || (i as Inventory).status === statusFilter;
+      return matchesStorage && matchesStatus;
+    }),
+    [inventories, storageFilter, statusFilter]
+  );
+
   return (
     <DataTable
       persistKey="warehouse-inventory-utility"
       columns={columns}
-      data={inventories}
-      searchValue={searchQuery}
-      onSearchChange={(value) => {
-        setSearchQuery(value);
-        setPaginationModel({ ...paginationModel, page: 0 });
-        return;
+      data={filteredInventories}
+      search={{ value: searchQuery, onChange: (value) => { setSearchQuery(value); setPaginationModel({ ...paginationModel, page: 0 }); } }}
+      pagination={{
+        page: paginationModel.page,
+        rowsPerPage: paginationModel.pageSize,
+        totalCount: total,
+        rowsPerPageOptions: [10, 20, 50, 100],
+        onPageChange: (page) => setPaginationModel({ ...paginationModel, page }),
+        onRowsPerPageChange: (pageSize) => setPaginationModel({ ...paginationModel, pageSize }),
       }}
-      page={paginationModel.page}
-      rowsPerPage={paginationModel.pageSize}
-      totalCount={total}
-      rowsPerPageOptions={[10, 20, 50, 100]}
-      onPageChange={(page) => setPaginationModel({ ...paginationModel, page })}
-      onRowsPerPageChange={(pageSize) => setPaginationModel({ ...paginationModel, pageSize })}
       defaultConfig={{
         order: ['number', 'date', 'storage_id', 'description', 'status', 'remaining_amount', 'shortage_amount', 'surplus_amount', 'actions'],
         visibility: {
@@ -251,7 +264,33 @@ export function InventoryDataTable({
           actions: '0.7fr',
         },
       }}
-      onReset={() => {}}
+      onReset={() => { setStorageFilter(''); setStatusFilter(''); }}
+      filterRow={
+        <>
+          <TextField
+            select size="small" label="Storage"
+            value={storageFilter}
+            onChange={(e) => setStorageFilter(e.target.value)}
+            sx={{ minWidth: 160 }}
+          >
+            <MenuItem value="">All</MenuItem>
+            {storageOptions.map((name) => (
+              <MenuItem key={name} value={name}>{name}</MenuItem>
+            ))}
+          </TextField>
+          <TextField
+            select size="small" label="Status"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            sx={{ minWidth: 140 }}
+          >
+            <MenuItem value="">All</MenuItem>
+            {['active', 'draft', 'deleted'].map((s) => (
+              <MenuItem key={s} value={s} sx={{ textTransform: 'capitalize' }}>{s}</MenuItem>
+            ))}
+          </TextField>
+        </>
+      }
       headerActions={
         showHeaderActions ? (
           <Button
@@ -261,64 +300,19 @@ export function InventoryDataTable({
             href={paths.menu.inventory.new}
             size="small"
           >
-            {t('inventory.add', 'Add')}
+            {t('inventory.add')}
           </Button>
         ) : undefined
       }
-      showPeriodPicker={enablePeriodPicker}
-      periodPickerProps={{
+      periodFilter={enablePeriodPicker || enablePeriodButtons ? {
         startDate: toPickerDate(filters.date_from || '')?.toDate() || null,
         endDate: toPickerDate(filters.date_to || '')?.toDate() || null,
-        onStartDateChange: (date: Date | null) => {
-          setFilters({
-            ...filters,
-            date_from: date ? getTodayUtcBoundary(false) : undefined
-          });
-        },
-        onEndDateChange: (date: Date | null) => {
-          setFilters({
-            ...filters,
-            date_to: date ? getTomorrowUtcBoundary(true) : undefined
-          });
-        }
-      }}
-      showPeriodButtons={enablePeriodButtons}
-      periodButtonProps={{
+        onStartDateChange: (date: Date | null) => { setFilters({ ...filters, date_from: date ? getTodayUtcBoundary(false) : undefined }); },
+        onEndDateChange: (date: Date | null) => { setFilters({ ...filters, date_to: date ? getTomorrowUtcBoundary(true) : undefined }); },
         onPeriodChange: (period: 'day' | 'week' | 'month' | 'year') => {
-          const now = new Date();
-          let startDate = '';
-          let endDate = '';
-          
-          switch (period) {
-            case 'day':
-              startDate = getTodayUtcBoundary(false);
-              endDate = getTomorrowUtcBoundary(true);
-              break;
-            case 'week':
-              const weekStart = new Date(now);
-              weekStart.setDate(now.getDate() - now.getDay());
-              startDate = getTodayUtcBoundary(false);
-              endDate = getTomorrowUtcBoundary(true);
-              break;
-            case 'month':
-              const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-              startDate = getTodayUtcBoundary(false);
-              endDate = getTomorrowUtcBoundary(true);
-              break;
-            case 'year':
-              const yearStart = new Date(now.getFullYear(), 0, 1);
-              startDate = getTodayUtcBoundary(false);
-              endDate = getTomorrowUtcBoundary(true);
-              break;
-          }
-          
-          setFilters({
-            ...filters,
-            date_from: startDate,
-            date_to: endDate
-          });
-        }
-      }}
+          setFilters({ ...filters, date_from: getTodayUtcBoundary(false), date_to: getTomorrowUtcBoundary(true) });
+        },
+      } : undefined}
       getRowId={(row: any) => (row as Inventory).id}
     />
   );

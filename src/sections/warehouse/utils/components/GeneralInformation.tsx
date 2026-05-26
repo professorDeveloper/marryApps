@@ -41,9 +41,9 @@ export const GeneralInformation = React.memo(function GeneralInformation({
                 '&.MuiAccordion-root': {
                     boxShadow: 'none',
                     border: '1px solid',
-                    borderColor: 'var(--color-border)',
+                    borderColor: 'var(--border)',
                     borderRadius: 1,
-                    bgcolor: 'var(--color-surface-1)',
+                    bgcolor: 'var(--surface)',
                     '&:before': {
                         display: 'none',
                     },
@@ -98,11 +98,11 @@ export const GeneralInformation = React.memo(function GeneralInformation({
                                     py: 0.5,
                                     borderRadius: 0.5,
                                     bgcolor: 'var(--glow-md)',
-                                    color: 'var(--color-primary)',
+                                    color: 'var(--accent)',
                                     fontWeight: 'fontWeightSemiBold',
                                     whiteSpace: 'nowrap',
                                     border: '1px solid',
-                                    borderColor: 'var(--color-border)',
+                                    borderColor: 'var(--border)',
                                     fontSize: '0.75rem',
                                 }}
                             >

@@ -163,14 +163,14 @@ export const useTransferredItems = () => {
             }
 
             if (unique.length > 1) {
-                toast.success(t('warehouse.invoiceDetails.itemsDeleted', 'Items deleted'));
+                toast.success(t('warehouse.invoiceDetails.itemsDeleted'));
             }
         },
         [t]
     );
 
     const moveLeft = useCallback(() => {
-        toast.success(t('warehouse.invoiceDetails.allItemsRemoved', 'All items removed'));
+        toast.success(t('warehouse.invoiceDetails.allItemsRemoved'));
         setState(initialTransferredState);
     }, [t]);
 

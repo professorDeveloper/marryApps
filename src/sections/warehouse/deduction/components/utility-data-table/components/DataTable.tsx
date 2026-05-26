@@ -1,12 +1,45 @@
 import type { ReactNode } from 'react';
 import type { RowAction, SortState, BatchAction, SortDirection, DataTableColumn, StorageStrategy, DataTableDefaultConfig, SearchMode, SearchOutput } from '../types/types';
 
+// ---------------------------------------------------------------------------
+// Grouped prop shapes (exported so consumers can type-check their objects)
+// ---------------------------------------------------------------------------
+
+export type DataTablePaginationProps = {
+  page: number;
+  rowsPerPage?: number;
+  totalCount: number;
+  rowsPerPageOptions?: number[];
+  onPageChange: (page: number) => void;
+  onRowsPerPageChange?: (rowsPerPage: number) => void;
+};
+
+export type DataTableSearchProps = {
+  value?: string;
+  onChange?: (value: string) => void;
+  mode?: SearchMode;
+  allowFreeText?: boolean;
+  options?: { id: string; label: string }[];
+  onSearch?: (data: SearchOutput) => void;
+};
+
+export type DataTablePeriodFilterProps = {
+  startDate?: Date | null;
+  endDate?: Date | null;
+  onStartDateChange?: (date: Date | null) => void;
+  onEndDateChange?: (date: Date | null) => void;
+  activePeriod?: 'day' | 'week' | 'month' | 'year';
+  onPeriodChange?: (period: 'day' | 'week' | 'month' | 'year') => void;
+};
+
 import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
 
-import Card from '@mui/material/Card';
-import { Stack } from '@mui/material';
+import Tooltip from '@mui/material/Tooltip';
+import IconButton from '@mui/material/IconButton';
 
-import { CYBER_TABLE_SX } from 'src/theme/cyber-table-sx';
+import { Iconify } from 'src/components/iconify';
+import { useDataTableActionsContext } from '../context/DataTableActionsContext';
+
 import { DataTableBody } from './DataTableBody';
 import { DataTableHeader } from './DataTableHeader';
 import { DataTableToolbar } from './DataTableToolbar';
@@ -33,59 +66,41 @@ import { usePaginationRows } from 'src/hooks/use-pagination-rows';
 type FilterState = Record<string, { type: 'text' | 'multi'; value: string | string[] }>;
 
 export type DataTableProps<T> = {
+  // Core
   persistKey: string;
   data: T[];
   columns: Array<DataTableColumn<T>>;
   defaultConfig: DataTableDefaultConfig;
-  onReset: () => void;
-
-  headerActions?: ReactNode;
-  toolbarActions?: ReactNode;
-
-  showPeriodPicker?: boolean;
-  periodPickerProps?: {
-    startDate?: Date | null;
-    endDate?: Date | null;
-    onStartDateChange?: (date: Date | null) => void;
-    onEndDateChange?: (date: Date | null) => void;
-  };
-  showPeriodButtons?: boolean;
-  periodButtonProps?: {
-    activePeriod?: 'day' | 'week' | 'month' | 'year';
-    onPeriodChange?: (period: 'day' | 'week' | 'month' | 'year') => void;
-  };
-
-  showRowNumbers?: boolean;
-  batchActions?: Array<BatchAction<T>>;
-  rowActions?: Array<RowAction<T>>;
   getRowId: (row: T) => string;
-  onCellEdit?: (args: { row: T; key: string; value: unknown }) => void | Promise<void>;
+  onReset: () => void;
   storageStrategy?: StorageStrategy;
 
-  searchValue?: string;
-  onSearchChange?: (value: string) => void;
+  // Toolbar slots
+  headerActions?: ReactNode;
+  toolbarActions?: ReactNode;
+  filterRow?: ReactNode;
 
-  searchMode?: SearchMode;
-  allowFreeText?: boolean;
-  searchOptions?: { id: string; label: string }[];
-  onSearch?: (data: SearchOutput) => void;
+  // Feature groups
+  search?: DataTableSearchProps;
+  pagination?: DataTablePaginationProps;
+  periodFilter?: DataTablePeriodFilterProps;
 
+  // Column filters + sort
   filters?: Record<string, { type: 'text' | 'multi'; value: string | string[] }>;
   onFiltersChange?: (filters: Record<string, { type: 'text' | 'multi'; value: string | string[] }>) => void;
-
   onSortChange?: (sort: SortState) => void;
 
-  page?: number;
-  rowsPerPage?: number;
-  totalCount?: number;
-  rowsPerPageOptions?: number[];
-  onPageChange?: (page: number) => void;
-  onRowsPerPageChange?: (rowsPerPage: number) => void;
+  // Row behaviour
+  showRowNumbers?: boolean;
+  showTotals?: boolean;
+  onRowClick?: (row: T) => void;
+  onCellEdit?: (args: { row: T; key: string; value: unknown }) => void | Promise<void>;
+  batchActions?: Array<BatchAction<T>>;
+  rowActions?: Array<RowAction<T>>;
 
+  // Empty state
   emptyTitle?: string;
   emptySubtitle?: string;
-  onRowClick?: (row: T) => void;
-  showTotals?: boolean;
 };
 
 // ---------------------------------------------------------------------------
@@ -100,27 +115,15 @@ export function DataTable<T>({
   onReset,
   headerActions,
   toolbarActions,
-  showPeriodPicker = false,
-  periodPickerProps,
-  showPeriodButtons = false,
-  periodButtonProps,
+  filterRow,
+  periodFilter,
   showRowNumbers = true,
   batchActions = [],
   rowActions = [],
   getRowId,
   onCellEdit,
-  searchValue = '',
-  onSearchChange,
-  searchMode,
-  allowFreeText,
-  searchOptions,
-  onSearch,
-  page = 0,
-  rowsPerPage: propRowsPerPage,
-  totalCount,
-  rowsPerPageOptions = [10, 20, 50, 100],
-  onPageChange,
-  onRowsPerPageChange,
+  search,
+  pagination,
   filters: controlledFilters,
   onFiltersChange,
   onSortChange,
@@ -130,6 +133,38 @@ export function DataTable<T>({
   onRowClick,
   showTotals = true,
 }: DataTableProps<T>) {
+  // Unpack grouped props
+  const {
+    page = 0,
+    rowsPerPage: propRowsPerPage,
+    totalCount,
+    rowsPerPageOptions = [10, 20, 50, 100],
+    onPageChange,
+    onRowsPerPageChange,
+  } = pagination ?? {};
+
+  const {
+    value: searchValue = '',
+    onChange: onSearchChange,
+    mode: searchMode,
+    allowFreeText,
+    options: searchOptions,
+    onSearch,
+  } = search ?? {};
+
+  const showPeriodPicker = Boolean(periodFilter && (periodFilter.startDate !== undefined || periodFilter.onStartDateChange));
+  const showPeriodButtons = Boolean(periodFilter?.onPeriodChange);
+  const periodPickerProps = periodFilter ? {
+    startDate: periodFilter.startDate,
+    endDate: periodFilter.endDate,
+    onStartDateChange: periodFilter.onStartDateChange,
+    onEndDateChange: periodFilter.onEndDateChange,
+  } : undefined;
+  const periodButtonProps = periodFilter ? {
+    activePeriod: periodFilter.activePeriod,
+    onPeriodChange: periodFilter.onPeriodChange,
+  } : undefined;
+
   const serverPagination = Boolean(onPageChange);
   const effectiveTotalCount = totalCount ?? data.length;
   const showCheckboxes = batchActions.length > 0;
@@ -346,6 +381,28 @@ export function DataTable<T>({
     setSelectedIds(new Set());
   }, [storageStrategy, persistKey, merged, getDefaultWidths, handleSortChange]);
 
+  // ---- Settings slot in tabs bar -----------------------------------------
+  const { setSettingsSlot, clearSettingsSlot } = useDataTableActionsContext();
+
+  useEffect(() => {
+    setSettingsSlot(
+      <>
+        <Tooltip title="Column settings">
+          <IconButton size="small" onClick={(e) => setColumnMenuAnchor(e.currentTarget)}>
+            <Iconify icon="solar:settings-bold-duotone" width={18} />
+          </IconButton>
+        </Tooltip>
+        <Tooltip title="Reset to default">
+          <IconButton size="small" onClick={reset}>
+            <Iconify icon="solar:restart-bold" width={18} />
+          </IconButton>
+        </Tooltip>
+      </>
+    );
+    return () => clearSettingsSlot();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reset]);
+
   // ---- Filters -----------------------------------------------------------
   const [filterAnchor, setFilterAnchor] = useState<HTMLElement | null>(null);
   const [filterKey, setFilterKey] = useState<string | null>(null);
@@ -498,16 +555,9 @@ export function DataTable<T>({
 
   // ---- Render ------------------------------------------------------------
   return (
-    <Stack gap={2} sx={{ mt: 2, height: 'min(88vh, 880px)', overflow: 'auto' }}>
-      {/* Toolbar Island */}
-      <Card
-        sx={{
-          backgroundColor: 'var(--color-surface-1) !important',
-          borderRadius: 2,
-          overflow: 'hidden',
-          backdropFilter: 'blur(12px)',
-        }}
-      >
+    <div style={{ marginTop: 16, height: 'min(88vh, 880px)', display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {/* Toolbar */}
+      <div style={{ flexShrink: 0 }}>
         <DataTableToolbar<T>
           searchValue={searchValue}
           onSearchChange={onSearchChange}
@@ -522,12 +572,11 @@ export function DataTable<T>({
           showCheckboxes={showCheckboxes}
           selectedRows={selectedRows}
           batchActions={batchActions}
-          onOpenColumnMenu={(e) => setColumnMenuAnchor(e.currentTarget)}
-          onReset={reset}
           headerActions={headerActions}
           toolbarActions={toolbarActions}
+          filterRow={filterRow}
         />
-      </Card>
+      </div>
 
       <DataTableColumnMenu<T>
         anchorEl={columnMenuAnchor}
@@ -537,19 +586,8 @@ export function DataTable<T>({
         onToggleVisibility={toggleColumnVisibility}
       />
 
-      {/* Main Table Island (Header + Body + Footer) */}
-      <Card
-        sx={{
-          backgroundColor: 'var(--color-surface-0) !important',
-          borderRadius: 2,
-          overflow: 'hidden',
-          backdropFilter: 'blur(12px)',
-          flex: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          minHeight: 0,
-        }}
-      >
+      {/* Main Table Card */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
         <DataTableHeader<T>
           gridTemplateColumns={gridTemplateColumns}
           showCheckboxes={showCheckboxes}
@@ -612,19 +650,9 @@ export function DataTable<T>({
             totals={totals}
           />
         )}
-      </Card>
 
-      {/* Pagination Island */}
-      {serverPagination && onPageChange && (
-        <Card
-          sx={{
-            backgroundColor: 'var(--color-surface-1) !important',
-            borderRadius: 2,
-            overflow: 'hidden',
-            backdropFilter: 'blur(12px)',
-            // mb: -2,
-          }}
-        >
+        {/* Pagination (attached to main card) */}
+        {serverPagination && onPageChange && (
           <DataTablePagination
             page={page}
             rowsPerPage={rowsPerPage}
@@ -632,13 +660,12 @@ export function DataTable<T>({
             rowsPerPageOptions={rowsPerPageOptions}
             onPageChange={onPageChange}
             onRowsPerPageChange={(newRowsPerPage) => {
-              // Always update global state and localStorage for rowsPerPage
               setGlobalRowsPerPage(newRowsPerPage);
               onRowsPerPageChange?.(newRowsPerPage);
             }}
           />
-        </Card>
-      )}
-    </Stack>
+        )}
+      </div>
+    </div>
   );
 }

@@ -1,7 +1,6 @@
 import type { RefObject } from 'react';
 import type { RowAction, DataTableColumn } from '../types/types';
 
-import { AnimatePresence } from 'framer-motion';
 import { useVirtualizer } from '@tanstack/react-virtual';
 
 import Box from '@mui/material/Box';
@@ -68,7 +67,7 @@ export function DataTableBody<T>({
         position: 'relative',
         flex: 1,
         overflow: 'auto',
-        backgroundColor: 'var(--color-surface-0)',
+        backgroundColor: 'var(--bg)',
       }}
     >
       {data.length === 0 ? (
@@ -80,8 +79,8 @@ export function DataTableBody<T>({
             alignItems: 'center',
             justifyContent: 'center',
             gap: 1,
-            color: 'var(--color-text-muted)',
-            backgroundColor: 'var(--color-surface-0)',
+            color: 'var(--text3)',
+            backgroundColor: 'var(--bg2)',
           }}
         >
           <Box
@@ -91,59 +90,58 @@ export function DataTableBody<T>({
               borderRadius: 2,
               display: 'grid',
               placeItems: 'center',
-              border: '1px solid var(--color-border)',
-              backgroundColor: 'var(--color-surface-0)',
+              border: '1px solid var(--border)',
+              backgroundColor: 'var(--bg2)',
             }}
           >
             <Iconify icon="solar:inbox-in-bold-duotone" width={26} />
           </Box>
           <Typography sx={{ fontSize: 14, fontWeight: 700, textAlign: 'center' }}>{emptyTitle}</Typography>
-          <Typography sx={{ fontSize: 12.5, color: 'var(--color-text-subtle)', textAlign: 'center' }}>
+          <Typography sx={{ fontSize: 12.5, color: 'var(--text3)', textAlign: 'center' }}>
             {emptySubtitle}
           </Typography>
         </Box>
       ) : (
         <Box sx={{ height: rowVirtualizer.getTotalSize(), position: 'relative' }}>
-          <AnimatePresence initial={false}>
-            {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-              const row = data[virtualRow.index];
-              const rowId = getRowId(row);
-              const selected = selectedIds.has(rowId);
+          {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+            const row = data[virtualRow.index];
+            if (!row) return null;
+            const rowId = getRowId(row);
+            const selected = selectedIds.has(rowId);
 
-              return (
-                <Box
-                  key={rowId}
-                  sx={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: 1,
-                    transform: `translateY(${virtualRow.start}px)`,
-                  }}
-                >
-                  <DataTableRow<T>
-                    row={row}
-                    rowId={rowId}
-                    index={virtualRow.index}
-                    columns={columns}
-                    colOrder={colOrder}
-                    visibility={visibility}
-                    widths={widths}
-                    showRowNumbers={showRowNumbers}
-                    showCheckboxes={showCheckboxes}
-                    selected={selected}
-                    onToggleSelected={() => onToggleSelected(rowId)}
-                    rowActions={rowActions}
-                    editing={editing}
-                    startEdit={startEdit}
-                    commitEdit={commitEdit}
-                    cancelEdit={cancelEdit}
-                    onRowClick={onRowClick}
-                  />
-                </Box>
-              );
-            })}
-          </AnimatePresence>
+            return (
+              <Box
+                key={rowId}
+                sx={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: 1,
+                  transform: `translateY(${virtualRow.start}px)`,
+                }}
+              >
+                <DataTableRow<T>
+                  row={row}
+                  rowId={rowId}
+                  index={virtualRow.index}
+                  columns={columns}
+                  colOrder={colOrder}
+                  visibility={visibility}
+                  widths={widths}
+                  showRowNumbers={showRowNumbers}
+                  showCheckboxes={showCheckboxes}
+                  selected={selected}
+                  onToggleSelected={() => onToggleSelected(rowId)}
+                  rowActions={rowActions}
+                  editing={editing}
+                  startEdit={startEdit}
+                  commitEdit={commitEdit}
+                  cancelEdit={cancelEdit}
+                  onRowClick={onRowClick}
+                />
+              </Box>
+            );
+          })}
         </Box>
       )}
     </Box>

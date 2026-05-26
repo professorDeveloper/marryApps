@@ -24,11 +24,11 @@ export const SummaryPanel = React.memo<SummaryPanelProps>(
         return (
             <Paper sx={{ p: 2 }}>
                 <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
-                    {t('warehouse.invoiceDetails.summary', 'Summary')}
+                    {t('warehouse.invoiceDetails.summary')}
                 </Typography>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                     <Typography variant="body2" color="text.secondary">
-                        {t('warehouse.invoiceDetails.products', 'Products')}
+                        {t('warehouse.invoiceDetails.products')}
                     </Typography>
                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
                         {transferredItemsCount}
@@ -36,7 +36,7 @@ export const SummaryPanel = React.memo<SummaryPanelProps>(
                 </Box>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                     <Typography variant="body2" color="text.secondary">
-                        {t('warehouse.invoiceDetails.totalQty', 'Total Qty')}
+                        {t('warehouse.invoiceDetails.totalQty')}
                     </Typography>
                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
                         {formatPrice(totalQuantity)}
@@ -44,7 +44,7 @@ export const SummaryPanel = React.memo<SummaryPanelProps>(
                 </Box>
                 <Divider sx={{ my: 1.5 }} />
                 <Typography variant="caption" color="text.secondary">
-                    {t('warehouse.invoiceDetails.totalAmount', 'Total Amount')}
+                    {t('warehouse.invoiceDetails.totalAmount')}
                 </Typography>
                 <Typography variant="h5" sx={{ fontWeight: 800, mt: 0.5 }}>
                     {formatPrice(totalAmount)} UZS

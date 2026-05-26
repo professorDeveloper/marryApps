@@ -45,7 +45,7 @@ export const InventoryMetaFields = React.memo(function InventoryMetaFields({
     return (
         <Box sx={{ mt: 2 }}>
             <GeneralInformation
-                title={t('inventory.details', 'Details')}
+                title={t('inventory.details')}
                 isOpen={isOpen}
                 onToggle={onToggle}
                 disabled={disabled}
@@ -67,7 +67,7 @@ export const InventoryMetaFields = React.memo(function InventoryMetaFields({
                         }}
                     >
                         <DateTimePicker
-                            label={t('inventory.dateTime', 'Date & Time')}
+                            label={t('inventory.dateTime')}
                             value={dateValue}
                             onChange={(newDateTime) => {
                                 onDateChange(newDateTime ? newDateTime.format('YYYY-MM-DDTHH:mm:ss') : '');
@@ -85,7 +85,7 @@ export const InventoryMetaFields = React.memo(function InventoryMetaFields({
                         />
                         <TextField
                             select
-                            label={t('inventory.storage', 'Storage')}
+                            label={t('inventory.storage')}
                             value={storageId}
                             onChange={(e) => onStorageChange(e.target.value)}
                             size="small"
@@ -101,16 +101,16 @@ export const InventoryMetaFields = React.memo(function InventoryMetaFields({
                         </TextField>
                         <TextField
                             select
-                            label={t('inventory.status', 'Status')}
+                            label={t('inventory.status')}
                             value={status}
                             onChange={(e) => onStatusChange(e.target.value)}
                             size="small"
                             SelectProps={{ native: true }}
                             disabled={disabled}
                         >
-                            <option value="deleted">{t('inventory.deleted', 'Deleted')}</option>
-                            <option value="draft">{t('inventory.draft', 'Draft')}</option>
-                            <option value="active">{t('inventory.active', 'Active')}</option>
+                            <option value="deleted">{t('inventory.deleted')}</option>
+                            <option value="draft">{t('inventory.draft')}</option>
+                            <option value="active">{t('inventory.active')}</option>
                         </TextField>
                     </Box>
                     <Box
@@ -122,7 +122,7 @@ export const InventoryMetaFields = React.memo(function InventoryMetaFields({
                         <InventoryDescriptionField
                             value={description}
                             onLiveChange={onDescriptionChange}
-                            label={t('inventory.description', 'Description')}
+                            label={t('inventory.description')}
                             disabled={disabled}
                         />
                     </Box>

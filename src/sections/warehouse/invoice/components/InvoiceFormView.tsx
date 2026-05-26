@@ -177,7 +177,7 @@ const InvoiceFormView = React.memo(function InvoiceFormView() {
         }
 
         if (!storage) {
-            toast.error(t('warehouse.invoices.storageRequired', 'Storage is required'));
+            toast.error(t('warehouse.invoices.storageRequired'));
             return;
         }
 

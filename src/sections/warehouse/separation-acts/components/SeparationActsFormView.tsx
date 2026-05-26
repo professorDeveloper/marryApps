@@ -247,23 +247,23 @@ const SeparationActsFormView = React.memo(function SeparationActsFormView({
         const batchData = api?.getBatchData() ?? [];
 
         if (batchData.length === 0) {
-            toast.error(t('deductions.itemsRequired', 'Please add at least one item'));
+            toast.error(t('deductions.itemsRequired'));
             return;
         }
         if (!formData.storage_id) {
-            toast.error(t('deductions.storageRequired', 'Please select storage'));
+            toast.error(t('deductions.storageRequired'));
             return;
         }
         if (!formData.group_id) {
-            toast.error(t('deductions.groupRequired', 'Please select group'));
+            toast.error(t('deductions.groupRequired'));
             return;
         }
         if (!formData.source_ingredient_id) {
-            toast.error(t('separationActs.sourceIngredientRequired', 'Please select source ingredient'));
+            toast.error(t('separationActs.sourceIngredientRequired'));
             return;
         }
         if (!formData.source_quantity || Number(formData.source_quantity) <= 0) {
-            toast.error(t('separationActs.sourceQuantityRequired', 'Source quantity must be greater than zero'));
+            toast.error(t('separationActs.sourceQuantityRequired'));
             return;
         }
 
@@ -309,13 +309,13 @@ const SeparationActsFormView = React.memo(function SeparationActsFormView({
                 const result = await createSeparationActBatch(payload);
                 if (result) {
                     setBatchResponse(result);
-                    toast.success(t('separationActs.created', 'Separation act created successfully'));
+                    toast.success(t('separationActs.created'));
                 }
             } else if (effectiveActId) {
                 const result = await updateSeparationAct(effectiveActId, payload);
                 if (result) {
                     setBatchResponse(result);
-                    toast.success(t('separationActs.updated', 'Separation act updated successfully'));
+                    toast.success(t('separationActs.updated'));
                 }
             }
         } catch (error) {
@@ -340,11 +340,11 @@ const SeparationActsFormView = React.memo(function SeparationActsFormView({
                 source_quantity: formData.source_quantity,
                 storage_id: formData.storage_id,
             });
-            toast.success(t('separationActs.confirmed', 'Separation act confirmed successfully'));
+            toast.success(t('separationActs.confirmed'));
             navigate(paths.warehouse.separationActs.root);
         } catch (error) {
             console.error('Error confirming separation act:', error);
-            toast.error(t('error.failed', 'Failed to confirm'));
+            toast.error(t('error.failed'));
         } finally {
             setActionLoading(null);
         }
@@ -356,11 +356,11 @@ const SeparationActsFormView = React.memo(function SeparationActsFormView({
         try {
             setActionLoading('cancel');
             await cancelSeparationAct(effectiveActId);
-            toast.success(t('separationActs.cancelled', 'Separation act cancelled successfully'));
+            toast.success(t('separationActs.cancelled'));
             navigate(paths.warehouse.separationActs.root);
         } catch (error) {
             console.error('Error cancelling separation act:', error);
-            toast.error(t('error.failed', 'Failed to cancel'));
+            toast.error(t('error.failed'));
         } finally {
             setActionLoading(null);
         }
@@ -372,11 +372,11 @@ const SeparationActsFormView = React.memo(function SeparationActsFormView({
         try {
             setActionLoading('delete');
             await deleteSeparationAct(effectiveActId);
-            toast.success(t('separationActs.deleted', 'Separation act deleted successfully'));
+            toast.success(t('separationActs.deleted'));
             navigate(paths.warehouse.separationActs.root);
         } catch (error) {
             console.error('Error deleting separation act:', error);
-            toast.error(t('error.failed', 'Failed to delete'));
+            toast.error(t('error.failed'));
         } finally {
             setActionLoading(null);
         }
@@ -393,10 +393,10 @@ const SeparationActsFormView = React.memo(function SeparationActsFormView({
                 if (result) {
                     setBatchResponse(result);
                 }
-                toast.success(t('separationActs.itemDeleted', 'Item deleted successfully'));
+                toast.success(t('separationActs.itemDeleted'));
             } catch (error) {
                 console.error('Error deleting item:', error);
-                toast.error(t('error.failed', 'Failed to delete item'));
+                toast.error(t('error.failed'));
             } finally {
                 setDeletingItemId(null);
                 setDeleteItemDialog(null);
@@ -407,20 +407,20 @@ const SeparationActsFormView = React.memo(function SeparationActsFormView({
 
     // ── Derived ───────────────────────────────────────────────────────────
     const saveLabel = isNew
-        ? t('common.save', 'Save')
-        : t('common.save', 'Save');
+        ? t('common.save')
+        : t('common.save');
 
     const breadcrumbs = useMemo(
         () => [
             { name: t('app'), href: paths.menu.root },
             {
-                name: t('overview.warehouse.separationActs', 'Separation Acts'),
+                name: t('overview.warehouse.separationActs'),
                 href: paths.warehouse.separationActs.root,
             },
             {
                 name: isNew
-                    ? t('separationActs.new', 'New')
-                    : String(batchResponse?.data?.act?.id || t('common.edit', 'Edit')),
+                    ? t('separationActs.new')
+                    : String(batchResponse?.data?.act?.id || t('common.edit')),
                 href: '',
             },
         ],
@@ -428,8 +428,8 @@ const SeparationActsFormView = React.memo(function SeparationActsFormView({
     );
 
     const heading = isNew
-        ? t('separationActs.createNew', 'Create New Separation Act')
-        : t('separationActs.edit', 'Edit Separation Act');
+        ? t('separationActs.createNew')
+        : t('separationActs.edit');
 
     const ingredientMap = useMemo(() => {
         const map = new Map<string, string>();
@@ -527,18 +527,18 @@ const SeparationActsFormView = React.memo(function SeparationActsFormView({
                         {/* Items Display */}
                         <Box sx={{ p: 2, bgcolor: 'background.paper', borderRadius: 1 }}>
                             <Typography variant="subtitle1" sx={{ mb: 2 }}>
-                                {t('separationActs.items', 'Items')} ({batchResponse.data.items.length})
+                                {t('separationActs.items')} ({batchResponse.data.items.length})
                             </Typography>
                             {batchResponse.data.items.length > 0 ? (
                                 <TableContainer>
                                     <Table size="small">
                                         <TableHead>
                                             <TableRow>
-                                                <TableCell>{t('warehouse.ingredient', 'Ingredient')}</TableCell>
-                                                <TableCell align="center">{t('calculation.quantity', 'Quantity')}</TableCell>
-                                                <TableCell align="right">{t('calculation.price', 'Price')}</TableCell>
-                                                <TableCell align="right">{t('calculation.totalPrice', 'Total')}</TableCell>
-                                                <TableCell align="center">{t('common.actions', 'Actions')}</TableCell>
+                                                <TableCell>{t('warehouse.ingredient')}</TableCell>
+                                                <TableCell align="center">{t('calculation.quantity')}</TableCell>
+                                                <TableCell align="right">{t('calculation.price')}</TableCell>
+                                                <TableCell align="right">{t('calculation.totalPrice')}</TableCell>
+                                                <TableCell align="center">{t('common.actions')}</TableCell>
                                             </TableRow>
                                         </TableHead>
                                         <TableBody>
@@ -567,7 +567,7 @@ const SeparationActsFormView = React.memo(function SeparationActsFormView({
                                                             {deletingItemId === item.id ? (
                                                                 <CircularProgress size={16} color="inherit" />
                                                             ) : (
-                                                                t('common.delete', 'Delete')
+                                                                t('common.delete')
                                                             )}
                                                         </Button>
                                                     </TableCell>
@@ -577,14 +577,14 @@ const SeparationActsFormView = React.memo(function SeparationActsFormView({
                                     </Table>
                                 </TableContainer>
                             ) : (
-                                <Typography color="text.secondary">{t('separationActs.noItems', 'No items')}</Typography>
+                                <Typography color="text.secondary">{t('separationActs.noItems')}</Typography>
                             )}
                         </Box>
 
                         {/* Action Buttons */}
                         <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
                             <Button variant="contained" onClick={handleCancel}>
-                                {t('common.back', 'Back')}
+                                {t('common.back')}
                             </Button>
                             {batchResponse.data.act.status === 'draft' && (
                                 <>
@@ -595,9 +595,9 @@ const SeparationActsFormView = React.memo(function SeparationActsFormView({
                                         onClick={handleConfirm}
                                     >
                                         {actionLoading === 'confirm' ? (
-                                            <CircularProgress size={18} sx={{ color: 'var(--color-text-on-primary)' }} />
+                                            <CircularProgress size={18} sx={{ color: 'var(--accent-fg)' }} />
                                         ) : (
-                                            t('common.confirm', 'Confirm')
+                                            t('common.confirm')
                                         )}
                                     </Button>
                                     <Button
@@ -606,15 +606,15 @@ const SeparationActsFormView = React.memo(function SeparationActsFormView({
                                         disabled={!!actionLoading}
                                         onClick={() => {
                                             const confirmed = window.confirm(
-                                                t('common.deleteConfirmMessage', 'Are you sure?')
+                                                t('common.deleteConfirmMessage')
                                             );
                                             if (confirmed) handleDeleteAct();
                                         }}
                                     >
                                         {actionLoading === 'delete' ? (
-                                            <CircularProgress size={18} sx={{ color: 'var(--color-text-on-primary)' }} />
+                                            <CircularProgress size={18} sx={{ color: 'var(--accent-fg)' }} />
                                         ) : (
-                                            t('common.delete', 'Delete')
+                                            t('common.delete')
                                         )}
                                     </Button>
                                 </>
@@ -627,9 +627,9 @@ const SeparationActsFormView = React.memo(function SeparationActsFormView({
                                     onClick={handleCancelAct}
                                 >
                                     {actionLoading === 'cancel' ? (
-                                        <CircularProgress size={18} sx={{ color: 'var(--color-text-on-primary)' }} />
+                                        <CircularProgress size={18} sx={{ color: 'var(--accent-fg)' }} />
                                     ) : (
-                                        t('common.cancel', 'Cancel')
+                                        t('common.cancel')
                                     )}
                                 </Button>
                             )}
@@ -641,14 +641,14 @@ const SeparationActsFormView = React.memo(function SeparationActsFormView({
                 {!isNew && !batchResponse && !pageLoading && (
                     <Box sx={{ py: 4 }}>
                         <Typography color="text.secondary">
-                            {t('error.notFound', 'Not found')}
+                            {t('error.notFound')}
                         </Typography>
                         <Button
                             sx={{ mt: 2 }}
                             variant="contained"
                             onClick={() => navigate(paths.warehouse.separationActs.root)}
                         >
-                            {t('overview.warehouse.separationActs', 'Separation Acts')}
+                            {t('overview.warehouse.separationActs')}
                         </Button>
                     </Box>
                 )}
@@ -656,10 +656,10 @@ const SeparationActsFormView = React.memo(function SeparationActsFormView({
 
             {/* Delete Item Dialog */}
             <Dialog open={!!deleteItemDialog} onClose={() => setDeleteItemDialog(null)}>
-                <DialogTitle>{t('common.delete', 'Delete')}</DialogTitle>
+                <DialogTitle>{t('common.delete')}</DialogTitle>
                 <DialogContent>
                     <Typography>
-                        {t('separationActs.deleteItemConfirm', 'Are you sure you want to delete this item?')}
+                        {t('separationActs.deleteItemConfirm')}
                     </Typography>
                     {deleteItemDialog && (
                         <Typography variant="body2" sx={{ mt: 1, fontWeight: 500 }}>
@@ -669,7 +669,7 @@ const SeparationActsFormView = React.memo(function SeparationActsFormView({
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={() => setDeleteItemDialog(null)}>
-                        {t('common.cancel', 'Cancel')}
+                        {t('common.cancel')}
                     </Button>
                     <Button
                         variant="contained"
@@ -680,7 +680,7 @@ const SeparationActsFormView = React.memo(function SeparationActsFormView({
                             }
                         }}
                     >
-                        {t('common.delete', 'Delete')}
+                        {t('common.delete')}
                     </Button>
                 </DialogActions>
             </Dialog>

@@ -1,5 +1,5 @@
 import { Box } from '@mui/material';
-import { CELL_SX } from '../../deduction/components/utility-data-table/utils/constants';
+import { CELL_SX } from 'src/sections/common/data-table/utils/constants';
 
 export function RenderCell({ label }: { label: string }) {
   return (

@@ -175,12 +175,12 @@ const InventoryFormView = React.memo(function InventoryFormView() {
 
     const handleSave = useCallback(async () => {
         if (!storageId) {
-            toast.error(t('inventory.selectStorage', 'Please select a storage'));
+            toast.error(t('inventory.selectStorage'));
             return;
         }
         const batchData = itemsApiRef.current?.getBatchData() ?? [];
         if (batchData.length === 0) {
-            toast.error(t('inventory.selectIngredients', 'Please add at least one item'));
+            toast.error(t('inventory.selectIngredients'));
             return;
         }
 
@@ -245,7 +245,7 @@ const InventoryFormView = React.memo(function InventoryFormView() {
                             alignItems: 'center',
                             justifyContent: 'center',
                             zIndex: 2,
-                            bgcolor: 'var(--color-surface-0)',
+                            bgcolor: 'var(--bg)',
                             opacity: 0.85,
                         }}
                     >

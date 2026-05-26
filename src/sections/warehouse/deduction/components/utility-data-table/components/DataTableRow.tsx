@@ -1,15 +1,14 @@
 import type { ReactNode } from 'react';
 import type { RowAction, DataTableColumn } from '../types/types';
 
-import { m } from 'framer-motion';
-import { memo, useMemo, useState } from 'react';
+import { memo, useMemo } from 'react';
 
 import Box from '@mui/material/Box';
 import Checkbox from '@mui/material/Checkbox';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 
-import { ACCENT, BORDER, getCellValue, buildGridTemplate } from '../utils';
+import { getCellValue, buildGridTemplate } from '../utils';
 
 type SpecialColumn = '__checkbox__' | '__rowNumber__' | '__actions__';
 
@@ -56,8 +55,6 @@ export const DataTableRow = memo(function DataTableRow<T>({
   cancelEdit,
   onRowClick,
 }: DataTableRowProps<T>) {
-  const [actionsAnchor, setActionsAnchor] = useState<HTMLElement | null>(null);
-
   const visibleCols = useMemo(() => {
     const byKey = new Map(columns.map((c) => [c.key, c]));
     return colOrder
@@ -74,24 +71,19 @@ export const DataTableRow = memo(function DataTableRow<T>({
 
   return (
     <Box
-      component={m.div}
-      layout
-      initial={{ opacity: 0, y: 6 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: 6 }}
       onClick={() => onRowClick?.(row)}
       sx={{
         display: 'grid',
         gridTemplateColumns,
         alignItems: 'center',
-        px: 1,
+        // px: 1,
         height: 44,
-        borderBottom: '1px solid var(--color-border)',
+        borderBottom: '1px solid var(--border)',
         position: 'relative',
         cursor: onRowClick ? 'pointer' : 'default',
-        backgroundColor: index % 2 === 0 ? 'var(--color-surface-0)' : 'var(--color-surface-2)',
+        backgroundColor: 'var(--bg)',
         '&:hover': {
-          backgroundColor: 'var(--color-surface-2)',
+          backgroundColor: 'var(--bg2)',
         },
         '&:hover .utilityDtMore': { opacity: 1 },
       }}
@@ -104,12 +96,8 @@ export const DataTableRow = memo(function DataTableRow<T>({
             onClick={(e) => e.stopPropagation()}
             size="small"
             sx={{
-              color: 'var(--color-text)',
-              '&.Mui-checked': { color: 'var(--color-primary)' },
-              '&:hover': {
-                backgroundColor: 'var(--glow-sm)',
-                boxShadow: 'var(--glow-shadow-md)',
-              },
+              color: 'var(--text3)',
+              '&.Mui-checked': { color: 'var(--brand)' },
             }}
           />
         </Box>
@@ -172,13 +160,13 @@ export const DataTableRow = memo(function DataTableRow<T>({
                     '& .MuiInputBase-root': {
                       height: 32,
                       fontSize: 12,
-                      backgroundColor: 'var(--color-surface-0)',
+                      backgroundColor: 'var(--bg3)',
                       borderRadius: 1,
                       fontFamily: 'var(--font-sans)',
                     },
-                    '& .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--color-border)' },
+                    '& .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--border)' },
                     '& .MuiInputBase-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                      borderColor: 'var(--color-primary)',
+                      borderColor: 'var(--accent)',
                       boxShadow: '0 0 0 3px var(--glow-md)',
                     },
                   }}
@@ -191,8 +179,8 @@ export const DataTableRow = memo(function DataTableRow<T>({
                 noWrap
                 sx={{
                   width: 1,
-                  fontSize: 12.5,
-                  color: 'var(--color-text)',
+                  fontSize: 13,
+                  color: 'var(--text)',
                   textAlign: col.align || 'left',
                   fontFamily: 'var(--font-sans)',
                   textOverflow: 'ellipsis',

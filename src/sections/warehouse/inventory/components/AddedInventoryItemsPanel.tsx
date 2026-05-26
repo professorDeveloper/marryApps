@@ -45,7 +45,7 @@ export const AddedInventoryItemsPanel = React.memo<AddedInventoryItemsPanelProps
         setBatchRemoveArmed(false);
     }, [onRemoveMany, batchRemoveArmed]);
 
-    const removeTitle = t('warehouse.invoiceDetails.removeLine', 'Remove line');
+    const removeTitle = t('warehouse.invoiceDetails.removeLine');
 
     const rowVirtualizer = useVirtualizer({
         count: transferredItems.length,
@@ -59,7 +59,7 @@ export const AddedInventoryItemsPanel = React.memo<AddedInventoryItemsPanelProps
             <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1, mb: 1, justifyContent: 'space-between' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Typography variant="subtitle2" sx={{ fontWeight: 700, textTransform: 'uppercase' }}>
-                        {t('warehouse.invoiceDetails.selectedItems', 'Selected for Audit')}
+                        {t('warehouse.invoiceDetails.selectedItems')}
                     </Typography>
                     <Chip label={transferredItems.length} size="small" color="primary" />
                 </Box>
@@ -71,7 +71,7 @@ export const AddedInventoryItemsPanel = React.memo<AddedInventoryItemsPanelProps
                     onClick={batchRemoveArmed ? handleRemoveBatch : handleToggleBatchArm}
                     disabled={transferredItems.length === 0}
                 >
-                    {t('warehouse.invoiceDetails.removeBatch', 'Remove batch')}
+                    {t('warehouse.invoiceDetails.removeBatch')}
                 </Button>
             </Box>
 
@@ -104,19 +104,19 @@ export const AddedInventoryItemsPanel = React.memo<AddedInventoryItemsPanelProps
                 }}
             >
                 <Typography variant="caption" sx={{ fontWeight: 700 }}>
-                    {t('warehouse.invoiceDetails.product', 'Ingredient')}
+                    {t('warehouse.invoiceDetails.product')}
                 </Typography>
                 <Typography variant="caption" sx={{ fontWeight: 700, textAlign: 'center' }}>
-                    {t('calculation.systemQty', 'System')}
+                    {t('calculation.systemQty')}
                 </Typography>
                 <Typography variant="caption" sx={{ fontWeight: 700, textAlign: 'center' }}>
-                    {t('calculation.countedQty', 'Counted')}
+                    {t('calculation.countedQty')}
                 </Typography>
                 <Typography variant="caption" sx={{ fontWeight: 700, textAlign: 'center' }}>
-                    {t('calculation.difference', 'Diff')}
+                    {t('calculation.difference')}
                 </Typography>
                 <Typography variant="caption" sx={{ fontWeight: 700, textAlign: 'right' }}>
-                    {t('calculation.impact', 'Impact')}
+                    {t('calculation.impact')}
                 </Typography>
                 <Box />
             </Box>
@@ -125,7 +125,7 @@ export const AddedInventoryItemsPanel = React.memo<AddedInventoryItemsPanelProps
                 {transferredItems.length === 0 ? (
                     <Box sx={{ py: 6, textAlign: 'center', opacity: 0.6 }}>
                         <Typography variant="body2">
-                            {t('warehouse.invoiceDetails.noItemsAdded', 'No items added')}
+                            {t('warehouse.invoiceDetails.noItemsAdded')}
                         </Typography>
                     </Box>
                 ) : (
