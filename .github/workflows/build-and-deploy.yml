@@ -66,14 +66,10 @@ jobs:
 
       - name: Deploy on server
         run: |
-          ssh -i ~/.ssh/id_ed25519 ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << EOF
-            set -e
-
-            echo "${{ secrets.GHCR_PULL_TOKEN }}" | sudo -n docker login ghcr.io -u "${{ secrets.GHCR_USER }}" --password-stdin
-
-            cd /opt/maryai/infra/compose
-            sudo -n docker compose -f frontend-compose.yml pull
-            sudo -n docker compose -f frontend-compose.yml up -d
-
-            sudo -n docker image prune -f
-          EOF
+          ssh -i ~/.ssh/id_ed25519 ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
+            "set -e && \
+             echo '${{ secrets.GHCR_PULL_TOKEN }}' | sudo -n docker login ghcr.io -u '${{ secrets.GHCR_USER }}' --password-stdin && \
+             cd /opt/maryai/infra/compose && \
+             sudo -n docker compose -f frontend-compose.yml pull && \
+             sudo -n docker compose -f frontend-compose.yml up -d && \
+             sudo -n docker image prune -f"
