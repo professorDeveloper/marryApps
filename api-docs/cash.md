@@ -2,7 +2,7 @@
 
 > **Module:** cash  
 > **Base URL:** https://api.maryai.uz/  
-> **Last Updated:** 2026-05-11T03:54:32.006Z
+> **Last Updated:** 2026-05-23T03:18:48.641Z
 
 ---
 

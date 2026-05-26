@@ -2,7 +2,7 @@
 
 > **Module:** branches  
 > **Base URL:** https://api.maryai.uz/  
-> **Last Updated:** 2026-05-11T03:54:32.003Z
+> **Last Updated:** 2026-05-23T03:18:48.639Z
 
 ---
 
@@ -257,6 +257,40 @@
 ```
 
 
+## /api/v1/branches/{branch_id}/employee-shifts
+
+### GET /api/v1/branches/{branch_id}/employee-shifts 🔒
+
+**Summary:** List shifts by branch
+
+**Description:** undefined
+
+**Parameters:**
+
+| Name | Location | Type | Required | Description |
+|------|----------|------|----------|-------------|
+| page | query | string | No | Page (default 1) |
+| limit | query | string | No | Limit (default 20) |
+| date_from | query | string | No | RFC3339 date from |
+| date_to | query | string | No | RFC3339 date to |
+
+**Responses:**
+
+- **200**: OK
+  ```json
+{
+  "$ref": "#/definitions/model.EmployeeShiftListSwaggerResponse"
+}
+```
+
+- **500**: Internal Server Error
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorData"
+}
+```
+
+
 ## /api/v1/branches/{id}
 
 ### GET /api/v1/branches/{id} 🔒
@@ -313,7 +347,7 @@
 
 **Summary:** Update branch
 
-**Description:** Update a branch's name, name_i18n, or phone
+**Description:** Update a branch's name, name_i18n, phone, or default service percent
 
 **Parameters:**
 

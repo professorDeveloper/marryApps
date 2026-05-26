@@ -1,9 +1,9 @@
-# MaryAI API Documentation
+#  Documentation
 
-> **Version:** 1.0  
+> **Version:**   
 > **Base URL:** https://api.maryai.uz/  
-> **Description:** MaryAI API server with multi-language support (uz, ru, en)  
-> **Last Updated:** 2026-05-11T03:54:32.008Z
+> **Description:**   
+> **Last Updated:** 2026-05-23T03:18:48.643Z
 
 ---
 
@@ -15,19 +15,19 @@ This documentation is organized by functional modules for easier navigation:
 *4 endpoints*
 
 ### [AUTH](./auth.md) - 🔐 Authentication & authorization endpoints
-*5 endpoints*
+*7 endpoints*
 
 ### [BILLING](./billing.md) - 💳 Bills, payments, and financial operations
 *2 endpoints*
 
 ### [BRANCHES](./branches.md) - 🏪 Branch management and operations
-*6 endpoints*
+*7 endpoints*
+
+### [CORE](./core.md) - ⚙️ Core system endpoints
+*166 endpoints*
 
 ### [CAFE](./cafe.md) - ☕ Cafe table management and reservations
 *13 endpoints*
-
-### [CORE](./core.md) - ⚙️ Core system endpoints
-*148 endpoints*
 
 ### [CASH](./cash.md) - 💰 Cash register and shift management
 *8 endpoints*
@@ -39,7 +39,7 @@ This documentation is organized by functional modules for easier navigation:
 *55 endpoints*
 
 ### [STAFF](./staff.md) - 👥 Staff management and operations
-*4 endpoints*
+*1 endpoints*
 
 ### [REPORTS](./reports.md) - 📊 Reporting and analytics
 *2 endpoints*
@@ -48,7 +48,7 @@ This documentation is organized by functional modules for easier navigation:
 *3 endpoints*
 
 ### [USERS](./users.md) - 👤 User management and profiles
-*6 endpoints*
+*7 endpoints*
 
 ---
 
@@ -65,7 +65,7 @@ Authorization: Bearer <your-token>
 ## 📊 Quick Stats
 
 - **Total Modules**: 13
-- **Total Endpoints**: 274
+- **Total Endpoints**: 293
 
 ---
 
@@ -86,4 +86,4 @@ Common data models are shared across modules. Refer to individual module documen
 ---
 
 *This documentation is automatically generated from the Swagger/OpenAPI specification*  
-*Last updated: 2026-05-11T03:54:32.009Z*
+*Last updated: 2026-05-23T03:18:48.643Z*

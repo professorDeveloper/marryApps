@@ -2,7 +2,7 @@
 
 > **Module:** users  
 > **Base URL:** https://api.maryai.uz/  
-> **Last Updated:** 2026-05-11T03:54:32.008Z
+> **Last Updated:** 2026-05-23T03:18:48.643Z
 
 ---
 
@@ -108,6 +108,37 @@
   ```json
 {
   "$ref": "#/definitions/model.ErrorResponse"
+}
+```
+
+
+## /api/v1/users/ratings
+
+### GET /api/v1/users/ratings 🔒
+
+**Summary:** Get user ratings
+
+**Description:** undefined
+
+**Parameters:**
+
+| Name | Location | Type | Required | Description |
+|------|----------|------|----------|-------------|
+| period | query | string | No | Period: weekly|monthly|all_time (default: monthly) |
+
+**Responses:**
+
+- **200**: OK
+  ```json
+{
+  "$ref": "#/definitions/model.EmployeeRatingSwaggerResponse"
+}
+```
+
+- **500**: Internal Server Error
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorData"
 }
 ```
 

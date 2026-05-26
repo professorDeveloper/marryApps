@@ -2,7 +2,7 @@
 
 > **Module:** auth  
 > **Base URL:** https://api.maryai.uz/  
-> **Last Updated:** 2026-05-11T03:54:32.003Z
+> **Last Updated:** 2026-05-23T03:18:48.639Z
 
 ---
 
@@ -234,6 +234,73 @@
   ```json
 {
   "$ref": "#/definitions/model.ErrorResponse"
+}
+```
+
+
+## /api/v1/auth/terminal/branches
+
+### POST /api/v1/auth/terminal/branches 🔓
+
+**Summary:** Get branches for terminal
+
+**Description:** Verify brand admin password and return list of branches
+
+**Parameters:**
+
+| Name | Location | Type | Required | Description |
+|------|----------|------|----------|-------------|
+| request | body | object | Yes | Brand credentials |
+
+**Request Body:**
+
+```json
+{
+  "$ref": "#/definitions/handler.getTerminalBranchesRequest"
+}
+```
+
+**Responses:**
+
+- **200**: OK
+  ```json
+{
+  "type": "array",
+  "items": {
+    "$ref": "#/definitions/model.BranchResponse"
+  }
+}
+```
+
+
+## /api/v1/auth/terminal/token
+
+### POST /api/v1/auth/terminal/token 🔓
+
+**Summary:** Generate terminal token
+
+**Description:** Verify brand admin password + branch_id and issue a permanent terminal JWT
+
+**Parameters:**
+
+| Name | Location | Type | Required | Description |
+|------|----------|------|----------|-------------|
+| request | body | object | Yes | Terminal token request |
+
+**Request Body:**
+
+```json
+{
+  "$ref": "#/definitions/handler.generateTerminalTokenRequest"
+}
+```
+
+**Responses:**
+
+- **200**: OK
+  ```json
+{
+  "$ref": "#/definitions/handler.generateTerminalTokenResponse"
 }
 ```
 

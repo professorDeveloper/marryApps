@@ -2,11 +2,43 @@
 
 > **Module:** core  
 > **Base URL:** https://api.maryai.uz/  
-> **Last Updated:** 2026-05-11T03:54:32.004Z
+> **Last Updated:** 2026-05-23T03:18:48.639Z
 
 ---
 
 ## Endpoints
+
+## /api/v1/brand/info
+
+### GET /api/v1/brand/info 🔒
+
+**Summary:** Get own brand info
+
+**Description:** Returns brand info derived from the token's brand_id claim
+
+**Responses:**
+
+- **200**: OK
+  ```json
+{
+  "$ref": "#/definitions/model.BrandResponse"
+}
+```
+
+- **401**: Unauthorized
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorResponse"
+}
+```
+
+- **404**: Not Found
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorResponse"
+}
+```
+
 
 ## /api/v1/calculations/preview
 
@@ -61,6 +93,68 @@
 ```
 
 
+## /api/v1/dashboard/kpis
+
+### GET /api/v1/dashboard/kpis 🔒
+
+**Summary:** Get dashboard KPIs
+
+**Description:** Returns KPI metrics for current and previous periods
+
+**Parameters:**
+
+| Name | Location | Type | Required | Description |
+|------|----------|------|----------|-------------|
+| start | query | string | Yes | Start date (RFC3339 format) |
+| end | query | string | Yes | End date (RFC3339 format) |
+| previous_start | query | string | No | Previous period start date (RFC3339 format, optional) |
+| previous_end | query | string | No | Previous period end date (RFC3339 format, optional) |
+| group_by | query | string | No | Group by (day, week, month) |
+| lang | query | string | No | Language (uz, ru, en) |
+
+**Responses:**
+
+- **200**: OK
+  ```json
+{
+  "allOf": [
+    {
+      "$ref": "#/definitions/model.SuccessResponse"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/definitions/model.DashboardKPIsResponse"
+        }
+      }
+    }
+  ]
+}
+```
+
+- **400**: Bad Request
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorResponse"
+}
+```
+
+- **401**: Unauthorized
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorResponse"
+}
+```
+
+- **500**: Internal Server Error
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorResponse"
+}
+```
+
+
 ## /api/v1/dashboard/overview
 
 ### GET /api/v1/dashboard/overview 🔒
@@ -75,6 +169,8 @@
 |------|----------|------|----------|-------------|
 | start | query | string | Yes | Start date (RFC3339 format) |
 | end | query | string | Yes | End date (RFC3339 format) |
+| previous_start | query | string | No | Previous period start date (RFC3339 format, optional) |
+| previous_end | query | string | No | Previous period end date (RFC3339 format, optional) |
 | group_by | query | string | No | Group by (day, week, month) |
 | dish_metric | query | string | No | Dish metric (revenue, quantity) |
 | dish_sort | query | string | No | Dish sort (asc, desc) |
@@ -95,6 +191,68 @@
       "properties": {
         "data": {
           "$ref": "#/definitions/model.DashboardOverviewResponse"
+        }
+      }
+    }
+  ]
+}
+```
+
+- **400**: Bad Request
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorResponse"
+}
+```
+
+- **401**: Unauthorized
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorResponse"
+}
+```
+
+- **500**: Internal Server Error
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorResponse"
+}
+```
+
+
+## /api/v1/dashboard/sales-dynamics
+
+### GET /api/v1/dashboard/sales-dynamics 🔒
+
+**Summary:** Get dashboard sales dynamics
+
+**Description:** Returns sales dynamics for current and previous periods
+
+**Parameters:**
+
+| Name | Location | Type | Required | Description |
+|------|----------|------|----------|-------------|
+| start | query | string | Yes | Start date (RFC3339 format) |
+| end | query | string | Yes | End date (RFC3339 format) |
+| previous_start | query | string | No | Previous period start date (RFC3339 format, optional) |
+| previous_end | query | string | No | Previous period end date (RFC3339 format, optional) |
+| group_by | query | string | No | Group by (day, week, month) |
+| lang | query | string | No | Language (uz, ru, en) |
+
+**Responses:**
+
+- **200**: OK
+  ```json
+{
+  "allOf": [
+    {
+      "$ref": "#/definitions/model.SuccessResponse"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/definitions/model.DashboardSalesDynamicsResponse"
         }
       }
     }
@@ -1435,6 +1593,718 @@
 ```
 
 
+## /api/v1/employee-shift-templates
+
+### GET /api/v1/employee-shift-templates 🔒
+
+**Summary:** List shift templates
+
+**Description:** undefined
+
+**Parameters:**
+
+| Name | Location | Type | Required | Description |
+|------|----------|------|----------|-------------|
+| employee_id | query | string | No | Filter by employee ID |
+| branch_id | query | string | No | Filter by branch ID |
+| is_active | query | boolean | No | Filter by active status |
+| page | query | integer | No | Page number (default 1) |
+| limit | query | integer | No | Page size (default 20) |
+
+**Responses:**
+
+- **200**: OK
+  ```json
+{
+  "$ref": "#/definitions/model.TemplateListSwaggerResponse"
+}
+```
+
+- **400**: Bad Request
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorData"
+}
+```
+
+- **500**: Internal Server Error
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorData"
+}
+```
+
+
+### POST /api/v1/employee-shift-templates 🔒
+
+**Summary:** Create shift template
+
+**Description:** undefined
+
+**Parameters:**
+
+| Name | Location | Type | Required | Description |
+|------|----------|------|----------|-------------|
+| input | body | object | Yes | Template data |
+
+**Request Body:**
+
+```json
+{
+  "$ref": "#/definitions/model.CreateTemplateRequest"
+}
+```
+
+**Responses:**
+
+- **201**: Created
+  ```json
+{
+  "$ref": "#/definitions/model.TemplateSwaggerResponse"
+}
+```
+
+- **400**: Bad Request
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorData"
+}
+```
+
+- **500**: Internal Server Error
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorData"
+}
+```
+
+
+## /api/v1/employee-shift-templates/{id}
+
+### GET /api/v1/employee-shift-templates/{id} 🔒
+
+**Summary:** Get shift template by ID
+
+**Description:** undefined
+
+**Parameters:**
+
+| Name | Location | Type | Required | Description |
+|------|----------|------|----------|-------------|
+| id | path | string | Yes | Template ID |
+
+**Responses:**
+
+- **200**: OK
+  ```json
+{
+  "$ref": "#/definitions/model.TemplateSwaggerResponse"
+}
+```
+
+- **400**: Bad Request
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorData"
+}
+```
+
+- **404**: Not Found
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorData"
+}
+```
+
+
+### DELETE /api/v1/employee-shift-templates/{id} 🔒
+
+**Summary:** Delete shift template
+
+**Description:** undefined
+
+**Parameters:**
+
+| Name | Location | Type | Required | Description |
+|------|----------|------|----------|-------------|
+| id | path | string | Yes | Template ID |
+
+**Responses:**
+
+- **200**: OK
+  ```json
+{
+  "$ref": "#/definitions/model.TemplateSwaggerResponse"
+}
+```
+
+- **400**: Bad Request
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorData"
+}
+```
+
+- **404**: Not Found
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorData"
+}
+```
+
+- **500**: Internal Server Error
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorData"
+}
+```
+
+
+### PATCH /api/v1/employee-shift-templates/{id} 🔒
+
+**Summary:** Update shift template
+
+**Description:** undefined
+
+**Parameters:**
+
+| Name | Location | Type | Required | Description |
+|------|----------|------|----------|-------------|
+| id | path | string | Yes | Template ID |
+| input | body | object | Yes | Fields to update |
+
+**Request Body:**
+
+```json
+{
+  "$ref": "#/definitions/model.UpdateTemplateRequest"
+}
+```
+
+**Responses:**
+
+- **200**: OK
+  ```json
+{
+  "$ref": "#/definitions/model.TemplateSwaggerResponse"
+}
+```
+
+- **400**: Bad Request
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorData"
+}
+```
+
+- **404**: Not Found
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorData"
+}
+```
+
+- **500**: Internal Server Error
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorData"
+}
+```
+
+
+## /api/v1/employee-shifts
+
+### GET /api/v1/employee-shifts 🔒
+
+**Summary:** List shifts by employee
+
+**Description:** undefined
+
+**Parameters:**
+
+| Name | Location | Type | Required | Description |
+|------|----------|------|----------|-------------|
+| employee_id | query | string | Yes | Employee ID |
+| page | query | integer | No | Page (default 1) |
+| limit | query | integer | No | Limit (default 20) |
+
+**Responses:**
+
+- **200**: OK
+  ```json
+{
+  "$ref": "#/definitions/model.EmployeeShiftListSwaggerResponse"
+}
+```
+
+- **400**: Bad Request
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorData"
+}
+```
+
+- **500**: Internal Server Error
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorData"
+}
+```
+
+
+### POST /api/v1/employee-shifts 🔒
+
+**Summary:** Create employee shift
+
+**Description:** undefined
+
+**Parameters:**
+
+| Name | Location | Type | Required | Description |
+|------|----------|------|----------|-------------|
+| input | body | object | Yes | Shift data |
+
+**Request Body:**
+
+```json
+{
+  "$ref": "#/definitions/model.CreateEmployeeShiftRequest"
+}
+```
+
+**Responses:**
+
+- **201**: Created
+  ```json
+{
+  "$ref": "#/definitions/model.EmployeeShiftSwaggerResponse"
+}
+```
+
+- **400**: Bad Request
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorData"
+}
+```
+
+- **500**: Internal Server Error
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorData"
+}
+```
+
+
+## /api/v1/employee-shifts/my-active
+
+### GET /api/v1/employee-shifts/my-active 🔒
+
+**Summary:** Get my active shift
+
+**Description:** undefined
+
+**Responses:**
+
+- **200**: OK
+  ```json
+{
+  "$ref": "#/definitions/model.EmployeeShiftSwaggerResponse"
+}
+```
+
+- **500**: Internal Server Error
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorData"
+}
+```
+
+
+## /api/v1/employee-shifts/vacation
+
+### POST /api/v1/employee-shifts/vacation 🔒
+
+**Summary:** Create vacation request
+
+**Description:** undefined
+
+**Parameters:**
+
+| Name | Location | Type | Required | Description |
+|------|----------|------|----------|-------------|
+| input | body | object | Yes | Vacation request data |
+
+**Request Body:**
+
+```json
+{
+  "$ref": "#/definitions/model.VacationRequestRequest"
+}
+```
+
+**Responses:**
+
+- **201**: Created
+  ```json
+{
+  "$ref": "#/definitions/model.VacationSwaggerResponse"
+}
+```
+
+- **400**: Bad Request
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorData"
+}
+```
+
+- **500**: Internal Server Error
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorData"
+}
+```
+
+
+## /api/v1/employee-shifts/vacations
+
+### GET /api/v1/employee-shifts/vacations 🔒
+
+**Summary:** List vacation requests
+
+**Description:** undefined
+
+**Parameters:**
+
+| Name | Location | Type | Required | Description |
+|------|----------|------|----------|-------------|
+| status | query | string | No | Filter by status (pending, approved, rejected) |
+| page | query | integer | No | Page (default 1) |
+| limit | query | integer | No | Limit (default 20) |
+
+**Responses:**
+
+- **200**: OK
+  ```json
+{
+  "$ref": "#/definitions/model.EmployeeShiftListSwaggerResponse"
+}
+```
+
+- **400**: Bad Request
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorData"
+}
+```
+
+- **500**: Internal Server Error
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorData"
+}
+```
+
+
+## /api/v1/employee-shifts/{id}
+
+### GET /api/v1/employee-shifts/{id} 🔒
+
+**Summary:** Get shift by ID
+
+**Description:** undefined
+
+**Parameters:**
+
+| Name | Location | Type | Required | Description |
+|------|----------|------|----------|-------------|
+| id | path | string | Yes | Shift ID |
+
+**Responses:**
+
+- **200**: OK
+  ```json
+{
+  "$ref": "#/definitions/model.EmployeeShiftSwaggerResponse"
+}
+```
+
+- **404**: Not Found
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorData"
+}
+```
+
+
+## /api/v1/employee-shifts/{id}/approve
+
+### POST /api/v1/employee-shifts/{id}/approve 🔒
+
+**Summary:** Approve vacation request
+
+**Description:** undefined
+
+**Parameters:**
+
+| Name | Location | Type | Required | Description |
+|------|----------|------|----------|-------------|
+| id | path | string | Yes | Shift ID |
+
+**Responses:**
+
+- **200**: OK
+  ```json
+{
+  "$ref": "#/definitions/model.VacationSwaggerResponse"
+}
+```
+
+- **400**: Bad Request
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorData"
+}
+```
+
+- **404**: Not Found
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorData"
+}
+```
+
+- **500**: Internal Server Error
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorData"
+}
+```
+
+
+## /api/v1/employee-shifts/{id}/end
+
+### POST /api/v1/employee-shifts/{id}/end 🔒
+
+**Summary:** End employee shift
+
+**Description:** undefined
+
+**Parameters:**
+
+| Name | Location | Type | Required | Description |
+|------|----------|------|----------|-------------|
+| id | path | string | Yes | Shift ID |
+| input | body | object | Yes | Payment amount |
+
+**Request Body:**
+
+```json
+{
+  "$ref": "#/definitions/model.EndEmployeeShiftRequest"
+}
+```
+
+**Responses:**
+
+- **200**: OK
+  ```json
+{
+  "$ref": "#/definitions/model.EmployeeShiftSwaggerResponse"
+}
+```
+
+- **400**: Bad Request
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorData"
+}
+```
+
+- **404**: Not Found
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorData"
+}
+```
+
+- **500**: Internal Server Error
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorData"
+}
+```
+
+
+## /api/v1/employee-shifts/{id}/reject
+
+### POST /api/v1/employee-shifts/{id}/reject 🔒
+
+**Summary:** Reject vacation request
+
+**Description:** undefined
+
+**Parameters:**
+
+| Name | Location | Type | Required | Description |
+|------|----------|------|----------|-------------|
+| id | path | string | Yes | Shift ID |
+
+**Responses:**
+
+- **200**: OK
+  ```json
+{
+  "$ref": "#/definitions/model.VacationSwaggerResponse"
+}
+```
+
+- **400**: Bad Request
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorData"
+}
+```
+
+- **404**: Not Found
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorData"
+}
+```
+
+- **500**: Internal Server Error
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorData"
+}
+```
+
+
+## /api/v1/employee-shifts/{id}/start
+
+### POST /api/v1/employee-shifts/{id}/start 🔒
+
+**Summary:** Start employee shift
+
+**Description:** undefined
+
+**Parameters:**
+
+| Name | Location | Type | Required | Description |
+|------|----------|------|----------|-------------|
+| id | path | string | Yes | Shift ID |
+
+**Responses:**
+
+- **200**: OK
+  ```json
+{
+  "$ref": "#/definitions/model.StartShiftSwaggerResponse"
+}
+```
+
+- **400**: Bad Request
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorData"
+}
+```
+
+- **404**: Not Found
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorData"
+}
+```
+
+- **500**: Internal Server Error
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorData"
+}
+```
+
+
+## /api/v1/employees/{id}/active-shift
+
+### GET /api/v1/employees/{id}/active-shift 🔒
+
+**Summary:** Get active shift by employee ID
+
+**Description:** undefined
+
+**Parameters:**
+
+| Name | Location | Type | Required | Description |
+|------|----------|------|----------|-------------|
+| id | path | string | Yes | Employee ID |
+
+**Responses:**
+
+- **200**: OK
+  ```json
+{
+  "$ref": "#/definitions/model.EmployeeShiftSwaggerResponse"
+}
+```
+
+- **400**: Bad Request
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorData"
+}
+```
+
+- **500**: Internal Server Error
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorData"
+}
+```
+
+
+## /api/v1/employees/{id}/salary-report
+
+### GET /api/v1/employees/{id}/salary-report 🔒
+
+**Summary:** Get employee salary report
+
+**Description:** undefined
+
+**Parameters:**
+
+| Name | Location | Type | Required | Description |
+|------|----------|------|----------|-------------|
+| id | path | string | Yes | Employee ID |
+| date_from | query | string | Yes | Start date (YYYY-MM-DD) |
+| date_to | query | string | Yes | End date (YYYY-MM-DD) |
+
+**Responses:**
+
+- **200**: OK
+  ```json
+{
+  "$ref": "#/definitions/model.SalaryReportSwaggerResponse"
+}
+```
+
+- **400**: Bad Request
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorData"
+}
+```
+
+- **500**: Internal Server Error
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorData"
+}
+```
+
+
 ## /api/v1/good-details
 
 ### POST /api/v1/good-details 🔒
@@ -2250,8 +3120,8 @@
 
 **How it works:**
 - Create the good first
-- Then create all ingredient calculations (price from invoice_detail)
-- Then create all compound calculations (price from compound.price)
+- Then create all ingredient calculations (price override or from ingredient.price_per_unit)
+- Then create all compound calculations (price override or from compound.price)
 - If any calculation fails, everything is rolled back (good won't be created)
 
 **Example Request:**
@@ -2259,16 +3129,25 @@
 {
 "good": { "name": "Osh", "price": "85000.00" },
 "ingredient_calculations": [
-{ "ingredient_id": "sabzi-uuid", "quantity": "2.5" },
+{ "ingredient_id": "sabzi-uuid", "quantity": "2.5", "price": "8000.00" },
 { "ingredient_id": "guruch-uuid", "quantity": "0.5" }
 ],
 "compound_calculations": [
-{ "compound_id": "salad-uuid", "quantity": "3" },
+{ "compound_id": "salad-uuid", "quantity": "3", "price": "15000.00" },
 { "compound_id": "xamir-uuid", "quantity": "1" }
 ],
 "modifiers": [
-{ "modifier_id": "modifier-uuid-1", "is_required": false, "sort_order": 1 },
-{ "modifier_id": "modifier-uuid-2", "is_required": true, "sort_order": 2 }
+{
+"modifier_id": "modifier-uuid-1",
+"is_required": false,
+"sort_order": 1,
+"ingredient_calculations": [
+{ "ingredient_id": "ing-uuid", "quantity": "2.5", "price": "8000.00" }
+],
+"compound_calculations": [
+{ "compound_id": "comp-uuid", "quantity": "1" }
+]
+}
 ]
 }
 ```
@@ -2705,8 +3584,15 @@
 - Delete all existing calculations for this good
 - Create the new ingredient calculations (price from invoice_detail)
 - Create the new compound calculations (price from compound.price)
-- Replace all good modifiers
+- Replace all good modifiers and create their ingredient/compound calculations
 - If any step fails, everything is rolled back
+
+**Modifier calculations example:**
+"modifiers": [
+{ "modifier_id": "uuid", "is_required": false, "sort_order": 1,
+"ingredient_calculations": [{"ingredient_id": "uuid", "quantity": "2.5", "price": "1500.00"}],
+"compound_calculations": [{"compound_id": "uuid", "quantity": "1"}] }
+]
 
 **Parameters:**
 
@@ -7588,87 +8474,6 @@
 ```
 
 
-## /api/v1/orders/{id}/table-timer/transfer
-
-### POST /api/v1/orders/{id}/table-timer/transfer 🔒
-
-**Summary:** Transfer order table timer to another table
-
-**Description:** Transfers the active table timer session to a different table
-
-**Parameters:**
-
-| Name | Location | Type | Required | Description |
-|------|----------|------|----------|-------------|
-| id | path | string | Yes | Session ID |
-| request | body | object | Yes | Transfer request |
-
-**Request Body:**
-
-```json
-{
-  "type": "object",
-  "properties": {
-    "reason": {
-      "type": "string"
-    },
-    "to_table_id": {
-      "type": "string"
-    }
-  }
-}
-```
-
-**Responses:**
-
-- **200**: OK
-  ```json
-{
-  "allOf": [
-    {
-      "$ref": "#/definitions/model.SuccessResponse"
-    },
-    {
-      "type": "object",
-      "properties": {
-        "data": {
-          "$ref": "#/definitions/model.TableTimerResponse"
-        }
-      }
-    }
-  ]
-}
-```
-
-- **400**: Bad Request
-  ```json
-{
-  "$ref": "#/definitions/model.ErrorResponse"
-}
-```
-
-- **401**: Unauthorized
-  ```json
-{
-  "$ref": "#/definitions/model.ErrorResponse"
-}
-```
-
-- **403**: Forbidden
-  ```json
-{
-  "$ref": "#/definitions/model.ErrorResponse"
-}
-```
-
-- **409**: Conflict
-  ```json
-{
-  "$ref": "#/definitions/model.ErrorResponse"
-}
-```
-
-
 ## /api/v1/orders/{id}/transfer
 
 ### POST /api/v1/orders/{id}/transfer 🔒
@@ -9110,6 +9915,226 @@
 ```
 
 - **500**: Internal Server Error
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorResponse"
+}
+```
+
+
+## /api/v1/stop-list
+
+### GET /api/v1/stop-list 🔒
+
+**Summary:** Get stop list for current branch
+
+**Description:** undefined
+
+**Parameters:**
+
+| Name | Location | Type | Required | Description |
+|------|----------|------|----------|-------------|
+| limit | query | integer | No | Limit (default 20) |
+| offset | query | integer | No | Offset (default 0) |
+
+**Responses:**
+
+- **200**: OK
+  ```json
+{
+  "$ref": "#/definitions/model.PaginatedStopListResponse"
+}
+```
+
+- **500**: Internal Server Error
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorResponse"
+}
+```
+
+
+### POST /api/v1/stop-list 🔒
+
+**Summary:** Add item to stop list
+
+**Description:** undefined
+
+**Parameters:**
+
+| Name | Location | Type | Required | Description |
+|------|----------|------|----------|-------------|
+| request | body | object | Yes | Stop list item |
+
+**Request Body:**
+
+```json
+{
+  "$ref": "#/definitions/model.CreateStopListRequest"
+}
+```
+
+**Responses:**
+
+- **201**: Created
+  ```json
+{
+  "$ref": "#/definitions/model.SuccessResponse"
+}
+```
+
+- **400**: Bad Request
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorResponse"
+}
+```
+
+- **500**: Internal Server Error
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorResponse"
+}
+```
+
+
+## /api/v1/stop-list/logs
+
+### GET /api/v1/stop-list/logs 🔒
+
+**Summary:** Get stop list logs for current branch
+
+**Description:** undefined
+
+**Parameters:**
+
+| Name | Location | Type | Required | Description |
+|------|----------|------|----------|-------------|
+| limit | query | integer | No | Limit (default 20) |
+| offset | query | integer | No | Offset (default 0) |
+
+**Responses:**
+
+- **200**: OK
+  ```json
+{
+  "$ref": "#/definitions/model.PaginatedStopListResponse"
+}
+```
+
+- **500**: Internal Server Error
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorResponse"
+}
+```
+
+
+## /api/v1/stop-list/{id}
+
+### GET /api/v1/stop-list/{id} 🔒
+
+**Summary:** Get stop list item by ID
+
+**Description:** undefined
+
+**Parameters:**
+
+| Name | Location | Type | Required | Description |
+|------|----------|------|----------|-------------|
+| id | path | string | Yes | Stop list item ID |
+
+**Responses:**
+
+- **200**: OK
+  ```json
+{
+  "$ref": "#/definitions/model.SuccessResponse"
+}
+```
+
+- **400**: Bad Request
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorResponse"
+}
+```
+
+- **404**: Not Found
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorResponse"
+}
+```
+
+
+### PUT /api/v1/stop-list/{id} 🔒
+
+**Summary:** Update stop list item
+
+**Description:** undefined
+
+**Parameters:**
+
+| Name | Location | Type | Required | Description |
+|------|----------|------|----------|-------------|
+| id | path | string | Yes | Stop list item ID |
+| request | body | object | Yes | Update data |
+
+**Request Body:**
+
+```json
+{
+  "$ref": "#/definitions/model.UpdateStopListRequest"
+}
+```
+
+**Responses:**
+
+- **200**: OK
+  ```json
+{
+  "$ref": "#/definitions/model.SuccessResponse"
+}
+```
+
+- **400**: Bad Request
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorResponse"
+}
+```
+
+- **404**: Not Found
+  ```json
+{
+  "$ref": "#/definitions/model.ErrorResponse"
+}
+```
+
+
+### DELETE /api/v1/stop-list/{id} 🔒
+
+**Summary:** Remove item from stop list
+
+**Description:** undefined
+
+**Parameters:**
+
+| Name | Location | Type | Required | Description |
+|------|----------|------|----------|-------------|
+| id | path | string | Yes | Stop list item ID |
+
+**Responses:**
+
+- **200**: OK
+  ```json
+{
+  "$ref": "#/definitions/model.SuccessResponse"
+}
+```
+
+- **400**: Bad Request
   ```json
 {
   "$ref": "#/definitions/model.ErrorResponse"

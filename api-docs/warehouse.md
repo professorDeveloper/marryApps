@@ -2,7 +2,7 @@
 
 > **Module:** warehouse  
 > **Base URL:** https://api.maryai.uz/  
-> **Last Updated:** 2026-05-11T03:54:32.007Z
+> **Last Updated:** 2026-05-23T03:18:48.642Z
 
 ---
 
@@ -1288,27 +1288,7 @@
 **Summary:** Create compound with multiple ingredients and child compounds (One Save)
 
 **Description:** Create a new compound with its ingredient/child compound calculations in one atomic transaction.
-
-**How it works:**
-- Create the compound first
-- Then create all ingredient calculations (price from invoice_detail)
-- Then create all child compound calculations (price from child compound's price)
-- If any calculation fails, everything is rolled back (compound won't be created)
-- Compound price is auto-calculated as sum of all calculation total_costs
-
-**Example Request:**
-```json
-{
-"compound": { "name": "Pizza Dough", "quantity": 1, "measurement": "kg" },
-"ingredient_calculations": [
-{ "ingredient_id": "flour-uuid", "quantity": "0.5" },
-{ "ingredient_id": "water-uuid", "quantity": "0.3" }
-],
-"compound_calculations": [
-{ "compound_id": "yeast-mix-uuid", "quantity": "1" }
-]
-}
-```
+The compound price is auto-calculated as sum of all calculation total_costs.
 
 **Parameters:**
 
@@ -1823,15 +1803,8 @@
 
 **Summary:** Update compound with multiple ingredients and child compounds (One Save)
 
-**Description:** Update a compound and replace all its ingredient/child compound calculations in one atomic transaction.
-
-**How it works:**
-- Update the compound first
-- Delete all existing calculations for this compound
-- Create the new ingredient calculations (price from invoice_detail)
-- Create the new child compound calculations (price from child compound's price)
-- If any step fails, everything is rolled back
-- Compound price is auto-calculated as sum of all calculation total_costs
+**Description:** Update a compound and atomically replace all its calculations in one transaction.
+Old calculations are deleted, new ones inserted, price recalculated once at the end.
 
 **Parameters:**
 
