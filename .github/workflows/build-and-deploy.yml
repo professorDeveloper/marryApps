@@ -10,6 +10,12 @@ on:
     branches:
       - master
       - main
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: Deploy to server after successful build
+        type: boolean
+        default: true
 
 jobs:
   build-check:
@@ -23,8 +29,14 @@ jobs:
         run: docker build -t maryai-front:test .
 
   publish-and-deploy:
-    if: (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main') && github.event_name == 'push'
     needs: build-check
+    if: >
+      needs.build-check.result == 'success' &&
+      (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main') &&
+      (
+        github.event_name == 'push' ||
+        (github.event_name == 'workflow_dispatch' && inputs.deploy)
+      )
     runs-on: ubuntu-latest
 
     permissions:
