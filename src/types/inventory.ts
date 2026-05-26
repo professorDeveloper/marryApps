@@ -45,6 +45,7 @@ export interface IInventory {
 }
 
 export interface IInventoryFormData {
+    date: string;
     counted_at: string;
     status: 'active' | 'completed' | 'draft' | 'cancelled';
     storage_id: string;

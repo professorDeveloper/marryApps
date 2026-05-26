@@ -264,10 +264,12 @@ export function InventoryDetailsCalculation({
                     return false;
                 }
 
+                const countedAt = formData.counted_at
+                    ? dayjs(formData.counted_at).utc().format('YYYY-MM-DDTHH:mm:ss[Z]')
+                    : dayjs().utc().format('YYYY-MM-DDTHH:mm:ss[Z]');
                 const batchResult = await createInventoryBatch({
-                    counted_at: formData.counted_at
-                        ? dayjs(formData.counted_at).utc().format('YYYY-MM-DDTHH:mm:ss[Z]')
-                        : dayjs().utc().format('YYYY-MM-DDTHH:mm:ss[Z]'),
+                    date: countedAt.split('T')[0],
+                    counted_at: countedAt,
                     status: formData.status || 'active',
                     storage_id: formData.storage_id,
                     description: formData.description || '',

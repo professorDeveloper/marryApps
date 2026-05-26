@@ -197,8 +197,10 @@ const InventoryFormView = React.memo(function InventoryFormView() {
                     meta: { isNew, inventoryId: effectiveId ?? null, source: 'submit' },
                 })
             );
+            const countedAt = date ? dayjs(date).utc().format('YYYY-MM-DDTHH:mm:ss[Z]') : '';
             const formPayload: IInventoryFormData = {
-                counted_at: date ? dayjs(date).utc().format('YYYY-MM-DDTHH:mm:ss[Z]') : '',
+                date: countedAt ? countedAt.split('T')[0] : '',
+                counted_at: countedAt,
                 status: status as IInventoryFormData['status'],
                 storage_id: storageId,
                 description: descriptionLiveRef.current,
