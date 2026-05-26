@@ -89,7 +89,7 @@ export function EmployeeEditViewAdmin({ userId, isNew = false }: EmployeeEditVie
                     throw new Error(t('users.passwordRequired'));
                 }
                 // if (isNew && !formData.cash_register_id) {
-                //     throw new Error(t('users.cashRegisterRequired', 'Cash register is required'));
+                //     throw new Error(t('users.cashRegisterRequired'));
                 // }
 
                 const userData: IUserFormData = {

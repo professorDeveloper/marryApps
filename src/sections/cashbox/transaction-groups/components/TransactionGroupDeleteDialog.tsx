@@ -33,30 +33,30 @@ export function TransactionGroupDeleteDialog({
 
         try {
             await onDelete(groupId);
-            toast.success(t('common.deleteSuccess', 'Successfully deleted'));
+            toast.success(t('common.deleteSuccess'));
             onClose();
             onSuccess();
         } catch (error: any) {
-            toast.error(error?.message || t('common.deleteFailed', 'Failed to delete'));
+            toast.error(error?.message || t('common.deleteFailed'));
         }
     }, [groupId, onDelete, onClose, onSuccess, t]);
 
     return (
         <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
-            <DialogTitle>{t('common.confirmDelete', 'Confirm Delete')}</DialogTitle>
+            <DialogTitle>{t('common.confirmDelete')}</DialogTitle>
             <DialogContent>
-                {t('common.deleteConfirmation', 'Are you sure you want to delete this item?')}
+                {t('common.deleteConfirmation')}
             </DialogContent>
             <DialogActions>
                 <Button onClick={onClose}>
-                    {t('common.cancel', 'Cancel')}
+                    {t('common.cancel')}
                 </Button>
                 <Button
                     onClick={handleDelete}
                     variant="contained"
                     color="error"
                 >
-                    {t('common.delete', 'Delete')}
+                    {t('common.delete')}
                 </Button>
             </DialogActions>
         </Dialog>

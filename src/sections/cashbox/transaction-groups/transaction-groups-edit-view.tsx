@@ -65,26 +65,26 @@ export function CashRegisterEditView({ isNew = false }: CashRegisterEditViewProp
         try {
             if (isNew) {
                 await onCreate({ name: data.name });
-                toast.success(t('common.createSuccess', 'Created successfully'));
+                toast.success(t('common.createSuccess'));
             } else {
                 await onUpdate({ name: data.name });
-                toast.success(t('common.updateSuccess', 'Updated successfully'));
+                toast.success(t('common.updateSuccess'));
             }
             navigate(paths.cashbox.transactionGroups);
         } catch (error: any) {
-            toast.error(error?.message || t('common.saveFailed', 'Failed to save'));
+            toast.error(error?.message || t('common.saveFailed'));
         }
     });
 
     return (
         <DashboardContent>
             <CustomBreadcrumbs
-                heading={isNew ? t('cashbox.newTransactionGroup', 'New Transaction Group') : t('cashbox.editTransactionGroup', 'Edit Transaction Group')}
+                heading={isNew ? t('cashbox.newTransactionGroup') : t('cashbox.editTransactionGroup')}
                 links={[
-                    { name: t('dashboard', 'Dashboard'), href: paths.dashboard.root },
-                    { name: t('cashbox.title', 'Cashbox'), href: paths.cashbox.root },
-                    { name: t('cashbox.transactionGroups', 'Transaction Groups'), href: paths.cashbox.transactionGroups },
-                    { name: isNew ? t('cashbox.newTransactionGroup', 'New') : t('cashbox.editTransactionGroup', 'Edit') },
+                    { name: t('dashboard'), href: paths.dashboard.root },
+                    { name: t('cashbox.title'), href: paths.cashbox.root },
+                    { name: t('cashbox.transactionGroups'), href: paths.cashbox.transactionGroups },
+                    { name: isNew ? t('cashbox.newTransactionGroup') : t('cashbox.editTransactionGroup') },
                 ]}
                 sx={{ mb: { xs: 3, md: 5 } }}
             />
@@ -98,9 +98,9 @@ export function CashRegisterEditView({ isNew = false }: CashRegisterEditViewProp
                 <form onSubmit={onFormSubmit}>
                     <Stack spacing={3}>
                         <TextField
-                            label={t('common.name', 'Name')}
+                            label={t('common.name')}
                             {...register('name', {
-                                required: t('common.nameRequired', 'Name is required'),
+                                required: t('common.nameRequired'),
                             })}
                             error={!!errors.name}
                             helperText={errors.name?.message}
@@ -112,14 +112,14 @@ export function CashRegisterEditView({ isNew = false }: CashRegisterEditViewProp
                                 variant="outlined"
                                 onClick={() => navigate(-1)}
                             >
-                                {t('common.cancel', 'Cancel')}
+                                {t('common.cancel')}
                             </Button>
                             <Button
                                 type="submit"
                                 variant="contained"
                                 disabled={isSubmitting}
                             >
-                                {isNew ? t('common.create', 'Create') : t('common.update', 'Update')}
+                                {isNew ? t('common.create') : t('common.update')}
                             </Button>
                         </Stack>
                     </Stack>

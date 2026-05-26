@@ -1,0 +1,345 @@
+import type { DataTableColumn } from 'src/sections/common/data-table/types/types';
+
+import dayjs from 'dayjs';
+import { useTranslation } from 'react-i18next';
+import { useRef, useMemo , useState, useEffect, useCallback } from 'react';
+
+import { useTimeFilter } from 'src/hooks/use-time-filter';
+
+import { Box, Button } from '@mui/material';
+
+import { paths } from 'src/routes/paths';
+
+import { DashboardContent } from 'src/layouts/dashboard';
+import { usePaginationRows } from 'src/hooks/use-pagination-rows';
+
+import { Iconify } from 'src/components/iconify';
+
+import { DataTable } from 'src/sections/common/data-table';
+import { RouterLink } from 'src/routes/components';
+
+interface ArchiveReport {
+  id: string;
+  title: string;
+  author: string;
+  authorAvatar?: string;
+  coverUrl?: string;
+  createdAt: string;
+  summary: string;
+}
+
+const getTodayUtcBoundary = (endOfDay = false): string => {
+  const now = dayjs();
+  const date = new Date(
+    Date.UTC(
+      now.year(),
+      now.month(),
+      now.date(),
+      endOfDay ? 23 : 0,
+      endOfDay ? 59 : 0,
+      endOfDay ? 59 : 0
+    )
+  );
+
+  return date.toISOString().replace('.000Z', 'Z');
+};
+
+const getTomorrowUtcBoundary = (endOfDay = false): string => {
+  const now = dayjs().add(1, 'day');
+  const date = new Date(
+    Date.UTC(
+      now.year(),
+      now.month(),
+      now.date(),
+      endOfDay ? 23 : 0,
+      endOfDay ? 59 : 0,
+      endOfDay ? 59 : 0
+    )
+  );
+
+  return date.toISOString().replace('.000Z', 'Z');
+};
+
+const toUtcDayBoundary = (value: dayjs.Dayjs, endOfDay = false): string => {
+  const date = new Date(
+    Date.UTC(
+      value.year(),
+      value.month(),
+      value.date(),
+      endOfDay ? 23 : 0,
+      endOfDay ? 59 : 0,
+      endOfDay ? 59 : 0
+    )
+  );
+
+  return date.toISOString().replace('.000Z', 'Z');
+};
+
+const toPickerDate = (value?: string): dayjs.Dayjs | null => (value ? dayjs(value.slice(0, 10)) : null);
+
+const initialFilters = {
+  date_from: getTodayUtcBoundary(),
+  date_to: getTomorrowUtcBoundary(true),
+  author: '',
+  q: '',
+  limit: 20,
+  offset: 0,
+};
+
+export function ArchivesListView() {
+  const { t } = useTranslation('menu');
+  const noDataText = t('noDataAvailable');
+  
+  // Get global rows per page
+  const { rowsPerPage: globalRowsPerPage } = usePaginationRows();
+  
+  // State management
+  const [rawData, setRawData] = useState<ArchiveReport[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+  const [filters, setFilters] = useState(initialFilters);
+  const [draftFilters, setDraftFilters] = useState(initialFilters);
+  const [rowCount, setRowCount] = useState(0);
+  const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: globalRowsPerPage });
+
+  useEffect(() => {
+    setPaginationModel((prev) => ({ ...prev, pageSize: globalRowsPerPage }));
+  }, [globalRowsPerPage]);
+  const { startDate, endDate, activePeriod: activeRange, setDates, applyRange, reset: resetTimeFilter } = useTimeFilter();
+  const lastDataKeyRef = useRef('');
+
+  // Mock authors for filter dropdown
+  const authors = useMemo(() => {
+    const uniqueAuthors = [...new Set(rawData.map(item => item.author).filter(Boolean))];
+    return uniqueAuthors.map(author => ({ id: author, name: author }));
+  }, [rawData]);
+
+  const isAuthorsEmpty = authors.length === 0;
+
+  // Apply date range changes
+  useEffect(() => {
+    setDraftFilters((prev) => ({
+      ...prev,
+      date_from: startDate ? toUtcDayBoundary(startDate) : '',
+      date_to: endDate ? toUtcDayBoundary(endDate, true) : '',
+      offset: 0,
+    }));
+    setPaginationModel((prev) => ({ ...prev, page: 0 }));
+  }, [startDate, endDate]);
+
+  // Effects
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 400);
+
+    return () => clearTimeout(timeout);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    setDraftFilters((prev) => ({
+      ...prev,
+      q: debouncedSearchQuery,
+    }));
+  }, [debouncedSearchQuery]);
+
+  useEffect(() => {
+    setPaginationModel((prev) => ({ ...prev, page: 0 }));
+    setFilters((prev) => ({
+      ...prev,
+      ...draftFilters,
+      offset: 0,
+      limit: paginationModel.pageSize,
+    }));
+  }, [draftFilters, paginationModel.pageSize]);
+
+  const handlePaginationPageChange = (page: number) => {
+    setPaginationModel((prev) => ({ ...prev, page }));
+    setFilters((prev) => ({
+      ...prev,
+      offset: page * paginationModel.pageSize,
+    }));
+    lastDataKeyRef.current = '';
+  };
+
+  const handlePaginationRowsPerPageChange = (pageSize: number) => {
+    setPaginationModel({ page: 0, pageSize });
+    setFilters((prev) => ({
+      ...prev,
+      limit: pageSize,
+      offset: 0,
+    }));
+    lastDataKeyRef.current = '';
+  };
+
+  const handleViewClick = useCallback((report: ArchiveReport) => {
+    // Placeholder for view action - can be implemented as needed
+    console.log('View archive report:', report);
+  }, []);
+
+  const handleReset = useCallback(() => {
+    setDraftFilters(initialFilters);
+    resetTimeFilter();
+    setSearchQuery('');
+  }, [resetTimeFilter]);
+
+  const startDateValue = useMemo(() => toPickerDate(draftFilters.date_from), [draftFilters.date_from]);
+  const endDateValue = useMemo(() => toPickerDate(draftFilters.date_to), [draftFilters.date_to]);
+
+  const columns = useMemo<DataTableColumn<ArchiveReport>[]>(
+    () => [
+      {
+        key: 'title',
+        label: t('overview.reports.archives'),
+        sortable: true,
+        width: '2fr',
+        align: 'left' as const,
+        getValue: (row: ArchiveReport) => row?.title ?? '',
+        renderCell: ({ row }: { row: ArchiveReport }) => (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            {row.coverUrl && (
+              <Box
+                component="img"
+                src={row.coverUrl}
+                alt={row.title}
+                sx={{ width: 40, height: 40, borderRadius: 1, objectFit: 'cover' }}
+              />
+            )}
+            <Box>
+              <Box sx={{ fontWeight: 500, color: 'text.primary' }}>
+                {row.title}
+              </Box>
+            </Box>
+          </Box>
+        ),
+      },
+      {
+        key: 'author',
+        label: 'Author',
+        sortable: true,
+        filter: {
+          type: 'multi' as const,
+          options: authors.map((a) => a.id),
+          getOptionLabel: (id: string) => authors.find((a) => a.id === id)?.name || id,
+        },
+        width: '1.5fr',
+        align: 'left' as const,
+        getValue: (row: ArchiveReport) => row?.author ?? '',
+        renderCell: ({ row }: { row: ArchiveReport }) => (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            {row.authorAvatar && (
+              <Box
+                component="img"
+                src={row.authorAvatar}
+                alt={row.author}
+                sx={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover' }}
+              />
+            )}
+            <Box>{row.author}</Box>
+          </Box>
+        ),
+      },
+      {
+        key: 'createdAt',
+        label: 'Date',
+        sortable: true,
+        width: '1fr',
+        align: 'left' as const,
+        getValue: (row: ArchiveReport) =>
+          row?.createdAt ? new Date(row.createdAt).toLocaleDateString() : '',
+      },
+      {
+        key: 'summary',
+        label: 'Summary',
+        sortable: true,
+        width: '2fr',
+        align: 'left' as const,
+        getValue: (row: ArchiveReport) => row?.summary ?? '',
+      },
+      {
+        key: 'actions',
+        label: t('actions'),
+        sortable: false,
+        filterable: false,
+        width: '0.7fr',
+        align: 'center' as const,
+        renderCell: () => null,
+      },
+    ],
+    [t, handleViewClick, authors]
+  );
+
+  return (
+    <DashboardContent
+      sx={{
+        flexGrow: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        maxHeight: '100vh',
+        '--layout-dashboard-content-pt': { xs: '0px', md: '0px' },
+        '--layout-dashboard-content-pb': { xs: '0px', md: '0px' },
+      }}
+    >
+
+      <DataTable<ArchiveReport>
+        persistKey="reports-archives-list"
+        data={rawData}
+        getRowId={(row: ArchiveReport) => String(row?.id)}
+        columns={columns}
+        search={{ value: searchQuery, onChange: (value: string) => { setSearchQuery(value); setPaginationModel((prev) => ({ ...prev, page: 0 })); } }}
+        filters={draftFilters.author ? { author: { type: 'multi', value: [draftFilters.author] } } : {}}
+        onFiltersChange={(filterState) => {
+          const selectedAuthor = (filterState.author?.value as string[])?.[0] || '';
+          setDraftFilters((prev) => ({ ...prev, author: selectedAuthor }));
+          setPaginationModel((prev) => ({ ...prev, page: 0 }));
+        }}
+        pagination={{
+          page: paginationModel.page,
+          rowsPerPage: paginationModel.pageSize,
+          totalCount: rowCount,
+          rowsPerPageOptions: [10, 20, 50, 100],
+          onPageChange: handlePaginationPageChange,
+          onRowsPerPageChange: handlePaginationRowsPerPageChange,
+        }}
+        defaultConfig={{
+          order: ['title', 'author', 'createdAt', 'summary', 'actions'],
+          visibility: {
+            title: true,
+            author: true,
+            createdAt: true,
+            summary: true,
+            actions: true,
+          },
+          widths: {
+            title: '2fr',
+            author: '1.5fr',
+            createdAt: '1fr',
+            summary: '2fr',
+            actions: '0.7fr',
+          },
+        }}
+        onReset={handleReset}
+        periodFilter={{
+          startDate: startDate ? startDate.toDate() : null,
+          endDate: endDate ? endDate.toDate() : null,
+          onStartDateChange: (date: Date | null) => { setDates(date ? dayjs(date) : null, endDate, 'day'); },
+          onEndDateChange: (date: Date | null) => { setDates(startDate, date ? dayjs(date) : null, 'day'); },
+          activePeriod: activeRange,
+          onPeriodChange: applyRange,
+        }}
+        onRowClick={handleViewClick}
+        headerActions={
+          <Button
+            variant="contained"
+            startIcon={<Iconify icon="mingcute:add-line" />}
+            component={RouterLink}
+            href={paths.menu.reports.archives.new}
+            size="small"
+          >
+            {t('add')}
+          </Button>
+        }
+      />
+    </DashboardContent>
+  );
+}

@@ -32,7 +32,7 @@ export function GoodsReportFilters({
   onReset,
 }: GoodsReportFiltersProps) {
   const { t } = useTranslation('menu');
-  const noDataText = t('noDataAvailable', "Tushunarli ma'lumot mavjud emas");
+  const noDataText = t('noDataAvailable');
 
   const { departments } = useGetDepartments();
   const { categories } = useGetCategories();
@@ -49,8 +49,7 @@ export function GoodsReportFilters({
           gridTemplateColumns: {
             xs: '1fr',
             sm: 'auto 1fr 1fr',
-            md: 'auto repeat(4, 1fr)',
-            lg: 'auto repeat(5, 1fr)',
+            md: 'auto 1fr 1fr 1fr auto',
           },
           gap: 1.5,
           alignItems: 'end',
@@ -93,7 +92,7 @@ export function GoodsReportFilters({
 
         {/* Start date */}
         <DatePicker
-          label={t('goodsReports.startDate', 'Start date')}
+          label={t('goodsReports.startDate')}
           value={startDate}
           onChange={onStartDateChange}
           format="DD.MM.YYYY"
@@ -109,7 +108,7 @@ export function GoodsReportFilters({
 
         {/* End date */}
         <DatePicker
-          label={t('goodsReports.endDate', 'End date')}
+          label={t('goodsReports.endDate')}
           value={endDate}
           onChange={onEndDateChange}
           format="DD.MM.YYYY"
@@ -123,129 +122,22 @@ export function GoodsReportFilters({
           }}
         />
 
-        {/* Department */}
-        <NoDataTooltip enabled={departments.length === 0} title={noDataText}>
-          <TextField
-            select
-            size="small"
-            fullWidth
-            label={t('goodsReports.department', 'Department')}
-            value={filters.department_id}
-            onChange={(e) =>
-              onFilterChange({ department_id: e.target.value, category_id: '', good_id: '' })
-            }
-            SelectProps={{ native: true }}
-            InputLabelProps={{ shrink: true }}
-          >
-            <option value="">{t('ingredientReports.all', 'All')}</option>
-            {departments.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.name}
-              </option>
-            ))}
-          </TextField>
-        </NoDataTooltip>
-
-        {/* Category */}
-        <NoDataTooltip enabled={categories.length === 0} title={noDataText}>
-          <TextField
-            select
-            size="small"
-            fullWidth
-            label={t('goodsReports.category', 'Category')}
-            value={filters.category_id}
-            onChange={(e) => onFilterChange({ category_id: e.target.value, good_id: '' })}
-            SelectProps={{ native: true }}
-            InputLabelProps={{ shrink: true }}
-          >
-            <option value="">{t('ingredientReports.all', 'All')}</option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </TextField>
-        </NoDataTooltip>
-
         {/* Good */}
         <NoDataTooltip enabled={goods.length === 0} title={noDataText}>
           <TextField
             select
             size="small"
             fullWidth
-            label={t('goodsReports.good', 'Good')}
+            label={t('goodsReports.good')}
             value={filters.good_id}
             onChange={(e) => onFilterChange({ good_id: e.target.value })}
             SelectProps={{ native: true }}
             InputLabelProps={{ shrink: true }}
           >
-            <option value="">{t('ingredientReports.all', 'All')}</option>
+            <option value="">{t('ingredientReports.all')}</option>
             {goods.map((g) => (
               <option key={g.id} value={g.id}>
                 {g.name}
-              </option>
-            ))}
-          </TextField>
-        </NoDataTooltip>
-
-        {/* Waiter */}
-        <NoDataTooltip enabled={waiters.length === 0} title={noDataText}>
-          <TextField
-            select
-            size="small"
-            fullWidth
-            label={t('goodsReports.waiter', 'Waiter')}
-            value={filters.waiter_id}
-            onChange={(e) => onFilterChange({ waiter_id: e.target.value })}
-            SelectProps={{ native: true }}
-            InputLabelProps={{ shrink: true }}
-          >
-            <option value="">{t('ingredientReports.all', 'All')}</option>
-            {waiters.map((w) => (
-              <option key={w.id} value={w.id}>
-                {w.full_name || w.username || '-'}
-              </option>
-            ))}
-          </TextField>
-        </NoDataTooltip>
-
-        {/* Hall */}
-        <NoDataTooltip enabled={halls.length === 0} title={noDataText}>
-          <TextField
-            select
-            size="small"
-            fullWidth
-            label={t('goodsReports.hall', 'Hall')}
-            value={filters.hall_id}
-            onChange={(e) => onFilterChange({ hall_id: e.target.value, table_id: '' })}
-            SelectProps={{ native: true }}
-            InputLabelProps={{ shrink: true }}
-          >
-            <option value="">{t('ingredientReports.all', 'All')}</option>
-            {halls.map((h) => (
-              <option key={h.id} value={h.id}>
-                {h.name}
-              </option>
-            ))}
-          </TextField>
-        </NoDataTooltip>
-
-        {/* Table */}
-        <NoDataTooltip enabled={tables.length === 0} title={noDataText}>
-          <TextField
-            select
-            size="small"
-            fullWidth
-            label={t('goodsReports.table', 'Table')}
-            value={filters.table_id}
-            onChange={(e) => onFilterChange({ table_id: e.target.value })}
-            SelectProps={{ native: true }}
-            InputLabelProps={{ shrink: true }}
-          >
-            <option value="">{t('ingredientReports.all', 'All')}</option>
-            {tables.map((tbl) => (
-              <option key={tbl.id} value={tbl.id}>
-                #{tbl.number}
               </option>
             ))}
           </TextField>
@@ -260,9 +152,130 @@ export function GoodsReportFilters({
             onClick={onReset}
             sx={{ minWidth: 'auto', flex: 1 }}
           >
-            {t('goodsReports.reset', 'Reset')}
+            {t('goodsReports.reset')}
           </Button>
         </Box>
+      </Box>
+
+      {/* Second row: Department, Category, Waiter, Hall, Table — evenly distributed */}
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: {
+            xs: '1fr',
+            sm: 'repeat(2, 1fr)',
+            md: 'repeat(5, 1fr)',
+          },
+          gap: 1.5,
+          alignItems: 'end',
+        }}
+      >
+        {/* Department */}
+        <NoDataTooltip enabled={departments.length === 0} title={noDataText}>
+          <TextField
+            select
+            size="small"
+            fullWidth
+            label={t('goodsReports.department')}
+            value={filters.department_id}
+            onChange={(e) =>
+              onFilterChange({ department_id: e.target.value, category_id: '', good_id: '' })
+            }
+            SelectProps={{ native: true }}
+            InputLabelProps={{ shrink: true }}
+          >
+            <option value="">{t('ingredientReports.all')}</option>
+            {departments.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.name}
+              </option>
+            ))}
+          </TextField>
+        </NoDataTooltip>
+
+        {/* Category */}
+        <NoDataTooltip enabled={categories.length === 0} title={noDataText}>
+          <TextField
+            select
+            size="small"
+            fullWidth
+            label={t('goodsReports.category')}
+            value={filters.category_id}
+            onChange={(e) => onFilterChange({ category_id: e.target.value, good_id: '' })}
+            SelectProps={{ native: true }}
+            InputLabelProps={{ shrink: true }}
+          >
+            <option value="">{t('ingredientReports.all')}</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </TextField>
+        </NoDataTooltip>
+
+        {/* Waiter */}
+        <NoDataTooltip enabled={waiters.length === 0} title={noDataText}>
+          <TextField
+            select
+            size="small"
+            fullWidth
+            label={t('goodsReports.waiter')}
+            value={filters.waiter_id}
+            onChange={(e) => onFilterChange({ waiter_id: e.target.value })}
+            SelectProps={{ native: true }}
+            InputLabelProps={{ shrink: true }}
+          >
+            <option value="">{t('ingredientReports.all')}</option>
+            {waiters.map((w) => (
+              <option key={w.id} value={w.id}>
+                {w.full_name || w.username || '-'}
+              </option>
+            ))}
+          </TextField>
+        </NoDataTooltip>
+
+        {/* Hall */}
+        <NoDataTooltip enabled={halls.length === 0} title={noDataText}>
+          <TextField
+            select
+            size="small"
+            fullWidth
+            label={t('goodsReports.hall')}
+            value={filters.hall_id}
+            onChange={(e) => onFilterChange({ hall_id: e.target.value, table_id: '' })}
+            SelectProps={{ native: true }}
+            InputLabelProps={{ shrink: true }}
+          >
+            <option value="">{t('ingredientReports.all')}</option>
+            {halls.map((h) => (
+              <option key={h.id} value={h.id}>
+                {h.name}
+              </option>
+            ))}
+          </TextField>
+        </NoDataTooltip>
+
+        {/* Table */}
+        <NoDataTooltip enabled={tables.length === 0} title={noDataText}>
+          <TextField
+            select
+            size="small"
+            fullWidth
+            label={t('goodsReports.table')}
+            value={filters.table_id}
+            onChange={(e) => onFilterChange({ table_id: e.target.value })}
+            SelectProps={{ native: true }}
+            InputLabelProps={{ shrink: true }}
+          >
+            <option value="">{t('ingredientReports.all')}</option>
+            {tables.map((tbl) => (
+              <option key={tbl.id} value={tbl.id}>
+                #{tbl.number}
+              </option>
+            ))}
+          </TextField>
+        </NoDataTooltip>
       </Box>
     </Box>
   );

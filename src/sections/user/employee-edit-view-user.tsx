@@ -157,7 +157,7 @@ export function EmployeeEditViewUser({ userId, isNew = false }: EmployeeEditView
                 throw new Error(t('users.branchRequired'));
             }
             if (isNew && formData.role === 'cashier' && !formData.cash_register_id) {
-                throw new Error(t('users.cashRegisterRequired', 'Cash register is required'));
+                throw new Error(t('users.cashRegisterRequired'));
             }
 
             const userData: IUserFormData = {

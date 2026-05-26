@@ -2,6 +2,7 @@ import { configureStore } from '@reduxjs/toolkit';
 import { useDispatch, useSelector, type TypedUseSelectorHook } from 'react-redux';
 
 import paginationReducer from './slices/paginationSlice';
+import timeFilterReducer from './slices/timeFilterSlice';
 import {
   mealFormPickerReducer,
   invoiceFormPickerReducer,
@@ -28,6 +29,7 @@ export const store = configureStore({
     outgoingInvoiceFormPicker: outgoingInvoiceFormPickerReducer,
     deductionFormPicker: deductionFormPickerReducer,
     separationActsFormPicker: separationActsFormPickerReducer,
+    timeFilter: timeFilterReducer,
   },
 });
 

@@ -17,18 +17,18 @@ import { GenericEditView } from 'src/components/generic-edit-view';
 import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 
 const COLOR_CODES = [
-  'var(--color-danger-500)', // Error/Red
-  'var(--color-info-500)', // Info/Blue
-  'var(--color-success-500)', // Success/Green
-  'var(--color-warning-500)', // Warning/Yellow
-  'var(--color-secondary-500)', // Secondary/Violet
-  'var(--color-primary-500)', // Primary/Orange
-  'var(--color-danger-100)', // Light Error
-  'var(--color-danger-600)', // Danger/Dark Red
-  'var(--color-info-100)', // Light Info
-  'var(--color-warning-300)', // Light Warning
-  'var(--color-text)', // Black
-  'var(--color-text-on-primary)', // White
+  'var(--danger)', // Error/Red
+  '#60A5FA', // Info/Blue
+  'var(--success)', // Success/Green
+  'var(--warning)', // Warning/Yellow
+  'var(--text-2)', // Secondary/Violet
+  'var(--accent)', // Primary/Orange
+  'color-mix(in oklch, var(--danger) 20%, transparent)', // Light Error
+  'var(--danger)', // Danger/Dark Red
+  'color-mix(in oklch, #60A5FA 20%, transparent)', // Light Info
+  'color-mix(in oklch, var(--warning) 40%, transparent)', // Light Warning
+  'var(--text)', // Black
+  'var(--accent-fg)', // White
 ];
 
 export function WarehouseEditView({ isNew = false }: { isNew?: boolean }) {
@@ -98,18 +98,18 @@ export function WarehouseEditView({ isNew = false }: { isNew?: boolean }) {
 
   const IMAGE: CardSection = {
     id: 'image',
-    title: t('warehouse.imageTitle', 'Warehouse Image'),
-    fields: [{ key: 'picture_url', label: t('warehouse.picture', 'Picture'), type: 'image', defaultValue: null, height: 250 }],
+    title: t('warehouse.imageTitle'),
+    fields: [{ key: 'picture_url', label: t('warehouse.picture'), type: 'image', defaultValue: null, height: 250 }],
   };
 
   const BASIC: CardSection = {
     id: 'basic',
-    title: t('warehouse.basicInfo', 'Basic Information'),
+    title: t('warehouse.basicInfo'),
     columns: 1,
     fields: [
       {
         key: 'name',
-        label: t('warehouse.name', 'Name'),
+        label: t('warehouse.name'),
         type: 'text',
         required: true,
         defaultValue: '',
@@ -117,21 +117,21 @@ export function WarehouseEditView({ isNew = false }: { isNew?: boolean }) {
       },
       {
         key: 'name_en',
-        label: t('warehouse.nameEn', 'Name (English)'),
+        label: t('warehouse.nameEn'),
         type: 'text',
         required: false,
         defaultValue: '',
       },
       {
         key: 'name_ru',
-        label: t('warehouse.nameRu', 'Name (Russian)'),
+        label: t('warehouse.nameRu'),
         type: 'text',
         required: false,
         defaultValue: '',
       },
       // {
       //   key: 'branch_id',
-      //   label: t('warehouse.branch', 'Branch'),
+      //   label: t('warehouse.branch'),
       //   type: 'select',
       //   required: true,
       //   defaultValue: '',
@@ -139,22 +139,22 @@ export function WarehouseEditView({ isNew = false }: { isNew?: boolean }) {
       // },
       {
         key: 'color_code',
-        label: t('warehouse.color', 'Color'),
+        label: t('warehouse.color'),
         type: 'color',
-        defaultValue: 'var(--color-danger-500)',
+        defaultValue: 'var(--danger)',
         colors: COLOR_CODES,
       },
     ],
   };
 
   const config: GenericEditViewConfig = {
-    title: isNew ? t('warehouse.newStorage', 'New storage') : t('warehouse.editStorage', 'Edit storage'),
+    title: isNew ? t('warehouse.newStorage') : t('warehouse.editStorage'),
     entityName: 'storage',
     showBreadcrumbs: false,
     breadcrumbs: [
-      { name: t('app', 'Menu'), href: paths.menu.root },
-      { name: t('overview.warehouse.storage', 'Storage'), href: paths.warehouse.storage.root },
-      { name: isNew ? t('warehouse.new', 'New') : t('warehouse.edit', 'Edit'), href: '' },
+      { name: t('app'), href: paths.menu.root },
+      { name: t('overview.warehouse.storage'), href: paths.warehouse.storage.root },
+      { name: isNew ? t('warehouse.new') : t('warehouse.edit'), href: '' },
     ],
     leftSidecard: IMAGE,
     sections: [BASIC],

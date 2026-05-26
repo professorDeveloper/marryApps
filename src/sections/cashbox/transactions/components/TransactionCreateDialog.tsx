@@ -37,9 +37,9 @@ type TransactionCreateDialogProps = {
 };
 
 const PAY_TYPE_OPTIONS = (t: TFunction) => [
-  { value: 'cash', label: t('payType.cash', 'Cash') },
-  { value: 'card', label: t('payType.card', 'Card') },
-  { value: 'transfer', label: t('payType.transfer', 'Transfer') },
+  { value: 'cash', label: t('payType.cash') },
+  { value: 'card', label: t('payType.card') },
+  { value: 'transfer', label: t('payType.transfer') },
 ];
 
 export function TransactionCreateDialog({ open, onClose, onSuccess }: TransactionCreateDialogProps) {
@@ -106,7 +106,7 @@ export function TransactionCreateDialog({ open, onClose, onSuccess }: Transactio
       console.error('Error loading base data:', error);
       const errorMsg = error instanceof Error ? error.message : 'Failed to load data';
       setLoadError(errorMsg);
-      toast.error(t('common.loadError', 'Failed to load data. Please try again.'));
+      toast.error(t('common.loadError'));
     } finally {
       setLoading(false);
     }
@@ -167,37 +167,37 @@ export function TransactionCreateDialog({ open, onClose, onSuccess }: Transactio
     const newErrors: Record<string, string> = {};
 
     if (!formData.amount || Number(formData.amount) <= 0) {
-      newErrors.amount = t('validation.required', 'Required');
+      newErrors.amount = t('validation.required');
     }
 
     if (!formData.date) {
-      newErrors.date = t('validation.required', 'Required');
+      newErrors.date = t('validation.required');
     }
 
     if (!formData.group_transaction_id) {
-      newErrors.group_transaction_id = t('validation.required', 'Required');
+      newErrors.group_transaction_id = t('validation.required');
     }
 
     if (transactionType === 'transfer') {
       if (!formData.from_branch_id) {
-        newErrors.from_branch_id = t('validation.required', 'Required');
+        newErrors.from_branch_id = t('validation.required');
       }
       if (!formData.to_branch_id) {
-        newErrors.to_branch_id = t('validation.required', 'Required');
+        newErrors.to_branch_id = t('validation.required');
       }
       if (!formData.from_cash_register_id) {
-        newErrors.from_cash_register_id = t('validation.required', 'Required');
+        newErrors.from_cash_register_id = t('validation.required');
       }
       if (!formData.to_cash_register_id) {
-        newErrors.to_cash_register_id = t('validation.required', 'Required');
+        newErrors.to_cash_register_id = t('validation.required');
       }
       if (formData.from_branch_id === formData.to_branch_id && 
           formData.from_cash_register_id === formData.to_cash_register_id) {
-        newErrors.to_cash_register_id = t('validation.sameRegister', 'Cannot transfer to same register');
+        newErrors.to_cash_register_id = t('validation.sameRegister');
       }
     } else {
       if (!formData.cash_register_id) {
-        newErrors.cash_register_id = t('validation.required', 'Required');
+        newErrors.cash_register_id = t('validation.required');
       }
     }
 
@@ -246,7 +246,7 @@ export function TransactionCreateDialog({ open, onClose, onSuccess }: Transactio
     } catch (error) {
       console.error('Error submitting transaction:', error);
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-      toast.error(t('transactions.createError', 'Failed to create transaction: {{message}}', { message: errorMsg }));
+      toast.error(t('transactions.createError', { message: errorMsg }));
     } finally {
       setSubmitting(false);
     }
@@ -265,7 +265,7 @@ export function TransactionCreateDialog({ open, onClose, onSuccess }: Transactio
   const renderTypeSelection = () => (
     <Stack spacing={2} sx={{ py: 2 }}>
       <Typography variant="subtitle1" sx={{ mb: 1 }}>
-        {t('transactions.selectType', 'Select transaction type')}
+        {t('transactions.selectType')}
       </Typography>
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
         <Card
@@ -306,10 +306,10 @@ export function TransactionCreateDialog({ open, onClose, onSuccess }: Transactio
               <Iconify icon="solar:import-bold" width={28} color="success.main" />
             </Box>
             <Typography variant="h6" color="success.main">
-              {t('transactions.income', 'Income')}
+              {t('transactions.income')}
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-              {t('transactions.incomeDesc', 'Record incoming money')}
+              {t('transactions.incomeDesc')}
             </Typography>
           </CardContent>
         </Card>
@@ -352,10 +352,10 @@ export function TransactionCreateDialog({ open, onClose, onSuccess }: Transactio
               <Iconify icon="solar:export-bold" width={28} color="error.main" />
             </Box>
             <Typography variant="h6" color="error.main">
-              {t('transactions.expense', 'Expense')}
+              {t('transactions.expense')}
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-              {t('transactions.expenseDesc', 'Record outgoing money')}
+              {t('transactions.expenseDesc')}
             </Typography>
           </CardContent>
         </Card>
@@ -398,10 +398,10 @@ export function TransactionCreateDialog({ open, onClose, onSuccess }: Transactio
               <Iconify icon="solar:forward-bold" width={28} color="primary.main" />
             </Box>
             <Typography variant="h6" color="primary.main">
-              {t('transactions.transfer', 'Transfer')}
+              {t('transactions.transfer')}
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-              {t('transactions.transferDesc', 'Move money between registers')}
+              {t('transactions.transferDesc')}
             </Typography>
           </CardContent>
         </Card>
@@ -420,19 +420,19 @@ export function TransactionCreateDialog({ open, onClose, onSuccess }: Transactio
             startIcon={<Iconify icon="solar:reply-bold" />}
             onClick={handleBack}
           >
-            {t('common.back', 'Back')}
+            {t('common.back')}
           </Button>
           <Typography variant="subtitle1">
             {isTransfer
-              ? t('transactions.newTransfer', 'New Transfer')
+              ? t('transactions.newTransfer')
               : transactionType === 'income'
-              ? t('transactions.newIncome', 'New Income')
-              : t('transactions.newExpense', 'New Expense')}
+              ? t('transactions.newIncome')
+              : t('transactions.newExpense')}
           </Typography>
         </Stack>
 
         <TextField
-          label={t('common.total', 'Amount')}
+          label={t('common.total')}
           type="number"
           value={formData.amount}
           onChange={(e) => handleChange('amount', e.target.value)}
@@ -443,7 +443,7 @@ export function TransactionCreateDialog({ open, onClose, onSuccess }: Transactio
         />
 
         <TextField
-          label={t('deductions.date', 'Date')}
+          label={t('deductions.date')}
           type="date"
           value={formData.date}
           onChange={(e) => handleChange('date', e.target.value)}
@@ -455,11 +455,11 @@ export function TransactionCreateDialog({ open, onClose, onSuccess }: Transactio
         />
 
         <FormControl fullWidth required error={!!errors.pay_type}>
-          <InputLabel>{t('common.paymentType', 'Pay type')}</InputLabel>
+          <InputLabel>{t('common.paymentType')}</InputLabel>
           <Select
             value={formData.pay_type}
             onChange={(e) => handleChange('pay_type', e.target.value)}
-            label={t('common.paymentType', 'Pay type')}
+            label={t('common.paymentType')}
           >
             {PAY_TYPE_OPTIONS(t).map((opt) => (
               <MenuItem key={opt.value} value={opt.value}>
@@ -470,11 +470,11 @@ export function TransactionCreateDialog({ open, onClose, onSuccess }: Transactio
         </FormControl>
 
         <FormControl fullWidth required error={!!errors.group_transaction_id}>
-          <InputLabel>{t('deductions.group', 'Group')}</InputLabel>
+          <InputLabel>{t('deductions.group')}</InputLabel>
           <Select
             value={formData.group_transaction_id}
             onChange={(e) => handleChange('group_transaction_id', e.target.value)}
-            label={t('deductions.group', 'Group')}
+            label={t('deductions.group')}
           >
             {groupOptions.map((opt) => (
               <MenuItem key={opt.value} value={opt.value}>
@@ -493,11 +493,11 @@ export function TransactionCreateDialog({ open, onClose, onSuccess }: Transactio
           <>
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
               <FormControl fullWidth required error={!!errors.from_branch_id}>
-                <InputLabel>{t('transactions.fromBranch', 'From branch')}</InputLabel>
+                <InputLabel>{t('transactions.fromBranch')}</InputLabel>
                 <Select
                   value={formData.from_branch_id}
                   onChange={(e) => handleChange('from_branch_id', e.target.value)}
-                  label={t('transactions.fromBranch', 'From branch')}
+                  label={t('transactions.fromBranch')}
                 >
                   {branchOptions.map((opt) => (
                     <MenuItem key={opt.value} value={opt.value}>
@@ -513,11 +513,11 @@ export function TransactionCreateDialog({ open, onClose, onSuccess }: Transactio
               </FormControl>
 
               <FormControl fullWidth required error={!!errors.to_branch_id}>
-                <InputLabel>{t('transactions.toBranch', 'To branch')}</InputLabel>
+                <InputLabel>{t('transactions.toBranch')}</InputLabel>
                 <Select
                   value={formData.to_branch_id}
                   onChange={(e) => handleChange('to_branch_id', e.target.value)}
-                  label={t('transactions.toBranch', 'To branch')}
+                  label={t('transactions.toBranch')}
                 >
                   {branchOptions.map((opt) => (
                     <MenuItem key={opt.value} value={opt.value}>
@@ -535,11 +535,11 @@ export function TransactionCreateDialog({ open, onClose, onSuccess }: Transactio
 
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
               <FormControl fullWidth required error={!!errors.from_cash_register_id}>
-                <InputLabel>{t('transactions.fromRegister', 'From cash register')}</InputLabel>
+                <InputLabel>{t('transactions.fromRegister')}</InputLabel>
                 <Select
                   value={formData.from_cash_register_id}
                   onChange={(e) => handleChange('from_cash_register_id', e.target.value)}
-                  label={t('transactions.fromRegister', 'From cash register')}
+                  label={t('transactions.fromRegister')}
                 >
                   {cashRegisterOptions
                     .filter((opt) => {
@@ -563,11 +563,11 @@ export function TransactionCreateDialog({ open, onClose, onSuccess }: Transactio
               </FormControl>
 
               <FormControl fullWidth required error={!!errors.to_cash_register_id}>
-                <InputLabel>{t('transactions.toRegister', 'To cash register')}</InputLabel>
+                <InputLabel>{t('transactions.toRegister')}</InputLabel>
                 <Select
                   value={formData.to_cash_register_id}
                   onChange={(e) => handleChange('to_cash_register_id', e.target.value)}
-                  label={t('transactions.toRegister', 'To cash register')}
+                  label={t('transactions.toRegister')}
                   disabled={!formData.to_branch_id}
                 >
                   {toCashRegisterOptions.map((opt) => (
@@ -586,11 +586,11 @@ export function TransactionCreateDialog({ open, onClose, onSuccess }: Transactio
           </>
         ) : (
           <FormControl fullWidth required error={!!errors.cash_register_id}>
-            <InputLabel>{t('cashbox.cashiers.title', 'Cash register')}</InputLabel>
+            <InputLabel>{t('cashbox.cashiers.title')}</InputLabel>
             <Select
               value={formData.cash_register_id}
               onChange={(e) => handleChange('cash_register_id', e.target.value)}
-              label={t('cashbox.cashiers.title', 'Cash register')}
+              label={t('cashbox.cashiers.title')}
             >
               {cashRegisterOptions.map((opt) => (
                 <MenuItem key={opt.value} value={opt.value}>
@@ -607,7 +607,7 @@ export function TransactionCreateDialog({ open, onClose, onSuccess }: Transactio
         )}
 
         <TextField
-          label={t('deductions.description', 'Description')}
+          label={t('deductions.description')}
           multiline
           rows={3}
           value={formData.description}
@@ -622,12 +622,12 @@ export function TransactionCreateDialog({ open, onClose, onSuccess }: Transactio
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>
         {transactionType === null
-          ? t('transactions.createTransaction', 'Create Transaction')
+          ? t('transactions.createTransaction')
           : transactionType === 'transfer'
-          ? t('transactions.newTransfer', 'New Transfer')
+          ? t('transactions.newTransfer')
           : transactionType === 'income'
-          ? t('transactions.newIncome', 'New Income')
-          : t('transactions.newExpense', 'New Expense')}
+          ? t('transactions.newIncome')
+          : t('transactions.newExpense')}
       </DialogTitle>
       <DialogContent>
         {loading ? (
@@ -641,7 +641,7 @@ export function TransactionCreateDialog({ open, onClose, onSuccess }: Transactio
             </Alert>
             <Box sx={{ display: 'flex', justifyContent: 'center' }}>
               <Button onClick={loadBaseData} variant="outlined">
-                {t('common.retry', 'Retry')}
+                {t('common.retry')}
               </Button>
             </Box>
           </Box>
@@ -653,7 +653,7 @@ export function TransactionCreateDialog({ open, onClose, onSuccess }: Transactio
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose} variant="outlined" disabled={submitting}>
-          {t('common.cancel', 'Cancel')}
+          {t('common.cancel')}
         </Button>
         {transactionType !== null && (
           <Button
@@ -663,8 +663,8 @@ export function TransactionCreateDialog({ open, onClose, onSuccess }: Transactio
             startIcon={submitting ? <CircularProgress size={16} /> : null}
           >
             {submitting
-              ? t('common.creating', 'Creating...')
-              : t('common.create', 'Create')}
+              ? t('common.creating')
+              : t('common.create')}
           </Button>
         )}
       </DialogActions>

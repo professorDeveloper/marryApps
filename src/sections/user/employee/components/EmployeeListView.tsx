@@ -1,6 +1,6 @@
 import type { IUser } from 'src/types/user';
 import type { EmployeeListProps } from '../types';
-import type { RowAction, BatchAction, DataTableColumn } from 'src/sections/warehouse/deduction/components/utility-data-table/types/types';
+import type { RowAction, BatchAction, DataTableColumn } from 'src/sections/common/data-table/types/types';
 
 import { useTranslation } from 'react-i18next';
 import { useMemo, useState, useCallback } from 'react';
@@ -17,7 +17,7 @@ import { useGenericViewModal } from 'src/hooks/use-generic-view-modal';
 import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
 
-import { DataTable } from 'src/sections/warehouse/deduction/components/utility-data-table/components/DataTable';
+import { DataTable } from 'src/sections/common/data-table/components/DataTable';
 
 import { getErrorMessageKey } from 'src/auth/utils';
 
@@ -125,7 +125,7 @@ export function EmployeeListView({ role, useStaffApi = false, branchId }: Employ
             },
             {
                 key: 'actions',
-                label: t('common.actions', 'Actions'),
+                label: t('common.actions'),
                 width: 140,
                 sortable: false,
                 filterable: false,
@@ -232,15 +232,16 @@ export function EmployeeListView({ role, useStaffApi = false, branchId }: Employ
                 batchActions={batchActions}
                 rowActions={rowActions}
                 getRowId={(row) => row.id}
-                searchValue={query}
-                onSearchChange={setQuery}
-                page={page}
-                rowsPerPage={rowsPerPage}
-                totalCount={totalCount}
-                onPageChange={setPage}
-                onRowsPerPageChange={setRowsPerPage}
-                emptyTitle={t('users.noEmployees', 'No employees found')}
-                emptySubtitle={t('users.noEmployeesSubtitle', 'Try adjusting filters or check if employees exist for this role.')}
+                search={{ value: query, onChange: setQuery }}
+                pagination={{
+                    page,
+                    rowsPerPage,
+                    totalCount,
+                    onPageChange: setPage,
+                    onRowsPerPageChange: setRowsPerPage,
+                }}
+                emptyTitle={t('users.noEmployees')}
+                emptySubtitle={t('users.noEmployeesSubtitle')}
                 headerActions={headerActions}
             />
 

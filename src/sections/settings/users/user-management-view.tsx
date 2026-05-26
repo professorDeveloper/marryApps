@@ -1,5 +1,5 @@
 import type { IUser } from 'src/types/user';
-import type { RowAction, BatchAction, DataTableColumn } from 'src/sections/warehouse/deduction/components/utility-data-table/types/types';
+import type { RowAction, BatchAction, DataTableColumn } from 'src/sections/common/data-table/types/types';
 
 import { useMemo, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -14,7 +14,7 @@ import { paths } from 'src/routes/paths';
 import { getStatusColor, formatStatusLabel } from 'src/utils/status-colors';
 import { Iconify } from 'src/components/iconify';
 
-import { DataTable } from 'src/sections/warehouse/deduction/components/utility-data-table/components/DataTable';
+import { DataTable } from 'src/sections/common/data-table/components/DataTable';
 
 import { useEmployeeApi } from '../../user/employee/hooks/useEmployeeApi';
 import { DEFAULT_DATATABLE_CONFIG, EMPLOYEE_DATATABLE_PERSIST_KEY } from '../../user/employee/constants';
@@ -63,35 +63,35 @@ export function UserManagementView() {
     () => [
       {
         key: 'full_name',
-        label: t('users.fullName', 'Full Name'),
+        label: t('users.fullName'),
         width: '5fr',
         sortable: true,
         getValue: (row) => row.full_name || '',
       },
       {
         key: 'username',
-        label: t('users.username', 'Username'),
+        label: t('users.username'),
         width: '12fr',
         sortable: true,
         getValue: (row) => row.username || '',
       },
       {
         key: 'role',
-        label: t('users.role', 'Role'),
+        label: t('users.role'),
         width: '0.8fr',
         sortable: true,
         getValue: (row) => row.role || '',
       },
       {
         key: 'phone_number',
-        label: t('users.phone', 'Phone'),
+        label: t('users.phone'),
         width: '1fr',
         sortable: true,
         getValue: (row) => row.phone_number || '',
       },
       {
         key: 'status',
-        label: t('users.status', 'Status'),
+        label: t('users.status'),
         width: '0.7fr',
         sortable: true,
         getValue: (row) => row.status || '',
@@ -109,7 +109,7 @@ export function UserManagementView() {
       },
       {
         key: 'created_at',
-        label: t('users.createdAt', 'Created Date'),
+        label: t('users.createdAt'),
         width: '0.9fr',
         sortable: true,
         getValue: (row) => row.created_at || '',
@@ -117,7 +117,7 @@ export function UserManagementView() {
       },
       {
         key: 'actions',
-        label: t('common.actions', 'Actions'),
+        label: t('common.actions'),
         width: '0.7fr',
         sortable: false,
         filterable: false,
@@ -128,7 +128,7 @@ export function UserManagementView() {
               onClick={() => {
                 window.location.href = paths.settings.usersEdit(row.id);
               }}
-              title={t('common.edit', 'Edit')}
+              title={t('common.edit')}
             >
               <Iconify icon="solar:pen-bold" width={16} />
             </IconButton>
@@ -146,7 +146,7 @@ export function UserManagementView() {
                   }
                 }
               }}
-              title={t('common.delete', 'Delete')}
+              title={t('common.delete')}
             >
               <Iconify icon="solar:trash-bin-trash-bold" width={16} />
             </IconButton>
@@ -161,14 +161,14 @@ export function UserManagementView() {
   const rowActions = useMemo<RowAction<IUser>[]>(
     () => [
       {
-        label: t('common.edit', 'Edit'),
+        label: t('common.edit'),
         icon: 'solar:pen-bold',
         onClick: (user) => {
           window.location.href = paths.settings.usersEdit(user.id);
         },
       },
       {
-        label: t('common.delete', 'Delete'),
+        label: t('common.delete'),
         icon: 'solar:trash-bin-trash-bold',
         onClick: (user) => {
           const userToDelete = adminUsers?.find(u => u.id === user.id) || 
@@ -191,7 +191,7 @@ export function UserManagementView() {
   const batchActions = useMemo<BatchAction<IUser>[]>(
     () => [
       {
-        label: t('common.delete', 'Delete'),
+        label: t('common.delete'),
         icon: 'solar:trash-bin-trash-bold',
         onClick: (selectedRows) => {
           selectedRows.forEach(user => {
@@ -226,20 +226,24 @@ export function UserManagementView() {
           setPaginationModel({ page: 0, pageSize: 20 });
         }}
         getRowId={(row) => row.id}
-        searchValue={searchQuery}
-        onSearchChange={(value) => {
-          setSearchQuery(value);
-          setPaginationModel({ page: 0, pageSize: 20 });
+        search={{
+          value: searchQuery,
+          onChange: (value) => {
+            setSearchQuery(value);
+            setPaginationModel({ page: 0, pageSize: 20 });
+          },
         }}
-        page={paginationModel.page}
-        rowsPerPage={paginationModel.pageSize}
-        totalCount={totalCount}
-        rowsPerPageOptions={[10, 20, 50, 100]}
-        onPageChange={(page) => {
-          setPaginationModel((prev) => ({ ...prev, page }));
-        }}
-        onRowsPerPageChange={(pageSize) => {
-          setPaginationModel({ page: 0, pageSize });
+        pagination={{
+          page: paginationModel.page,
+          rowsPerPage: paginationModel.pageSize,
+          totalCount,
+          rowsPerPageOptions: [10, 20, 50, 100],
+          onPageChange: (page) => {
+            setPaginationModel((prev) => ({ ...prev, page }));
+          },
+          onRowsPerPageChange: (pageSize) => {
+            setPaginationModel({ page: 0, pageSize });
+          },
         }}
         headerActions={
           <Button
@@ -249,7 +253,7 @@ export function UserManagementView() {
             href={paths.settings.usersNew}
             size="small"
           >
-            {t('common.add', 'Add')}
+            {t('common.add')}
           </Button>
         }
       />

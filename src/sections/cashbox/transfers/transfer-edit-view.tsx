@@ -150,7 +150,7 @@ export function TransactionsEditView({ isNew = false }: TransactionsEditViewProp
         setLoading(true);
         const data = await getTransferById(id);
         if (!data) {
-          toast.error(t('error.notFound', 'Transfer not found'));
+          toast.error(t('error.notFound'));
           navigate(paths.cashbox.transactions);
           return;
         }
@@ -185,15 +185,15 @@ export function TransactionsEditView({ isNew = false }: TransactionsEditViewProp
   const validateBaseFields = useCallback(() => {
     if (!formData.from_branch_id || !formData.to_branch_id) {
       setActiveTab(0);
-      throw new Error(t('warehouse.branch', 'Please select branches'));
+      throw new Error(t('warehouse.branch'));
     }
     if (!formData.from_storage_id || !formData.to_storage_id) {
       setActiveTab(0);
-      throw new Error(t('deductions.storageRequired', 'Please select storages'));
+      throw new Error(t('deductions.storageRequired'));
     }
     if (!formData.act_group_id) {
       setActiveTab(0);
-      throw new Error(t('deductions.groupRequired', 'Please select group'));
+      throw new Error(t('deductions.groupRequired'));
     }
   }, [formData.act_group_id, formData.from_branch_id, formData.from_storage_id, formData.to_branch_id, formData.to_storage_id, t]);
 
@@ -203,7 +203,7 @@ export function TransactionsEditView({ isNew = false }: TransactionsEditViewProp
     if (isNew && !effectiveTransferId) {
       if (!itemsRef.current.length) {
         setActiveTab(1);
-        throw new Error(t('deductions.itemsRequired', 'Please add at least one item'));
+        throw new Error(t('deductions.itemsRequired'));
       }
 
       await createTransferBatch({
@@ -215,7 +215,7 @@ export function TransactionsEditView({ isNew = false }: TransactionsEditViewProp
         from_storage_id: formData.from_storage_id,
         items: itemsRef.current,
       });
-      toast.success(t('common.createSuccess', 'Created successfully'));
+      toast.success(t('common.createSuccess'));
       goToTransactions();
       return;
     }
@@ -230,7 +230,7 @@ export function TransactionsEditView({ isNew = false }: TransactionsEditViewProp
         status: formData.status,
         items: itemsRef.current,
       });
-      toast.success(t('common.updateSuccess', 'Updated successfully'));
+      toast.success(t('common.updateSuccess'));
       goToTransactions();
     }
   }, [
@@ -251,7 +251,7 @@ export function TransactionsEditView({ isNew = false }: TransactionsEditViewProp
 
       if (!itemsRef.current.length) {
         setActiveTab(1);
-        throw new Error(t('deductions.itemsRequired', 'Please add at least one item'));
+        throw new Error(t('deductions.itemsRequired'));
       }
 
       if (isNew && !effectiveTransferId) {
@@ -264,7 +264,7 @@ export function TransactionsEditView({ isNew = false }: TransactionsEditViewProp
           from_storage_id: formData.from_storage_id,
           items: itemsRef.current,
         });
-        toast.success(t('common.createSuccess', 'Created successfully'));
+        toast.success(t('common.createSuccess'));
         goToTransactions();
         return;
       }
@@ -279,7 +279,7 @@ export function TransactionsEditView({ isNew = false }: TransactionsEditViewProp
           status: formData.status,
           items: itemsRef.current,
         });
-        toast.success(t('common.updateSuccess', 'Updated successfully'));
+        toast.success(t('common.updateSuccess'));
         goToTransactions();
       }
     } finally {
@@ -311,25 +311,25 @@ export function TransactionsEditView({ isNew = false }: TransactionsEditViewProp
 
   const config = useMemo(
     () => ({
-      title: isNew ? t('common.create', 'Create transaction') : t('common.edit', 'Edit transaction'),
+      title: isNew ? t('common.create') : t('common.edit'),
       entityName: 'transfer',
       showBreadcrumbs: false,
       showDeleteButton: false,
       breadcrumbs: [
-        { name: t('dashboard', 'Dashboard'), href: paths.dashboard.root },
-        { name: t('cashbox.sidebar.title', 'Cashbox'), href: paths.cashbox.root },
-        { name: t('cashbox.sidebar.transactions', 'Transactions'), href: paths.cashbox.transactions },
-        { name: isNew ? t('common.create', 'Create') : t('common.edit', 'Edit'), href: '' },
+        { name: t('dashboard'), href: paths.dashboard.root },
+        { name: t('cashbox.sidebar.title'), href: paths.cashbox.root },
+        { name: t('cashbox.sidebar.transactions'), href: paths.cashbox.transactions },
+        { name: isNew ? t('common.create') : t('common.edit'), href: '' },
       ],
       sections: [
         {
           id: 'basic',
-          title: t('deductions.details', 'Details'),
+          title: t('deductions.details'),
           columns: 2,
           fields: [
             {
               key: 'from_branch_id',
-              label: t('warehouse.branch', 'From branch'),
+              label: t('warehouse.branch'),
               type: 'select' as const,
               required: true,
               options: branchOptions,
@@ -337,7 +337,7 @@ export function TransactionsEditView({ isNew = false }: TransactionsEditViewProp
             },
             {
               key: 'to_branch_id',
-              label: t('warehouse.branch', 'To branch'),
+              label: t('warehouse.branch'),
               type: 'select' as const,
               required: true,
               options: branchOptions,
@@ -345,7 +345,7 @@ export function TransactionsEditView({ isNew = false }: TransactionsEditViewProp
             },
             {
               key: 'from_storage_id',
-              label: t('deductions.storage', 'From storage'),
+              label: t('deductions.storage'),
               type: 'select' as const,
               required: true,
               options: storageOptions,
@@ -353,7 +353,7 @@ export function TransactionsEditView({ isNew = false }: TransactionsEditViewProp
             },
             {
               key: 'to_storage_id',
-              label: t('warehouse.storage', 'To storage'),
+              label: t('warehouse.storage'),
               type: 'select' as const,
               required: true,
               options: storageOptions,
@@ -361,7 +361,7 @@ export function TransactionsEditView({ isNew = false }: TransactionsEditViewProp
             },
             {
               key: 'act_group_id',
-              label: t('deductions.group', 'Group'),
+              label: t('deductions.group'),
               type: 'select' as const,
               required: true,
               options: groupOptions,
@@ -369,17 +369,17 @@ export function TransactionsEditView({ isNew = false }: TransactionsEditViewProp
             },
             {
               key: 'status',
-              label: t('deductions.status', 'Status'),
+              label: t('deductions.status'),
               type: 'select' as const,
               options: [
-                { value: 'active', label: t('deductions.active', 'Active') },
-                { value: 'deleted', label: t('deductions.deleted', 'Deleted') },
+                { value: 'active', label: t('deductions.active') },
+                { value: 'deleted', label: t('deductions.deleted') },
               ],
               defaultValue: 'active',
             },
             {
               key: 'description',
-              label: t('deductions.description', 'Description'),
+              label: t('deductions.description'),
               type: 'textarea' as const,
               defaultValue: '',
               rows: 3,
@@ -403,8 +403,8 @@ export function TransactionsEditView({ isNew = false }: TransactionsEditViewProp
           variant="fullWidth"
           sx={{ mb: 0, width: '100%' }}
         >
-          <Tab label={t('common.edit', 'Details')} id="transactions-tab-0" />
-          <Tab label={t('mealsProducts.calculate', 'Calculation')} id="transactions-tab-1" />
+          <Tab label={t('common.edit')} id="transactions-tab-0" />
+          <Tab label={t('mealsProducts.calculate')} id="transactions-tab-1" />
         </Tabs>
 
         <TabPanel value={activeTab} index={0}>

@@ -17,6 +17,11 @@ export function useGoodsReportFilters() {
     hall_id: '',
     table_id: '',
     good_ids: [],
+    waiter_ids: [],
+    hall_ids: [],
+    table_ids: [],
+    department_ids: [],
+    category_ids: [],
     sort_by: '',
     sort_order: '',
     limit: DEFAULT_PAGE_SIZE,
@@ -92,6 +97,11 @@ export function useGoodsReportFilters() {
       hall_id: '',
       table_id: '',
       good_ids: [],
+      waiter_ids: [],
+      hall_ids: [],
+      table_ids: [],
+      department_ids: [],
+      category_ids: [],
       sort_by: '',
       sort_order: '',
       limit: DEFAULT_PAGE_SIZE,
@@ -104,6 +114,23 @@ export function useGoodsReportFilters() {
     setFilters((prev) => ({ ...prev, good_ids: goodIds, good_id: '', offset: 0 }));
     setPaginationModel((prev) => ({ ...prev, page: 0 }));
   }, []);
+
+  const handleMultiIdsChange = useCallback(
+    (key: 'waiter_ids' | 'hall_ids' | 'table_ids' | 'department_ids' | 'category_ids', ids: string[]) => {
+      setFilters((prev) => {
+        const next = { ...prev, [key]: ids, offset: 0 } as typeof prev;
+        if (key === 'hall_ids') next.table_ids = [];
+        if (key === 'department_ids') {
+          next.category_ids = [];
+          next.good_ids = [];
+        }
+        if (key === 'category_ids') next.good_ids = [];
+        return next;
+      });
+      setPaginationModel((prev) => ({ ...prev, page: 0 }));
+    },
+    []
+  );
 
   const handleSortChange = useCallback((sort: { key: string | null; dir: string | null }) => {
     setFilters((prev) => ({
@@ -126,6 +153,7 @@ export function useGoodsReportFilters() {
     handlePaginationChange,
     handleReset,
     handleGoodIdsChange,
+    handleMultiIdsChange,
     handleSortChange,
   };
 }

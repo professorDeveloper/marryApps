@@ -1,5 +1,5 @@
 import type { IGoodsReportItem } from 'src/types/goods-reports';
-import type { SearchOutput, DataTableColumn, DataTableDefaultConfig } from 'src/sections/warehouse/deduction/components/utility-data-table/types/types';
+import type { SearchOutput, DataTableColumn, DataTableDefaultConfig } from 'src/sections/common/data-table/types/types';
 
 import dayjs from 'dayjs';
 import { useMemo, useCallback } from 'react';
@@ -11,13 +11,16 @@ import { paths } from 'src/routes/paths';
 
 import { useMetadata } from 'src/hooks/use-metadata';
 import { MetadataEntity } from 'src/types/metadata';
+import { useGetHalls } from 'src/actions/halls';
+import { useGetUsersByRole } from 'src/actions/users';
 import { useGetGoodsReports } from 'src/actions/goods-reports';
 import { useGetDepartments } from 'src/actions/departments';
 import { useGetCategories } from 'src/actions/categories';
+import { useGetCafeTables } from 'src/actions/cafe-tables';
 
-import { DataTable } from 'src/sections/warehouse/deduction/components/utility-data-table/components/DataTable';
-import { DepartmentFilter } from 'src/sections/warehouse/deduction/components/utility-data-table/components/DepartmentFilter';
-import { CategoryFilter } from 'src/sections/warehouse/deduction/components/utility-data-table/components/CategoryFilter';
+import { DataTable } from 'src/sections/common/data-table/components/DataTable';
+
+import { MultiSelectFilter } from './MultiSelectFilter';
 
 import { PERSIST_KEY, PAGE_SIZE_OPTIONS } from '../constants';
 import { formatAmount, formatPercent } from '../utils/formatters';
@@ -48,8 +51,34 @@ export function GoodsReportListView() {
     handlePaginationChange,
     handleReset,
     handleGoodIdsChange,
+    handleMultiIdsChange,
     handleSortChange,
   } = useGoodsReportFilters();
+
+  const { users: waiters } = useGetUsersByRole('waiter');
+  const { halls } = useGetHalls();
+  const { tables } = useGetCafeTables();
+
+  const departmentOptions = useMemo(
+    () => departments.map((d) => ({ id: String(d.id), label: d.name })),
+    [departments]
+  );
+  const categoryOptions = useMemo(
+    () => categories.map((c) => ({ id: String(c.id), label: c.name })),
+    [categories]
+  );
+  const waiterOptions = useMemo(
+    () => waiters.map((w: any) => ({ id: String(w.id), label: w.full_name || w.username || '-' })),
+    [waiters]
+  );
+  const hallOptions = useMemo(
+    () => halls.map((h: any) => ({ id: String(h.id), label: h.name })),
+    [halls]
+  );
+  const tableOptions = useMemo(
+    () => tables.map((tbl: any) => ({ id: String(tbl.id), label: `#${tbl.number}` })),
+    [tables]
+  );
 
   const handleSearch = useCallback(
     ({ optionIds = [] }: SearchOutput) => {
@@ -61,13 +90,13 @@ export function GoodsReportListView() {
   const { reports, totals, reportsLoading, reportsPagination } = useGetGoodsReports({
     start_date: filters.start_date,
     end_date: filters.end_date,
-    department_id: filters.department_id || undefined,
-    category_id: filters.category_id || undefined,
+    department_ids: filters.department_ids.length > 0 ? filters.department_ids : undefined,
+    category_ids: filters.category_ids.length > 0 ? filters.category_ids : undefined,
     good_ids: filters.good_ids.length > 0 ? filters.good_ids : undefined,
     good_id: filters.good_ids.length === 0 && filters.good_id ? filters.good_id : undefined,
-    waiter_id: filters.waiter_id || undefined,
-    hall_id: filters.hall_id || undefined,
-    table_id: filters.table_id || undefined,
+    waiter_ids: filters.waiter_ids.length > 0 ? filters.waiter_ids : undefined,
+    hall_ids: filters.hall_ids.length > 0 ? filters.hall_ids : undefined,
+    table_ids: filters.table_ids.length > 0 ? filters.table_ids : undefined,
     sort_by: filters.sort_by || undefined,
     sort_order: filters.sort_order || undefined,
     limit: filters.limit,
@@ -83,32 +112,20 @@ export function GoodsReportListView() {
       const params = new URLSearchParams();
       if (filters.start_date) params.set('start_date', filters.start_date);
       if (filters.end_date) params.set('end_date', filters.end_date);
-      if (filters.waiter_id) params.set('waiter_id', filters.waiter_id);
-      if (filters.hall_id) params.set('hall_id', filters.hall_id);
-      if (filters.table_id) params.set('table_id', filters.table_id);
+      if (filters.department_ids.length > 0) params.set('department_ids', filters.department_ids.join(','));
+      if (filters.category_ids.length > 0) params.set('category_ids', filters.category_ids.join(','));
+      if (filters.waiter_ids.length > 0) params.set('waiter_ids', filters.waiter_ids.join(','));
+      if (filters.hall_ids.length > 0) params.set('hall_ids', filters.hall_ids.join(','));
+      if (filters.table_ids.length > 0) params.set('table_ids', filters.table_ids.join(','));
 
       const query = params.toString();
       const absoluteUrl = `${window.location.origin}${href}${query ? `?${query}` : ''}`;
       window.open(absoluteUrl, '_blank', 'noopener,noreferrer');
     },
-    [filters.end_date, filters.hall_id, filters.start_date, filters.table_id, filters.waiter_id]
+    [filters.end_date, filters.hall_ids, filters.start_date, filters.table_ids, filters.waiter_ids]
   );
 
   const getRowId = useCallback((row: IGoodsReportItem) => String(row.good_id), []);
-
-  const handleDepartmentChange = useCallback(
-    (departmentId: string) => {
-      handleFilterChange({ department_id: departmentId === 'all' ? '' : departmentId, category_id: '', good_id: '' });
-    },
-    [handleFilterChange]
-  );
-
-  const handleCategoryChange = useCallback(
-    (categoryId: string) => {
-      handleFilterChange({ category_id: categoryId === 'all' ? '' : categoryId, good_id: '' });
-    },
-    [handleFilterChange]
-  );
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, px:2 }}>
@@ -122,55 +139,73 @@ export function GoodsReportListView() {
         onReset={handleReset}
         showRowNumbers
         getRowId={getRowId}
-        searchMode="advanced"
-        allowFreeText={false}
-        searchOptions={goodOptions}
-        onSearch={handleSearch}
+        search={{ mode: 'advanced', allowFreeText: false, options: goodOptions, onSearch: handleSearch, placeholder: t('goodsReports.searchMeals', 'Search meals') }}
         onSortChange={handleSortChange}
-        page={paginationModel.page}
-        rowsPerPage={paginationModel.pageSize}
-        totalCount={reportsPagination?.total ?? totals?.total_count ?? 0}
-        rowsPerPageOptions={[...PAGE_SIZE_OPTIONS]}
-        onPageChange={(page) => handlePaginationChange({ ...paginationModel, page })}
-        onRowsPerPageChange={(pageSize) => handlePaginationChange({ page: 0, pageSize })}
-        showPeriodPicker
-        periodPickerProps={{
+        pagination={{
+          page: paginationModel.page,
+          rowsPerPage: paginationModel.pageSize,
+          totalCount: reportsPagination?.total ?? totals?.total_count ?? 0,
+          rowsPerPageOptions: [...PAGE_SIZE_OPTIONS],
+          onPageChange: (page) => handlePaginationChange({ ...paginationModel, page }),
+          onRowsPerPageChange: (pageSize) => handlePaginationChange({ page: 0, pageSize }),
+        }}
+        periodFilter={{
           startDate: startDate?.toDate() || null,
           endDate: endDate?.toDate() || null,
           onStartDateChange: (date) => handleStartDateChange(date ? dayjs(date) : null),
           onEndDateChange: (date) => handleEndDateChange(date ? dayjs(date) : null),
-        }}
-        showPeriodButtons
-        periodButtonProps={{
           activePeriod: activeRange,
           onPeriodChange: handleRangeChange,
         }}
-        toolbarActions={
-          <>
-            <DepartmentFilter
-              departmentId={filters.department_id || "all"}
-              departments={departments.map((d) => ({ id: d.id, name: d.name }))}
-              onDepartmentChange={handleDepartmentChange}
-              label={t('goodsReports.department', 'Department')}
-              disabled={departments.length === 0}
+        filterRow={
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(5, 1fr)' },
+              gap: 1,
+              width: '100%',
+            }}
+          >
+            <MultiSelectFilter
+              label={t('goodsReports.department')}
+              options={departmentOptions}
+              value={filters.department_ids}
+              onChange={(ids) => handleMultiIdsChange('department_ids', ids)}
             />
-            <CategoryFilter
-              categoryId={filters.category_id || 'all'}
-              categories={categories.map((c) => ({ id: c.id, name: c.name }))}
-              onCategoryChange={handleCategoryChange}
-              label={t('goodsReports.category', 'Category')}
-              disabled={categories.length === 0}
+            <MultiSelectFilter
+              label={t('goodsReports.category')}
+              options={categoryOptions}
+              value={filters.category_ids}
+              onChange={(ids) => handleMultiIdsChange('category_ids', ids)}
             />
-          </>
+            <MultiSelectFilter
+              label={t('goodsReports.waiter')}
+              options={waiterOptions}
+              value={filters.waiter_ids}
+              onChange={(ids) => handleMultiIdsChange('waiter_ids', ids)}
+            />
+            <MultiSelectFilter
+              label={t('goodsReports.hall')}
+              options={hallOptions}
+              value={filters.hall_ids}
+              onChange={(ids) => handleMultiIdsChange('hall_ids', ids)}
+            />
+            <MultiSelectFilter
+              label={t('goodsReports.table')}
+              options={tableOptions}
+              value={filters.table_ids}
+              onChange={(ids) => handleMultiIdsChange('table_ids', ids)}
+            />
+          </Box>
         }
         rowActions={[
           {
-            label: t('viewDetails', 'View Details'),
+            label: t('viewDetails'),
             onClick: handleRowClick,
           },
         ]}
-        emptyTitle={t('noData', 'No data')}
-        emptySubtitle={t('tryAdjustingFilters', 'Try adjusting filters')}
+        emptyTitle={t('noData')}
+        emptySubtitle={t('tryAdjustingFilters')}
       />
     </Box>
   );
@@ -183,7 +218,7 @@ function useDataTableColumns(): DataTableColumn<IGoodsReportItem>[] {
   return [
     {
       key: 'name',
-      label: t('goodsReports.good', 'Good'),
+      label: t('goodsReports.good'),
       width: 220,
       sortable: true,
       filterable: true,
@@ -192,7 +227,7 @@ function useDataTableColumns(): DataTableColumn<IGoodsReportItem>[] {
     },
     {
       key: 'total_qty',
-      label: t('goodsReports.totalQty', 'Total Qty'),
+      label: t('goodsReports.totalQty'),
       width: 120,
       sortable: true,
       align: 'right',
@@ -206,7 +241,7 @@ function useDataTableColumns(): DataTableColumn<IGoodsReportItem>[] {
     },
     {
       key: 'avg_sell_price',
-      label: t('goodsReports.avgSellPrice', 'Avg sell price'),
+      label: t('goodsReports.avgSellPrice'),
       width: 160,
       sortable: true,
       align: 'right',
@@ -216,7 +251,7 @@ function useDataTableColumns(): DataTableColumn<IGoodsReportItem>[] {
     },
     {
       key: 'total_sell',
-      label: t('goodsReports.totalSell', 'Total sell'),
+      label: t('goodsReports.totalSell'),
       width: 160,
       sortable: true,
       align: 'right',
@@ -231,7 +266,7 @@ function useDataTableColumns(): DataTableColumn<IGoodsReportItem>[] {
     },
     {
       key: 'avg_cost_price',
-      label: t('goodsReports.avgCostPrice', 'Avg cost price'),
+      label: t('goodsReports.avgCostPrice'),
       width: 160,
       sortable: true,
       align: 'right',
@@ -241,7 +276,7 @@ function useDataTableColumns(): DataTableColumn<IGoodsReportItem>[] {
     },
     {
       key: 'total_cost',
-      label: t('goodsReports.totalCost', 'Total cost'),
+      label: t('goodsReports.totalCost'),
       width: 160,
       sortable: true,
       align: 'right',
@@ -256,7 +291,7 @@ function useDataTableColumns(): DataTableColumn<IGoodsReportItem>[] {
     },
     {
       key: 'avg_markup',
-      label: t('goodsReports.avgMarkup', 'Avg markup'),
+      label: t('goodsReports.avgMarkup'),
       width: 150,
       sortable: true,
       align: 'right',
@@ -266,7 +301,7 @@ function useDataTableColumns(): DataTableColumn<IGoodsReportItem>[] {
     },
     {
       key: 'total_markup',
-      label: t('goodsReports.totalMarkup', 'Total markup'),
+      label: t('goodsReports.totalMarkup'),
       width: 160,
       sortable: true,
       align: 'right',
@@ -281,7 +316,7 @@ function useDataTableColumns(): DataTableColumn<IGoodsReportItem>[] {
     },
     {
       key: 'avg_markup_pct',
-      label: t('goodsReports.avgMarkupPct', 'Avg markup %'),
+      label: t('goodsReports.avgMarkupPct'),
       width: 150,
       sortable: true,
       align: 'right',

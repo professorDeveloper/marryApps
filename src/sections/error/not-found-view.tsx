@@ -31,7 +31,7 @@ export function NotFoundView() {
 
         <m.div variants={varBounce('in')}>
           <Typography sx={{ color: 'text.secondary' }}>
-            {t('notFound.description', 'Sorry, we couldn’t find the page you’re looking for. Perhaps you’ve mistyped the URL? Be sure to check your spelling.')}
+            {t('notFound.description')}
           </Typography>
         </m.div>
 
@@ -40,7 +40,7 @@ export function NotFoundView() {
         </m.div>
 
         <Button component={RouterLink} href="/" size="large" variant="contained">
-          {t('notFound.goHome', 'Go back to home')}
+          {t('notFound.goHome')}
         </Button>
       </Container>
     </SimpleLayout>

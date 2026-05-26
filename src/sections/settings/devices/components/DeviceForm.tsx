@@ -77,7 +77,7 @@ export function DeviceForm({ formId, defaultValues, onSubmit }: DeviceFormProps)
       />
 
       <TextField
-        label={t('devices.port', 'Port')}
+        label={t('devices.port')}
         {...register('port', { 
           valueAsNumber: true,
           validate: validatePort 
@@ -113,7 +113,7 @@ export function DeviceForm({ formId, defaultValues, onSubmit }: DeviceFormProps)
       </FormControl>
 
       <FormControl fullWidth error={!!errors.connection_type}>
-        <InputLabel id="connection-type-select-label">{t('devices.connectionType', 'Connection Type')}</InputLabel>
+        <InputLabel id="connection-type-select-label">{t('devices.connectionType')}</InputLabel>
         <Controller
           name="connection_type"
           control={control}
@@ -121,7 +121,7 @@ export function DeviceForm({ formId, defaultValues, onSubmit }: DeviceFormProps)
             <Select
               {...field}
               labelId="connection-type-select-label"
-              label={t('devices.connectionType', 'Connection Type')}
+              label={t('devices.connectionType')}
             >
               {CONNECTION_TYPES.map((ct) => (
                 <MenuItem key={ct.value} value={ct.value}>

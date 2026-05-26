@@ -1,19 +1,20 @@
 import type { ReactNode } from 'react';
 import type { ITransaction } from 'src/types/transactions';
-import type { DataTableColumn } from 'src/sections/warehouse/deduction/components/utility-data-table/types/types';
+import type { DataTableColumn } from 'src/sections/common/data-table/types/types';
+import type { DataTablePeriodFilterProps, DataTableSearchProps, DataTablePaginationProps } from 'src/sections/common/data-table/components/DataTable';
 
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Box, Button, Chip, IconButton, Tooltip } from '@mui/material';
+import { Box, Button, Chip, IconButton, MenuItem, TextField, Tooltip } from '@mui/material';
 
 import { paths } from 'src/routes/paths';
 import { RouterLink } from 'src/routes/components';
 
 import { Iconify } from 'src/components/iconify';
-import { CELL_SX } from 'src/sections/warehouse/deduction/components/utility-data-table/utils/constants';
+import { CELL_SX } from 'src/sections/common/data-table/utils/constants';
 
-import { DataTable } from 'src/sections/warehouse/deduction/components/utility-data-table/components/DataTable';
+import { DataTable } from 'src/sections/common/data-table/components/DataTable';
 
 interface TransactionsDataTableProps {
   data: ITransaction[];
@@ -21,32 +22,16 @@ interface TransactionsDataTableProps {
   cashRegisterMap: Record<string, string>;
   groupsMap: Record<string, string>;
   usersMap: Record<string, string>;
-  searchValue?: string;
-  onSearchChange?: (value: string) => void;
+  search?: DataTableSearchProps;
   onDeleteClick: (id: string) => void;
   onCreateClick?: () => void;
-  page?: number;
-  rowsPerPage?: number;
-  totalCount?: number;
-  onPageChange?: (page: number) => void;
-  onRowsPerPageChange?: (rowsPerPage: number) => void;
+  pagination?: DataTablePaginationProps;
   onReset?: () => void;
   onSortChange?: (sort: { key: string | null; dir: 'asc' | 'desc' | null }) => void;
   filters?: Record<string, { type: 'text' | 'multi'; value: string | string[] }>;
   onFiltersChange?: (filters: Record<string, { type: 'text' | 'multi'; value: string | string[] }>) => void;
   headerActions?: ReactNode;
-  showPeriodPicker?: boolean;
-  periodPickerProps?: {
-    startDate: Date | null;
-    endDate: Date | null;
-    onStartDateChange: (date: Date | null) => void;
-    onEndDateChange: (date: Date | null) => void;
-  };
-  showPeriodButtons?: boolean;
-  periodButtonProps?: {
-    activePeriod: 'day' | 'week' | 'month' | 'year';
-    onPeriodChange: (period: 'day' | 'week' | 'month' | 'year') => void;
-  };
+  periodFilter?: DataTablePeriodFilterProps;
 }
 
 export function TransactionsDataTable({
@@ -55,54 +40,32 @@ export function TransactionsDataTable({
   cashRegisterMap,
   groupsMap,
   usersMap,
-  searchValue = '',
-  onSearchChange,
+  search,
   onDeleteClick,
   onCreateClick,
-  page = 0,
-  rowsPerPage = 20,
-  totalCount = 0,
-  onPageChange,
-  onRowsPerPageChange,
+  pagination,
   onReset,
   onSortChange,
   filters,
   onFiltersChange,
   headerActions,
-  showPeriodPicker = false,
-  periodPickerProps,
-  showPeriodButtons = false,
-  periodButtonProps,
+  periodFilter,
 }: TransactionsDataTableProps) {
   const { t } = useTranslation('menu');
   const columns = useMemo<DataTableColumn<ITransaction>[]>(
     () => [
       {
         key: 'type',
-        label: t('common.type', 'Type'),
+        label: t('common.type'),
         width: 140,
         sortable: true,
-        filterable: true,
         getValue: (row) => row.type,
-        filter: {
-          type: 'multi',
-          options: ['income', 'expense', 'transfer', 'bill_payment'],
-          getOptionLabel: (v) => {
-            const labels: Record<string, string> = {
-              income: t('transactions.typeIncome', 'Income'),
-              expense: t('transactions.typeExpense', 'Expense'),
-              transfer: t('transactions.typeTransfer', 'Transfer'),
-              bill_payment: t('transactions.typeBillPayment', 'Bill Payment'),
-            };
-            return labels[v] || v;
-          },
-        },
         renderCell: ({ row }) => {
           const typeConfig: Record<string, { label: string; color: 'success' | 'error' | 'info' | 'warning' }> = {
-            income: { label: t('transactions.typeIncome', 'Income'), color: 'success' },
-            expense: { label: t('transactions.typeExpense', 'Expense'), color: 'error' },
-            transfer: { label: t('transactions.typeTransfer', 'Transfer'), color: 'info' },
-            bill_payment: { label: t('transactions.typeBillPayment', 'Bill Payment'), color: 'warning' },
+            income: { label: t('transactions.typeIncome'), color: 'success' },
+            expense: { label: t('transactions.typeExpense'), color: 'error' },
+            transfer: { label: t('transactions.typeTransfer'), color: 'info' },
+            bill_payment: { label: t('transactions.typeBillPayment'), color: 'warning' },
           };
           const config = typeConfig[row.type];
           return (
@@ -118,7 +81,7 @@ export function TransactionsDataTable({
       },
       {
         key: 'amount',
-        label: t('common.total', 'Amount'),
+        label: t('common.total'),
         width: 130,
         sortable: true,
         align: 'right',
@@ -144,11 +107,10 @@ export function TransactionsDataTable({
       },
       {
         key: 'cash_register_id',
-        label: t('cashbox.cashiers.title', 'Cash register'),
+        label: t('cashbox.cashiers.title'),
         width: '1fr',
         minWidth: 180,
         sortable: true,
-        filterable: true,
         getValue: (row) => {
           if (row.type === 'transfer') {
             const fromName = cashRegisterMap[row.from_cash_register_id || ''] || row.from_cash_register_id || '-';
@@ -156,11 +118,6 @@ export function TransactionsDataTable({
             return `${fromName} -> ${toName}`;
           }
           return cashRegisterMap[row.cash_register_id || ''] || row.cash_register_id || '-';
-        },
-        filter: {
-          type: 'multi',
-          options: Object.keys(cashRegisterMap),
-          getOptionLabel: (v) => cashRegisterMap[v] || v,
         },
         renderCell: ({ row }) => {
           if (row.type === 'transfer') {
@@ -201,7 +158,7 @@ export function TransactionsDataTable({
 
           // Cashier not found (deleted) - show info icon chip
           if (row.cash_register_id) {
-            const deletedTooltip = t('cashbox.cashierDeleted', 'This cashier has been deleted. The reference is preserved for historical records but the cashier details are no longer available.');
+            const deletedTooltip = t('cashbox.cashierDeleted');
             return (
               <Tooltip title={deletedTooltip} placement="top" arrow>
                 <Chip
@@ -223,17 +180,11 @@ export function TransactionsDataTable({
       },
       {
         key: 'group_transaction_id',
-        label: t('deductions.group', 'Group'),
+        label: t('deductions.group'),
         width: '1fr',
         minWidth: 150,
         sortable: true,
-        filterable: true,
         getValue: (row) => groupsMap[row.group_transaction_id] || row.group_transaction_id || '-',
-        filter: {
-          type: 'multi',
-          options: Object.keys(groupsMap),
-          getOptionLabel: (v) => groupsMap[v] || v,
-        },
         renderCell: ({ row }) => {
           const mappedName = groupsMap[row.group_transaction_id || ''];
           const displayValue = mappedName || '-';
@@ -255,7 +206,7 @@ export function TransactionsDataTable({
       },
       {
         key: 'user_id',
-        label: t('users.fullName', 'User'),
+        label: t('users.fullName'),
         width: '1fr',
         minWidth: 180,
         sortable: false,
@@ -281,28 +232,15 @@ export function TransactionsDataTable({
       },
       {
         key: 'pay_type',
-        label: t('common.paymentType', 'Pay type'),
+        label: t('common.paymentType'),
         width: 120,
         sortable: true,
-        filterable: true,
         getValue: (row) => row.pay_type,
-        filter: {
-          type: 'multi',
-          options: ['cash', 'card', 'transfer'],
-          getOptionLabel: (v) => {
-            const labels: Record<string, string> = {
-              cash: t('paymentTypes.cash', 'Cash'),
-              card: t('paymentTypes.card', 'Card'),
-              transfer: t('paymentTypes.transfer', 'Transfer'),
-            };
-            return labels[v] || v;
-          },
-        },
         renderCell: ({ row }) => {
           const payTypeLabels: Record<string, string> = {
-            cash: t('paymentTypes.cash', 'Cash'),
-            card: t('paymentTypes.card', 'Card'),
-            transfer: t('paymentTypes.transfer', 'Transfer'),
+            cash: t('paymentTypes.cash'),
+            card: t('paymentTypes.card'),
+            transfer: t('paymentTypes.transfer'),
           };
           const label = payTypeLabels[row.pay_type || ''] || row.pay_type;
           return (
@@ -318,7 +256,7 @@ export function TransactionsDataTable({
       },
       {
         key: 'customer_paid_amount',
-        label: t('cashbox.customerPaid', 'Customer paid'),
+        label: t('cashbox.customerPaid'),
         width: 150,
         sortable: false,
         align: 'right',
@@ -336,7 +274,7 @@ export function TransactionsDataTable({
       },
       {
         key: 'change_amount',
-        label: t('cashbox.changeAmount', 'Change'),
+        label: t('cashbox.changeAmount'),
         width: 120,
         sortable: false,
         align: 'right',
@@ -354,7 +292,7 @@ export function TransactionsDataTable({
       },
       {
         key: 'date',
-        label: t('deductions.date', 'Date'),
+        label: t('deductions.date'),
         width: 140,
         sortable: true,
         getValue: (row) => (row.date ? new Date(row.date).toLocaleDateString() : ''),
@@ -377,7 +315,7 @@ export function TransactionsDataTable({
       },
       {
         key: 'description',
-        label: t('deductions.description', 'Description'),
+        label: t('deductions.description'),
         width: '1fr',
         minWidth: 220,
         sortable: false,
@@ -403,7 +341,7 @@ export function TransactionsDataTable({
       },
       {
         key: 'actions',
-        label: t('common.actions', 'Actions'),
+        label: t('common.actions'),
         width: 110,
         sortable: false,
         filterable: false,
@@ -450,6 +388,26 @@ export function TransactionsDataTable({
     [cashRegisterMap, groupsMap, t, usersMap, onDeleteClick]
   );
 
+  const typeLabels: Record<string, string> = {
+    income: t('transactions.typeIncome'),
+    expense: t('transactions.typeExpense'),
+    transfer: t('transactions.typeTransfer'),
+    bill_payment: t('transactions.typeBillPayment'),
+  };
+  const payTypeLabels: Record<string, string> = {
+    cash: t('paymentTypes.cash'),
+    card: t('paymentTypes.card'),
+    transfer: t('paymentTypes.transfer'),
+  };
+  const filterSelectSx = {
+    minWidth: 140,
+    '& .MuiInputBase-root': { height: 36, fontSize: 13.5, backgroundColor: 'var(--bg2)', borderRadius: '6px', fontFamily: 'var(--font-sans)' },
+    '& .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--border)' },
+    '& .MuiInputBase-root:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--border2)' },
+    '& .MuiInputBase-root.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--brand)', boxShadow: '0 0 0 2px var(--accent-soft)' },
+    '& .MuiInputLabel-root.Mui-focused': { color: 'var(--brand)' },
+  };
+
   return (
     <DataTable<ITransaction>
       persistKey="cashbox-transactions-list"
@@ -485,18 +443,60 @@ export function TransactionsDataTable({
         },
       }}
       getRowId={(row) => String(row.id)}
-      searchValue={searchValue}
-      onSearchChange={onSearchChange}
+      search={search}
       filters={filters}
       onFiltersChange={onFiltersChange}
       onSortChange={onSortChange}
-      page={page}
-      rowsPerPage={rowsPerPage}
-      totalCount={totalCount}
-      rowsPerPageOptions={[10, 20, 50, 100]}
-      onPageChange={onPageChange}
-      onRowsPerPageChange={onRowsPerPageChange}
+      pagination={pagination}
       onReset={onReset || (() => {})}
+      toolbarActions={
+        <>
+          <TextField
+            select size="small" label={t('common.type')}
+            value={(filters?.type?.value as string[])?.[0] ?? ''}
+            onChange={(e) => onFiltersChange?.({ ...filters, type: { type: 'multi', value: e.target.value ? [e.target.value] : [] } })}
+            sx={filterSelectSx}
+          >
+            <MenuItem value="">{t('common.all')}</MenuItem>
+            {['income', 'expense', 'transfer', 'bill_payment'].map((v) => (
+              <MenuItem key={v} value={v}>{typeLabels[v] ?? v}</MenuItem>
+            ))}
+          </TextField>
+          <TextField
+            select size="small" label={t('cashbox.cashiers.title')}
+            value={(filters?.cash_register_id?.value as string[])?.[0] ?? ''}
+            onChange={(e) => onFiltersChange?.({ ...filters, cash_register_id: { type: 'multi', value: e.target.value ? [e.target.value] : [] } })}
+            sx={filterSelectSx}
+          >
+            <MenuItem value="">{t('common.all')}</MenuItem>
+            {Object.entries(cashRegisterMap).map(([id, name]) => (
+              <MenuItem key={id} value={id}>{name}</MenuItem>
+            ))}
+          </TextField>
+          <TextField
+            select size="small" label={t('deductions.group')}
+            value={(filters?.group_transaction_id?.value as string[])?.[0] ?? ''}
+            onChange={(e) => onFiltersChange?.({ ...filters, group_transaction_id: { type: 'multi', value: e.target.value ? [e.target.value] : [] } })}
+            sx={filterSelectSx}
+          >
+            <MenuItem value="">{t('common.all')}</MenuItem>
+            {Object.entries(groupsMap).map(([id, name]) => (
+              <MenuItem key={id} value={id}>{name}</MenuItem>
+            ))}
+          </TextField>
+          <TextField
+            select size="small" label={t('common.paymentType')}
+            value={(filters?.pay_type?.value as string[])?.[0] ?? ''}
+            onChange={(e) => onFiltersChange?.({ ...filters, pay_type: { type: 'multi', value: e.target.value ? [e.target.value] : [] } })}
+            sx={filterSelectSx}
+          >
+            <MenuItem value="">{t('common.all')}</MenuItem>
+            {['cash', 'card', 'transfer'].map((v) => (
+              <MenuItem key={v} value={v}>{payTypeLabels[v] ?? v}</MenuItem>
+            ))}
+          </TextField>
+        </>
+      }
       headerActions={
         onCreateClick ? (
           <Button
@@ -505,16 +505,13 @@ export function TransactionsDataTable({
             onClick={onCreateClick}
             size="small"
           >
-            {t('transactions.createTransaction', 'Create Transaction')}
+            {t('transactions.createTransaction')}
           </Button>
         ) : (
           headerActions
         )
       }
-      showPeriodPicker={showPeriodPicker}
-      periodPickerProps={periodPickerProps}
-      showPeriodButtons={showPeriodButtons}
-      periodButtonProps={periodButtonProps}
+      periodFilter={periodFilter}
     />
   );
 }

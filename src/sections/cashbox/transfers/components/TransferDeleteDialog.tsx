@@ -33,30 +33,30 @@ export function TransferDeleteDialog({
 
         try {
             await deleteTransfer(transferId);
-            toast.success(t('common.deleteSuccess', 'Successfully deleted'));
+            toast.success(t('common.deleteSuccess'));
             onClose();
             onSuccess();
         } catch (error: any) {
-            toast.error(error?.message || t('common.deleteFailed', 'Failed to delete'));
+            toast.error(error?.message || t('common.deleteFailed'));
         }
     }, [transferId, deleteTransfer, onClose, onSuccess, t]);
 
     return (
         <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
-            <DialogTitle>{t('common.deleteConfirmTitle', 'Confirm delete')}</DialogTitle>
+            <DialogTitle>{t('common.deleteConfirmTitle')}</DialogTitle>
             <DialogContent>
-                {t('common.deleteConfirmMessage', 'Are you sure?')}
+                {t('common.deleteConfirmMessage')}
             </DialogContent>
             <DialogActions>
                 <Button onClick={onClose}>
-                    {t('common.cancel', 'Cancel')}
+                    {t('common.cancel')}
                 </Button>
                 <Button
                     onClick={handleDelete}
                     variant="contained"
                     color="error"
                 >
-                    {t('common.delete', 'Delete')}
+                    {t('common.delete')}
                 </Button>
             </DialogActions>
         </Dialog>

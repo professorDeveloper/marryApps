@@ -1,7 +1,7 @@
-import type { RowAction, DataTableColumn, DataTableDefaultConfig } from 'src/sections/warehouse/deduction/components/utility-data-table/types/types';
+import type { RowAction, DataTableColumn, DataTableDefaultConfig } from 'src/sections/common/data-table/types/types';
 
 import { useTranslation } from 'react-i18next';
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback, useEffect } from 'react';
 
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -12,7 +12,7 @@ import { useGetGroupTransactions } from 'src/actions/cashbox';
 
 import { Iconify } from 'src/components/iconify';
 
-import { DataTable } from 'src/sections/warehouse/deduction/components/utility-data-table/components/DataTable';
+import { DataTable } from 'src/sections/common/data-table/components/DataTable';
 import type { TransactionGroup } from './types';
 import { TRANSACTION_GROUPS_TABLE_PERSIST_KEY } from './constants';
 import { TransactionGroupDeleteDialog } from './components/TransactionGroupDeleteDialog';
@@ -22,10 +22,20 @@ export function CashRegistersListView() {
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(20);
     const [searchValue, setSearchValue] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
     const [sortState, setSortState] = useState<{ key: string | null; dir: string | null }>({ key: null, dir: null });
 
+    useEffect(() => {
+        const t = setTimeout(() => setDebouncedSearch(searchValue), 400);
+        return () => clearTimeout(t);
+    }, [searchValue]);
+
+    useEffect(() => {
+        setPage(0);
+    }, [debouncedSearch]);
+
     const { groupTransactions, groupTransactionsLoading, total } = useGetGroupTransactions({
-        search: searchValue || undefined,
+        search: debouncedSearch || undefined,
         sort_by: sortState.key || undefined,
         sort_order: (sortState.dir === 'asc' || sortState.dir === 'desc') ? sortState.dir : undefined,
         limit: rowsPerPage,
@@ -39,7 +49,7 @@ export function CashRegistersListView() {
         () => [
             {
                 key: 'name',
-                label: t('common.name', 'Name'),
+                label: t('common.name'),
                 width: '1fr',
                 sortable: true,
                 filterable: true,
@@ -47,7 +57,7 @@ export function CashRegistersListView() {
             },
             {
                 key: 'created_at',
-                label: t('common.created_at', 'Created At'),
+                label: t('common.created_at'),
                 width: 180,
                 sortable: true,
                 filterable: true,
@@ -67,14 +77,14 @@ export function CashRegistersListView() {
     const rowActions: RowAction<TransactionGroup>[] = useMemo(
         () => [
             {
-                label: t('common.edit', 'Edit'),
+                label: t('common.edit'),
                 icon: <Iconify icon="solar:pen-bold" />,
                 onClick: (row) => {
                     window.location.href = `/menu/cashbox/transaction-groups/${row.id}/edit`;
                 },
             },
             {
-                label: t('common.delete', 'Delete'),
+                label: t('common.delete'),
                 icon: <Iconify icon="solar:trash-bin-trash-bold" />,
                 onClick: (row) => {
                     setDeleteId(row.id);
@@ -102,6 +112,7 @@ export function CashRegistersListView() {
 
     const handleReset = useCallback(() => {
         setSearchValue('');
+        setDebouncedSearch('');
         setPage(0);
         setRowsPerPage(20);
         setSortState({ key: null, dir: null });
@@ -128,25 +139,26 @@ export function CashRegistersListView() {
                         columns={columns}
                         defaultConfig={defaultConfig}
                         onReset={handleReset}
-                        searchValue={searchValue}
-                        onSearchChange={setSearchValue}
+                        search={{ value: searchValue, onChange: setSearchValue }}
                         onSortChange={(sort) => {
                             setSortState({ key: sort.key, dir: sort.dir });
                             setPage(0);
                         }}
-                        page={page}
-                        rowsPerPage={rowsPerPage}
-                        totalCount={total}
-                        rowsPerPageOptions={[20, 50, 100]}
-                        onPageChange={setPage}
-                        onRowsPerPageChange={(newRowsPerPage) => {
-                            setRowsPerPage(newRowsPerPage);
-                            setPage(0);
+                        pagination={{
+                            page,
+                            rowsPerPage,
+                            totalCount: total,
+                            rowsPerPageOptions: [20, 50, 100],
+                            onPageChange: setPage,
+                            onRowsPerPageChange: (newRowsPerPage) => {
+                                setRowsPerPage(newRowsPerPage);
+                                setPage(0);
+                            },
                         }}
                         rowActions={rowActions}
                         getRowId={getRowId}
-                        emptyTitle={t('common.noData', 'No data')}
-                        emptySubtitle={t('common.noDataSubtitle', 'Try adjusting filters or columns.')}
+                        emptyTitle={t('common.noData')}
+                        emptySubtitle={t('common.noDataSubtitle')}
                     />
                 )}
             </DashboardContent>

@@ -1,6 +1,6 @@
 import type { ICashier } from 'src/types/cashbox';
-import type { DataTableColumn } from 'src/sections/warehouse/deduction/components/utility-data-table/types/types';
-import { CELL_SX } from 'src/sections/warehouse/deduction/components/utility-data-table/utils/constants';
+import type { DataTableColumn } from 'src/sections/common/data-table/types/types';
+import { CELL_SX } from 'src/sections/common/data-table/utils/constants';
 
 import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
@@ -182,7 +182,7 @@ export function CashiersListView() {
                             href={`${paths.cashbox.cashiers}/new`}
                             size="small"
                         >
-                            {t('common.add', 'Add')}
+                            {t('common.add')}
                         </Button>
                     }
                 />

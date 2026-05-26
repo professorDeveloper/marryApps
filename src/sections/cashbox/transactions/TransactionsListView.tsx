@@ -3,6 +3,8 @@ import type { ITransaction, TransactionFilters } from 'src/types/transactions';
 import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
 import { useState, useEffect, useCallback } from 'react';
+
+import { useTimeFilter } from 'src/hooks/use-time-filter';
 import { useNavigate } from 'react-router';
 
 import {
@@ -18,65 +20,8 @@ import { useTransactionsAPI } from 'src/hooks/use-transactions-api';
 
 import { DashboardContent } from 'src/layouts/dashboard';
 
+import { getInitialFilters, toUtcDayBoundary } from './utils/date-utils';
 import { TransactionsDataTable } from './components/TransactionsDataTable';
-
-const getTodayUtcBoundary = (endOfDay = false): string => {
-  const now = dayjs();
-  const year = now.year();
-  const month = String(now.month() + 1).padStart(2, '0');
-  const day = String(now.date()).padStart(2, '0');
-
-  if (endOfDay) {
-    const date = now.add(1, 'day');
-    return `${date.year()}-${String(date.month() + 1).padStart(2, '0')}-${String(date.date()).padStart(2, '0')}`;
-  }
-
-  return `${year}-${month}-${day}`;
-};
-
-const getTomorrowUtcBoundary = (endOfDay = false): string => {
-  const now = dayjs().add(1, 'day');
-  const year = now.year();
-  const month = String(now.month() + 1).padStart(2, '0');
-  const day = String(now.date()).padStart(2, '0');
-
-  if (endOfDay) {
-    const date = now.add(1, 'day');
-    return `${date.year()}-${String(date.month() + 1).padStart(2, '0')}-${String(date.date()).padStart(2, '0')}`;
-  }
-
-  return `${year}-${month}-${day}`;
-};
-
-const toUtcDayBoundary = (value: dayjs.Dayjs, endOfDay = false): string => {
-  const year = value.year();
-  const month = String(value.month() + 1).padStart(2, '0');
-  const day = String(value.date()).padStart(2, '0');
-
-  if (endOfDay) {
-    const date = value.add(1, 'day');
-    return `${date.year()}-${String(date.month() + 1).padStart(2, '0')}-${String(date.date()).padStart(2, '0')}`;
-  }
-
-  return `${year}-${month}-${day}`;
-};
-
-const toPickerDate = (value?: string): dayjs.Dayjs | null => (value ? dayjs(value.slice(0, 10)) : null);
-
-const getInitialFilters = (): TransactionFilters => {
-  const today = dayjs();
-
-  return {
-    date_from: getTodayUtcBoundary(),
-    date_to: getTomorrowUtcBoundary(true),
-    type: '',
-    cash_register_id: '',
-    group_transaction_id: '',
-    search: '',
-    sort_by: '',
-    sort_order: '',
-  };
-};
 
 const INITIAL_FILTERS: TransactionFilters = getInitialFilters();
 
@@ -104,9 +49,7 @@ export function TransactionsListView() {
   const [openConfirm, setOpenConfirm] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
-  const [startDate, setStartDate] = useState<dayjs.Dayjs | null>(null);
-  const [endDate, setEndDate] = useState<dayjs.Dayjs | null>(null);
-  const [activeRange, setActiveRange] = useState<'day' | 'week' | 'month' | 'year'>('day');
+  const { startDate, endDate, activePeriod: activeRange, setDates, applyRange, reset: resetTimeFilter } = useTimeFilter();
   const [sortState, setSortState] = useState<{ key: string | null; dir: 'asc' | 'desc' | null }>({ key: null, dir: null });
   const [columnFilters, setColumnFilters] = useState<Record<string, { type: 'text' | 'multi'; value: string | string[] }>>({});
 
@@ -118,13 +61,6 @@ export function TransactionsListView() {
 
     return () => clearTimeout(timeout);
   }, [searchQuery]);
-
-  // Set default date range on component mount
-  useEffect(() => {
-    const today = dayjs();
-    setStartDate(today.startOf('day'));
-    setEndDate(today.endOf('day'));
-  }, []);
 
   // Apply search changes
   useEffect(() => {
@@ -169,35 +105,6 @@ export function TransactionsListView() {
     }));
   }, [startDate, endDate]);
 
-  // Apply range changes
-  const applyRange = useCallback((range: 'day' | 'week' | 'month' | 'year') => {
-    const today = dayjs();
-    let nextStart = today.startOf('day');
-    let nextEnd = today.endOf('day');
-
-    switch (range) {
-      case 'day':
-        nextStart = today.startOf('day');
-        nextEnd = today.endOf('day');
-        break;
-      case 'week':
-        nextStart = today.startOf('week');
-        nextEnd = today.endOf('day');
-        break;
-      case 'month':
-        nextStart = today.startOf('month');
-        nextEnd = today.endOf('day');
-        break;
-      case 'year':
-        nextStart = today.startOf('year');
-        nextEnd = today.endOf('day');
-        break;
-    }
-
-    setActiveRange(range);
-    setStartDate(nextStart);
-    setEndDate(nextEnd);
-  }, []);
 
   const loadData = useCallback(
     async (nextFilters: TransactionFilters = {}) => {
@@ -279,10 +186,7 @@ export function TransactionsListView() {
     setDebouncedSearchQuery('');
     setSortState({ key: null, dir: null });
     setColumnFilters({});
-    const today = dayjs();
-    setStartDate(today.startOf('day'));
-    setEndDate(today.endOf('day'));
-    setActiveRange('day');
+    resetTimeFilter();
   }, []);
 
   const handleSortChange = useCallback((sort: { key: string | null; dir: 'asc' | 'desc' | null }) => {
@@ -324,48 +228,39 @@ export function TransactionsListView() {
           cashRegisterMap={cashRegisterMap}
           groupsMap={groupsMap}
           usersMap={usersMap}
-          searchValue={searchQuery}
-          onSearchChange={handleSearchChange}
+          search={{ value: searchQuery, onChange: handleSearchChange }}
           onSortChange={handleSortChange}
           onDeleteClick={handleDeleteClick}
           onCreateClick={handleCreateClick}
           onReset={handleResetFilters}
           filters={columnFilters}
           onFiltersChange={setColumnFilters}
-          showPeriodPicker
-          periodPickerProps={{
+          periodFilter={{
             startDate: startDate ? startDate.toDate() : null,
             endDate: endDate ? endDate.toDate() : null,
             onStartDateChange: (date: Date | null) => {
-              setStartDate(date ? dayjs(date) : null);
-              setActiveRange('day');
+              setDates(date ? dayjs(date) : null, endDate, 'day');
             },
             onEndDateChange: (date: Date | null) => {
-              setEndDate(date ? dayjs(date) : null);
-              setActiveRange('day');
-            }
-          }}
-          showPeriodButtons
-          periodButtonProps={{
+              setDates(startDate, date ? dayjs(date) : null, 'day');
+            },
             activePeriod: activeRange,
-            onPeriodChange: (period: 'day' | 'week' | 'month' | 'year') => {
-              applyRange(period);
-            }
+            onPeriodChange: applyRange,
           }}
         />
       </DashboardContent>
 
       <Dialog open={openConfirm} onClose={() => setOpenConfirm(false)}>
-        <DialogTitle>{t('common.confirmDelete', 'Confirm Delete')}</DialogTitle>
+        <DialogTitle>{t('common.confirmDelete')}</DialogTitle>
         <DialogContent>
-          <p>{t('common.deleteConfirmation', 'Are you sure you want to delete this transaction?')}</p>
+          <p>{t('common.deleteConfirmation')}</p>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpenConfirm(false)} variant="outlined">
-            {t('common.cancel', 'Cancel')}
+            {t('common.cancel')}
           </Button>
           <Button onClick={handleDelete} variant="contained" color="error">
-            {t('common.delete', 'Delete')}
+            {t('common.delete')}
           </Button>
         </DialogActions>
       </Dialog>

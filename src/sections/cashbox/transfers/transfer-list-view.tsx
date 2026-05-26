@@ -90,65 +90,65 @@ export function TransactionsListView() {
     () => [
       {
         field: 'number',
-        headerName: t('deductions.number', 'Number'),
+        headerName: t('deductions.number'),
         width: 90,
       },
       {
         field: 'from_branch_id',
-        headerName: t('warehouse.branch', 'From Branch'),
+        headerName: t('warehouse.branch'),
         flex: 1,
         minWidth: 170,
         renderCell: (params) => branchesMap[params.row.from_branch_id] || params.row.from_branch_id,
       },
       {
         field: 'to_branch_id',
-        headerName: t('warehouse.branch', 'To Branch'),
+        headerName: t('warehouse.branch'),
         flex: 1,
         minWidth: 170,
         renderCell: (params) => branchesMap[params.row.to_branch_id] || params.row.to_branch_id,
       },
       {
         field: 'from_storage_id',
-        headerName: t('deductions.storage', 'From Storage'),
+        headerName: t('deductions.storage'),
         flex: 1,
         minWidth: 180,
         renderCell: (params) => storagesMap[params.row.from_storage_id] || '-',
       },
       {
         field: 'to_storage_id',
-        headerName: t('warehouse.storage', 'To Storage'),
+        headerName: t('warehouse.storage'),
         flex: 1,
         minWidth: 180,
         renderCell: (params) => storagesMap[params.row.to_storage_id] || params.row.to_storage_id,
       },
       {
         field: 'act_group_id',
-        headerName: t('deductions.group', 'Group'),
+        headerName: t('deductions.group'),
         flex: 1,
         minWidth: 150,
         renderCell: (params) => groupsMap[params.row.act_group_id] || params.row.act_group_id,
       },
       {
         field: 'status',
-        headerName: t('deductions.status', 'Status'),
+        headerName: t('deductions.status'),
         width: 120,
       },
       {
         field: 'total_amount',
-        headerName: t('deductions.balance', 'Total'),
+        headerName: t('deductions.balance'),
         width: 140,
         renderCell: (params) => Number(params.row.total_amount || 0).toLocaleString(),
       },
       {
         field: 'date',
-        headerName: t('deductions.date', 'Date'),
+        headerName: t('deductions.date'),
         width: 140,
         renderCell: (params) => new Date(params.row.date).toLocaleDateString(),
       },
       {
         type: 'actions',
         field: 'actions',
-        headerName: t('common.actions', 'Actions'),
+        headerName: t('common.actions'),
         width: 110,
         sortable: false,
         filterable: false,
@@ -157,8 +157,8 @@ export function TransactionsListView() {
           <CustomGridActionsCellItem
             key="delete"
             icon={<Iconify icon="solar:trash-bin-trash-bold" />}
-            label={t('common.delete', 'Delete')}
-            style={{ color: 'var(--color-primary)' }}
+            label={t('common.delete')}
+            style={{ color: 'var(--accent)' }}
             onClick={() => {
               setDeleteId(params.row.id);
               setOpenConfirm(true);
@@ -177,15 +177,15 @@ export function TransactionsListView() {
         columns={columns}
         loading={loading}
         breadcrumbs={{
-          heading: t('cashbox.sidebar.transactions', 'Transactions'),
+          heading: t('cashbox.sidebar.transactions'),
           links: [
-            { name: t('dashboard', 'Dashboard'), href: paths.dashboard.root },
-            { name: t('cashbox.sidebar.title', 'Cashbox'), href: paths.cashbox.root },
-            { name: t('cashbox.sidebar.transactions', 'Transactions') },
+            { name: t('dashboard'), href: paths.dashboard.root },
+            { name: t('cashbox.sidebar.title'), href: paths.cashbox.root },
+            { name: t('cashbox.sidebar.transactions') },
           ],
         }}
         addButton={{
-          label: t('common.add', 'Add'),
+          label: t('common.add'),
           href: `${paths.cashbox.transactions}/new`,
         }}
       />

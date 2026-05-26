@@ -85,7 +85,7 @@ export function TransactionsFilters({
     <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(4, 1fr)', lg: 'repeat(7, 1fr)' }, gap: 1.5 }}>
       {/* Start Date */}
       <DatePicker
-        label={t('ingredientReports.startDate', 'Start date')}
+        label={t('ingredientReports.startDate')}
         value={filters.date_from ? dayjs(filters.date_from) : null}
         onChange={handleDateFromChange}
         format="DD.MM.YYYY"
@@ -101,7 +101,7 @@ export function TransactionsFilters({
 
       {/* End Date */}
       <DatePicker
-        label={t('ingredientReports.endDate', 'End date')}
+        label={t('ingredientReports.endDate')}
         value={filters.date_to ? dayjs(filters.date_to) : null}
         onChange={handleDateToChange}
         format="DD.MM.YYYY"
@@ -117,15 +117,15 @@ export function TransactionsFilters({
 
       {/* Type */}
       <FormControl fullWidth size="small">
-        <InputLabel shrink>{t('common.type', 'Type')}</InputLabel>
+        <InputLabel shrink>{t('common.type')}</InputLabel>
         <Select
           value={filters.type || ''}
-          label={t('common.type', 'Type')}
+          label={t('common.type')}
           displayEmpty
           onChange={(event) => handleTypeChange(event.target.value)}
         >
           <MenuItem value="">
-            <em>{t('ingredientReports.all', 'All')}</em>
+            <em>{t('ingredientReports.all')}</em>
           </MenuItem>
           <MenuItem value="income">Income</MenuItem>
           <MenuItem value="expense">Expense</MenuItem>
@@ -135,15 +135,15 @@ export function TransactionsFilters({
 
       {/* Cash Register */}
       <FormControl fullWidth size="small">
-        <InputLabel shrink>{t('cashbox.cashiers.title', 'Cash register')}</InputLabel>
+        <InputLabel shrink>{t('cashbox.cashiers.title')}</InputLabel>
         <Select
           value={filters.cash_register_id || ''}
-          label={t('cashbox.cashiers.title', 'Cash register')}
+          label={t('cashbox.cashiers.title')}
           displayEmpty
           onChange={(event) => handleCashRegisterChange(event.target.value)}
         >
           <MenuItem value="">
-            <em>{t('ingredientReports.all', 'All')}</em>
+            <em>{t('ingredientReports.all')}</em>
           </MenuItem>
           {Object.entries(cashRegisterMap).map(([id, name]) => (
             <MenuItem key={id} value={id}>
@@ -155,15 +155,15 @@ export function TransactionsFilters({
 
       {/* Group */}
       <FormControl fullWidth size="small">
-        <InputLabel shrink>{t('deductions.group', 'Group')}</InputLabel>
+        <InputLabel shrink>{t('deductions.group')}</InputLabel>
         <Select
           value={filters.group_id || ''}
-          label={t('deductions.group', 'Group')}
+          label={t('deductions.group')}
           displayEmpty
           onChange={(event) => handleGroupChange(event.target.value)}
         >
           <MenuItem value="">
-            <em>{t('ingredientReports.all', 'All')}</em>
+            <em>{t('ingredientReports.all')}</em>
           </MenuItem>
           {Object.entries(groupsMap).map(([id, name]) => (
             <MenuItem key={id} value={id}>
@@ -181,7 +181,7 @@ export function TransactionsFilters({
           onClick={onReset}
           fullWidth
         >
-          {t('bills.reset', 'Reset')}
+          {t('bills.reset')}
         </Button>
       </Box>
     </Box>

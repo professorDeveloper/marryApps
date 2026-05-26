@@ -27,13 +27,13 @@ export function ErrorView() {
       <Container component={MotionContainer}>
         <m.div variants={varBounce('in')}>
           <Typography variant="h3" sx={{ mb: 2 }}>
-            {t('error.title', 'Something went wrong')}
+            {t('error.title')}
           </Typography>
         </m.div>
 
         <m.div variants={varBounce('in')}>
           <Typography sx={{ color: 'text.secondary' }}>
-            {t('error.description', 'We apologize for the inconvenience. An unexpected error has occurred. Please try refreshing the page or contact support if the problem persists.')}
+            {t('error.description')}
           </Typography>
         </m.div>
 
@@ -42,7 +42,7 @@ export function ErrorView() {
         </m.div>
 
         <Button component={RouterLink} href="/" size="large" variant="contained">
-          {t('error.goHome', 'Go back to home')}
+          {t('error.goHome')}
         </Button>
       </Container>
     </SimpleLayout>

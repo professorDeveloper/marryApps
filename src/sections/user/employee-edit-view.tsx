@@ -178,7 +178,7 @@ export function EmployeeEditView({ userId, isNew = false, role }: EmployeeEditVi
                     throw new Error(t('users.pincodeRequired'));
                 }
                 if (isNew && !formData.cash_register_id) {
-                    throw new Error(t('users.cashRegisterRequired', 'Cash register is required'));
+                    throw new Error(t('users.cashRegisterRequired'));
                 }
 
                 const userData: IUserFormData = {
