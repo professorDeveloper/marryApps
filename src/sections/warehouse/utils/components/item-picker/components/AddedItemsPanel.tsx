@@ -339,25 +339,28 @@ export const AddedItemsPanel = React.memo<AddedItemsPanelProps>(({
                         bgcolor: 'transparent',
                     }}
                 >
-                    {summaryEntries?.[0] && (
+                    {summaryEntries?.map((entry, index) => {
+                        const colors = [
+                            'rgba(76, 175, 80, 0.9)',
+                            'rgba(244, 67, 54, 0.9)',
+                            'rgba(183, 28, 28, 0.9)',
+                        ];
+                        return (
+                            <TotalCard
+                                key={entry.label}
+                                totalLabel={entry.label}
+                                totalValue={String(entry.value)}
+                                color={colors[index] ?? 'rgba(46, 144, 250, 0.9)'}
+                            />
+                        );
+                    })}
+                    {totalLabel && totalValue && (
                         <TotalCard
-                            totalLabel={summaryEntries?.[0]?.label || 'Sometehing'}
-                            totalValue={String(summaryEntries?.[0]?.value) || '0'}
-                            color='rgba(46, 144, 250, 0.9)'
-                        />)}
-                    {summaryEntries?.[1] && (
-
-                        <TotalCard
-                            totalLabel={summaryEntries?.[1]?.label || 'Sometehing'}
-                            totalValue={String(summaryEntries?.[1]?.value) || '0'}
-                            color='rgba(33, 150, 243, 0.9)'
-                        />)}
-
-                        <TotalCard
-                            totalLabel={totalLabel || 'Sometehing'}
-                            totalValue={String(totalValue || '0')}
-                            color='rgba(76, 175, 80, 0.9)'
+                            totalLabel={totalLabel}
+                            totalValue={String(totalValue)}
+                            color="rgba(46, 144, 250, 0.9)"
                         />
+                    )}
                 </Box>
             )}
         </Paper>

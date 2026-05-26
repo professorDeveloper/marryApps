@@ -261,7 +261,11 @@ function enrichCompound(
 /**
  * Get all compounds with enriched ingredient group names and translations
  */
-export function useGetCompounds(searchQuery?: string, enabled = true) {
+export function useGetCompounds(
+    searchQuery?: string,
+    enabled = true,
+    options?: { limit?: number; offset?: number }
+) {
     const { i18n } = useTranslation();
 
     // Get ingredient groups for enrichment - always fetch once and cache
@@ -275,9 +279,18 @@ export function useGetCompounds(searchQuery?: string, enabled = true) {
     );
 
     const normalizedQuery = searchQuery?.trim() || '';
+    const listParams =
+        typeof options?.limit === 'number'
+            ? {
+                  limit: options.limit,
+                  offset: typeof options.offset === 'number' ? options.offset : 0,
+              }
+            : undefined;
     const swrKey = normalizedQuery
-        ? [endpoints.compound.search, { params: { q: normalizedQuery } }]
-        : endpoints.compound.list; // Always fetch compounds
+        ? [endpoints.compound.search, { params: { q: normalizedQuery, ...(listParams ?? {}) } }]
+        : listParams
+          ? [endpoints.compound.list, { params: listParams }]
+          : endpoints.compound.list;
 
     const { data, isLoading, error, isValidating, mutate: mutateCompounds } = useSWR<
         BackendResponse<ICompound[]> | ICompound[]

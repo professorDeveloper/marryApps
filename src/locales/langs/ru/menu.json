@@ -1,4 +1,4 @@
-﻿{
+{
   "units": {
     "kg": "кг",
     "piece": "шт",
@@ -513,7 +513,9 @@
     "pricePerUnit": "Цена за единицу",
     "surplus": "Излишек",
     "shortage": "Недостача",
-    "remaining": "Остаток"
+    "totalShortage": "Итого недостача",
+    "remaining": "Остаток",
+    "impact": "Влияние"
   },
   "users": {
     "title": "Сотрудники",

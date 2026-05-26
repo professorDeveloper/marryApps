@@ -512,7 +512,9 @@
     "pricePerUnit": "Price per unit",
     "surplus": "Surplus",
     "shortage": "Shortage",
-    "remaining": "Remaining"
+    "totalShortage": "Total shortage",
+    "remaining": "Remaining",
+    "impact": "Impact"
   },
   "users": {
     "title": "Employees",

@@ -1,4 +1,4 @@
-﻿{
+{
   "units": {
     "kg": "кг",
     "piece": "дона",
@@ -512,7 +512,9 @@
     "pricePerUnit": "Бирлик нархи",
     "surplus": "Ортиқча",
     "shortage": "Камомад",
-    "remaining": "Қолган миқдор"
+    "totalShortage": "Жами камомад",
+    "remaining": "Қолган миқдор",
+    "impact": "Таъсир"
   },
   "users": {
     "title": "Ходимлар",

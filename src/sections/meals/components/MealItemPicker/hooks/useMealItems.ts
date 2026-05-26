@@ -21,6 +21,9 @@ interface BackendResponse<T> {
     code?: number;
 }
 
+/** Max items loaded into the meal/compound item picker available table */
+const PICKER_LIST_LIMIT = 2000;
+
 export interface UseMealItemsResult {
     items: MealItem[];
     loading: boolean;
@@ -34,7 +37,7 @@ export function useMealItems(isVisible: boolean = true): UseMealItemsResult {
         isLoading: ingredientsLoading,
         mutate: mutateIngredients,
     } = useSWR<BackendResponse<RawIngredient[]>>(
-        endpoints.ingredient.list,
+        [endpoints.ingredient.list, { params: { limit: PICKER_LIST_LIMIT, offset: 0 } }],
         fetcher,
         {
             revalidateIfStale: false, // Don't re-fetch stale data when component re-mounts
@@ -49,7 +52,7 @@ export function useMealItems(isVisible: boolean = true): UseMealItemsResult {
         compounds,
         compoundsLoading,
         mutate: mutateCompounds,
-    } = useGetCompounds(undefined, true); // Always enabled
+    } = useGetCompounds(undefined, true, { limit: PICKER_LIST_LIMIT, offset: 0 });
 
     // Memoize items array to prevent unnecessary re-renders
     const items: MealItem[] = useMemo(() => {

@@ -72,8 +72,10 @@ export const InventoryItemsSection = React.memo(function InventoryItemsSection({
         const map: IngredientReportLookup = {};
         reports.forEach((report: any) => {
             const endQty = parseFloat(report.end_quantity) || 0;
-            const endAmount = parseFloat(report.end_quantity) || 0;
-            const pricePerUnit = endQty > 0 ? endAmount / endQty : 0;
+            const endPrice = parseFloat(report.end_price) || 0;
+            const endAmount = parseFloat(report.end_amount) || 0;
+            const pricePerUnit =
+                endPrice > 0 ? endPrice : endQty > 0 ? endAmount / endQty : 0;
 
             map[report.ingredient_id] = {
                 systemQuantity: endQty,
@@ -144,9 +146,11 @@ export const InventoryItemsSection = React.memo(function InventoryItemsSection({
                 const report = reportLookup[rowId];
                 const systemQty = report?.systemQuantity ?? 0;
                 const counted = quantities[rowId];
-                const diff = (counted ?? 0) - systemQty;
                 const pricePerUnit = report?.pricePerUnit ?? 0;
-                const impact = diff * pricePerUnit;
+                const diff =
+                    counted !== undefined ? counted - systemQty : undefined;
+                const impact =
+                    diff !== undefined ? diff * pricePerUnit : undefined;
 
                 return {
                     id: rowId,
@@ -161,8 +165,6 @@ export const InventoryItemsSection = React.memo(function InventoryItemsSection({
             })
             .filter(Boolean) as PickerItem[];
 
-        console.log('transferredItems recalculated:', items);
-        console.log('quantities state:', quantities);
         return items;
     }, [orderedUniqueIds, ingredientsById, quantities, reportLookup]);
 
@@ -171,7 +173,7 @@ export const InventoryItemsSection = React.memo(function InventoryItemsSection({
         () => [
             {
                 key: 'system_quantity',
-                header: 'System Qty',
+                header: t('calculation.systemQty'),
                 width: '100px',
                 editable: false,
                 align: 'center',
@@ -179,36 +181,49 @@ export const InventoryItemsSection = React.memo(function InventoryItemsSection({
             },
             {
                 key: 'counted_quantity',
-                header: 'Counted Qty',
+                header: t('calculation.countedQty'),
                 width: '100px',
                 editable: true,
                 type: 'number',
-                step: '1',
+                step: '0.01',
                 min: '0',
                 align: 'center',
                 suffix: (item) => (item.measurement ? t(`units.${item.measurement}`, { defaultValue: item.measurement }) : ''),
             },
             {
                 key: 'difference',
-                header: 'Difference',
+                header: t('calculation.difference'),
                 width: '100px',
                 editable: false,
                 align: 'center',
-                format: (val) => String(val ?? '—'),
+                format: (val) => {
+                    if (val === undefined || val === null || val === '') return '—';
+                    const n = Number(val);
+                    if (Number.isNaN(n)) return '—';
+                    return n > 0 ? `+${n}` : String(n);
+                },
                 colorFn: (item) => {
-                    const diff = Number(item.difference) || 0;
+                    const diff = Number(item.difference);
+                    if (Number.isNaN(diff)) return undefined;
                     return diff > 0 ? 'success.main' : diff < 0 ? 'error.main' : undefined;
                 },
             },
             {
                 key: 'impact',
-                header: 'Impact',
+                header: t('calculation.impact'),
                 width: '100px',
                 editable: false,
                 align: 'right',
-                format: (val) => formatPrice(Number(val) || 0),
+                format: (val) => {
+                    if (val === undefined || val === null || val === '') return '—';
+                    const n = Number(val);
+                    if (Number.isNaN(n)) return '—';
+                    const formatted = formatPrice(Math.abs(n));
+                    return n > 0 ? `+${formatted}` : n < 0 ? `-${formatted}` : formatted;
+                },
                 colorFn: (item) => {
-                    const impact = Number(item.impact) || 0;
+                    const impact = Number(item.impact);
+                    if (Number.isNaN(impact)) return undefined;
                     return impact > 0 ? 'success.main' : impact < 0 ? 'error.main' : undefined;
                 },
             },
@@ -216,55 +231,43 @@ export const InventoryItemsSection = React.memo(function InventoryItemsSection({
         [t]
     );
 
-    // Summary entries from inventory summary logic
+    // Footer totals: surplus, shortage, total shortage (net)
     const summaryEntries: SummaryEntry[] = useMemo(() => {
         let shortage = 0;
         let surplus = 0;
-        let remaining = 0;
-
-        console.log('Calculating summary with transferredItems:', transferredItems);
 
         transferredItems.forEach((item) => {
+            if (item.counted_quantity === undefined) return;
             const diff = Number(item.difference) || 0;
             const impact = Number(item.impact) || 0;
-            const counted = Number(item.counted_quantity) || 0;
-            const pricePerUnit = Number(item.price_per_unit) || 0;
-
-            console.log(`Item ${item.id}: diff=${diff}, impact=${impact}, counted=${counted}, pricePerUnit=${pricePerUnit}`);
-
             if (diff > 0) surplus += impact;
             else if (diff < 0) shortage += Math.abs(impact);
-            remaining += counted * pricePerUnit;
         });
 
-        const result = [
+        const totalShortage = Math.max(0, shortage - surplus);
+
+        return [
             {
-                label: 'Products',
-                value: transferredItems.length,
-            },
-            {
-                label: 'Surplus',
+                label: t('calculation.surplus'),
                 value: formatPrice(surplus),
             },
             {
-                label: 'Shortage',
+                label: t('calculation.shortage'),
                 value: formatPrice(shortage),
             },
             {
-                label: 'Remaining',
-                value: formatPrice(remaining),
+                label: t('calculation.totalShortage'),
+                value: formatPrice(totalShortage),
             },
         ];
-        console.log('Summary result:', result);
-        return result;
-    }, [transferredItems]);
+    }, [transferredItems, t]);
 
-    // Calculate total value for summary panel
     const totalValue = useMemo(() => {
         const total = transferredItems.reduce((sum, item) => {
+            if (item.counted_quantity === undefined) return sum;
             const counted = Number(item.counted_quantity) || 0;
             const pricePerUnit = Number(item.price_per_unit) || 0;
-            return sum + (counted * pricePerUnit);
+            return sum + counted * pricePerUnit;
         }, 0);
         return formatPrice(total);
     }, [transferredItems]);
@@ -352,7 +355,7 @@ export const InventoryItemsSection = React.memo(function InventoryItemsSection({
                 onRemoveMany={handleRemoveMany}
                 onAddNewItem={onOpenIngredientDialog}
                 summaryEntries={summaryEntries}
-                totalLabel="Total"
+                totalLabel={t('calculation.remaining')}
                 totalValue={totalValue}
                 onNavigateFocus={handleNavigateFocus}
                 metaFieldsOpen={metaFieldsOpen}

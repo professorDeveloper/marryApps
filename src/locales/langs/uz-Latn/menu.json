@@ -1,4 +1,4 @@
-﻿{
+{
   "units": {
     "kg": "kg",
     "piece": "dona",
@@ -512,7 +512,9 @@
     "pricePerUnit": "Birlik narxi",
     "surplus": "Ortiqcha",
     "shortage": "Kamomad",
-    "remaining": "Qolgan miqdor"
+    "totalShortage": "Jami kamomad",
+    "remaining": "Qolgan miqdor",
+    "impact": "Ta'sir"
   },
   "users": {
     "title": "Xodimlar",
