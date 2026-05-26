@@ -39,19 +39,8 @@ const lightShadows = [
   ...Array(15).fill('0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.03)'),
 ] as Shadows;
 
-const darkShadows = [
-  'none',
-  '0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2)', // Level 1
-  '0 1px 3px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.3)',
-  '0 4px 12px rgba(0,0,0,0.4)',
-  '0 6px 20px rgba(0,0,0,0.5)',
-  '0 8px 28px rgba(0,0,0,0.55)',
-  '0 12px 32px rgba(0,0,0,0.6)',
-  '0 16px 40px rgba(0,0,0,0.65)',
-  '0 20px 48px rgba(0,0,0,0.7)',
-  '0 24px 56px rgba(0,0,0,0.75)',
-  ...Array(15).fill('0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2)'),
-] as Shadows;
+// Dark mode: no drop shadows — depth via stacked surfaces
+const darkShadows = Array(25).fill('none') as Shadows;
 
 export const shadows: SchemesRecord<Shadows> = {
   light: lightShadows,

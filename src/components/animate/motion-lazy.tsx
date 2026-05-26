@@ -1,6 +1,8 @@
-import { domMax, LazyMotion } from 'framer-motion';
+import { LazyMotion } from 'framer-motion';
 
 // ----------------------------------------------------------------------
+
+const loadFeatures = () => import('./features').then((m) => m.default);
 
 export type MotionLazyProps = {
   children: React.ReactNode;
@@ -8,7 +10,7 @@ export type MotionLazyProps = {
 
 export function MotionLazy({ children }: MotionLazyProps) {
   return (
-    <LazyMotion strict features={domMax}>
+    <LazyMotion strict features={loadFeatures}>
       {children}
     </LazyMotion>
   );

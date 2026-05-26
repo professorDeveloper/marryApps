@@ -499,10 +499,10 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
 
                 await mutateCalculations();
                 setPendingCalculations([]);
-                toast.success(t('calculation.savedSuccessfully', 'Calculations saved successfully'));
+                toast.success(t('calculation.savedSuccessfully'));
             } catch (error) {
                 console.error('Error saving pending calculations:', error);
-                toast.error(t('error.saveFailed', 'Failed to save calculations'));
+                toast.error(t('error.saveFailed'));
             }
         };
 
@@ -580,7 +580,7 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
 
                 // Revalidate calculations
                 await mutateCalculations();
-                toast.success(t('calculation.savedSuccessfully', 'Saqlandi'));
+                toast.success(t('calculation.savedSuccessfully'));
             } catch (error) {
                 console.error('Error auto-saving calculations:', error);
                 // Don't show error toast for auto-save to avoid spam
@@ -679,7 +679,7 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
                 );
             } catch (error) {
                 console.error('Error deleting calculations:', error);
-                toast.error(t('error.deleteFailed', 'Failed to delete some calculations'));
+                toast.error(t('error.deleteFailed'));
             }
         }
 
@@ -766,7 +766,7 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
                 );
             } catch (error) {
                 console.error('Error deleting calculations:', error);
-                toast.error(t('error.deleteFailed', 'Failed to delete some calculations'));
+                toast.error(t('error.deleteFailed'));
             }
         }
 
@@ -877,7 +877,7 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
             {/* Show warning if no entityId */}
             {/* {!entityId && (
                 <Alert severity="info" sx={{ mb: 3 }}>
-                    {t('calculation.saveEntityFirst', 'Please save the item first to enable calculation saving. Your selections will be preserved.')}
+                    {t('calculation.saveEntityFirst')}
                 </Alert>
             )} */}
 
@@ -1057,7 +1057,7 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
                                         size="small"
                                         onClick={() => setVisibleIngredientCount((prev) => prev + INITIAL_VISIBLE_ITEMS)}
                                     >
-                                        {t('common.showMore', 'Ko‘proq ko‘rsat')} ({filteredIngredients.length - visibleIngredientCount})
+                                        {t('common.showMore')} ({filteredIngredients.length - visibleIngredientCount})
                                     </Button>
                                 </Box>
                             )}
@@ -1122,7 +1122,7 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
 
                                     if (!entityId) {
                                         // View mode - no API calls needed initially, but now handle save logic if conditions met
-                                        toast.info(t('calculation.calculatedLocally', 'Calculated locally'));
+                                        toast.info(t('calculation.calculatedLocally'));
 
                                         if (onSaveWithGood && (allCalculatedRows.length > 0 || (transferredIds.length === 0 && sfTransferredIds.length === 0))) {
                                             try {
@@ -1143,7 +1143,7 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
                                                 });
                                             } catch (error) {
                                                 console.error('Error saving with calculations:', error);
-                                                toast.error(t('error.saveFailed', 'Failed to save'));
+                                                toast.error(t('error.saveFailed'));
                                             }
                                         }
                                         return;
@@ -1168,10 +1168,10 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
                                                 }
                                             }
                                             await mutateCalculations();
-                                            toast.success(t('calculation.calculatedSuccessfully', 'Calculated successfully'));
+                                            toast.success(t('calculation.calculatedSuccessfully'));
                                         } catch (error) {
                                             console.error('Error saving calculations:', error);
-                                            toast.error(t('error.saveFailed', 'Failed to save calculations'));
+                                            toast.error(t('error.saveFailed'));
                                         }
                                     }
                                 }}
@@ -1379,7 +1379,7 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
                                         size="small"
                                         onClick={() => setVisibleCompoundCount((prev) => prev + INITIAL_VISIBLE_ITEMS)}
                                     >
-                                        {t('common.showMore', 'Ko‘proq ko‘rsat')} ({filteredCompounds.length - visibleCompoundCount})
+                                        {t('common.showMore')} ({filteredCompounds.length - visibleCompoundCount})
                                     </Button>
                                 </Box>
                             )}
@@ -1444,7 +1444,7 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
 
                                     if (!entityId) {
                                         // View mode - no API calls needed initially, but now handle save logic if conditions met
-                                        toast.info(t('calculation.calculatedLocally', 'Calculated locally'));
+                                        toast.info(t('calculation.calculatedLocally'));
 
                                         if (onSaveWithGood && (allCalculatedRows.length > 0 || (transferredIds.length === 0 && sfTransferredIds.length === 0))) {
                                             try {
@@ -1465,7 +1465,7 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
                                                 });
                                             } catch (error) {
                                                 console.error('Error saving with calculations:', error);
-                                                toast.error(t('error.saveFailed', 'Failed to save'));
+                                                toast.error(t('error.saveFailed'));
                                             }
                                         }
                                         return;
@@ -1492,10 +1492,10 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
                                                 }
                                             }
                                             await mutateCalculations();
-                                            toast.success(t('calculation.calculatedSuccessfully', 'Calculated successfully'));
+                                            toast.success(t('calculation.calculatedSuccessfully'));
                                         } catch (error) {
                                             console.error('Error saving calculations:', error);
-                                            toast.error(t('error.saveFailed', 'Failed to save calculations'));
+                                            toast.error(t('error.saveFailed'));
                                         }
                                     }
                                 }}
@@ -1627,7 +1627,7 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
                                 <TableRow>
                                     <TableCell sx={{ color: 'text.primary' }}>{t('calculation.number')}</TableCell>
                                     <TableCell sx={{ color: 'text.primary' }}>{t('calculation.productName')}</TableCell>
-                                    <TableCell sx={{ color: 'text.primary' }}>{t('calculation.type', 'Turi')}</TableCell>
+                                    <TableCell sx={{ color: 'text.primary' }}>{t('calculation.type')}</TableCell>
                                     <TableCell sx={{ color: 'text.primary' }}>{t('calculation.quantity')}</TableCell>
                                     <TableCell sx={{ color: 'text.primary' }}>{t('calculation.price')}</TableCell>
                                     <TableCell align="right" sx={{ color: 'text.primary' }}>{t('calculation.totalPrice')}</TableCell>
@@ -1640,8 +1640,8 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
                                         <TableCell sx={{ color: 'text.primary' }}>{row.name}</TableCell>
                                         <TableCell sx={{ color: 'text.secondary' }}>
                                             {row.type === 'ingredient'
-                                                ? t('calculation.ingredientType', 'Ingredient')
-                                                : t('calculation.compoundType', 'Yarim tayyor')}
+                                                ? t('calculation.ingredientType')
+                                                : t('calculation.compoundType')}
                                         </TableCell>
                                         <TableCell sx={{ color: 'text.primary' }}>{row.qty}</TableCell>
                                         <TableCell sx={{ color: 'text.primary' }}>{formatPrice(row.price_per_unit)}</TableCell>
@@ -1695,12 +1695,12 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
                                         });
                                     } catch (error) {
                                         console.error('Error saving with calculations:', error);
-                                        toast.error(t('error.saveFailed', 'Failed to save'));
+                                        toast.error(t('error.saveFailed'));
                                     }
                                 }}
                                 sx={{ mb: 2 }}
                             >
-                                {t('common.save', 'Saqlash')}
+                                {t('common.save')}
                             </Button>
                         )} */}
 
@@ -1717,7 +1717,7 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
                         </Box>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '300px' }}>
                             <Typography color="text.secondary" fontWeight="bold">
-                                {t('calculation.profit', 'Profit')}
+                                {t('calculation.profit')}
                             </Typography>
                             <Typography fontWeight="bold" color={displayProfit < 0 ? 'error.main' : 'text.primary'}>
                                 {formatPrice(displayProfit)}
@@ -1725,7 +1725,7 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
                         </Box>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '300px' }}>
                             <Typography color="text.secondary" fontWeight="bold">
-                                {t('calculation.profitMargin', 'Profit Margin')}
+                                {t('calculation.profitMargin')}
                             </Typography>
                             <Typography fontWeight="bold" color={displayProfitMargin && parseFloat(displayProfitMargin) < 0 ? 'error.main' : 'text.primary'}>
                                 {displayProfitMargin}

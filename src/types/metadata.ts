@@ -13,7 +13,12 @@ export enum MetadataEntity {
 
 export interface MetadataRecord {
   id: string;
-  name: string;
+  name?: string;
+  [key: string]: unknown;
 }
 
 export type MetadataResponse = Partial<Record<MetadataEntity, MetadataRecord[]>>;
+
+export type MetadataInclude =
+  | MetadataEntity
+  | { entity: MetadataEntity; fields: string[] };

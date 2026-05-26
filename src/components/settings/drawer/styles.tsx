@@ -23,8 +23,8 @@ const LargeBlockRoot = styled('div')(({ theme }) => ({
   flexDirection: 'column',
   padding: theme.spacing(4, 2, 2, 2),
   borderRadius: Number(theme.shape.borderRadius) * 2,
-  backgroundColor: 'var(--color-surface-0)',
-  border: `solid 1px var(--color-border)`,
+  backgroundColor: 'var(--bg)',
+  border: `solid 1px var(--border)`,
 }));
 
 const LargeLabel = styled('span')(({ theme }) => ({
@@ -36,9 +36,9 @@ const LargeLabel = styled('span')(({ theme }) => ({
   display: 'inline-flex',
   padding: theme.spacing(0, 1.25),
   fontSize: theme.typography.pxToRem(13),
-  color: 'var(--color-text-on-primary)',
+  color: 'var(--accent-fg)',
   fontWeight: theme.typography.fontWeightSemiBold,
-  backgroundColor: 'var(--color-primary)',
+  backgroundColor: 'var(--accent)',
 }));
 
 export function LargeBlock({
@@ -98,7 +98,7 @@ const SmallLabel = styled(ButtonBase, {
   alignSelf: 'flex-start',
   gap: theme.spacing(0.25),
   fontSize: theme.typography.pxToRem(11),
-  color: 'var(--color-text-muted)',
+  color: 'var(--text-3)',
   fontWeight: theme.typography.fontWeightSemiBold,
   transition: theme.transitions.create(['color']),
   variants: [
@@ -107,10 +107,10 @@ const SmallLabel = styled(ButtonBase, {
       style: {
         cursor: 'pointer',
         pointerEvent: 'auto',
-        color: 'var(--color-text)',
+        color: 'var(--text)',
         fontWeight: theme.typography.fontWeightBold,
         '&:hover': {
-          color: 'var(--color-primary)',
+          color: 'var(--accent)',
         },
       },
     },
@@ -149,12 +149,12 @@ export function OptionButton({ selected, sx, children, ...other }: OptionButtonP
           fontWeight: 'fontWeightSemiBold',
           fontSize: theme.typography.pxToRem(13),
           ...(selected && {
-            color: 'var(--color-text)',
-            bgcolor: 'var(--color-surface-0)',
-            borderColor: 'var(--color-border)',
+            color: 'var(--text)',
+            bgcolor: 'var(--bg)',
+            borderColor: 'var(--border)',
             boxShadow: 'var(--glow-shadow-md)',
             '& svg': {
-              color: 'var(--color-primary)',
+              color: 'var(--accent)',
             },
           }),
         }),

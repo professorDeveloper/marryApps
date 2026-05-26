@@ -121,10 +121,10 @@ function GenericEditV2Inner<T extends Record<string, any>>({
             <ConfirmDialog
                 open={deleteDialogOpen}
                 onClose={() => setDeleteDialogOpen(false)}
-                title={t('common.deleteConfirmTitle', { defaultValue: 'Confirm Delete' })}
+                title={t('common.deleteConfirmTitle')}
                 content={
                     config.deleteConfirmMessage
-                    || t('common.deleteConfirmMessage', { defaultValue: 'Are you sure?' })
+                    || t('common.deleteConfirmMessage')
                 }
                 action={
                     <Button

@@ -60,7 +60,7 @@ export function BaseOption({
             <Iconify
               width={16}
               icon="eva:info-outline"
-              sx={{ cursor: 'pointer', color: 'var(--color-text-muted)' }}
+              sx={{ cursor: 'pointer', color: 'var(--text-3)' }}
             />
           </Tooltip>
         )}
@@ -79,14 +79,14 @@ const ItemRoot = styled(ButtonBase, {
   alignItems: 'flex-start',
   padding: theme.spacing(2, 2, 2, 2.5),
   borderRadius: Number(theme.shape.borderRadius) * 2,
-  backgroundColor: 'var(--color-surface-0)',
-  border: `solid 1px var(--color-border)`,
+  backgroundColor: 'var(--bg)',
+  border: `solid 1px var(--border)`,
   '&:hover': {
-    backgroundColor: 'var(--color-surface-1)',
+    backgroundColor: 'var(--surface)',
   },
   ...(selected && {
-    backgroundColor: 'var(--color-surface-1)',
-    borderColor: 'var(--color-primary)',
+    backgroundColor: 'var(--surface)',
+    borderColor: 'var(--accent)',
   }),
 }));
 

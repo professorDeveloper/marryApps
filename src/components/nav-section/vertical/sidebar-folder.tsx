@@ -5,12 +5,11 @@ import { mergeClasses } from 'minimal-shared/utils';
 
 import { createNavItem } from '../utils';
 import { navSectionClasses } from '../styles';
-import { 
-  ItemRoot, 
-  ItemIcon, 
-  ItemTitle, 
-  ItemInfo, 
-  ItemArrow 
+import {
+  ItemRoot,
+  ItemIcon,
+  ItemTitle,
+  ItemInfo,
 } from './sidebar-folder.styles';
 
 // ----------------------------------------------------------------------
@@ -82,13 +81,6 @@ export function SidebarFolder({
           {navItem.renderInfo}
         </ItemInfo>
       )}
-
-      <ItemArrow
-        {...ownerState}
-        className={navSectionClasses.item.arrow}
-        sx={slotProps?.arrow}
-        icon={open ? 'eva:arrow-ios-downward-fill' : 'eva:arrow-ios-forward-fill'}
-      />
     </ItemRoot>
   );
 }

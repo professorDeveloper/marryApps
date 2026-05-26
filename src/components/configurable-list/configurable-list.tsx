@@ -316,7 +316,7 @@ function ConfigurableListInner<R extends Record<string, any>>(
           gap: 2,
           px: 2,
           py: 1,
-          borderTop: '1px solid var(--color-border)',
+          borderTop: '1px solid var(--border)',
           overflow: 'hidden',
           '& .MuiDataGrid-footerContainer': { borderTop: 'none', minHeight: 'unset' },
           '& .MuiTablePagination-root': { overflow: 'hidden' },
@@ -405,7 +405,11 @@ function ConfigurableListInner<R extends Record<string, any>>(
         )}
 
         {/* Custom filters (above the table card) */}
-        {renderFilters && <Card sx={{ p: 2, mb: 2.5 }}>{renderFilters()}</Card>}
+        {renderFilters && (
+          <Card sx={{ p: 2, mb: 2.5, background: 'var(--bg2)', border: '1px solid var(--border)', boxShadow: 'none' }}>
+            {renderFilters()}
+          </Card>
+        )}
 
         {/* Data grid card */}
         <Card
@@ -417,6 +421,10 @@ function ConfigurableListInner<R extends Record<string, any>>(
             maxHeight: gridHeight,
             minHeight: 0,
             overflow: 'hidden',
+            background: 'var(--bg2)',
+            border: '1px solid var(--border)',
+            boxShadow: 'none',
+            borderRadius: 'var(--r2)',
           }}
         >
           <DataGrid
@@ -488,13 +496,43 @@ function ConfigurableListInner<R extends Record<string, any>>(
               flex: 1,
               minHeight: 0,
               border: 0,
+              fontSize: '13px',
+              color: 'var(--text)',
+              background: 'var(--bg2)',
+              '& .MuiDataGrid-main': { background: 'var(--bg2)' },
               '& .MuiDataGrid-columnHeaders': {
+                background: 'var(--bg3)',
+                borderBottom: '1px solid var(--border)',
                 transition: 'all 0.25s ease',
+                minHeight: '38px !important',
+                maxHeight: '38px !important',
+              },
+              '& .MuiDataGrid-columnHeaderTitle': {
+                fontSize: '11px',
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                letterSpacing: '.6px',
+                color: 'var(--text2)',
+              },
+              '& .MuiDataGrid-columnHeader': {
+                background: 'var(--bg3)',
+              },
+              '& .MuiDataGrid-columnSeparator': {
+                color: 'var(--border2)',
+              },
+              '& .MuiDataGrid-row': {
+                borderBottom: '1px solid var(--border)',
+              },
+              '& .MuiDataGrid-row:hover': {
+                background: 'var(--bg3)',
               },
               [`& .${gridClasses.cell}`]: {
                 display: 'flex',
                 alignItems: 'center',
                 transition: 'width 0.25s ease, padding 0.25s ease',
+                color: 'var(--text)',
+                fontSize: '13px',
+                borderBottom: 'none',
               },
               '& .MuiDataGrid-cell:focus, & .MuiDataGrid-cell:focus-within': {
                 outline: 'none',
@@ -502,32 +540,45 @@ function ConfigurableListInner<R extends Record<string, any>>(
               '& .MuiDataGrid-columnHeader:focus, & .MuiDataGrid-columnHeader:focus-within': {
                 outline: 'none',
               },
-              // Pagination styling (matches existing project style)
-              '& .MuiTablePagination-root': { overflow: 'hidden' },
-              '& .MuiTablePagination-toolbar': { height: 64 },
-              '& .MuiTablePagination-selectLabel': { fontSize: '14px', fontWeight: 600 },
+              '& .MuiDataGrid-virtualScroller': { background: 'var(--bg2)' },
+              '& .MuiDataGrid-footerContainer': {
+                borderTop: '1px solid var(--border)',
+                background: 'var(--bg2)',
+                minHeight: '44px',
+              },
+              '& .MuiCheckbox-root': { color: 'var(--text3)' },
+              '& .MuiCheckbox-root.Mui-checked, & .MuiCheckbox-root.MuiCheckbox-indeterminate': {
+                color: 'var(--brand)',
+              },
+              // Pagination styling
+              '& .MuiTablePagination-root': { overflow: 'hidden', color: 'var(--text2)', fontSize: '13px' },
+              '& .MuiTablePagination-toolbar': { height: 44 },
+              '& .MuiTablePagination-selectLabel': { fontSize: '13px', fontWeight: 600 },
               '& .MuiTablePagination-input': {
                 marginLeft: '8px',
                 marginRight: '8px',
-                border: '1px solid var(--color-border)',
-                borderRadius: '8px',
-                height: '36px',
-                minWidth: '100px',
+                border: '1px solid var(--border2)',
+                borderRadius: '6px',
+                height: '32px',
+                minWidth: '90px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: '14px',
+                fontSize: '13px',
                 fontWeight: 700,
                 padding: '0 8px',
+                background: 'var(--bg3)',
               },
               '& .MuiTablePagination-select': {
                 paddingLeft: '8px',
                 paddingRight: '24px !important',
                 display: 'flex',
                 alignItems: 'center',
+                color: 'var(--text)',
               },
-              '& .MuiTablePagination-displayedRows': { fontSize: '14px', fontWeight: 600 },
+              '& .MuiTablePagination-displayedRows': { fontSize: '13px', fontWeight: 600, color: 'var(--text2)' },
               '& .MuiTablePagination-actions': { marginRight: '8px' },
+              '& .MuiIconButton-root': { color: 'var(--text2)' },
             }}
           />
         </Card>

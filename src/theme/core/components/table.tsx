@@ -40,13 +40,21 @@ const MuiTableCell: Components<Theme>['MuiTableCell'] = {
   // ▼▼▼▼▼▼▼▼ 🎨 STYLE ▼▼▼▼▼▼▼▼
   styleOverrides: {
     root: {
-      borderBottomStyle: 'dashed',
+      borderBottomStyle: 'solid',
+      height: 52,
+      padding: '0 16px',
+      fontSize: '13.5px',
+      fontWeight: 500,
     },
     head: ({ theme }) => ({
-      fontSize: theme.typography.pxToRem(14),
-      color: theme.vars.palette.text.secondary,
-      fontWeight: theme.typography.fontWeightSemiBold,
-      backgroundColor: theme.vars.palette.background.neutral,
+      fontSize: theme.typography.pxToRem(11),
+      color: theme.vars.palette.text.disabled,
+      fontWeight: 600,
+      textTransform: 'uppercase' as const,
+      letterSpacing: '0.08em',
+      backgroundColor: theme.vars.palette.background.paper,
+      height: 42,
+      padding: '0 16px',
     }),
     stickyHeader: ({ theme }) => ({
       backgroundColor: theme.vars.palette.background.paper,

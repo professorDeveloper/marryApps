@@ -26,7 +26,7 @@ import { PresetsOptions } from './presets-options';
 import { FullScreenButton } from './fullscreen-button';
 import { FontSizeOptions, FontFamilyOptions } from './font-options';
 import { useSettingsContext } from '../context/use-settings-context';
-import { NavColorOptions, NavLayoutOptions } from './nav-layout-option';
+import { NavColorOptions } from './nav-layout-option';
 import { FloorPlanSettings } from '../../floor-plan-editor/floor-plan-settings';
 
 // ----------------------------------------------------------------------
@@ -169,40 +169,6 @@ export function SettingsDrawer({ sx, defaultSettings }: SettingsDrawerProps) {
 
   const renderNav = () => (
     <LargeBlock title={t('settingsDrawer.nav')} tooltip="Dashboard only" sx={{ gap: 2.5 }}>
-      {visibility.navLayout && (
-        <SmallBlock
-          label={t('settingsDrawer.layout')}
-          canReset={settings.state.navLayout !== defaultSettings.navLayout}
-          onReset={() => {
-            settings.setState({ navLayout: defaultSettings.navLayout });
-          }}
-        >
-          <NavLayoutOptions
-            value={settings.state.navLayout}
-            onChangeOption={(newOption) => {
-              settings.setState({ navLayout: newOption });
-            }}
-            options={[
-              {
-                value: 'vertical',
-                icon: (
-                  <SvgIcon sx={{ width: 1, height: 'auto' }}>{settingIcons.navVertical}</SvgIcon>
-                ),
-              },
-              {
-                value: 'horizontal',
-                icon: (
-                  <SvgIcon sx={{ width: 1, height: 'auto' }}>{settingIcons.navHorizontal}</SvgIcon>
-                ),
-              },
-              {
-                value: 'mini',
-                icon: <SvgIcon sx={{ width: 1, height: 'auto' }}>{settingIcons.navMini}</SvgIcon>,
-              },
-            ]}
-          />
-        </SmallBlock>
-      )}
       {visibility.navColor && (
         <SmallBlock
           label={t('settingsDrawer.color')}

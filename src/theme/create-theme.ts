@@ -34,7 +34,7 @@ export const baseTheme: ThemeOptions = {
   mixins,
   components,
   typography,
-  shape: { borderRadius: 12 }, // Base radius; components override with 16px for cards, 10px for nav items
+  shape: { borderRadius: 6 }, // Slate Dawn base radius — 4/6/8px scale
   direction: themeConfig.direction,
   cssVariables: themeConfig.cssVariables,
 };

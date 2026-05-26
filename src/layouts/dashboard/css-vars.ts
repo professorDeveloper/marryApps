@@ -5,7 +5,7 @@ import { varAlpha } from 'minimal-shared/utils';
 
 // import { bulletColor } from 'src/components/nav-section';
 // export const bulletColor = { dark: '#2370c8', light: '#EDEFF2' };
-export const bulletColor = { dark: 'var(--color-primary)', light: 'var(--color-primary)' };
+export const bulletColor = { dark: 'var(--accent)', light: 'var(--accent)' };
 
 // ----------------------------------------------------------------------
 
@@ -27,9 +27,9 @@ export function dashboardLayoutVars(theme: Theme) {
 // INTEGRATED THEME COLORS (Default sidebar style)
 export const INTEGRATED_SIDEBAR_COLORS = {
   // === SIDEBAR BACKGROUND & BORDERS ===
-  SIDEBAR_BG: 'var(--color-dark-800)',
-  SIDEBAR_HORIZONTAL_BG: 'rgba(255, 255, 255, 0.08)', // 8% opacity white
-  SIDEBAR_BORDER: 'var(--color-border-strong)',
+  SIDEBAR_BG: 'var(--sidebar-bg)',
+  SIDEBAR_HORIZONTAL_BG: 'rgba(255, 255, 255, 0.04)',
+  SIDEBAR_BORDER: 'var(--border)',
   
   // === TEXT COLORS ===
   TEXT_PRIMARY: 'var(--text-strongest)',     // Main text (white)

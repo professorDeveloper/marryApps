@@ -322,7 +322,7 @@ export function GenericTableView<T extends Record<string, any>>({
           gap: 2,
           px: 2,
           py: 1,
-          borderTop: '1px solid var(--color-border)',
+          borderTop: '1px solid var(--border)',
           overflow: 'hidden',
           '& .MuiDataGrid-footerContainer': {
             borderTop: 'none',
@@ -490,7 +490,7 @@ export function GenericTableView<T extends Record<string, any>>({
                 // Select input (dropdown) stillari
                 marginLeft: '8px',
                 marginRight: '8px',
-                border: '1px solid var(--color-border)', // Chegara
+                border: '1px solid var(--border)', // Chegara
                 borderRadius: 'var(--radius-sm)', // Yumaloq burchaklar
                 height: '36px',
                 minWidth: '100px', // Minimal kenglik (juda tor bo'lmasligi uchun)

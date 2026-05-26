@@ -33,7 +33,7 @@ interface EditFormFieldProps {
 
 const EditFormFieldComponent: FC<EditFormFieldProps> = ({ field, value, onChange }) => {
     const { t } = useTranslation('menu');
-    const noDataText = t('noDataAvailable', "Tushunarli ma'lumot mavjud emas");
+    const noDataText = t('noDataAvailable');
 
     const handleChange = useCallback((e: any) => {
         const val = e.target.value;
@@ -154,13 +154,13 @@ const EditFormFieldComponent: FC<EditFormFieldProps> = ({ field, value, onChange
                                 transition: 'transform 0.15s ease, box-shadow 0.15s ease',
                                 boxShadow:
                                     selectedColor === color
-                                        ? '0 0 0 2px var(--color-bg), 0 0 0 4px var(--color-text-primary)'
-                                        : '0 0 0 1px var(--color-border-subtle)',
+                                        ? '0 0 0 2px var(--bg), 0 0 0 4px var(--text)'
+                                        : '0 0 0 1px var(--border)',
                                 '&:hover': {
                                     transform: 'translateY(-1px)',
                                 },
                                 '&:focus-visible': {
-                                    outline: '2px solid var(--color-text-primary)',
+                                    outline: '2px solid var(--text)',
                                     outlineOffset: 2,
                                 },
                             }}
@@ -174,7 +174,7 @@ const EditFormFieldComponent: FC<EditFormFieldProps> = ({ field, value, onChange
                                         left: '50%',
                                         transform: 'translate(-50%, -50%)',
                                         fontSize: 18,
-                                        color: 'var(--color-text-on-primary)',
+                                        color: 'var(--accent-fg)',
                                         filter: 'var(--filter-shadow-light)',
                                     }}
                                 />

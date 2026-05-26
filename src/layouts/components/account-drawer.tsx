@@ -46,7 +46,7 @@ export function AccountDrawer({ data: _data = [], sx, ...other }: AccountDrawerP
         borderRadius: '50%',
         overflow: 'hidden',
         position: 'relative',
-        bgcolor: 'var(--color-surface-1)',
+        bgcolor: 'var(--surface)',
       }}
     >
       <Box
@@ -56,7 +56,7 @@ export function AccountDrawer({ data: _data = [], sx, ...other }: AccountDrawerP
           width: '40%',
           aspectRatio: '1 / 1',
           borderRadius: '50%',
-          bgcolor: 'var(--color-surface-2)',
+          bgcolor: 'var(--surface-2)',
           position: 'absolute',
           transform: 'translateX(-50%)',
         }}
@@ -67,7 +67,7 @@ export function AccountDrawer({ data: _data = [], sx, ...other }: AccountDrawerP
           bottom: '10%',
           width: '72%',
           height: '30%',
-          bgcolor: 'var(--color-surface-2)',
+          bgcolor: 'var(--surface-2)',
           position: 'absolute',
           transform: 'translateX(-50%)',
           borderRadius: '999px 999px 0 0',
@@ -108,8 +108,8 @@ export function AccountDrawer({ data: _data = [], sx, ...other }: AccountDrawerP
           paper: { 
             sx: { 
               width: 320,
-              backgroundColor: 'var(--color-surface-0)',
-              borderLeft: '1px solid var(--color-border)',
+              backgroundColor: 'var(--bg)',
+              borderLeft: '1px solid var(--border)',
             } 
           },
         }}

@@ -45,7 +45,7 @@ export function NavLayoutOptions({
             onClick={() => onChangeOption(option.value)}
             sx={{
               height: 64,
-              border: `solid 1px var(--color-border)`,
+              border: `solid 1px var(--border)`,
             }}
           >
             {option.icon}

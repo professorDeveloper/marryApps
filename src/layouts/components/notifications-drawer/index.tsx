@@ -150,8 +150,8 @@ export function NotificationsDrawer({ data = [], sx, ...other }: NotificationsDr
             sx: { 
               width: 1, 
               maxWidth: 420,
-              backgroundColor: 'var(--color-surface-0)',
-              borderLeft: '1px solid var(--color-border)',
+              backgroundColor: 'var(--bg)',
+              borderLeft: '1px solid var(--border)',
             } 
           },
         }}

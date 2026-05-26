@@ -59,10 +59,20 @@ function createCustomShadows(colorChannel: string): CustomShadows {
   };
 }
 
+function createDarkShadows(): CustomShadows {
+  const none = 'none';
+  return {
+    z1: none, z4: none, z8: none, z12: none, z16: none, z20: none, z24: none,
+    dialog: none, card: none, dropdown: none,
+    primary: none, secondary: none, info: none,
+    success: none, warning: none, error: none,
+  };
+}
+
 /* **********************************************************************
- * 📦 Final
+ * 📦 Final — dark mode has no shadows (depth via stacked surfaces)
  * **********************************************************************/
 export const customShadows: SchemesRecord<CustomShadows> = {
   light: createCustomShadows(grey['500Channel']),
-  dark: createCustomShadows(common.blackChannel),
+  dark: createDarkShadows(),
 };

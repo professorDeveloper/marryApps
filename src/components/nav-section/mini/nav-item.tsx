@@ -70,7 +70,7 @@ export function NavItem({
         </ItemIcon>
       )}
 
-      {title && (
+      {title && ownerState.variant !== 'rootItem' && (
         <ItemTitle {...ownerState} className={navSectionClasses.item.title} sx={slotProps?.title}>
           {title}
         </ItemTitle>
@@ -93,14 +93,6 @@ export function NavItem({
         </ItemInfo>
       )}
 
-      {hasChild && (
-        <ItemArrow
-          {...ownerState}
-          icon="eva:arrow-ios-forward-fill"
-          className={navSectionClasses.item.arrow}
-          sx={slotProps?.arrow}
-        />
-      )}
     </ItemRoot>
   );
 }
@@ -132,12 +124,12 @@ const ItemRoot = styled(ButtonBase, { shouldForwardProp })<StyledState>(({
       backgroundColor: 'var(--nav-item-root-open-bg)',
     }),
     ...(active && {
-      color: 'var(--nav-item-root-active-color)',
-      backgroundColor: 'var(--nav-item-root-active-bg)',
-      '&:hover': { backgroundColor: 'var(--nav-item-root-active-hover-bg)' },
-      ...theme.applyStyles('dark', {
-        color: 'var(--nav-item-root-active-color-on-dark)',
-      }),
+      color: 'var(--accent)',
+      backgroundColor: 'color-mix(in srgb, var(--accent) 14%, transparent)',
+      borderLeft: '3px solid var(--accent)',
+      '&:hover': {
+        backgroundColor: 'color-mix(in srgb, var(--accent) 20%, transparent)',
+      },
     }),
   };
 
@@ -221,21 +213,3 @@ const ItemInfo = styled('span', { shouldForwardProp })<StyledState>(({ theme }) 
   ...navItemStyles.info,
 }));
 
-/**
- * @slot arrow
- */
-const ItemArrow = styled(Iconify, { shouldForwardProp })<StyledState>(({ theme }) => ({
-  ...navItemStyles.arrow(theme),
-  variants: [
-    {
-      props: { variant: 'rootItem' },
-      style: {
-        margin: 0,
-        top: 11,
-        right: 6,
-        position: 'absolute',
-      },
-    },
-    { props: { variant: 'subItem' }, style: { marginRight: theme.spacing(-0.5) } },
-  ],
-}));

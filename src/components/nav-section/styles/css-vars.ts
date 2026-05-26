@@ -5,7 +5,7 @@ import type { Theme } from '@mui/material/styles';
 
 // Sidebar should always be dark, regardless of light/dark mode
 // Using CSS variable for consistency - matches --color-sidebar-text in global.css
-export const bulletColor = { dark: 'var(--color-sidebar-text)', light: 'var(--color-sidebar-text)' };
+export const bulletColor = { dark: 'var(--text-2)', light: 'var(--text-2)' };
 
 
 function colorVars(theme: Theme, variant?: 'vertical' | 'mini' | 'horizontal') {
@@ -14,25 +14,25 @@ function colorVars(theme: Theme, variant?: 'vertical' | 'mini' | 'horizontal') {
   } = theme;
 
   return {
-    '--nav-item-color': palette.text.secondary,
-    '--nav-item-hover-bg': palette.action.hover,
-    '--nav-item-caption-color': palette.text.disabled,
+    '--nav-item-color': 'var(--text-2)',
+    '--nav-item-hover-bg': 'var(--hover)',
+    '--nav-item-caption-color': 'var(--text-3)',
     // root
-    '--nav-item-root-active-color': palette.common.white,
-    '--nav-item-root-active-color-on-dark': palette.common.white,
-    '--nav-item-root-active-bg': 'var(--color-primary)',
-    '--nav-item-root-active-hover-bg': 'var(--color-primary-hover)',
-    '--nav-item-root-open-color': palette.text.primary,
-    '--nav-item-root-open-bg': palette.action.hover,
+    '--nav-item-root-active-color': 'var(--accent)',
+    '--nav-item-root-active-color-on-dark': 'var(--accent)',
+    '--nav-item-root-active-bg': 'var(--accent-soft)',
+    '--nav-item-root-active-hover-bg': 'var(--accent-soft)',
+    '--nav-item-root-open-color': 'var(--text)',
+    '--nav-item-root-open-bg': 'var(--hover)',
     // sub
-    '--nav-item-sub-active-color': palette.text.primary,
-    '--nav-item-sub-active-bg': palette.action.selected,
-    '--nav-item-sub-open-color': palette.text.primary,
-    '--nav-item-sub-open-bg': palette.action.hover,
+    '--nav-item-sub-active-color': 'var(--accent)',
+    '--nav-item-sub-active-bg': 'var(--accent-soft)',
+    '--nav-item-sub-open-color': 'var(--text)',
+    '--nav-item-sub-open-bg': 'var(--hover)',
     ...(variant === 'vertical' && {
-      '--nav-item-sub-active-bg': palette.action.hover,
-      '--nav-subheader-color': palette.text.disabled,
-      '--nav-subheader-hover-color': palette.text.primary,
+      '--nav-item-sub-active-bg': 'var(--accent-soft)',
+      '--nav-subheader-color': 'var(--text-3)',
+      '--nav-subheader-hover-color': 'var(--text)',
     }),
   };
 }
@@ -44,23 +44,23 @@ function verticalVars(theme: Theme) {
 
   return {
     ...colorVars(theme, 'vertical'),
-    '--nav-item-gap': '4px',
-    '--nav-item-radius': `${shape.borderRadius}px`,
-    '--nav-item-pt': '4px',
-    '--nav-item-pr': '8px',
-    '--nav-item-pb': '4px',
-    '--nav-item-pl': '12px',
+    '--nav-item-gap': '2px',
+    '--nav-item-radius': '6px',
+    '--nav-item-pt': '9px',
+    '--nav-item-pr': '10px',
+    '--nav-item-pb': '9px',
+    '--nav-item-pl': '10px',
     // root
-    '--nav-item-root-height': '44px',
+    '--nav-item-root-height': '40px',
     // sub
     '--nav-item-sub-height': '36px',
     // icon
-    '--nav-icon-size': '24px',
+    '--nav-icon-size': '20px',
     '--nav-icon-margin': '0 12px 0 0',
     // bullet
-    '--nav-bullet-size': '12px',
-    '--nav-bullet-light-color': bulletColor.light,
-    '--nav-bullet-dark-color': bulletColor.dark,
+    '--nav-bullet-size': '4px',
+    '--nav-bullet-light-color': 'var(--accent)',
+    '--nav-bullet-dark-color': 'var(--accent)',
   };
 }
 
@@ -71,17 +71,17 @@ function miniVars(theme: Theme) {
 
   return {
     ...colorVars(theme, 'mini'),
-    '--nav-item-gap': '4px',
+    '--nav-item-gap': '2px',
     '--nav-item-radius': `${shape.borderRadius}px`,
     // root
-    '--nav-item-root-height': '56px',
-    '--nav-item-root-padding': '8px 4px 6px 4px',
+    '--nav-item-root-height': '48px',
+    '--nav-item-root-padding': '10px 4px',
     // sub
-    '--nav-item-sub-height': '34px',
+    '--nav-item-sub-height': '40px',
     '--nav-item-sub-padding': '0 8px',
     // icon
-    '--nav-icon-size': '22px',
-    '--nav-icon-root-margin': '0 0 6px 0',
+    '--nav-icon-size': '28px',
+    '--nav-icon-root-margin': '0',
     '--nav-icon-sub-margin': '0 8px 0 0',
   };
 }

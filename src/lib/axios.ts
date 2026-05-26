@@ -96,6 +96,20 @@ axiosInstance.interceptors.request.use((config) => {
 axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
+    if (error?.response?.status === 401) {
+      sessionStorage.removeItem('jwt_access_token');
+      sessionStorage.removeItem('accessToken');
+      localStorage.removeItem('jwt_access_token');
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('brand_id');
+      localStorage.removeItem('branch_id');
+      localStorage.removeItem('user_role');
+      localStorage.removeItem('selectedBranchId');
+      delete axiosInstance.defaults.headers.common.Authorization;
+      window.location.href = '/sign-in';
+      return Promise.reject(error);
+    }
+
     const message =
       error?.response?.data?.error ||
       error?.response?.data?.message ||
@@ -487,5 +501,24 @@ export const endpoints = {
   },
   dashboard: {
     overview: '/api/v1/dashboard/overview',
+    kpis: '/api/v1/dashboard/kpis',
+    salesDynamics: '/api/v1/dashboard/sales-dynamics',
+  },
+  staffing: {
+    employeeShifts: '/api/v1/employee-shifts',
+    branchShifts: (branchId: string) => `/api/v1/branches/${branchId}/employee-shifts`,
+    employeeShiftTemplates: {
+      list: '/api/v1/employee-shift-templates',
+      details: (id: string) => `/api/v1/employee-shift-templates/${id}`,
+      create: '/api/v1/employee-shift-templates',
+      update: (id: string) => `/api/v1/employee-shift-templates/${id}`,
+      delete: (id: string) => `/api/v1/employee-shift-templates/${id}`,
+    },
+    employees: {
+      list: '/api/v1/employees',
+      details: (id: string) => `/api/v1/employees/${id}`,
+      ratings: '/api/v1/employees/ratings',
+      salaryReport: (id: string) => `/api/v1/employees/${id}/salary-report`,
+    },
   },
 } as const;

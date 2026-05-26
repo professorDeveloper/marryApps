@@ -47,14 +47,17 @@ export const ItemRoot = styled(ButtonBase, { shouldForwardProp })<StyledState>((
   const rootItemStyles: CSSObject = {
     minHeight: 'var(--nav-item-root-height)',
     ...(open && {
-      color: 'var(--text-strongest)',
-      backgroundColor: 'var(--color-sidebar-hover)',
+      color: 'var(--text)',
+      backgroundColor: 'var(--hover)',
     }),
     ...(active && {
-      color: 'var(--color-primary-500)',
-      backgroundColor: 'color-mix(in srgb, var(--color-primary-400) 30%, transparent) !important',
-      boxShadow: '0 0 20px color-mix(in srgb, var(--color-primary-400) 30%, transparent), 0 0 20px color-mix(in srgb, var(--color-primary-400) 10%, transparent)',
-      borderLeft: '3px solid var(--color-primary-500)',
+      color: 'var(--accent)',
+      backgroundColor: 'color-mix(in srgb, var(--accent) 14%, transparent)',
+      borderLeft: '3px solid var(--accent)',
+      paddingLeft: 'calc(var(--nav-item-pl) - 3px)',
+      '&:hover': {
+        backgroundColor: 'color-mix(in srgb, var(--accent) 20%, transparent)',
+      },
     }),
   };
 
@@ -62,12 +65,12 @@ export const ItemRoot = styled(ButtonBase, { shouldForwardProp })<StyledState>((
     minHeight: 'var(--nav-item-sub-height)',
     '&::before': bulletStyles,
     ...(open && {
-      color: 'var(--text-strongest)',
+      color: 'var(--text)',
     }),
     ...(active && {
-      color: 'var(--color-primary-500)',
-      backgroundColor: 'color-mix(in srgb, var(--color-primary-400) 30%, transparent) !important',
-      boxShadow: '0 0 20px color-mix(in srgb, var(--color-primary-400) 30%, transparent), 0 0 20px color-mix(in srgb, var(--color-primary-400) 10%, transparent)',
+      color: 'var(--accent)',
+      backgroundColor: 'color-mix(in srgb, var(--accent) 14%, transparent)',
+      fontWeight: 600,
     }),
   };
 
@@ -78,9 +81,9 @@ export const ItemRoot = styled(ButtonBase, { shouldForwardProp })<StyledState>((
     paddingRight: 'var(--nav-item-pr)',
     paddingBottom: 'var(--nav-item-pb)',
     borderRadius: 'var(--nav-item-radius)',
-    color: 'var(--text-strongest)',
-    transition: 'background-color 0.2s ease, color 0.2s ease, transform 0.15s ease',
-    '&:hover': { backgroundColor: 'var(--color-sidebar-hover)' },
+    color: 'var(--text)',
+    transition: 'background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease',
+    '&:hover': { backgroundColor: 'var(--hover)' },
     '&:active': { transform: 'scale(0.97)' },
     variants: [
       { props: { variant: 'rootItem' }, style: rootItemStyles },

@@ -1,0 +1,37 @@
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+
+  <g opacity="0.4">
+    <path d="M3 10.2C3 9.4768 3.39164 8.8102 4.02295 8.45837L11.0229 4.55837C11.6288 4.22075 12.3712 4.22075 12.9771 4.55837L19.9771 8.45837C20.6084 8.8102 21 9.4768 21 10.2V18C21 19.1046 20.1046 20 19 20H5C3.89543 20 3 19.1046 3 18V10.2Z" fill="#1D7BF5"/>
+  </g>
+
+  <!-- roof outline -->
+  <path d="M3.5 9L12 4.5L20.5 9"
+        stroke="#1D7BF5"
+        stroke-width="1.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"/>
+
+  <!-- door -->
+  <path d="M10 20V15C10 14.4477 10.4477 14 11 14H13C13.5523 14 14 14.4477 14 15V20"
+        stroke="#1D7BF5"
+        stroke-width="1.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"/>
+
+  <!-- left eye (dot) -->
+  <path d="M7 10H7.01"
+        stroke="#1D7BF5"
+        stroke-width="2"
+        stroke-linecap="round"/>
+
+  <!-- right eye (rectangle) -->
+  <rect x="16.2" y="9.2" width="1.8" height="1.8" rx="0.3"
+        fill="#1D7BF5"/>
+
+  <!-- base -->
+  <path d="M4 20.8H20"
+        stroke="#1D7BF5"
+        stroke-width="1.5"
+        stroke-linecap="round"/>
+
+</svg>

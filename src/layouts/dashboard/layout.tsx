@@ -20,24 +20,23 @@ import { _notifications } from 'src/_mock';
 import { Logo } from 'src/components/logo';
 import { useSettingsContext } from 'src/components/settings';
 import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
-import { NeuralGrid, StarPattern } from 'src/components/animate/background-patterns';
 
 import { useAuthContext } from 'src/auth/hooks';
 
 import { NavMobile } from './nav-mobile';
 import { VerticalDivider } from './content';
 import { NavVertical } from './nav-vertical';
+import { SectionTabsBar } from './section-tabs-bar';
 import { NavHorizontal } from './nav-horizontal';
 import { Searchbar } from '../components/searchbar';
 import { getNavData } from '../nav-config-dashboard';
-import { getAccountData } from '../nav-config-account';
 import { MenuButton } from '../components/menu-button';
-import { AccountDrawer } from '../components/account-drawer';
 import { SettingsButton } from '../components/settings-button';
 import { LanguagePopover } from '../components/language-popover';
 import { WorkspacesPopover } from '../components/workspaces-popover';
 import { NotificationsDrawer } from '../components/notifications-drawer';
-import { MainSection, layoutClasses, HeaderSection, LayoutSection } from '../core';
+import { MainSection, HeaderSection, LayoutSection } from '../core';
+import { DataTableActionsProvider } from 'src/sections/common/data-table/context/DataTableActionsContext';
 
 // ----------------------------------------------------------------------
 
@@ -209,9 +208,6 @@ export function DashboardLayout({
 
           {/** @slot Settings button */}
           <SettingsButton />
-
-          {/** @slot Account drawer */}
-          <AccountDrawer data={getAccountData(tMenu)} />
         </Box>
       ),
     };
@@ -248,30 +244,16 @@ export function DashboardLayout({
     <MainSection
       {...slotProps?.main}
       sx={[
-        {
-          position: 'relative',
-          px:2,
-          overflow: 'hidden',
-          '& > .cyber-bg-layer': {
-            position: 'absolute',
-            inset: 0,
-            pointerEvents: 'none',
-            zIndex: 0,
-          },
-          '& > *:not(.cyber-bg-layer)': { position: 'relative', zIndex: 1 },
-        },
+        { px: 2, overflow: 'hidden' },
         ...(Array.isArray(slotProps?.main?.sx) ? slotProps.main.sx : [slotProps?.main?.sx]),
       ]}
     >
-      <Box className="cyber-bg-layer">
-        <NeuralGrid />
-        <StarPattern />
-      </Box>
       {children}
     </MainSection>
   );
 
   return (
+    <DataTableActionsProvider>
     <LayoutSection
       /** **************************************
        * @Header
@@ -293,7 +275,9 @@ export function DashboardLayout({
       ]}
       mini={isNavMini}
     >
+      <SectionTabsBar data={navData} checkPermissions={canDisplayItemByRole} />
       {renderMain()}
     </LayoutSection>
+    </DataTableActionsProvider>
   );
 }

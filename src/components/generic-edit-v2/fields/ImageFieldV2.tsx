@@ -41,7 +41,7 @@ const ImageFieldV2Component: FC<Props> = ({ value, onChange, label, disabled }) 
             try {
                 const objectName = await uploadImage(file);
                 onChange(objectName);
-                toast.success(t('mealsProducts.upload_success', 'Image uploaded'));
+                toast.success(t('mealsProducts.upload_success'));
             } catch (err) {
                 toast.error(err instanceof Error ? err.message : 'Upload failed');
             } finally {
@@ -102,7 +102,7 @@ const ImageFieldV2Component: FC<Props> = ({ value, onChange, label, disabled }) 
                         <Stack alignItems="center" spacing={1}>
                             <Iconify icon="eva:cloud-upload-fill" sx={{ fontSize: 48, color: 'text.secondary' }} />
                             <Typography variant="caption" color="text.secondary">
-                                {t('mealsProducts.upload_image', 'Upload image')}
+                                {t('mealsProducts.upload_image')}
                             </Typography>
                         </Stack>
                     )}
@@ -116,7 +116,7 @@ const ImageFieldV2Component: FC<Props> = ({ value, onChange, label, disabled }) 
                         onClick={handleClick}
                         disabled={disabled}
                     >
-                        {t('mealsProducts.upload_another', 'Upload another')}
+                        {t('mealsProducts.upload_another')}
                     </Button>
                 )}
             </Stack>

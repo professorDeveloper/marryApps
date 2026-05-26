@@ -15,10 +15,12 @@ type NavItemStyles = {
 
 export const navItemStyles: NavItemStyles = {
   icon: {
-    width: 22,
-    height: 22,
+    width: 26,
+    height: 26,
     flexShrink: 0,
     display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
     /**
      * As ':first-child' for ssr
      * https://github.com/emotion-js/emotion/issues/1105#issuecomment-1126025608

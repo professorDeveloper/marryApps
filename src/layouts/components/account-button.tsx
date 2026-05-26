@@ -24,7 +24,7 @@ export function AccountButton({ photoURL, displayName, sx, ...other }: AccountBu
         borderRadius: '50%',
         overflow: 'hidden',
         position: 'relative',
-        bgcolor: 'var(--color-surface-1)',
+        bgcolor: 'var(--surface)',
       }}
     >
       <Box
@@ -34,7 +34,7 @@ export function AccountButton({ photoURL, displayName, sx, ...other }: AccountBu
           width: '40%',
           aspectRatio: '1 / 1',
           borderRadius: '50%',
-          bgcolor: 'var(--color-surface-2)',
+          bgcolor: 'var(--surface-2)',
           position: 'absolute',
           transform: 'translateX(-50%)',
         }}
@@ -45,7 +45,7 @@ export function AccountButton({ photoURL, displayName, sx, ...other }: AccountBu
           bottom: '10%',
           width: '72%',
           height: '30%',
-          bgcolor: 'var(--color-surface-2)',
+          bgcolor: 'var(--surface-2)',
           position: 'absolute',
           transform: 'translateX(-50%)',
           borderRadius: '999px 999px 0 0',

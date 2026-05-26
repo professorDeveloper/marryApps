@@ -21,8 +21,8 @@ const baseColors = ['default'] as const;
 const allColors = [...baseColors, ...colorKeys.palette, ...colorKeys.common] as const;
 
 const DIMENSIONS: Record<'small' | 'medium', CSSObject> = {
-  small: { borderRadius: '8px' },
-  medium: { borderRadius: '10px' },
+  small: { borderRadius: '999px', height: '20px' },
+  medium: { borderRadius: '999px', height: '24px' },
 };
 
 /* **********************************************************************

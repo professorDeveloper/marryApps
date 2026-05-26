@@ -97,7 +97,7 @@ export function FontSizeOptions({
           },
           [`& .${sliderClasses.track}`]: {
             height: 12,
-            background: 'var(--color-primary)',
+            background: 'var(--accent)',
           },
         }),
         ...(Array.isArray(sx) ? sx : [sx]),

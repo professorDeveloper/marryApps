@@ -45,7 +45,7 @@ export function BranchFormDialog({
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>{t('branches.createTitle', 'Create New Branch')}</DialogTitle>
+      <DialogTitle>{t('branches.createTitle')}</DialogTitle>
 
       <DialogContent>
         <Box
@@ -55,8 +55,8 @@ export function BranchFormDialog({
           sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}
         >
           <TextField
-            label={t('branches.name', 'Branch Name')}
-            {...register('name', { required: t('validation.required', 'This field is required') })}
+            label={t('branches.name')}
+            {...register('name', { required: t('validation.required') })}
             error={!!errors.name}
             helperText={errors.name?.message}
             fullWidth
@@ -64,7 +64,7 @@ export function BranchFormDialog({
           />
 
           <TextField
-            label={t('branches.address', 'Address')}
+            label={t('branches.address')}
             {...register('address')}
             error={!!errors.address}
             helperText={errors.address?.message}
@@ -72,7 +72,7 @@ export function BranchFormDialog({
           />
 
           <TextField
-            label={t('branches.phone', 'Phone')}
+            label={t('branches.phone')}
             {...register('phone')}
             error={!!errors.phone}
             helperText={errors.phone?.message}
@@ -80,7 +80,7 @@ export function BranchFormDialog({
           />
 
           <TextField
-            label={t('branches.colorCode', 'Color Code')}
+            label={t('branches.colorCode')}
             {...register('color_code')}
             error={!!errors.color_code}
             helperText={errors.color_code?.message}
@@ -89,7 +89,7 @@ export function BranchFormDialog({
           />
 
           <TextField
-            label={t('branches.pictureUrl', 'Picture URL')}
+            label={t('branches.pictureUrl')}
             {...register('picture_url')}
             error={!!errors.picture_url}
             helperText={errors.picture_url?.message}
@@ -101,7 +101,7 @@ export function BranchFormDialog({
 
       <DialogActions>
         <Button onClick={onClose} variant="outlined" disabled={isSubmitting}>
-          {t('common.cancel', 'Cancel')}
+          {t('common.cancel')}
         </Button>
         <Button
           type="submit"
@@ -110,7 +110,7 @@ export function BranchFormDialog({
           disabled={isSubmitting}
           startIcon={isSubmitting ? <CircularProgress size={16} /> : null}
         >
-          {t('common.create', 'Create')}
+          {t('common.create')}
         </Button>
       </DialogActions>
     </Dialog>

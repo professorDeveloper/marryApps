@@ -1,7 +1,7 @@
 import type { RouteObject } from 'react-router';
 
 import { lazy, Suspense } from 'react';
-import { Outlet, Navigate } from 'react-router';
+import { Outlet } from 'react-router';
 
 import LinearProgress from '@mui/material/LinearProgress';
 
@@ -18,6 +18,9 @@ import { cashboxRoutes } from './cashbox';
 import { settingRoutes } from './settings';
 import { warehouseRoutes } from './warehouse';
 
+const ProfilePage = lazy(() => import('src/pages/profile'));
+const DashboardPage = lazy(() => import('src/pages/dashboard/overview'));
+
 // Demo / misc pages
 const PageTwo = lazy(() => import('src/pages/dashboard/two'));
 const PageThree = lazy(() => import('src/pages/dashboard/three'));
@@ -26,8 +29,6 @@ const PageFive = lazy(() => import('src/pages/dashboard/five'));
 const PageSix = lazy(() => import('src/pages/dashboard/six'));
 const FloorPlanPage = lazy(() => import('src/pages/dashboard/floor-plan'));
 const HallsPage = lazy(() => import('src/pages/dashboard/halls'));
-const AnalyticsPage = lazy(() => import('src/pages/analytics'));
-
 // ----------------------------------------------------------------------
 
 function MainPaneFallback() {
@@ -72,7 +73,7 @@ export const dashboardRoutes: RouteObject[] = [
   {
     element: dashboardLayoutElement,
     children: [
-      { element: <Navigate to="menu/departments" replace />, index: true },
+      { path: 'dashboard', element: <DashboardPage /> },
       { path: 'two', element: <PageTwo /> },
       { path: 'three', element: <PageThree /> },
       {
@@ -87,7 +88,7 @@ export const dashboardRoutes: RouteObject[] = [
       ...warehouseRoutes,
       ...reportRoutes,
       ...cashboxRoutes,
-      { path: 'analytics', element: <AnalyticsPage /> },
+      { path: 'profile', element: <ProfilePage /> },
       ...settingRoutes,
     ],
   },

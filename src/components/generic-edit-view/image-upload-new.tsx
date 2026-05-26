@@ -104,19 +104,19 @@ const ImageUploadComponent: FC<ImageUploadFieldProps> = ({
                     display: 'flex',
                     position: 'relative',
                     '&:hover .upload-box': {
-                        borderColor: error ? 'error.main' : 'var(--color-primary-400)',
+                        borderColor: error ? 'error.main' : 'var(--accent)',
                         bgcolor: displayUrl ? 'transparent' : 'action.hover',
                         animation: 'borderPulse 1.5s infinite',
                     },
                     '@keyframes borderPulse': {
                         '0%': {
-                            borderColor: error ? 'error.main' : 'var(--color-primary-200)',
+                            borderColor: error ? 'error.main' : 'var(--accent-soft)',
                         },
                         '50%': {
-                            borderColor: error ? 'error.light' : 'var(--color-primary-300)',
+                            borderColor: error ? 'error.light' : 'var(--accent)',
                         },
                         '100%': {
-                            borderColor: error ? 'error.main' : 'var(--color-primary-400)',
+                            borderColor: error ? 'error.main' : 'var(--accent)',
                         },
                     },
                 }}
@@ -231,9 +231,9 @@ const ImageUploadComponent: FC<ImageUploadFieldProps> = ({
                                             cursor: 'pointer',
                                             opacity: 0,
                                             transition: 'opacity 0.2s ease-in-out',
-                                            border: '1px solid var(--color-primary-400)',
+                                            border: '1px solid var(--accent)',
                                             '&:hover': {
-                                                bgcolor: 'var(--color-primary-400)',
+                                                bgcolor: 'var(--accent)',
                                                 opacity: 1,
                                             },
                                         }}

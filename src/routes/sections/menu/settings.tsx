@@ -29,6 +29,24 @@ const EmployeeListView = lazy(() =>
   }))
 );
 
+const ShiftsListView = lazy(() =>
+  import('src/sections/staffing/shifts/ShiftsListView').then((m) => ({
+    default: m.ShiftsListView,
+  }))
+);
+
+const KpiListView = lazy(() =>
+  import('src/sections/staffing/kpi/KpiListView').then((m) => ({
+    default: m.KpiListView,
+  }))
+);
+
+const SalaryReportView = lazy(() =>
+  import('src/sections/staffing/salary/SalaryReportView').then((m) => ({
+    default: m.SalaryReportView,
+  }))
+);
+
 export const settingRoutes: RouteObject[] = [
   { path: 'settings/users', element: <EmployeeListView /> },
   { path: 'settings/users/new', element: <EmployeeFormView isNew /> },
@@ -39,4 +57,7 @@ export const settingRoutes: RouteObject[] = [
   { path: 'settings/floor-plan', element: <FloorPlanPage /> },
   { path: 'settings/halls', element: <HallsPage /> },
   { path: 'settings/halls/:id', element: <FloorPlanPage /> },
+  { path: 'staffing/shifts', element: <ShiftsListView /> },
+  { path: 'staffing/kpi', element: <KpiListView /> },
+  { path: 'staffing/salary', element: <SalaryReportView /> },
 ];

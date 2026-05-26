@@ -94,6 +94,38 @@ export const i18nResourceLoader = resourcesToBackend(
   (lang: LangCode, namespace: string) => import(`./langs/${lang}/${namespace}.json`)
 );
 
+const reportedMissingKeys = new Set<string>();
+
+function reportMissingKey(lngs: readonly string[] | string, ns: string, key: string, fallbackValue?: string) {
+  const lngList = Array.isArray(lngs) ? lngs : [lngs];
+  const fingerprint = `${lngList.join(',')}::${ns}::${key}`;
+  if (reportedMissingKeys.has(fingerprint)) return;
+  reportedMissingKeys.add(fingerprint);
+
+  const payload = {
+    languages: lngList,
+    namespace: ns,
+    key,
+    fallback: fallbackValue,
+    timestamp: new Date().toISOString(),
+    url: typeof window !== 'undefined' ? window.location.href : '',
+  };
+
+  // eslint-disable-next-line no-console
+  console.warn('[i18n missing]', payload);
+
+  try {
+    const body = JSON.stringify(payload);
+    if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
+      navigator.sendBeacon('/__missing-i18n', new Blob([body], { type: 'application/json' }));
+    } else if (typeof fetch !== 'undefined') {
+      fetch('/__missing-i18n', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, keepalive: true }).catch(() => {});
+    }
+  } catch {
+    /* swallow — logging must never break the app */
+  }
+}
+
 export function i18nOptions(lang = fallbackLng, namespace = defaultNS): InitOptions {
   return {
     debug: import.meta.env.DEV,
@@ -104,6 +136,10 @@ export function i18nOptions(lang = fallbackLng, namespace = defaultNS): InitOpti
     fallbackNS: defaultNS,
     defaultNS,
     ns: [namespace, 'common', 'menu', 'navbar', 'messages', 'layout'],
+    saveMissing: true,
+    missingKeyHandler: (lngs, ns, key, fallbackValue) => {
+      reportMissingKey(lngs, ns, key, fallbackValue);
+    },
   };
 }
 

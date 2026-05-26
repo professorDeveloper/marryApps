@@ -8,6 +8,6 @@ export function layoutSectionVars(theme: Theme) {
     '--layout-header-blur': '8px',
     '--layout-header-zIndex': theme.zIndex.appBar + 1,
     '--layout-header-mobile-height': '64px',
-    '--layout-header-desktop-height': '72px',
+    '--layout-header-desktop-height': '64px',
   };
 }

@@ -184,7 +184,14 @@ export const outlinedInputStyles = {
   root: (theme: Theme, classes: Partial<OutlinedInputClasses>): CSSObject => ({
     [`&.${classes.focused}:not(.${classes.error})`]: {
       [`& .${classes.notchedOutline}`]: {
-        borderColor: theme.vars.palette.text.primary,
+        borderColor: theme.vars.palette.primary.main,
+        borderWidth: '1px',
+      },
+      boxShadow: `0 0 0 3px ${varAlpha(theme.vars.palette.primary.mainChannel, 0.13)}`,
+    },
+    [`&:hover:not(.${classes.focused}):not(.${classes.error}):not(.${classes.disabled})`]: {
+      [`& .${classes.notchedOutline}`]: {
+        borderColor: theme.vars.palette.text.secondary,
       },
     },
     [`&.${classes.disabled}`]: {
@@ -194,8 +201,8 @@ export const outlinedInputStyles = {
     },
   }),
   notchedOutline: (theme: Theme): CSSObject => ({
-    borderColor: theme.vars.palette.shared.inputOutlined,
-    transition: theme.transitions.create(['border-color'], {
+    borderColor: theme.vars.palette.divider,
+    transition: theme.transitions.create(['border-color', 'box-shadow'], {
       duration: theme.transitions.duration.shortest,
     }),
   }),

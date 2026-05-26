@@ -3,11 +3,9 @@ import type { NavItemProps } from '../types';
 
 import { mergeClasses } from 'minimal-shared/utils';
 
-import Tooltip from '@mui/material/Tooltip';
 import { styled } from '@mui/material/styles';
 import ButtonBase from '@mui/material/ButtonBase';
 
-import { Iconify } from '../../iconify';
 import { createNavItem } from '../utils';
 import { navItemStyles, navSectionClasses } from '../styles';
 
@@ -129,13 +127,13 @@ const ItemRoot = styled(ButtonBase, { shouldForwardProp })<StyledState>(({
       backgroundColor: 'var(--nav-item-root-open-bg)',
     }),
     ...(active && {
-      color: 'var(--nav-item-root-active-color)',
-      backgroundColor: 'var(--color-primary-500) !important',
-      '&:hover': { backgroundColor: 'var(--color-primary-500) !important' },
-      ...theme.applyStyles('dark', {
-        color: 'var(--nav-item-root-active-color-on-dark)',
-        backgroundColor: 'var(--color-primary-500) !important',
-      }),
+      color: 'var(--accent)',
+      backgroundColor: 'color-mix(in srgb, var(--accent) 14%, transparent)',
+      borderLeft: '3px solid var(--accent)',
+      paddingLeft: 'calc(var(--nav-item-pl) - 3px)',
+      '&:hover': {
+        backgroundColor: 'color-mix(in srgb, var(--accent) 20%, transparent)',
+      },
     }),
   };
 
@@ -154,6 +152,7 @@ const ItemRoot = styled(ButtonBase, { shouldForwardProp })<StyledState>(({
 
   return {
     width: '100%',
+    alignItems: 'center',
     paddingTop: 'var(--nav-item-pt)',
     paddingLeft: 'var(--nav-item-pl)',
     paddingRight: 'var(--nav-item-pr)',
@@ -188,6 +187,7 @@ const ItemIcon = styled('span', { shouldForwardProp })<StyledState>(() => ({
 const ItemTitle = styled('span', { shouldForwardProp })<StyledState>(({ theme }) => ({
   ...navItemStyles.title(theme),
   ...theme.typography.body2,
+  fontSize: '14px',
   fontWeight: theme.typography.fontWeightMedium,
   variants: [
     { props: { active: true }, style: { fontWeight: theme.typography.fontWeightSemiBold } },
@@ -198,13 +198,7 @@ const ItemTitle = styled('span', { shouldForwardProp })<StyledState>(({ theme })
 /**
  * @slot info
  */
-const ItemInfo = styled('span', { shouldForwardProp })<StyledState>(({ theme }) => ({
+const ItemInfo = styled('span', { shouldForwardProp })<StyledState>(() => ({
   ...navItemStyles.info,
 }));
 
-/**
- * @slot arrow
- */
-const ItemArrow = styled(Iconify, { shouldForwardProp })<StyledState>(({ theme }) => ({
-  ...navItemStyles.arrow(theme),
-}));

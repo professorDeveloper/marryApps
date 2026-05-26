@@ -19,7 +19,18 @@
     "title": "Параметры",
     "resetAll": "Сбросить все",
     "close": "Закрыть",
-    "mode": "Режим"
+    "mode": "Режим",
+    "system": "Системный",
+    "contrast": "Контрастность",
+    "direction": "Справа налево",
+    "compact": "Компактный",
+    "presets": "Пресеты",
+    "nav": "Навигация",
+    "layout": "Макет",
+    "color": "Цвет",
+    "font": "Шрифт",
+    "family": "Семейство",
+    "size": "Размер"
   },
   "workspaces": {
     "add": "Добавить филиал"
@@ -247,8 +258,16 @@
     "deleteMessage": "Это действие нельзя отменить и его нельзя будет вернуть.",
     "cancel": "Отмена",
     "confirm": "Подтвердить",
+    "editTitle": "Редактировать полуфабрикат",
     "basicInfo": "Основная информация",
-    "composition": "Состав"
+    "composition": "Состав",
+    "calculation": "Расчет",
+    "modifiers": "Модификаторы",
+    "relatedProducts": "Связанные блюда",
+    "relatedProductsTitle": "Связанные блюда",
+    "relatedProductsDescription": "Связанные блюда",
+    "relatedProductsDeleteConfirm": "Вы уверены, что хотите удалить этот связанный продукт?",
+    "relatedProductsDeleteMessage": "Это действие нельзя отменить и восстановить."
   },
   "mealsProducts": {
     "title": "Блюда",
@@ -269,7 +288,7 @@
     "section": "Раздел",
     "profitnumber": "Прибыль",
     "inventory": "Инвентарь",
-    "cookingTime": "Время приготовления (мин)",
+    "cookingTime": "Время приготовления",
     "barcode": "Штрих-код",
     "originalPrice": "Исходная цена",
     "costPrice": "Себестоимость",
@@ -335,12 +354,15 @@
     "totalModifiers": "Всего",
     "addSelected": "Добавить выбранные",
     "removeAll": "Удалить все",
+    "composition": "Состав",
     "items": "Элементы",
     "addedItems": "Добавленные элементы",
     "availableItems": "Доступные элементы",
     "pricePerUnit": "Цена за единицу",
     "totalPrice": "Общая цена",
-    "summaryItems": "Элементы"
+    "summaryItems": "Элементы",
+    "newTitle": "Добавить новое блюдо",
+    "confirm": "Подтвердить"
   },
   "modifiers": {
     "title": "Модификаторы",
@@ -420,6 +442,19 @@
       "title": "Сотрудники",
       "admin": "Администраторы",
       "staff": "Персонал ресторана"
+    },
+    "mock": {
+      "warehouse": {
+        "name": "Склад {{index}}",
+        "location": "Блок {{index}}"
+      },
+      "stock": {
+        "name": "Товар {{index}}",
+        "location": "Полка {{index}}"
+      },
+      "location": {
+        "name": "Локация {{index}}"
+      }
     }
   },
   "management": {
@@ -539,12 +574,13 @@
     "deleteConfirmMessage": "Вы уверены, что хотите удалить эту запись? Это действие нельзя отменить.",
     "created_at": "Создано",
     "actions": "Действия",
-    "nameRequired": "Name is required",
-    "createSuccess": "Created successfully",
-    "updateSuccess": "Updated successfully",
-    "deleteSuccess": "Deleted successfully",
-    "deleteFailed": "Failed to delete",
-    "saveFailed": "Failed to save",
+    "nameRequired": "Имя обязательно",
+    "noData": "Нет данных",
+    "createSuccess": "Успешно создано",
+    "updateSuccess": "Успешно обновлено",
+    "deleteSuccess": "Успешно удалено",
+    "deleteFailed": "Не удалось удалить",
+    "saveFailed": "Не удалось сохранить",
     "create": "Создать",
     "update": "Обновить",
     "amount": "Сумма",
@@ -617,6 +653,9 @@
       "noItemsAdded": "Элементы еще не добавлены. Добавьте элементы для создания пакета.",
       "total": "Итого",
       "availableIngredients": "Доступные ингредиенты",
+      "filterWarehouse": "Склад",
+      "filterGroup": "Группа ингредиентов",
+      "filterAll": "Все",
       "selectedItems": "Выбранные элементы",
       "selectIngredientsFirst": "Выберите ингредиенты из левой панели и нажмите Добавить",
       "summary": "Сводка счета",
@@ -1362,6 +1401,103 @@
     "created": "Перевод успешно создан",
     "updated": "Перевод успешно обновлен"
   },
+  "branches": {
+    "address": "Адрес",
+    "colorCode": "Код цвета",
+    "createTitle": "Создать новый филиал",
+    "name": "Название филиала",
+    "phone": "Телефон",
+    "pictureUrl": "URL изображения"
+  },
+  "paymentTypes": {
+    "card": "Карта",
+    "cash": "Наличные",
+    "transfer": "Перевод"
+  },
+  "payType": {
+    "card": "Карта",
+    "cash": "Наличные",
+    "transfer": "Перевод"
+  },
+  "transactions": {
+    "cashRegister": "Касса",
+    "createError": "Ошибка создания транзакции: {{message}}",
+    "createTransaction": "Создать транзакцию",
+    "expense": "Расход",
+    "expenseDesc": "Записать исходящие деньги",
+    "fromBranch": "Из филиала",
+    "fromCashRegister": "Из кассы",
+    "fromRegister": "Из кассы",
+    "income": "Доход",
+    "incomeDesc": "Записать входящие деньги",
+    "newExpense": "Новый расход",
+    "newIncome": "Новый доход",
+    "newTransfer": "Новый перевод",
+    "selectType": "Выберите тип транзакции",
+    "toBranch": "В филиал",
+    "toCashRegister": "В кассу",
+    "toRegister": "В кассу",
+    "transactionDetails": "Детали транзакции",
+    "transfer": "Перевод",
+    "transferDesc": "Перевод между кассами",
+    "typeBillPayment": "Оплата счета",
+    "typeExpense": "Расход",
+    "typeIncome": "Доход",
+    "typeTransfer": "Перевод"
+  },
+  "validation": {
+    "required": "Поле обязательно для заполнения",
+    "sameRegister": "Нельзя перевести в ту же кассу"
+  },
+  "staffing": {
+    "kpi": {
+      "allTime": "За всё время",
+      "employee": "Сотрудник",
+      "monthly": "Ежемесячно",
+      "ordersCount": "Заказы",
+      "rating": "Рейтинг",
+      "revenue": "Выручка",
+      "role": "Роль",
+      "weekly": "Еженедельно"
+    },
+    "salary": {
+      "bonus": "Бонус",
+      "date": "Дата",
+      "dateFrom": "С",
+      "dateTo": "По",
+      "employee": "Сотрудник",
+      "fetchError": "Не удалось загрузить отчет по зарплатам",
+      "hoursWorked": "Часы",
+      "ordersCount": "Заказы",
+      "revenue": "Выручка",
+      "salary": "Зарплата",
+      "total": "Итого",
+      "totalBonus": "Бонус",
+      "totalSalary": "Итого зарплата"
+    },
+    "shifts": {
+      "addShift": "Добавить смену",
+      "createTemplate": "Создать повторяющийся шаблон",
+      "customWeekdays": "Произвольные дни недели",
+      "daily": "Ежедневно",
+      "deleteTemplateConfirm": "Вы уверены, что хотите удалить этот шаблон?",
+      "editTemplate": "Редактировать повторяющийся шаблон",
+      "employee": "Сотрудник",
+      "endDate": "Дата окончания",
+      "endTime": "Время окончания",
+      "fromTemplate": "Из шаблона",
+      "oneTime": "Одноразовый",
+      "realShift": "Реальная смена",
+      "recurrenceType": "Повторяемость",
+      "recurring": "Повторяющийся",
+      "recurringTemplates": "Повторяющиеся шаблоны",
+      "startDate": "Дата начала",
+      "startTime": "Время начала",
+      "today": "Сегодня",
+      "weekdays": "Дни недели",
+      "weekly": "Еженедельно"
+    }
+  },
   "devices": {
     "title": "Принтерные устройства",
     "ipAddress": "IP-адрес",
@@ -1376,6 +1512,52 @@
     "deleteSuccess": "Устройство успешно удалено",
     "saveFailed": "Не удалось сохранить устройство",
     "deleteFailed": "Не удалось удалить устройство"
+  },
+  "nav": {
+    "staffing": "Персонал",
+    "employees": "Сотрудники",
+    "shifts": "Смены",
+    "kpi": "KPI",
+    "salary": "Зарплата",
+    "dashboard": {
+      "overview": "Обзор"
+    },
+    "storageOrg": "Склад и организация",
+    "storage": "Склад",
+    "departments": "Отделы",
+    "categories": "Категории",
+    "ingredientGroups": "Группы ингредиентов",
+    "menuSetup": "Настройка меню",
+    "meals": "Блюда",
+    "modifiers": "Модификаторы",
+    "ingredients": "Ингредиенты",
+    "semifinished": "Полуфабрикаты",
+    "finance": "Финансы",
+    "invoices": "Накладные",
+    "expensesInvoices": "Расходные накладные",
+    "separationActs": "Акты разделки",
+    "deductions": "Списания",
+    "deductionGroups": "Группы списаний",
+    "inventory": "Инвентаризация",
+    "pos": "Касса",
+    "orderManagement": "Управление заказами",
+    "transactions": "Транзакции",
+    "transactionGroups": "Группы транзакций",
+    "cashboxReport": "Отчет по кассе",
+    "dataReports": "Данные и отчеты",
+    "billReports": "Отчет по счетам",
+    "ingredientReports": "Отчет по ингредиентам",
+    "goodsReport": "Отчет по блюдам",
+    "salesReport": "Продажи",
+    "inventoryReport": "Отчет по инвентарю",
+    "customReports": "Пользовательские отчеты",
+    "archives": "Архивы",
+    "systemSettings": "Системные настройки",
+    "restaurantInfo": "Информация о ресторане",
+    "devices": "Устройства",
+    "halls": "Залы",
+    "management": "Управление",
+    "cashiers": "Кассы"
   }
 }
 

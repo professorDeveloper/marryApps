@@ -7,11 +7,12 @@ const MuiCard: Components<Theme>['MuiCard'] = {
   styleOverrides: {
     root: ({ theme }) => ({
       position: 'relative',
-      boxShadow: `var(--card-shadow, ${theme.vars.customShadows.card})`,
-      borderRadius: '16px', // Match reference design
-      zIndex: 0, // Fix Safari overflow: hidden with border radius
+      borderRadius: '8px',
+      zIndex: 0,
       backgroundImage: 'none',
       backgroundColor: theme.vars.palette.background.paper,
+      border: `1px solid ${theme.vars.palette.divider}`,
+      boxShadow: theme.vars.customShadows.card,
     }),
   },
 };

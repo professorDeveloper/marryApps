@@ -1,9 +1,12 @@
 import type { NavSectionProps } from 'src/components/nav-section';
 
+import type { TFunction } from 'i18next';
+
 import { paths } from 'src/routes/paths';
 
 import { CONFIG } from 'src/global-config';
 
+import { Iconify } from 'src/components/iconify';
 import { SvgColor } from 'src/components/svg-color';
 
 // ----------------------------------------------------------------------
@@ -13,223 +16,134 @@ const icon = (name: string) => (
 );
 
 const ICONS = {
-  job: icon('ic-job'),
-  blog: icon('ic-blog'),
-  chat: icon('ic-chat'),
-  mail: icon('ic-mail'),
-  user: icon('ic-user'),
-  file: icon('ic-file'),
-  lock: icon('ic-lock'),
-  tour: icon('ic-tour'),
-  order: icon('ic-order'),
-  label: icon('ic-label'),
-  blank: icon('ic-blank'),
-  kanban: icon('ic-kanban'),
-  folder: icon('ic-folder'),
-  course: icon('ic-course'),
-  params: icon('ic-params'),
-  banking: icon('ic-banking'),
-  booking: icon('ic-booking'),
-  invoice: icon('ic-invoice'),
-  product: icon('ic-product'),
-  calendar: icon('ic-calendar'),
-  disabled: icon('ic-disabled'),
-  external: icon('ic-external'),
-  subpaths: icon('ic-subpaths'),
-  menuItem: icon('ic-menu-item'),
-  ecommerce: icon('ic-ecommerce'),
-  analytics: icon('ic-analytics'),
-  dashboard: icon('ic-dashboard'),
+  dashboard:  icon('ic-dashboard'),
+  storage:    icon('ic-storage'),
+  menu:       icon('ic-menu'),
+  finance:    icon('ic-file'),
+  pos:        icon('ic-invoice'),
+  reports:    icon('ic-blog'),
+  staffing:   icon('ic-user'),
+  settings:   <Iconify icon="solar:settings-bold-duotone" width={24} height={24} />,
 };
 
 // ----------------------------------------------------------------------
 
-import type { TFunction } from 'i18next';
-
 export const getNavData = (t: TFunction): NavSectionProps['data'] => [
-  /**
-   * Overview
-   */
   {
-    subheader: t('overview.subheader', 'Overview'),
     items: [
+      // ── Dashboard ─────────────────────────────────────────────────────
       {
-        title: t('dashboard', 'Dashboard'),
-        path: paths.dashboard.root,
+        title: t('nav.dashboard.overview'),
+        path: paths.dashboard.overview,
         icon: ICONS.dashboard,
       },
+
+      // ── Storage & Org ─────────────────────────────────────────────────
       {
-        title: t('overview.menu.title', 'Menu'),
-        path: '/menu/departments',
-        icon: ICONS.menuItem,
+        title: t('nav.storageOrg'),
+        path: paths.warehouse.storage.root,
+        icon: ICONS.storage,
         deepMatch: true,
         children: [
-          { title: t('overview.menu.departments', 'Departments'), path: '/menu/departments' },
-          { title: t('overview.menu.categories', 'Categories'), path: '/menu/category' },
-          { title: t('overview.menu.ingredient-group', 'Ingredient Group'), path: '/menu/ingredient-group' },
-          { title: t('overview.menu.ingredients', 'Ingredients'), path: '/menu/ingredients' },
-          { title: t('overview.menu.semifinished', 'Semifinished'), path: '/menu/semifinished' },
-          { title: t('overview.menu.meals', 'Meals'), path: '/menu/meals' },
-          { title: t('overview.menu.modifiers', 'Modifiers'), path: '/menu/modifiers' },
+          { title: t('nav.storage'),              path: paths.warehouse.storage.root },
+          { title: t('nav.departments'),      path: paths.menu.product.root },
+          { title: t('nav.categories'),        path: paths.menu.category.root },
+          { title: t('nav.ingredientGroups'), path: paths.menu.ingredients_group.root },
         ],
       },
+
+      // ── Menu Setup ────────────────────────────────────────────────────
       {
-        title: t('overview.warehouse.title', 'Ombor'),
-        path: paths.warehouse.root,
-        icon: ICONS.banking,
-        children: [
-          { title: t('overview.warehouse.storage', 'Storage'), path: paths.warehouse.storage.root },
-          { title: t('ingredientStock.title', 'Ingredient Stock'), path: paths.warehouse.ingredientStock.root },
-          { title: t('overview.warehouse.invoiceDetails', 'Kirimlar'), path: paths.warehouse.invoiceDetails.root },
-          { title: t('overview.warehouse.transfers', 'Transfers'), path: paths.warehouse.transfers.root },
-          { title: t('overview.warehouse.inventories', 'Ombor Menusi'), path: paths.menu.inventory.root },
-          { title: t('overview.warehouse.shipments', 'Shipments'), path: paths.warehouse.shipments.root },
-          { title: t('overview.warehouse.expensesInvoices', 'Expenses invoices'), path: paths.warehouse.outgoingInvoices.root },
-          { title: t('overview.warehouse.separationActs', 'Separation acts'), path: paths.warehouse.separationActs.root },
-          { title: t('invoices.title', 'Invoices'), path: paths.warehouse.invoices.root },
-          { title: t('deductions.title', 'Deductions'), path: paths.warehouse.deductions.root },
-          { title: t('deductions.groups', 'Deduction Groups'), path: paths.warehouse.deductionGroups.root },
-          { title: t('overview.warehouse.orders', 'Order Management'), path: paths.warehouse.orders.root },
-          // { title: t('overview.warehouse.stocks', 'Stocks'), path: paths.menu.warehouse.stocks.root },
-          // { title: t('overview.warehouse.locations', 'Locations'), path: paths.menu.warehouse.locations.root },
-          // { title: t('overview.warehouse.suppliers', 'Suppliers'), path: paths.menu.warehouse.suppliers.root },
-        ],
-      },
-      {
-        title: t('overview.reports.title', 'Hisobotlar'),
-        path: paths.menu.reports.root,
-        icon: ICONS.file,
-        children: [
-          { title: t('overview.reports.bills', 'Hisob-kitoblar'), path: paths.menu.reports.bills.root },
-          { title: t('overview.reports.ingredients', 'Ingredient Reports'), path: paths.menu.reports.ingredients.root },
-          { title: t('overview.reports.goods', 'Goods report'), path: paths.menu.reports.goods.root },
-          { title: t('overview.reports.sales', 'Sales'), path: paths.menu.reports.sales.root },
-          { title: t('overview.reports.inventory', 'Inventory'), path: paths.menu.reports.inventory.root },
-          { title: t('overview.reports.custom', 'Custom'), path: paths.menu.reports.custom.root },
-          { title: t('overview.reports.archives', 'Archives'), path: paths.menu.reports.archives.root },
-        ],
-      },
-      {
-        title: t('cashbox.sidebar.title', 'Kassa'),
-        path: paths.cashbox.root,
-        icon: ICONS.banking,
+        title: t('nav.menuSetup'),
+        path: paths.menu.meals.root,
+        icon: ICONS.menu,
         deepMatch: true,
         children: [
-          { title: t('cashbox.sidebar.cashiers', 'Kassirlar'), path: paths.cashbox.cashiers },
-          { title: t('cashbox.sidebar.transactionGroups', 'Transaktsiya Guruhlari'), path: paths.cashbox.transactionGroups },
-          { title: t('cashbox.sidebar.transactions', 'Transactions'), path: paths.cashbox.transactions },
-          { title: t('cashbox.sidebar.report', 'Kassa Hisoboti'), path: paths.cashbox.report },
+          { title: t('nav.meals'),             path: paths.menu.meals.root },
+          { title: t('nav.modifiers'),     path: paths.menu.modifiers.root },
+          { title: t('nav.ingredients'), path: paths.menu.ingredients.root },
+          { title: t('nav.semifinished'), path: paths.menu.semifinished.root },
         ],
-      }
-    ],
-  },
-  {
-    subheader: t('management.subheader', 'Management'),
-    items: [
-      // {
-      //   title: t('management.group.title', 'Group'),
-      //   path: paths.menu.group.root,
-      //   icon: ICONS.user,
-      //   children: [
-      //     { title: t('management.group.four', 'Four'), path: paths.menu.group.root },
-      //     { title: t('management.group.five', 'Five'), path: paths.menu.group.five },
-      //     { title: t('management.group.six', 'Six'), path: paths.menu.group.six },
-      //   ],
-      // },
+      },
+
+      // ── Finance ───────────────────────────────────────────────────────
       {
-        title: t('settings.title', 'Settings'),
-        path: paths.settings.root,
-        icon: ICONS.blog,
+        title: t('nav.finance'),
+        path: paths.warehouse.invoiceDetails.root,
+        icon: ICONS.finance,
         deepMatch: true,
         children: [
-          { title: t('overview.employe.title', 'Users'), path: paths.settings.users },
-          { title: t('devices.title', 'Devices'), path: paths.settings.general.root },
-          { title: t('settings.management', 'Management'), path: paths.settings.profile.root },
-          { title: t('settings.restaurantInfo', 'Restaurant Info'), path: paths.settings.notifications.root },
-          { title: t('halls.Halls', 'Halls'), path: paths.settings.halls },
+          { title: t('nav.invoices'),             path: paths.warehouse.invoiceDetails.root },
+          { title: t('nav.expensesInvoices'), path: paths.warehouse.outgoingInvoices.root },
+          { title: t('nav.separationActs'), path: paths.warehouse.separationActs.root },
+          { title: t('nav.deductions'),         path: paths.warehouse.deductions.root },
+          { title: t('nav.deductionGroups'), path: paths.warehouse.deductionGroups.root },
+          { title: t('nav.inventory'),           path: paths.menu.inventory.root },
+        ],
+      },
+
+      // ── POS ───────────────────────────────────────────────────────────
+      {
+        title: t('nav.pos'),
+        path: paths.warehouse.orders.root,
+        icon: ICONS.pos,
+        deepMatch: true,
+        children: [
+          { title: t('nav.orderManagement'), path: paths.warehouse.orders.root },
+          { title: t('nav.transactions'),        path: paths.cashbox.transactions },
+          { title: t('nav.transactionGroups'), path: paths.cashbox.transactionGroups },
+          { title: t('nav.cashboxReport'),     path: paths.cashbox.report },
+        ],
+      },
+
+      // ── Data & Reports ────────────────────────────────────────────────
+      {
+        title: t('nav.dataReports'),
+        path: paths.menu.reports.bills.root,
+        icon: ICONS.reports,
+        deepMatch: true,
+        children: [
+          { title: t('nav.billReports'),          path: paths.menu.reports.bills.root },
+          { title: t('nav.ingredientReports'), path: paths.menu.reports.ingredients.root },
+          { title: t('nav.goodsReport'),          path: paths.menu.reports.goods.root },
+          { title: t('nav.salesReport'),                 path: paths.menu.reports.sales.root },
+          { title: t('nav.inventoryReport'),  path: paths.menu.reports.inventory.root },
+          { title: t('nav.customReports'),      path: paths.menu.reports.custom.root },
+          { title: t('nav.archives'),                 path: paths.menu.reports.archives.root },
+        ],
+      },
+
+      // ── Staffing ──────────────────────────────────────────────────────
+      {
+        title: t('nav.staffing'),
+        path: paths.staffing.employees,
+        icon: ICONS.staffing,
+        deepMatch: true,
+        children: [
+          { title: t('nav.employees'), path: paths.staffing.employees },
+          { title: t('nav.shifts'),       path: paths.staffing.shifts },
+          { title: t('nav.kpi'),             path: paths.staffing.kpi },
+          { title: t('nav.salary'),       path: paths.staffing.salary },
+        ],
+      },
+
+      // ── System Settings ───────────────────────────────────────────────
+      {
+        title: t('nav.systemSettings'),
+        path: paths.settings.notifications.root,
+        icon: ICONS.settings,
+        deepMatch: true,
+        children: [
+          { title: t('nav.restaurantInfo'), path: paths.settings.notifications.root },
+          { title: t('nav.devices'),                path: paths.settings.general.root },
+          { title: t('nav.halls'),                    path: paths.settings.halls },
+          { title: t('nav.management'),          path: paths.settings.profile.root },
+          { title: t('nav.cashiers'),              path: paths.cashbox.cashiers },
         ],
       },
     ],
   },
 ];
 
-// Backward compatibility: default navData (English) to avoid returning objects
-export const navData: NavSectionProps['data'] = [
-  {
-    subheader: 'Overview',
-    items: [
-      {
-        title: 'Dashboard',
-        path: paths.dashboard.root,
-        icon: ICONS.dashboard,
-      },
-      {
-        title: 'Menu',
-        path: paths.menu.product.root,
-        icon: ICONS.product,
-        deepMatch: true,
-        children: [
-          { title: 'Departments', path: paths.menu.product.root },
-          { title: 'Categories', path: paths.menu.category.root },
-          { title: 'Semifinished', path: paths.menu.semifinished.root },
-          { title: 'Meals', path: paths.menu.meals.root },
-          { title: 'Modifiers', path: paths.menu.modifiers.root },
-        ],
-      },
-      {
-        title: 'Ombor',
-        path: paths.warehouse.root,
-        icon: ICONS.folder,
-        children: [
-          { title: 'Storage', path: paths.warehouse.storage.root },
-          { title: 'Ingredients', path: paths.menu.ingredients.root },
-          { title: 'Stocks', path: paths.warehouse.stocks.root },
-          { title: 'Transfers', path: paths.warehouse.transfers.root },
-          { title: 'Locations', path: paths.warehouse.locations.root },
-          { title: 'Suppliers', path: paths.warehouse.suppliers.root },
-          { title: 'Order Management', path: paths.warehouse.orders.root },
-        ],
-      },
-
-      {
-        title: 'Hisobotlar',
-        path: paths.menu.reports.root,
-        icon: ICONS.analytics,
-        children: [
-          { title: 'Sales', path: paths.menu.reports.root },
-          { title: 'Inventory', path: paths.menu.reports.root },
-          { title: 'Custom', path: paths.menu.reports.root },
-          { title: 'Archives', path: paths.menu.reports.root },
-        ],
-      },
-    ],
-  },
-  {
-    subheader: 'Management',
-    items: [
-      {
-        title: 'Group',
-        path: paths.menu.group.root,
-        icon: ICONS.user,
-        children: [
-          { title: 'Four', path: paths.menu.group.root },
-          { title: 'Five', path: paths.menu.group.five },
-          { title: 'Six', path: paths.menu.group.six },
-        ],
-      },
-      {
-        title: 'Sozlamalar',
-        path: paths.settings.root,
-        icon: ICONS.params,
-        children: [
-          { title: 'General', path: paths.settings.general.root },
-          { title: 'Settings', path: paths.settings.profile.root },
-          { title: 'Notifications', path: paths.settings.notifications.root },
-          { title: 'Integrations', path: paths.settings.integrations.root },
-          // { title: 'Floor Plan', path: paths.settings.floorPlan },
-          { title: 'Halls', path: paths.settings.halls },
-        ],
-      },
-    ],
-  },
-];
+// Backward compat alias
+export const navData = getNavData(((k: string, fb: string) => fb) as unknown as TFunction);

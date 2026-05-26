@@ -114,13 +114,13 @@ function RenderListItems({ items }: { items: Array<{ id: string; label: string; 
           <Paper
             sx={{
               p: 1.5,
-              backgroundColor: 'var(--color-surface-1)',
-              border: '1px solid var(--color-border)',
+              backgroundColor: 'var(--surface)',
+              border: '1px solid var(--border)',
               backdropFilter: 'blur(8px)',
               transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
               '&:hover': {
-                backgroundColor: 'var(--color-surface-2)',
-                borderColor: 'var(--color-border-strong)',
+                backgroundColor: 'var(--surface-2)',
+                borderColor: 'var(--border-strong)',
                 transform: 'translateX(4px)',
               },
             }}
@@ -264,10 +264,10 @@ export function GenericViewModal({
               : isMobile
                 ? 0
                 : 2,
-          backgroundColor: 'var(--color-surface-0)',
+          backgroundColor: 'var(--bg)',
           backdropFilter: 'blur(12px)',
           boxShadow: 'var(--shadow-lg)',
-          border: '1px solid var(--color-border)',
+          border: '1px solid var(--border)',
           ...paperSx,
         },
       }}
@@ -287,8 +287,8 @@ export function GenericViewModal({
           alignItems: 'center',
           justifyContent: 'space-between',
           pb: 2,
-          borderBottom: '1px solid var(--color-border)',
-          backgroundColor: 'var(--color-surface-1)',
+          borderBottom: '1px solid var(--border)',
+          backgroundColor: 'var(--surface)',
           backdropFilter: 'blur(10px)',
           position: 'sticky',
           top: 0,
@@ -312,10 +312,10 @@ export function GenericViewModal({
           onClick={handleClose}
           sx={{
             color: 'text.primary',
-            backgroundColor: 'var(--color-primary-soft)',
+            backgroundColor: 'var(--accent-soft)',
             transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
             '&:hover': {
-              backgroundColor: 'var(--color-primary-ring)',
+              backgroundColor: 'var(--accent-soft)',
               transform: 'rotate(90deg)',
             },
           }}
@@ -332,19 +332,19 @@ export function GenericViewModal({
           flex: 1,
           overflowY: 'auto',
           color: 'text.primary',
-          backgroundColor: 'var(--color-surface-0)',
+          backgroundColor: 'var(--bg)',
           '&::-webkit-scrollbar': {
             width: '8px',
           },
           '&::-webkit-scrollbar-track': {
-            backgroundColor: 'var(--color-surface-1)',
+            backgroundColor: 'var(--surface)',
             borderRadius: '4px',
           },
           '&::-webkit-scrollbar-thumb': {
-            backgroundColor: 'var(--color-primary-ring)',
+            backgroundColor: 'var(--accent-soft)',
             borderRadius: '4px',
             '&:hover': {
-              backgroundColor: 'var(--color-primary)',
+              backgroundColor: 'var(--accent)',
             },
           },
         }}

@@ -32,10 +32,10 @@ export function AuthSplitContent({
           width: { xs: '100%', [layoutQuery]: '40%' },
           minWidth: { xs: '100%', [layoutQuery]: '350px' },
           maxWidth: { xs: '100%', [layoutQuery]: '600px' },
-          backgroundColor: 'var(--color-surface-0)',
+          backgroundColor: 'var(--bg)',
           backdropFilter: 'blur(12px)',
           WebkitBackdropFilter: 'blur(12px)',
-          borderRight: { xs: 'none', [layoutQuery]: '1px solid var(--color-border)' },
+          borderRight: { xs: 'none', [layoutQuery]: '1px solid var(--border)' },
           [theme.breakpoints.up(layoutQuery)]: {
             p: theme.spacing(4),
           },

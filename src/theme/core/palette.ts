@@ -97,15 +97,15 @@ export const grey = createPaletteChannel(themeConfig.palette.grey);
  * ➤
  */
 export const text = {
-  // Mirrors --color-text-* in src/global.css - CONSISTENT contrast
-  light: createPaletteChannel({ primary: '#1a1a1a', secondary: '#5c5c5c', disabled: '#9b9b9b' }),
-  dark: createPaletteChannel({ primary: '#f1f5f9', secondary: '#94a3b8', disabled: '#64748b' }),
+  // Slate Dawn text ladder
+  light: createPaletteChannel({ primary: '#20232B', secondary: '#5E5F68', disabled: '#8A8A93' }),
+  dark: createPaletteChannel({ primary: '#ECE9E2', secondary: '#A6A399', disabled: '#6E6B62' }),
 };
 
 export const background = {
-  // Mirrors --color-bg / --color-surface-* in src/global.css - CONSISTENT TIERS
-  light: createPaletteChannel({ paper: '#ffffff', default: '#f2f1f0', neutral: '#faf9f8' }),
-  dark: createPaletteChannel({ paper: '#1a1d2e', default: '#141626', neutral: '#0f111a' }),
+  // Slate Dawn surface depth ladder
+  light: createPaletteChannel({ paper: '#FBFAF6', default: '#F6F4EE', neutral: '#EDE9DF' }),
+  dark: createPaletteChannel({ paper: '#1F222B', default: '#1A1D24', neutral: '#262A33' }),
 };
 
 export const action = (mode: 'light' | 'dark'): Partial<TypeAction> => ({
@@ -150,8 +150,8 @@ const basePalette: ColorSystemOptions['palette'] = {
   error,
   common,
   grey,
-  divider: varAlpha(grey['500Channel'], 0.2),
-  TableCell: { border: varAlpha(grey['500Channel'], 0.2) },
+  divider: varAlpha(grey['500Channel'], 0.24),
+  TableCell: { border: varAlpha(grey['500Channel'], 0.24) },
   ...extendPalette,
 };
 

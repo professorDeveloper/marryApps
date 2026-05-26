@@ -6,17 +6,20 @@ const MOCK_TITLE = _postTitles[2];
 
 const ROOTS = {
   AUTH: '/auth',
+  DASHBOARD: '/dashboard',
   MENU: '/menu',
   SETTING: '/settings',
   WAREHOUSE: '/warehouse',
   REPORTS: '/reports',
   CASHBOX: '/cashbox',
+  STAFFING: '/staffing',
 };
 
 // ----------------------------------------------------------------------
 
 export const paths = {
   faqs: '/faqs',
+  profile: '/profile',
   minimalStore: 'https://mui.com/store/items/minimal-dashboard/',
 
   // AUTH
@@ -289,10 +292,17 @@ export const paths = {
     floorPlan: (id: string) => `${ROOTS.SETTING}/halls/${id}`,
   },
 
-  // DASHBOARD
+  // STAFFING
+  staffing: {
+    employees: `${ROOTS.SETTING}/users`,
+    shifts: `${ROOTS.STAFFING}/shifts`,
+    kpi: `${ROOTS.STAFFING}/kpi`,
+    salary: `${ROOTS.STAFFING}/salary`,
+  },
+
   dashboard: {
-    root: '/',
+    root: `${ROOTS.DASHBOARD}`,
+    overview: `${ROOTS.DASHBOARD}`,
     floorPlan: `/floor-plan`,
   },
-  analytics: `/analytics`,
 };
