@@ -38,6 +38,7 @@
     "@fontsource-variable/public-sans": "^5.2.7",
     "@fontsource/barlow": "^5.2.8",
     "@fontsource/jetbrains-mono": "^5.2.8",
+    "@fontsource/manrope": "^5.2.8",
     "@hookform/resolvers": "^5.2.2",
     "@iconify/react": "^6.0.2",
     "@mui/icons-material": "^7.3.7",
