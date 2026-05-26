@@ -2,7 +2,7 @@
  * Modifier list/view component with table and delete confirmation
  */
 
-import type { DataTableColumn, DataTableDefaultConfig } from 'src/sections/warehouse/deduction/components/utility-data-table/types/types';
+import type { DataTableColumn, DataTableDefaultConfig } from 'src/sections/common/data-table/types/types';
 import type { IModifierItem } from 'src/types/modifiers';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -67,6 +67,10 @@ export function ModifierListView() {
   useEffect(() => {
     setPaginationModel((prev) => ({ ...prev, page: 0 }));
   }, [debouncedSearchQuery]);
+
+  useEffect(() => {
+    setPaginationModel((prev) => ({ ...prev, pageSize: rowsPerPage }));
+  }, [rowsPerPage]);
 
   const handleEditModifier = useCallback((id: string) => {
     router.push(paths.menu.modifiers.edit(id));
@@ -217,17 +221,18 @@ export function ModifierListView() {
             setSearchQuery('');
             setPaginationModel({ page: 0, pageSize: 20 });
           }}
-          searchValue={searchQuery}
-          onSearchChange={setSearchQuery}
-          page={paginationModel.page}
-          rowsPerPage={paginationModel.pageSize}
-          totalCount={modifiersTotal || 0}
-          rowsPerPageOptions={[10, 20, 50, 100]}
-          onPageChange={(page) => {
-            setPaginationModel((prev) => ({ ...prev, page }));
-          }}
-          onRowsPerPageChange={(pageSize) => {
-            setPaginationModel({ page: 0, pageSize });
+          search={{ value: searchQuery, onChange: setSearchQuery }}
+          pagination={{
+            page: paginationModel.page,
+            rowsPerPage: paginationModel.pageSize,
+            totalCount: modifiersTotal || 0,
+            rowsPerPageOptions: [10, 20, 50, 100],
+            onPageChange: (page) => {
+              setPaginationModel((prev) => ({ ...prev, page }));
+            },
+            onRowsPerPageChange: (pageSize) => {
+              setPaginationModel({ page: 0, pageSize });
+            },
           }}
           getRowId={(row) => row.id}
           headerActions={
@@ -241,8 +246,8 @@ export function ModifierListView() {
               {t('modifiers.add')}
             </Button>
           }
-          emptyTitle={t('modifiers.noData', 'No modifiers found')}
-          emptySubtitle={t('modifiers.noDataSubtitle', 'Try adjusting your search or filters')}
+          emptyTitle={t('modifiers.noData')}
+          emptySubtitle={t('modifiers.noDataSubtitle')}
           showTotals={false}
         />
       </DashboardContent>

@@ -206,9 +206,9 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
     }, [name, ingredientGroupId, compoundPayload, handleSubmit, dispatch, formName, isNew, compoundId]);
 
     const breadcrumbs = [
-        { name: t('overview.menu.title', 'Menu'), href: paths.menu.root },
+        { name: t('overview.menu.title'), href: paths.menu.root },
         { name: t('semifinishedProducts.title'), href: paths.menu.semifinished.root },
-        { name: isNew ? t('semifinishedProducts.new', 'New') : compound?.name || '...', href: '' },
+        { name: isNew ? t('semifinishedProducts.new') : compound?.name || '...', href: '' },
     ];
 
     const saveLabel = isNew ? t('save') : t('save');
@@ -292,7 +292,7 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
                         onClick={handleCancel}
                         disabled={sectionsDisabled}
                     >
-                        {t('cancel', 'Cancel')}
+                        {t('cancel')}
                     </Button>
                     <Button
                         variant="contained"

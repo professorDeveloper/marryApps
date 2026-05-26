@@ -419,7 +419,7 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
 
        
                     {/* Tabs and content container with continuous background */}
-                    <Box sx={{ bgcolor:"var(--color-surface-1)", display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, gap:2, borderRadius: 2, border:null }}>
+                    <Box sx={{ bgcolor:"transparent", display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, gap:2, borderRadius: 2, border:null }}>
                         {/* Tabs inside accordion */}
                         <Tabs
                             value={activeTab}
@@ -429,15 +429,15 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
                         >
                             <Tab
                                 sx={{ minWidth: 0, flex: 1 }}
-                                label={t('mealsProducts.items', 'Items')}
+                                label={t('mealsProducts.items')}
                             />
                             <Tab
                                 sx={{ minWidth: 0, flex: 1 }}
-                                label={t('mealsProducts.modifiers', 'Modifiers')}
+                                label={t('mealsProducts.modifiers')}
                             />
                             <Tab
                                 sx={{ minWidth: 0, flex: 1 }}
-                                label={t('mealsProducts.related', 'Related')}
+                                label={t('mealsProducts.related')}
                             />
                         </Tabs>
 
@@ -486,7 +486,7 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
                         onClick={handleCancel}
                         disabled={sectionsDisabled}
                     >
-                        {t('cancel', 'Cancel')}
+                        {t('cancel')}
                     </Button>
                     <Button
                         variant="contained"

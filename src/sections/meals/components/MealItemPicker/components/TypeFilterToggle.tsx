@@ -39,7 +39,7 @@ export const TypeFilterToggle = React.memo(function TypeFilterToggle({
                 minWidth: 260,
                 width: '100%',
                 bgcolor: 'transparent',
-                border: '1px solid var(--color-border)',
+                border: '1px solid var(--border)',
                 borderRadius: 2,
                 p: 0.5,
                 '& .MuiToggleButton-root': {
@@ -48,17 +48,17 @@ export const TypeFilterToggle = React.memo(function TypeFilterToggle({
                     fontFamily: '"Inter", sans-serif',
                     fontSize: '0.75rem',
                     fontWeight: 600,
-                    color: 'var(--color-text-secondary)',
+                    color: 'var(--text-2)',
                     padding: '6px 12px',
                     minHeight: 28,
                     textTransform: 'none',
                     transition: 'all 0.2s ease-in-out',
                     // Ingredient button - very light orange tint
                     '&[value="ingredient"]': {
-                        bgcolor: 'rgba(255, 77, 26, 0.08)',
+                        bgcolor: 'var(--accent-soft)',
                         color: 'rgba(255, 77, 26, 0.7)',
                         '&:hover:not(.Mui-selected)': {
-                            bgcolor: 'rgba(255, 77, 26, 0.12)',
+                            bgcolor: 'var(--accent-soft)',
                             transform: 'translateY(-1px)',
                         },
                     },
@@ -74,19 +74,19 @@ export const TypeFilterToggle = React.memo(function TypeFilterToggle({
                     '&.Mui-selected': {
                         // Ingredient selected - strong orange
                         '&[aria-pressed="true"][value="ingredient"]': {
-                            bgcolor: 'rgba(255, 77, 26, 0.4)',
-                            color: '#ffffff',
-                            boxShadow: '0 2px 8px rgba(255, 77, 26, 0.4)',
+                            bgcolor: 'var(--accent-soft)',
+                            color: 'var(--accent-fg)',
+                            boxShadow: 'none',
                             '&:hover': {
-                                bgcolor: 'rgba(255, 77, 26, 0.5)',
+                                bgcolor: 'var(--accent-soft)',
                                 transform: 'translateY(-1px)',
-                                boxShadow: '0 4px 12px rgba(255, 77, 26, 0.5)',
+                                boxShadow: 'none',
                             },
                         },
                         // Compound selected - strong blue
                         '&[aria-pressed="true"][value="compound"]': {
                             bgcolor: 'rgba(46, 144, 250, 0.4)',
-                            color: '#ffffff',
+                            color: 'var(--accent-fg)',
                             boxShadow: '0 2px 8px rgba(46, 144, 250, 0.4)',
                             '&:hover': {
                                 bgcolor: 'rgba(46, 144, 250, 0.5)',

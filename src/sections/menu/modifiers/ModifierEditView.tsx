@@ -206,7 +206,7 @@ export function ModifierEditView({ isNew = false }: ModifierEditViewProps) {
   }, []);
 
   const sectionsDisabled = submitting || pageLoading;
-  const saveLabel = t('save', 'Save');
+  const saveLabel = t('save');
 
   return (
     <Box sx={{ px: 4, m: 0 }}>
@@ -274,7 +274,7 @@ export function ModifierEditView({ isNew = false }: ModifierEditViewProps) {
             onClick={handleCancel}
             disabled={sectionsDisabled}
           >
-            {t('cancel', 'Cancel')}
+            {t('cancel')}
           </Button>
           <Button variant="contained" onClick={onSave} disabled={sectionsDisabled}>
             {saveLabel}

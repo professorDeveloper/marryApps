@@ -53,7 +53,7 @@ export function buildBasicInfoSection(): CardSection {
         label: 'departments.color',
         type: 'color',
         required: true,
-        defaultValue: 'var(--color-danger-500)',
+        defaultValue: 'var(--danger)',
         colors: COLOR_CODES,
       },
     ],

@@ -3,18 +3,18 @@ import type { CardSection } from 'src/components/generic-edit-view/types';
 
 // Color palette used across edit views - using CSS variables from global.css
 export const COLOR_CODES = [
-    'var(--color-danger-500)', // Error/Red
-    'var(--color-info-500)', // Info/Blue
-    'var(--color-success-500)', // Success/Green
-    'var(--color-warning-500)', // Warning/Yellow
-    'var(--color-secondary-500)', // Secondary/Violet
-    'var(--color-primary-500)', // Primary/Orange
-    'var(--color-danger-100)', // Light Error
-    'var(--color-danger-600)', // Danger/Dark Red
-    'var(--color-info-100)', // Light Info
-    'var(--color-warning-300)', // Light Warning
-    'var(--color-text)', // Black text color
-    'var(--color-text-on-primary)', // White
+    'var(--danger)', // Error/Red
+    '#60A5FA', // Info/Blue
+    'var(--success)', // Success/Green
+    'var(--warning)', // Warning/Yellow
+    'var(--text-2)', // Secondary/Violet
+    'var(--accent)', // Primary/Orange
+    'var(--danger)', // Light Error
+    'var(--danger)', // Danger/Dark Red
+    'color-mix(in oklch, #60A5FA 20%, transparent)', // Light Info
+    'var(--warning)', // Light Warning
+    'var(--text)', // Black text color
+    'var(--accent-fg)', // White
 ];
 
 // Cache sync delays

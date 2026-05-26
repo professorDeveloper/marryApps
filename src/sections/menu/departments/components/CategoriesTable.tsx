@@ -121,8 +121,8 @@ export function CategoriesTable({ departmentId }: CategoriesTableProps) {
                     sx={{
                       width: 40,
                       height: 40,
-                      bgcolor: imageUrls[category.id] ? undefined : (category.color_code || 'var(--color-border)'),
-                      color: 'var(--color-text-on-primary)',
+                      bgcolor: imageUrls[category.id] ? undefined : (category.color_code || 'var(--border)'),
+                      color: 'var(--accent-fg)',
                       fontWeight: 'bold',
                       borderRadius: '8px',
                     }}

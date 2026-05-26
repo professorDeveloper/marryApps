@@ -39,6 +39,7 @@ export interface MealItemPickerProps {
     showProfitMargin?: boolean;
     tableHeight?: string | number;
     cacheKey?: string;
+    onTotalCostChange?: (cost: number) => void;
     onNavigateFocus?: (direction: 'up' | 'down' | 'left' | 'right', currentRowIndex: number, currentColumnKey: string) => void;
 }
 
@@ -75,6 +76,7 @@ export const MealItemPicker = React.memo(function MealItemPicker({
     showProfitMargin = false,
     tableHeight = 700,
     cacheKey,
+    onTotalCostChange,
     onNavigateFocus,
 }: MealItemPickerProps) {
     const renderStartedAtRef = useRef<number>(performance.now());
@@ -194,10 +196,16 @@ export const MealItemPicker = React.memo(function MealItemPicker({
     const { priceByKey } = useMealItemPricing(allAddedRows);
 
     const totalItemsCount = allAddedRows.length;
+    const totalIngredientCount = useMemo(() => allAddedRows.filter((r) => r.type === 'ingredient').length, [allAddedRows]);
+    const totalCompoundCount = useMemo(() => allAddedRows.filter((r) => r.type === 'compound').length, [allAddedRows]);
     const totalCost = useMemo(() => allAddedRows.reduce((sum, r) => {
             const unit = priceByKey.get(compositeKey(r.type, r.id)) ?? 0;
             return sum + unit * (r.quantity ?? 0);
         }, 0), [allAddedRows, priceByKey]);
+
+    useEffect(() => {
+        onTotalCostChange?.(totalCost);
+    }, [totalCost, onTotalCostChange]);
 
     // Reset available selection when the visible list changes (filter/search/items churn).
     // Selection is cleared inline inside mutation handlers, not via effects, to avoid a
@@ -279,9 +287,6 @@ export const MealItemPicker = React.memo(function MealItemPicker({
             next.delete(key);
             return next;
         });
-        // #region agent log
-        fetch('http://127.0.0.1:7493/ingest/af3dd71e-d3ee-4e8f-b31b-05d1110c3b8b',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'933603'},body:JSON.stringify({sessionId:'933603',runId:'pre-fix',hypothesisId:'H5',location:'MealItemPicker.tsx:264',message:'meal_picker_remove_cost',data:{itemId:id,itemType:type,addedRowsCount:addedRowsMapRef.current.size,selectedCount:addedSelectedRef.current.size,durationMs:Number((performance.now()-startedAt).toFixed(3))},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
     }, []);
 
     const handleRemoveSelected = useCallback(() => {
@@ -349,8 +354,8 @@ export const MealItemPicker = React.memo(function MealItemPicker({
     }, []);
 
     // Labels for filters
-    const ingredientLabel = t('mealsProducts.filterIngredients', 'Ingredients');
-    const compoundLabel = t('mealsProducts.filterSemiFinished', 'Semi-finished');
+    const ingredientLabel = t('mealsProducts.filterIngredients');
+    const compoundLabel = t('mealsProducts.filterSemiFinished');
 
     // Handle available row selection
     const handleAvailableSelectChange = useCallback(
@@ -466,7 +471,7 @@ export const MealItemPicker = React.memo(function MealItemPicker({
 
     // ── Render ──────────────────────────────────────────────────────────
     return (
-        <Stack spacing={2} sx={{ height: '100%', fontFamily: '"Inter", sans-serif' }}>
+        <Stack spacing={2} sx={{ height: '100%', fontFamily: '"Inter", sans-serif', backgroundColor:"transparent" }}>
             <Box
                 sx={{
                     display: 'grid',
@@ -474,6 +479,7 @@ export const MealItemPicker = React.memo(function MealItemPicker({
                     gap: 2,
                     flex: 1,
                     minHeight: 0,
+                    backgroundColor: 'transparent',
                 }}
             >
                 {/* AVAILABLE TABLE */}
@@ -514,6 +520,8 @@ export const MealItemPicker = React.memo(function MealItemPicker({
                     indeterminate={addedIndeterminate}
                     priceByKey={priceByKey}
                     totalItemsCount={totalItemsCount}
+                    totalIngredientCount={totalIngredientCount}
+                    totalCompoundCount={totalCompoundCount}
                     totalCost={totalCost}
                     ingredientLabel={ingredientLabel}
                     compoundLabel={compoundLabel}

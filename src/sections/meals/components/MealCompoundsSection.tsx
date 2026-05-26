@@ -113,7 +113,7 @@ export const MealCompoundsSection = React.memo(function MealCompoundsSection({
         () => [
             {
                 key: 'quantity',
-                header: t('calculation.quantity', 'Quantity'),
+                header: t('calculation.quantity'),
                 width: 'minmax(120px, auto)',
                 editable: true,
                 type: 'number' as const,
@@ -137,11 +137,11 @@ export const MealCompoundsSection = React.memo(function MealCompoundsSection({
     const summaryEntries: SummaryEntry[] = useMemo(
         () => [
             {
-                label: t('warehouse.invoiceDetails.products', 'Products'),
+                label: t('warehouse.invoiceDetails.products'),
                 value: transferredItems.length,
             },
             {
-                label: t('warehouse.invoiceDetails.totalQty', 'Total Qty'),
+                label: t('warehouse.invoiceDetails.totalQty'),
                 value: formatPrice(totalQty),
             },
         ],
@@ -254,7 +254,7 @@ export const MealCompoundsSection = React.memo(function MealCompoundsSection({
                 onRemoveRow={handleRemoveRow}
                 onRemoveMany={handleRemoveMany}
                 summaryEntries={summaryEntries}
-                totalLabel={t('calculation.total', 'Total')}
+                totalLabel={t('calculation.total')}
                 totalValue={formatPrice(totalQty)}
                 metaFieldsOpen={metaFieldsOpen}
                 tableHeight={tableHeight}

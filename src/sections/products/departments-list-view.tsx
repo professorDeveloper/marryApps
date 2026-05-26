@@ -1,6 +1,6 @@
 import type { IDepartmentItem } from 'src/types/departments.tsx';
-import type { DataTableColumn, DataTableDefaultConfig } from 'src/sections/warehouse/deduction/components/utility-data-table/types/types';
-import { CELL_SX } from 'src/sections/warehouse/deduction/components/utility-data-table/utils/constants';
+import type { DataTableColumn, DataTableDefaultConfig } from 'src/sections/common/data-table/types/types';
+import { CELL_SX } from 'src/sections/common/data-table/utils/constants';
 
 import { useTranslation } from 'react-i18next';
 import { useMemo, useState, useEffect, useCallback } from 'react';
@@ -25,7 +25,7 @@ import { GenericViewModal } from 'src/components/generic-view-view';
 
 import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
 import { usePaginationRows } from 'src/hooks/use-pagination-rows';
-import { StorageFilter } from 'src/sections/warehouse/deduction/components/utility-data-table/components/StorageFilter';
+import { StorageFilter } from 'src/sections/common/data-table/components/StorageFilter';
 import { DEPARTMENTS_TABLE_PERSIST_KEY } from 'src/sections/menu/compounds/utilities';
 import { RouterLink } from 'src/routes/components';
 
@@ -192,8 +192,8 @@ function CategoriesTable({ departmentId }: { departmentId: string }) {
                     sx={{
                       width: 40,
                       height: 40,
-                      bgcolor: imageUrls[category.id] ? undefined : (category.color_code || 'var(--color-border)'),
-                      color: 'var(--color-text-on-primary)',
+                      bgcolor: imageUrls[category.id] ? undefined : (category.color_code || 'var(--border)'),
+                      color: 'var(--accent-fg)',
                       fontWeight: 'bold',
                       borderRadius: '8px',
                     }}
@@ -267,6 +267,10 @@ export function DepartmentsListView() {
     page: 0,
     pageSize: rowsPerPage,
   });
+
+  useEffect(() => {
+    setPaginationModel((prev) => ({ ...prev, pageSize: rowsPerPage }));
+  }, [rowsPerPage]);
   const { data: metadata } = useMetadata([MetadataEntity.STORAGES]);
   const storages = metadata.storages || [];
 
@@ -453,8 +457,7 @@ export function DepartmentsListView() {
             setSortState({ key: null, dir: null });
             setPaginationModel({ page: 0, pageSize: rowsPerPage });
           }}
-          searchValue={searchQuery}
-          onSearchChange={setSearchQuery}
+          search={{ value: searchQuery, onChange: setSearchQuery }}
           onSortChange={(sort) => {
             setSortState({ key: sort.key, dir: sort.dir });
             setPaginationModel((prev) => ({ ...prev, page: 0 }));
@@ -467,18 +470,20 @@ export function DepartmentsListView() {
                 setStorageId(id);
                 setPaginationModel((prev) => ({ ...prev, page: 0 }));
               }}
-              label={t('common.storage', 'Storage')}
+              label={t('common.storage')}
             />
           }
-          page={paginationModel.page}
-          rowsPerPage={paginationModel.pageSize}
-          totalCount={departmentsTotal || 0}
-          rowsPerPageOptions={[10, 20, 50, 100]}
-          onPageChange={(page) => {
-            setPaginationModel((prev) => ({ ...prev, page }));
-          }}
-          onRowsPerPageChange={(pageSize) => {
-            setPaginationModel({ page: 0, pageSize });
+          pagination={{
+            page: paginationModel.page,
+            rowsPerPage: paginationModel.pageSize,
+            totalCount: departmentsTotal || 0,
+            rowsPerPageOptions: [10, 20, 50, 100],
+            onPageChange: (page) => {
+              setPaginationModel((prev) => ({ ...prev, page }));
+            },
+            onRowsPerPageChange: (pageSize) => {
+              setPaginationModel({ page: 0, pageSize });
+            },
           }}
           getRowId={(row) => row.id}
           headerActions={
@@ -492,8 +497,8 @@ export function DepartmentsListView() {
               {t('departments.add')}
             </Button>
           }
-          emptyTitle={t('departments.noData', 'No departments found')}
-          emptySubtitle={t('departments.noDataSubtitle', 'Try adjusting your search or filters')}
+          emptyTitle={t('departments.noData')}
+          emptySubtitle={t('departments.noDataSubtitle')}
         />
       </DashboardContent>
 

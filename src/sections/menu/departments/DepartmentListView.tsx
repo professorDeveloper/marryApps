@@ -2,7 +2,7 @@
  * Department list/view component with table and delete confirmation
  */
 
-import type { DataTableColumn, DataTableDefaultConfig } from 'src/sections/warehouse/deduction/components/utility-data-table/types/types';
+import type { DataTableColumn, DataTableDefaultConfig } from 'src/sections/common/data-table/types/types';
 import type { IDepartmentItem } from 'src/types/departments.tsx';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -22,7 +22,7 @@ import { GenericViewModal } from 'src/components/generic-view-view';
 import { DashboardContent } from 'src/layouts/dashboard';
 import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
 import { usePaginationRows } from 'src/hooks/use-pagination-rows';
-import { StorageFilter } from 'src/sections/warehouse/deduction/components/utility-data-table/components/StorageFilter';
+import { StorageFilter } from 'src/sections/common/data-table/components/StorageFilter';
 import { DEPARTMENTS_TABLE_PERSIST_KEY } from 'src/sections/menu/compounds/utilities';
 
 import { TABLE_COLUMN_ORDER, TABLE_COLUMN_VISIBILITY, TABLE_COLUMN_WIDTHS } from './constants';
@@ -78,6 +78,10 @@ export function DepartmentListView() {
   useEffect(() => {
     setPaginationModel((prev) => ({ ...prev, page: 0 }));
   }, [debouncedSearchQuery]);
+
+  useEffect(() => {
+    setPaginationModel((prev) => ({ ...prev, pageSize: rowsPerPage }));
+  }, [rowsPerPage]);
 
   const handleEditDepartment = useCallback((id: string) => {
     router.push(paths.menu.product.edit(id));
@@ -232,8 +236,7 @@ export function DepartmentListView() {
             setSortState({ key: null, dir: null });
             setPaginationModel({ page: 0, pageSize: 20 });
           }}
-          searchValue={searchQuery}
-          onSearchChange={setSearchQuery}
+          search={{ value: searchQuery, onChange: setSearchQuery }}
           onSortChange={(sort) => {
             setSortState({ key: sort.key, dir: sort.dir });
             setPaginationModel((prev) => ({ ...prev, page: 0 }));
@@ -246,18 +249,20 @@ export function DepartmentListView() {
                 setStorageId(id);
                 setPaginationModel((prev) => ({ ...prev, page: 0 }));
               }}
-              label={t('common.storage', 'Storage')}
+              label={t('common.storage')}
             />
           }
-          page={paginationModel.page}
-          rowsPerPage={paginationModel.pageSize}
-          totalCount={departmentsTotal || 0}
-          rowsPerPageOptions={[10, 20, 50, 100]}
-          onPageChange={(page) => {
-            setPaginationModel((prev) => ({ ...prev, page }));
-          }}
-          onRowsPerPageChange={(pageSize) => {
-            setPaginationModel({ page: 0, pageSize });
+          pagination={{
+            page: paginationModel.page,
+            rowsPerPage: paginationModel.pageSize,
+            totalCount: departmentsTotal || 0,
+            rowsPerPageOptions: [10, 20, 50, 100],
+            onPageChange: (page) => {
+              setPaginationModel((prev) => ({ ...prev, page }));
+            },
+            onRowsPerPageChange: (pageSize) => {
+              setPaginationModel({ page: 0, pageSize });
+            },
           }}
           getRowId={(row) => row.id}
           headerActions={
@@ -271,8 +276,8 @@ export function DepartmentListView() {
               {t('departments.add')}
             </Button>
           }
-          emptyTitle={t('departments.noData', 'No departments found')}
-          emptySubtitle={t('departments.noDataSubtitle', 'Try adjusting your search or filters')}
+          emptyTitle={t('departments.noData')}
+          emptySubtitle={t('departments.noDataSubtitle')}
           showTotals={false}
         />
       </DashboardContent>

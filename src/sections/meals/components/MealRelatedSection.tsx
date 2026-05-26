@@ -17,10 +17,10 @@ export const MealRelatedSection = React.memo(function MealRelatedSection() {
             }}
         >
             <Typography variant="h6" sx={{ mb: 1 }}>
-                {t('mealsProducts.related', 'Related')}
+                {t('mealsProducts.related')}
             </Typography>
             <Typography variant="body2">
-                {t('mealsProducts.comingSoon', 'Coming soon')}
+                {t('mealsProducts.comingSoon')}
             </Typography>
         </Box>
     );

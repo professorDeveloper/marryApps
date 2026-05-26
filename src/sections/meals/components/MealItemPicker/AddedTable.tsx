@@ -93,7 +93,7 @@ export const AddedTable = React.memo(function AddedTable({
                 sx={{ mb: 2 }}
             >
                 <Typography variant="h6">
-                    {t('mealsProducts.addedItems', 'Added Items')}
+                    {t('mealsProducts.addedItems')}
                 </Typography>
                 <Stack direction="row" spacing={1} alignItems="center" justifyContent="flex-end">
                    {/* <Box sx={{minWidth=}}> */}
@@ -111,7 +111,7 @@ export const AddedTable = React.memo(function AddedTable({
                         onClick={onRemoveSelected}
                         disabled={selectedKeys.size === 0}
                     >
-                        {t('mealsProducts.removeSelected', 'Remove Selected')}
+                        {t('mealsProducts.removeSelected')}
                     </Button>
                     <Button
                         variant="outlined"
@@ -120,7 +120,7 @@ export const AddedTable = React.memo(function AddedTable({
                         onClick={onRemoveAll}
                         disabled={isEmpty}
                     >
-                        {t('mealsProducts.removeAll', 'Remove All')}
+                        {t('mealsProducts.removeAll')}
                     </Button>
                 </Stack>
             </Stack>
@@ -128,7 +128,7 @@ export const AddedTable = React.memo(function AddedTable({
             <TextField
                 size="small"
                 fullWidth
-                placeholder={t('search', 'Search')}
+                placeholder={t('search')}
                 value={search}
                 onChange={(e) => onSearchChange(e.target.value)}
                 sx={{ mb: 2 }}
@@ -165,16 +165,16 @@ export const AddedTable = React.memo(function AddedTable({
                     />
                 </Box>
                 <Typography variant="caption" sx={{ fontWeight: 700 }}>
-                    {t('mealsProducts.name', 'Name')}
+                    {t('mealsProducts.name')}
                 </Typography>
                 <Typography variant="caption" sx={{ fontWeight: 700, textAlign: 'center' }}>
-                    {t('calculation.quantity', 'Quantity')}
+                    {t('calculation.quantity')}
                 </Typography>
                 <Typography variant="caption" sx={{ fontWeight: 700, textAlign: 'right' }}>
-                    {t('mealsProducts.pricePerUnit', 'Price/Unit')}
+                    {t('mealsProducts.pricePerUnit')}
                 </Typography>
                 <Typography variant="caption" sx={{ fontWeight: 700, textAlign: 'right' }}>
-                    {t('mealsProducts.totalPrice', 'Total')}
+                    {t('mealsProducts.totalPrice')}
                 </Typography>
                 <Box />
             </Box>
@@ -242,10 +242,10 @@ export const AddedTable = React.memo(function AddedTable({
                 sx={{ mt: 2 }}
             >
                 <Typography variant="body2" color="text.secondary">
-                    {t('mealsProducts.summaryItems', 'Items')}: {totalItemsCount}
+                    {t('mealsProducts.summaryItems')}: {totalItemsCount}
                 </Typography>
                 <Typography variant="subtitle2">
-                    {t('mealsProducts.summaryTotalCost', 'Total cost')}: {totalCost}
+                    {t('mealsProducts.summaryTotalCost')}: {totalCost}
                 </Typography>
             </Stack>
         </Paper>

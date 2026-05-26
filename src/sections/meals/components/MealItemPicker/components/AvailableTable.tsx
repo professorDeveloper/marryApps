@@ -10,7 +10,6 @@ import {
     Paper,
     Stack,
     Button,
-    Checkbox,
     TextField,
     Typography,
     InputAdornment,
@@ -32,11 +31,11 @@ interface AvailableTableProps {
     onSearchChange: (value: string) => void;
     selectedKeys: Set<string>;
     onSelectChange: (key: string, checked: boolean) => void;
-    onSelectAll: () => void;
+    onSelectAll?: () => void;
     onAddItem: (item: MealItem) => void;
     onAddSelected: () => void;
-    allChecked: boolean;
-    indeterminate: boolean;
+    allChecked?: boolean;
+    indeterminate?: boolean;
     ingredientLabel: string;
     compoundLabel: string;
     tableHeight?: string | number;
@@ -86,8 +85,8 @@ export const AvailableTable = React.memo(function AvailableTable({
           display: 'flex', 
           flexDirection: 'column', 
           height: typeof tableHeight === 'number' ? tableHeight + 42 : 'auto', 
-          borderColor: 'var(--color-border)', 
-          bgcolor: 'var(--color-surface-1)', 
+          borderColor: 'var(--border)', 
+          bgcolor: 'var(--surface)', 
           fontFamily: '"Inter", sans-serif',
           mb:2.5,
         
@@ -101,7 +100,7 @@ export const AvailableTable = React.memo(function AvailableTable({
                 sx={{ mb: 2, flexShrink: 1 }}
             >
                 <Typography variant="h6" sx={{ fontFamily: '"Inter", sans-serif' }}>
-                    {t('mealsProducts.availableItems', 'Available Items')}
+                    {t('mealsProducts.availableItems')}
                 </Typography>
                 {/* <Stack direction="row" spacing={1} alignItems="center" justifyContent="flex-end"> */}
                 <TypeFilterToggle
@@ -113,23 +112,16 @@ export const AvailableTable = React.memo(function AvailableTable({
 
                 {/* </Stack> */}
             </Stack>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2, flexShrink: 0 }}>
-                <Checkbox
-                    size="small"
-                    checked={allChecked}
-                    indeterminate={indeterminate}
-                    onChange={onSelectAll}
-                    slotProps={{ input: { 'aria-label': 'select all available' } }}
-                />
+            <Box sx={{ mb: 2, flexShrink: 0 }}>
                 <TextField
                     size="small"
                     fullWidth
-                    placeholder={t('search', 'Search')}
+                    placeholder={t('search')}
                     value={search}
                     onChange={(e) => onSearchChange(e.target.value)}
                     sx={{
                         '& .MuiOutlinedInput-root': {
-                            bgcolor: 'var(--color-surface-2)',
+                            bgcolor: 'var(--surface-2)',
                         },
                     }}
                     InputProps={{
@@ -212,7 +204,7 @@ export const AvailableTable = React.memo(function AvailableTable({
                             boxShadow: 2,
                         }}
                     >
-                        {t('mealsProducts.addSelected', 'Add Selected')} ({selectedKeys.size})
+                        {t('mealsProducts.addSelected')} ({selectedKeys.size})
                     </Button>
                 </Box>
             )}

@@ -29,6 +29,47 @@ export interface UseMealsAPIReturn {
 }
 
 // ============================================================================
+// REFERENCE DATA CACHE
+// Categories and departments change rarely. Cache them for 5 minutes so that
+// getMeals() and getMealById() don't each fire two extra requests per call.
+// ============================================================================
+
+const REFERENCE_CACHE_TTL_MS = 5 * 60 * 1000;
+
+let _categoriesCache: { data: any[]; fetchedAt: number } | null = null;
+let _departmentsCache: { data: any[]; fetchedAt: number } | null = null;
+let _categoriesPromise: Promise<any[]> | null = null;
+let _departmentsPromise: Promise<any[]> | null = null;
+
+async function getCachedCategories(fetchFn: () => Promise<any[]>): Promise<any[]> {
+    const now = Date.now();
+    if (_categoriesCache && now - _categoriesCache.fetchedAt < REFERENCE_CACHE_TTL_MS) {
+        return _categoriesCache.data;
+    }
+    if (!_categoriesPromise) {
+        _categoriesPromise = fetchFn().catch(() => []);
+    }
+    const data = await _categoriesPromise;
+    _categoriesCache = { data, fetchedAt: Date.now() };
+    _categoriesPromise = null;
+    return data;
+}
+
+async function getCachedDepartments(fetchFn: () => Promise<any[]>): Promise<any[]> {
+    const now = Date.now();
+    if (_departmentsCache && now - _departmentsCache.fetchedAt < REFERENCE_CACHE_TTL_MS) {
+        return _departmentsCache.data;
+    }
+    if (!_departmentsPromise) {
+        _departmentsPromise = fetchFn().catch(() => []);
+    }
+    const data = await _departmentsPromise;
+    _departmentsCache = { data, fetchedAt: Date.now() };
+    _departmentsPromise = null;
+    return data;
+}
+
+// ============================================================================
 // HELPERS
 // ============================================================================
 
@@ -61,16 +102,29 @@ export function useMealsAPI(): UseMealsAPIReturn {
     /**
      * Barcha meals'ni oladi va category/department names'ni enrich qiladi
      */
+    const fetchCategoriesRaw = useCallback(async (): Promise<any[]> => {
+        const res = await fetcher<BackendResponse<any[]>>(endpoints.category.list);
+        if (Array.isArray(res)) return res;
+        if (res?.data && Array.isArray(res.data)) return res.data;
+        return [];
+    }, []);
+
+    const fetchDepartmentsRaw = useCallback(async (): Promise<any[]> => {
+        const res = await fetcher<BackendResponse<any[]>>(endpoints.department.list);
+        if (Array.isArray(res)) return res;
+        if (res?.data && Array.isArray(res.data)) return res.data;
+        return [];
+    }, []);
+
     const getMeals = useCallback(async (): Promise<IMealsItem[]> => {
         try {
-            // Parallel'da meals, categories va departments'ni oladi
-            const [mealsResponse, categoriesResponse, departmentsResponse] = await Promise.all([
+            const [mealsResponse, categoriesData, departmentsData] = await Promise.all([
                 fetcher<BackendResponse<IMealAPIResponse[]>>(endpoints.meals.list),
-                fetcher<BackendResponse<any[]>>(endpoints.category.list).catch(() => null),
-                fetcher<BackendResponse<any[]>>(endpoints.department.list).catch(() => null),
+                getCachedCategories(fetchCategoriesRaw),
+                getCachedDepartments(fetchDepartmentsRaw),
             ]);
 
-            // Extract data from wrapped response
+            // Extract meals data from wrapped response
             let mealsData: IMealAPIResponse[] = [];
             if (Array.isArray(mealsResponse)) {
                 mealsData = mealsResponse;
@@ -78,25 +132,7 @@ export function useMealsAPI(): UseMealsAPIReturn {
                 mealsData = mealsResponse.data;
             }
 
-            let categoriesData: any[] = [];
-            if (categoriesResponse) {
-                if (Array.isArray(categoriesResponse)) {
-                    categoriesData = categoriesResponse;
-                } else if (categoriesResponse?.data && Array.isArray(categoriesResponse.data)) {
-                    categoriesData = categoriesResponse.data;
-                }
-            }
-
-            let departmentsData: any[] = [];
-            if (departmentsResponse) {
-                if (Array.isArray(departmentsResponse)) {
-                    departmentsData = departmentsResponse;
-                } else if (departmentsResponse?.data && Array.isArray(departmentsResponse.data)) {
-                    departmentsData = departmentsResponse.data;
-                }
-            }
-
-            // ID -> Name mapping
+            // ID -> Name mapping (categoriesData/departmentsData already extracted by cache helpers)
             const categoryMap = new Map(categoriesData?.map((cat: any) => [cat.id, cat.name]) || []);
             const departmentMap = new Map(
                 departmentsData?.map((dept: any) => [dept.id, dept.name]) || []
@@ -124,7 +160,7 @@ export function useMealsAPI(): UseMealsAPIReturn {
             console.error('Failed to fetch meals:', error);
             return [];
         }
-    }, []);
+    }, [fetchCategoriesRaw, fetchDepartmentsRaw]);
 
     /**
      * ID bo'yicha single meal'ni oladi
@@ -132,18 +168,15 @@ export function useMealsAPI(): UseMealsAPIReturn {
     const getMealById = useCallback(
         async (id: string): Promise<IMealsItem | null> => {
             try {
-                // Parallel'da meal, category va department ma'lumotlarini oladi
-                const [mealResponse, categoriesResponse, departmentsResponse] = await Promise.all([
+                const [mealResponse, categoriesData, departmentsData] = await Promise.all([
                     fetcher<BackendResponse<IMealAPIResponse>>(endpoints.meals.details(id)),
-                    fetcher<BackendResponse<any[]>>(endpoints.category.list).catch(() => null),
-                    fetcher<BackendResponse<any[]>>(endpoints.department.list).catch(() => null),
+                    getCachedCategories(fetchCategoriesRaw),
+                    getCachedDepartments(fetchDepartmentsRaw),
                 ]);
 
-                // Extract data from wrapped response
                 let mealData: IMealAPIResponse | null = null;
                 if (mealResponse) {
                     if ('id' in mealResponse && 'name' in mealResponse) {
-                        // Direct meal object
                         mealData = mealResponse as unknown as IMealAPIResponse;
                     } else if (mealResponse?.data) {
                         mealData = mealResponse.data as IMealAPIResponse;
@@ -152,24 +185,6 @@ export function useMealsAPI(): UseMealsAPIReturn {
 
                 if (!mealData) {
                     return null;
-                }
-
-                let categoriesData: any[] = [];
-                if (categoriesResponse) {
-                    if (Array.isArray(categoriesResponse)) {
-                        categoriesData = categoriesResponse;
-                    } else if (categoriesResponse?.data && Array.isArray(categoriesResponse.data)) {
-                        categoriesData = categoriesResponse.data;
-                    }
-                }
-
-                let departmentsData: any[] = [];
-                if (departmentsResponse) {
-                    if (Array.isArray(departmentsResponse)) {
-                        departmentsData = departmentsResponse;
-                    } else if (departmentsResponse?.data && Array.isArray(departmentsResponse.data)) {
-                        departmentsData = departmentsResponse.data;
-                    }
                 }
 
                 // ID -> Name mapping
@@ -201,7 +216,7 @@ export function useMealsAPI(): UseMealsAPIReturn {
                 return null;
             }
         },
-        []
+        [fetchCategoriesRaw, fetchDepartmentsRaw]
     );
 
     /**

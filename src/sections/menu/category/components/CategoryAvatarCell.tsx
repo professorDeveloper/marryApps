@@ -88,7 +88,7 @@ export function CategoryAvatarCell({ category }: CategoryAvatarCellProps) {
                     width: 64,
                     height: 64,
                     bgcolor: bgColor,
-                    color: 'var(--color-text-on-primary)',
+                    color: 'var(--accent-fg)',
                     fontWeight: 'bold',
                     fontSize: '20px',
                     borderRadius: '15%',

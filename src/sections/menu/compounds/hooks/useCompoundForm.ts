@@ -92,7 +92,7 @@ export function useCompoundForm({
                         compound_calculations,
                     });
 
-                    toast.success(t('success.created', 'Successfully created'));
+                    toast.success(t('success.created'));
                     router.push(paths.menu.semifinished.root);
                 } else if (compoundId) {
                     // Update existing compound with translation
@@ -151,7 +151,7 @@ export function useCompoundForm({
                         compound_calculations,
                     });
 
-                    toast.success(t('success.updated', 'Successfully updated'));
+                    toast.success(t('success.updated'));
                     // Redirect to list
                     router.push(paths.menu.semifinished.root);
                 }

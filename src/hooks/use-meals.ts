@@ -222,6 +222,7 @@ function enrichMealsFromExpand(
                 ? {
                     id: meal.category_id,
                     name: expandedCategory?.name || meal.category_name || '-',
+                    color_code: expandedCategory?.color_code || undefined,
                 }
                 : undefined,
             department: meal.department_id

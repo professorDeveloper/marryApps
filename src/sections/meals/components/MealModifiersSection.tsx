@@ -78,7 +78,7 @@ export const MealModifiersSection = React.memo(function MealModifiersSection({
                 code: mod.code,
                 description: mod.description,
                 is_active: mod.is_active,
-                measurement: mod.is_active ? t('mealsProducts.status', 'Active') : t('mealsProducts.status', 'Inactive'),
+                measurement: mod.is_active ? t('mealsProducts.status') : t('mealsProducts.status'),
             })),
         [modifiers, t]
     );
@@ -97,7 +97,7 @@ export const MealModifiersSection = React.memo(function MealModifiersSection({
                 code: mod.code,
                 description: mod.description,
                 is_active: mod.is_active,
-                measurement: mod.is_active ? t('mealsProducts.status', 'Active') : t('mealsProducts.status', 'Inactive'),
+                measurement: mod.is_active ? t('mealsProducts.status') : t('mealsProducts.status'),
             });
         }
         return out;
@@ -108,7 +108,7 @@ export const MealModifiersSection = React.memo(function MealModifiersSection({
         () => [
             {
                 key: 'code',
-                header: t('modifiers.code', 'Code'),
+                header: t('modifiers.code'),
                 width: 'minmax(150px, auto)',
                 align: 'left',
             },
@@ -119,7 +119,7 @@ export const MealModifiersSection = React.memo(function MealModifiersSection({
     const summaryEntries: SummaryEntry[] = useMemo(
         () => [
             {
-                label: t('mealsProducts.totalModifiers', 'Total'),
+                label: t('mealsProducts.totalModifiers'),
                 value: transferredItems.length,
             },
         ],
@@ -197,12 +197,12 @@ export const MealModifiersSection = React.memo(function MealModifiersSection({
                 onRemoveRow={handleRemoveRow}
                 onRemoveMany={handleRemoveMany}
                 summaryEntries={summaryEntries}
-                totalLabel={t('mealsProducts.totalModifiers', 'Total')}
+                totalLabel={t('mealsProducts.totalModifiers')}
                 totalValue={formatPrice(transferredItems.length)}
                 metaFieldsOpen={metaFieldsOpen}
                 tableHeight={tableHeight}
             />
-            {onCancel && onSave && (
+            {/* {onCancel && onSave && (
                 <Box sx={{ mt: 2, display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
                     <Button
                         variant="outlined"
@@ -216,10 +216,10 @@ export const MealModifiersSection = React.memo(function MealModifiersSection({
                         onClick={() => void onSave()}
                         disabled={saveDisabled}
                     >
-                        {saveLabel ?? t('common.save', 'Save')}
+                        {saveLabel ?? t('common.save')}
                     </Button>
                 </Box>
-            )}
+            )} */}
         </Box>
     );
 });

@@ -1,6 +1,6 @@
 import type { ICategory } from 'src/types/category';
-import type { DataTableColumn } from 'src/sections/warehouse/deduction/components/utility-data-table/types/types';
-import { CELL_SX } from 'src/sections/warehouse/deduction/components/utility-data-table/utils/constants';
+import type { DataTableColumn } from 'src/sections/common/data-table/types/types';
+import { CELL_SX } from 'src/sections/common/data-table/utils/constants';
 
 import { useTranslation } from 'react-i18next';
 import { useMemo, useState, useCallback, useEffect } from 'react';
@@ -25,6 +25,8 @@ import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
 import { useCategoryData } from './hooks/useCategoryData';
 import { usePaginationRows } from 'src/hooks/use-pagination-rows';
 import { StorageNameCell } from './components/StorageNameCell';
+import { StorageFilter } from 'src/sections/common/data-table/components/StorageFilter';
+import { DepartmentFilter } from 'src/sections/common/data-table/components/DepartmentFilter';
 import { CategoryGoodsTable } from './components/CategoryGoodsTable';
 import { RouterLink } from 'src/routes/components';
 
@@ -36,6 +38,8 @@ export function CategoryListView() {
     const { t } = useTranslation('menu');
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [selectedDeleteId, setSelectedDeleteId] = useState<string | null>(null);
+    const [storageFilterId, setStorageFilterId] = useState('');
+    const [departmentFilterId, setDepartmentFilterId] = useState('');
 
     // Use custom hook for category data management
     const {
@@ -62,7 +66,7 @@ export function CategoryListView() {
         () => [
             {
                 key: 'category',
-                label: t('categories.name', 'Category'),
+                label: t('categories.name'),
                 width: '2fr',
                 sortable: false,
                 filterable: false,
@@ -75,14 +79,10 @@ export function CategoryListView() {
             },
             {
                 key: 'storage_name',
-                label: t('categories.storage', 'Storage'),
+                label: t('categories.storage'),
                 width: '1.2fr',
                 sortable: false,
-                filterable: true,
-                filter: {
-                    type: 'multi' as const,
-                    options: storages.map((s) => s.name),
-                },
+                filterable: false,
                 getValue: (row: ICategory) => row,
                 renderCell: ({ row }: { row: ICategory }) => (
                     <Box sx={CELL_SX}>
@@ -92,14 +92,10 @@ export function CategoryListView() {
             },
             {
                 key: 'department_name',
-                label: t('categories.department', 'Department'),
+                label: t('categories.department'),
                 width: '1.2fr',
                 sortable: false,
-                filterable: true,
-                filter: {
-                    type: 'multi' as const,
-                    options: departments.map((d) => d.name),
-                },
+                filterable: false,
                 getValue: (row) => row.department_name || '-',
                 renderCell: ({ row }: { row: ICategory }) => (
                     <Box sx={CELL_SX}>
@@ -109,7 +105,7 @@ export function CategoryListView() {
             },
             {
                 key: 'color_code',
-                label: t('categories.color', 'Color'),
+                label: t('categories.color'),
                 width: '0.8fr',
                 sortable: false,
                 getValue: (row) => row.color_code || '-',
@@ -147,7 +143,7 @@ export function CategoryListView() {
             },
             {
                 key: 'created_at',
-                label: t('categories.createdAt', 'Created At'),
+                label: t('categories.createdAt'),
                 width: '1fr',
                 sortable: true,
                 getValue: (row) => row.created_at,
@@ -229,9 +225,9 @@ export function CategoryListView() {
         if (selectedDeleteId) {
             const success = await handleDelete(selectedDeleteId);
             if (success) {
-                toast.success(t('categories.deleteSuccess', 'Category deleted successfully'));
+                toast.success(t('categories.deleteSuccess'));
             } else {
-                toast.error(t('categories.deleteError', 'Failed to delete category'));
+                toast.error(t('categories.deleteError'));
             }
         }
         setDeleteDialogOpen(false);
@@ -281,27 +277,47 @@ export function CategoryListView() {
                     data={categories}
                     getRowId={(row) => String(row.id)}
                     columns={columns}
-                    searchValue={searchQuery}
-                    onSearchChange={handleSearch}
+                    search={{ value: searchQuery, onChange: handleSearch }}
                     onSortChange={handleSortChange}
-                    onFiltersChange={(fs: Record<string, any>) => {
-                        const storageId = (fs.storage_name?.value as string[])?.[0];
-                        const departmentId = (fs.department_name?.value as string[])?.[0];
-                        handleFilterChange({ storage_id: storageId || undefined, department_id: departmentId || undefined });
-                    }}
-                    page={paginationModel.page}
-                    rowsPerPage={paginationModel.pageSize}
-                    totalCount={totalCount}
                     onReset={() => {
                         handleSearch('');
                         handleSortChange({ key: null, dir: null });
+                        setStorageFilterId('');
+                        setDepartmentFilterId('');
                         handleFilterChange({});
                     }}
-                    rowsPerPageOptions={[10, 20, 50, 100]}
-                    onPageChange={(page) => handlePageChangeInternal(page, paginationModel.pageSize)}
-                    onRowsPerPageChange={(pageSize) =>
-                        handlePageChangeInternal(0, pageSize)
+                    toolbarActions={
+                        <>
+                            <StorageFilter
+                                storageId={storageFilterId}
+                                storages={storages.map((s) => ({ id: s.id, name: s.name }))}
+                                onStorageChange={(id) => {
+                                    setStorageFilterId(id);
+                                    handleFilterChange({ storage_id: id || undefined, department_id: departmentFilterId || undefined });
+                                    setPaginationModel((p) => ({ ...p, page: 0 }));
+                                }}
+                                label={t('categories.storage')}
+                            />
+                            <DepartmentFilter
+                                departmentId={departmentFilterId}
+                                departments={departments.map((d) => ({ id: d.id, name: d.name }))}
+                                onDepartmentChange={(id) => {
+                                    setDepartmentFilterId(id);
+                                    handleFilterChange({ storage_id: storageFilterId || undefined, department_id: id || undefined });
+                                    setPaginationModel((p) => ({ ...p, page: 0 }));
+                                }}
+                                label={t('categories.department')}
+                            />
+                        </>
                     }
+                    pagination={{
+                        page: paginationModel.page,
+                        rowsPerPage: paginationModel.pageSize,
+                        totalCount,
+                        rowsPerPageOptions: [10, 20, 50, 100],
+                        onPageChange: (page) => handlePageChangeInternal(page, paginationModel.pageSize),
+                        onRowsPerPageChange: (pageSize) => handlePageChangeInternal(0, pageSize),
+                    }}
                     defaultConfig={{
                         order: ['category', 'storage_name', 'department_name', 'color_code', 'created_at', 'actions'],
                         visibility: {
@@ -338,16 +354,16 @@ export function CategoryListView() {
             </DashboardContent>
 
             <Dialog open={deleteDialogOpen} onClose={handleDeleteCancel}>
-                <DialogTitle>{t('categories.deleteConfirmation', 'Delete Category')}</DialogTitle>
+                <DialogTitle>{t('categories.deleteConfirmation')}</DialogTitle>
                 <DialogContent>
-                    <p>{t('categories.deleteMessage', 'Are you sure you want to delete this category?') as string}</p>
+                    <p>{t('categories.deleteMessage') as string}</p>
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={handleDeleteCancel} variant="outlined">
-                        {t('cancel', 'Cancel')}
+                        {t('cancel')}
                     </Button>
                     <Button onClick={handleDeleteConfirm} variant="contained" color="error">
-                        {t('delete', 'Delete')}
+                        {t('delete')}
                     </Button>
                 </DialogActions>
             </Dialog>

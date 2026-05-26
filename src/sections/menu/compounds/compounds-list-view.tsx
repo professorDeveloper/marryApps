@@ -21,6 +21,8 @@ import {
     TableContainer,
     CircularProgress,
     IconButton,
+    MenuItem,
+    TextField,
 } from '@mui/material';
 
 import { paths } from 'src/routes/paths';
@@ -43,7 +45,7 @@ import { Iconify } from 'src/components/iconify';
 import { GenericViewModal } from 'src/components/generic-view-view';
 import { formatDate, formatPrice } from 'src/components/generic-view-view/modal-formatters';
 
-import { DataTable } from 'src/sections/warehouse/deduction/components/utility-data-table';
+import { DataTable } from 'src/sections/common/data-table';
 import { RouterLink } from 'src/routes/components';
 import { RenderCell } from 'src/components/RenderCell';
 
@@ -426,6 +428,15 @@ function renderCompoundSpecifications(item: ICompound, t: any) {
 // MAIN COMPONENT
 // ============================================================================
 
+const filterSelectSx = {
+    minWidth: 140,
+    '& .MuiInputBase-root': { height: 36, fontSize: 13.5, backgroundColor: 'var(--bg2)', borderRadius: '6px', fontFamily: 'var(--font-sans)' },
+    '& .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--border)' },
+    '& .MuiInputBase-root:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--border2)' },
+    '& .MuiInputBase-root.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--brand)', boxShadow: '0 0 0 2px var(--accent-soft)' },
+    '& .MuiInputLabel-root.Mui-focused': { color: 'var(--brand)' },
+};
+
 export function HalfMeals() {
     const theme = useTheme();
     const { t } = useTranslation('menu');
@@ -433,6 +444,7 @@ export function HalfMeals() {
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
     const [departmentId, setDepartmentId] = useState('');
+    const [measurementFilter, setMeasurementFilter] = useState('');
     const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 20 });
     const [sortState, setSortState] = useState<{ key: string | null; dir: 'asc' | 'desc' | null }>({ key: null, dir: null });
     const { departments } = useGetDepartments();
@@ -532,7 +544,6 @@ export function HalfMeals() {
                 key: 'measurement',
                 label: t('semifinishedProducts.measurement'),
                 sortable: true,
-                filter: { type: 'multi' as const },
                 width: '1fr',
                 align: 'left' as const,
                 getValue: (row: ICompound) => row?.measurement || '',
@@ -546,7 +557,6 @@ export function HalfMeals() {
                 key: 'ingredient_group_name',
                 label: t('ingredients.group'),
                 sortable: true,
-                filter: { type: 'multi' as const },
                 width: '1.5fr',
                 align: 'left' as const,
                 getValue: (row: ICompound) => (
@@ -702,29 +712,57 @@ export function HalfMeals() {
             >
                 <DataTable
                     persistKey="compounds-list-view"
-                    data={compounds}
+                    data={measurementFilter ? compounds.filter((c) => c.measurement === measurementFilter) : compounds}
                     getRowId={(row: ICompound) => row.id}
                     columns={columns}
-                    searchValue={searchQuery}
-                    onSearchChange={(value) => {
-                        setSearchQuery(value);
-                        setPaginationModel((prev) => ({ ...prev, page: 0 }));
+                    search={{
+                        value: searchQuery,
+                        onChange: (value) => {
+                            setSearchQuery(value);
+                            setPaginationModel((prev) => ({ ...prev, page: 0 }));
+                        },
                     }}
                     onSortChange={(sort) => {
                         setSortState({ key: sort.key, dir: sort.dir });
                         setPaginationModel((prev) => ({ ...prev, page: 0 }));
                     }}
-                    onFiltersChange={(fs: Record<string, any>) => {
-                        const depId = (fs.ingredient_group_name?.value as string[])?.[0];
-                        setDepartmentId(depId || '');
-                        setPaginationModel((prev) => ({ ...prev, page: 0 }));
+                    toolbarActions={
+                        <>
+                            <TextField
+                                select size="small" label={t('ingredients.group')}
+                                value={departmentId}
+                                onChange={(e) => {
+                                    setDepartmentId(e.target.value);
+                                    setPaginationModel((prev) => ({ ...prev, page: 0 }));
+                                }}
+                                sx={filterSelectSx}
+                            >
+                                <MenuItem value="">{t('common.all')}</MenuItem>
+                                {ingredientGroupOptions.map(({ value, label }) => (
+                                    <MenuItem key={value} value={value}>{label}</MenuItem>
+                                ))}
+                            </TextField>
+                            <TextField
+                                select size="small" label={t('semifinishedProducts.measurement')}
+                                value={measurementFilter}
+                                onChange={(e) => setMeasurementFilter(e.target.value)}
+                                sx={{ ...filterSelectSx, minWidth: 200 }}
+                            >
+                                <MenuItem value="">{t('common.all')}</MenuItem>
+                                {['kg', 'l', 'piece'].map((v) => (
+                                    <MenuItem key={v} value={v}>{t(`semifinishedProducts.${v}`)}</MenuItem>
+                                ))}
+                            </TextField>
+                        </>
+                    }
+                    pagination={{
+                        page: paginationModel.page,
+                        rowsPerPage: paginationModel.pageSize,
+                        totalCount: pagination?.total || 0,
+                        rowsPerPageOptions: [10, 20, 50, 100],
+                        onPageChange: handlePaginationPageChange,
+                        onRowsPerPageChange: handlePaginationRowsPerPageChange,
                     }}
-                    page={paginationModel.page}
-                    rowsPerPage={paginationModel.pageSize}
-                    totalCount={pagination?.total || 0}
-                    rowsPerPageOptions={[10, 20, 50, 100]}
-                    onPageChange={handlePaginationPageChange}
-                    onRowsPerPageChange={handlePaginationRowsPerPageChange}
                     defaultConfig={{
                         order: ['name', 'measurement', 'ingredient_group_name', 'price', 'quantity', 'actions'],
                         visibility: {
@@ -747,6 +785,7 @@ export function HalfMeals() {
                     onReset={() => {
                         setSearchQuery('');
                         setDepartmentId('');
+                        setMeasurementFilter('');
                         setSortState({ key: null, dir: null });
                         setPaginationModel({ page: 0, pageSize: 20 });
                     }}

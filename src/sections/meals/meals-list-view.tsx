@@ -1,11 +1,12 @@
 import type { IMealsItem } from 'src/types/meals';
-import type { DataTableColumn } from 'src/sections/warehouse/deduction/components/utility-data-table/types/types';
+import type { DataTableColumn } from 'src/sections/common/data-table/types/types';
 
 import { useTranslation } from 'react-i18next';
 import { useMemo, useState, useEffect, useCallback } from 'react';
 
 import { useTheme } from '@mui/material/styles';
-import { Box, Table, Paper, Button, Dialog, TableRow, 
+import {
+    Box, Table, Paper, Button, Dialog, TableRow,
     TableBody,
     TableCell,
     TableHead,
@@ -35,10 +36,31 @@ import { formatPrice } from 'src/components/generic-view-view/modal-formatters';
 import { GenericViewModal, SpecificationsTable } from 'src/components/generic-view-view';
 import TextField from '@mui/material/TextField';
 
-import { DataTable } from 'src/sections/warehouse/deduction/components/utility-data-table';
-import { StorageFilter } from 'src/sections/warehouse/deduction/components/utility-data-table/components/StorageFilter';
-import { DepartmentFilter } from 'src/sections/warehouse/deduction/components/utility-data-table/components/DepartmentFilter';
+import { DataTable } from 'src/sections/common/data-table';
+import { StorageFilter } from 'src/sections/common/data-table/components/StorageFilter';
+import { DepartmentFilter } from 'src/sections/common/data-table/components/DepartmentFilter';
+import { CategoryFilter } from 'src/sections/common/data-table/components/CategoryFilter';
 import { RouterLink } from 'src/routes/components';
+
+const filterFieldSx = {
+    minWidth: 120,
+    '& .MuiInputBase-root': {
+        height: 36,
+        fontSize: 13.5,
+        backgroundColor: 'transparent',
+        borderRadius: '6px',
+        fontFamily: 'var(--font-sans)',
+    },
+    '& .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--border)' },
+    '& .MuiInputBase-root:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--border2)' },
+    '& .MuiInputBase-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
+        borderColor: 'var(--brand)',
+        boxShadow: '0 0 0 2px var(--accent-soft)',
+    },
+    '& .MuiInputLabel-root.Mui-focused': { color: 'var(--brand)' },
+    '& input::placeholder': { color: 'var(--text3)', opacity: 1 },
+    '& input[type=number]': { fontFamily: 'var(--font-sans)' },
+};
 
 const initialFilters = {
     category_id: '',
@@ -118,7 +140,7 @@ function MealCalculationsTable({ mealId }: { mealId: string }) {
         <Box sx={{ width: '100%' }}>
             <TableContainer component={Paper} sx={{ mb: 2 }}>
                 <Table size="small">
-                    <TableHead sx={{ bgcolor: 'var(--color-surface-secondary)' }}>
+                    <TableHead sx={{ bgcolor: 'var(--surface)' }}>
                         <TableRow>
                             <TableCell align="left">
                                 {t('common.name')}
@@ -193,53 +215,21 @@ function MealCalculationsTable({ mealId }: { mealId: string }) {
     );
 }
 
-/**
- * Meals item'uchun modal render function
- */
-function renderMealsSpecifications(item: IMealsItem, t: any) {
-    const specs = [
-        { label: t('mealsProducts.name'), value: item.name },
-        { label: t('mealsProducts.description'), value: item.description },
-        {
-            label: t('mealsProducts.category'),
-            value: item.category?.name || item.category_id || '-',
-        },
-        {
-            label: t('mealsProducts.department'),
-            value: item.department?.name || item.department_id || '-',
-        },
-        { label: t('mealsProducts.price'), value: `${item.price?.toLocaleString()} so'm` },
-        {
-            label: t('mealsProducts.costPrice'),
-            value:
-                item.cost_price || item.cost_price === 0
-                    ? `${item.cost_price.toLocaleString()} so'm`
-                    : '-',
-        },
-        { label: t('mealsProducts.cookingTime'), value: `${item.cook_time} min` },
-        {
-            label: t('mealsProducts.createdAt'),
-            value: item.created_at ? new Date(item.created_at).toLocaleDateString() : '-',
-        },
-        {
-            label: t('mealsProducts.updatedAt'),
-            value: item.updated_at ? new Date(item.updated_at).toLocaleDateString() : '-',
-        },
-    ];
-
-    return <SpecificationsTable rows={specs} />;
-}
 
 export function Meals() {
     const theme = useTheme();
     const { t, i18n } = useTranslation('menu');
-    const noDataText = t('noDataAvailable', "Tushunarli ma'lumot mavjud emas");
+    const noDataText = t('noDataAvailable');
     const { rowsPerPage: globalRowsPerPage } = usePaginationRows();
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
     const [filters, setFilters] = useState(initialFilters);
     const [draftFilters, setDraftFilters] = useState(initialFilters);
     const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: globalRowsPerPage });
+
+    useEffect(() => {
+        setPaginationModel((prev) => ({ ...prev, pageSize: globalRowsPerPage }));
+    }, [globalRowsPerPage]);
     const [sortState, setSortState] = useState<{ key: string | null; dir: 'asc' | 'desc' | null }>({ key: null, dir: null });
     const { data: metadata } = useMetadata([MetadataEntity.CATEGORIES, MetadataEntity.DEPARTMENTS]);
     const { departments } = useGetDepartments();
@@ -364,9 +354,11 @@ export function Meals() {
                     }
                     return displayName;
                 },
-                renderCell: ({ value }) => {
+                renderCell: ({ value }: { row: IMealsItem; value: unknown }) => {
                     const displayName = String(value);
-                    return <span>{displayName}</span>;
+                    return (
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayName}</span>
+                    );
                 },
             },
             {
@@ -374,16 +366,34 @@ export function Meals() {
                 label: t('mealsProducts.category'),
                 width: '1fr',
                 sortable: false,
-                filterable: true,
-                filter: {
-                    type: 'multi',
-                    options: categoryOptions.map((opt) => opt.id),
-                    getOptionLabel: (id) => categoryMap.get(id) || id,
-                    maxSelections: 1,
-                },
                 getValue: (row) =>
-                    // Use the translated category name from categoryMap
-                     categoryMap.get(row.category_id) || row.category?.name || row.category_id || '-',
+                    categoryMap.get(row.category_id) || row.category?.name || row.category_id || '-',
+                renderCell: ({ value }: { row: IMealsItem; value: unknown }) => {
+                    const label = String(value);
+                    if (!label || label === '-') return <span>–</span>;
+                    return (
+                        <Box
+                            sx={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                px: '9px',
+                                py: '3px',
+                                borderRadius: '999px',
+                                fontSize: 12,
+                                fontWeight: 450,
+                                backgroundColor: 'var(--bg3)',
+                                color: 'var(--text2)',
+                                border: '1px solid var(--border)',
+                                maxWidth: '100%',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                            }}
+                        >
+                            {label}
+                        </Box>
+                    );
+                },
             },
             {
                 key: 'price',
@@ -404,8 +414,8 @@ export function Meals() {
                 mono: true,
                 getValue: (row) => row.cost_price ? Number(row.cost_price) : null,
                 renderCell: ({ value }) => value !== null && value !== undefined
-                        ? `${Number(value).toLocaleString()} ${t('mealsProducts.som')}`
-                        : '-',
+                    ? `${Number(value).toLocaleString()}`
+                    : '–',
             },
             {
                 key: 'cook_time',
@@ -414,7 +424,7 @@ export function Meals() {
                 sortable: true,
                 align: 'center',
                 getValue: (row) => Number(row.cook_time || 0),
-                renderCell: ({ value }) => `${value} ${t('mealsProducts.min')}`,
+                renderCell: ({ value }) => Number(value) > 0 ? `${value} ${t('mealsProducts.min')}` : '–',
             },
             {
                 key: 'actions',
@@ -509,104 +519,91 @@ export function Meals() {
                     '--layout-dashboard-content-pb': { xs: '0px', md: '0px' },
                 }}
             >
-            
+
                 <DataTable<IMealsItem>
                     persistKey="meals-list-view"
                     data={meals}
                     getRowId={(row: IMealsItem) => String(row?.id)}
                     columns={columns}
-                    searchValue={searchQuery}
-                    onSearchChange={(value) => {
-                        setSearchQuery(value);
-                        setPaginationModel((prev) => ({ ...prev, page: 0 }));
+                    search={{
+                        value: searchQuery,
+                        onChange: (value) => {
+                            setSearchQuery(value);
+                            setPaginationModel((prev) => ({ ...prev, page: 0 }));
+                        },
                     }}
                     onSortChange={(sort) => {
                         setSortState({ key: sort.key, dir: sort.dir });
                         setPaginationModel((prev) => ({ ...prev, page: 0 }));
                     }}
-                    filters={filters.category_id ? { category_id: { type: 'multi', value: [filters.category_id] } } : {}}
-                    onFiltersChange={(filterState) => {
-                        const selectedCategory = (filterState.category_id?.value as string[])?.[0];
-                        setDraftFilters((prev) => ({ ...prev, category_id: selectedCategory || '' }));
-                        setPaginationModel((prev) => ({ ...prev, page: 0 }));
+                    batchActions={[
+                        {
+                            label: t('mealsProducts.delete'),
+                            icon: <Iconify icon="solar:trash-bin-trash-bold" width={18} />,
+                            onClick: (rows: IMealsItem[]) => handleDeleteRows(rows.map((r) => r.id)),
+                            color: 'error',
+                        },
+                    ]}
+                    pagination={{
+                        page: paginationModel.page,
+                        rowsPerPage: paginationModel.pageSize,
+                        totalCount: pagination?.total || 0,
+                        rowsPerPageOptions: [10, 20, 50, 100],
+                        onPageChange: handlePaginationPageChange,
+                        onRowsPerPageChange: handlePaginationRowsPerPageChange,
                     }}
-                    page={paginationModel.page}
-                    rowsPerPage={paginationModel.pageSize}
-                    totalCount={pagination?.total || 0}
-                    rowsPerPageOptions={[10, 20, 50, 100]}
-                    onPageChange={handlePaginationPageChange}
-                    onRowsPerPageChange={handlePaginationRowsPerPageChange}
                     toolbarActions={
-                      <>
-                        <DepartmentFilter
-                          departmentId={filters.department_id || ''}
-                          departments={departmentOptions}
-                          onDepartmentChange={(departmentId: string) => {
-                            setDraftFilters((prev) => ({ ...prev, department_id: departmentId }));
-                            setPaginationModel((prev) => ({ ...prev, page: 0 }));
-                          }}
-                          label={t('common.department', 'Department')}
-                        />
-                        <StorageFilter
-                          storageId={filters.storage_id || ''}
-                          storages={storages.map((s: any) => ({ id: s.id, name: s.name }))}
-                          onStorageChange={(storageId: string) => {
-                            setDraftFilters((prev) => ({ ...prev, storage_id: storageId }));
-                            setPaginationModel((prev) => ({ ...prev, page: 0 }));
-                          }}
-                          label={t('common.storage', 'Storage')}
-                        />
-                        <TextField
-                          size="small"
-                          label={t('mealsProducts.minPrice', 'Min Price')}
-                          type="number"
-                          value={filters.min_price}
-                          onChange={(e) => {
-                            setDraftFilters((prev) => ({ ...prev, min_price: e.target.value }));
-                            setPaginationModel((prev) => ({ ...prev, page: 0 }));
-                          }}
-                          sx={{
-                            minWidth: 100,
-                            '& .MuiInputBase-root': {
-                              height: 34,
-                              fontSize: 12.5,
-                              backgroundColor: 'var(--color-surface-0)',
-                              borderRadius: 1,
-                              fontFamily: '"Inter", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif',
-                            },
-                            '& .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--color-border)' },
-                            '& .MuiInputBase-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                              borderColor: 'var(--color-primary)',
-                              boxShadow: '0 0 0 3px var(--glow-md)',
-                            },
-                          }}
-                        />
-                        <TextField
-                          size="small"
-                          label={t('mealsProducts.maxPrice', 'Max Price')}
-                          type="number"
-                          value={filters.max_price}
-                          onChange={(e) => {
-                            setDraftFilters((prev) => ({ ...prev, max_price: e.target.value }));
-                            setPaginationModel((prev) => ({ ...prev, page: 0 }));
-                          }}
-                          sx={{
-                            minWidth: 100,
-                            '& .MuiInputBase-root': {
-                              height: 34,
-                              fontSize: 12.5,
-                              backgroundColor: 'var(--color-surface-0)',
-                              borderRadius: 1,
-                              fontFamily: '"Inter", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif',
-                            },
-                            '& .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--color-border)' },
-                            '& .MuiInputBase-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                              borderColor: 'var(--color-primary)',
-                              boxShadow: '0 0 0 3px var(--glow-md)',
-                            },
-                          }}
-                        />
-                      </>
+                        <>
+                            <CategoryFilter
+                                categoryId={filters.category_id || ''}
+                                categories={categoryOptions}
+                                onCategoryChange={(categoryId: string) => {
+                                    setDraftFilters((prev) => ({ ...prev, category_id: categoryId }));
+                                    setPaginationModel((prev) => ({ ...prev, page: 0 }));
+                                }}
+                                label={t('mealsProducts.category')}
+                            />
+                            <DepartmentFilter
+                                departmentId={filters.department_id || ''}
+                                departments={departmentOptions}
+                                onDepartmentChange={(departmentId: string) => {
+                                    setDraftFilters((prev) => ({ ...prev, department_id: departmentId }));
+                                    setPaginationModel((prev) => ({ ...prev, page: 0 }));
+                                }}
+                                label={t('common.department')}
+                            />
+                            <StorageFilter
+                                storageId={filters.storage_id || ''}
+                                storages={storages.map((s: any) => ({ id: s.id, name: s.name }))}
+                                onStorageChange={(storageId: string) => {
+                                    setDraftFilters((prev) => ({ ...prev, storage_id: storageId }));
+                                    setPaginationModel((prev) => ({ ...prev, page: 0 }));
+                                }}
+                                label={t('common.storage')}
+                            />
+                            <TextField
+                                size="small"
+                                label={t('mealsProducts.minPrice')}
+                                type="number"
+                                value={filters.min_price}
+                                onChange={(e) => {
+                                    setDraftFilters((prev) => ({ ...prev, min_price: e.target.value }));
+                                    setPaginationModel((prev) => ({ ...prev, page: 0 }));
+                                }}
+                                sx={filterFieldSx}
+                            />
+                            <TextField
+                                size="small"
+                                label={t('mealsProducts.maxPrice')}
+                                type="number"
+                                value={filters.max_price}
+                                onChange={(e) => {
+                                    setDraftFilters((prev) => ({ ...prev, max_price: e.target.value }));
+                                    setPaginationModel((prev) => ({ ...prev, page: 0 }));
+                                }}
+                                sx={filterFieldSx}
+                            />
+                        </>
                     }
                     defaultConfig={{
                         order: ['name', 'category_id', 'price', 'cost_price', 'cook_time', 'actions'],

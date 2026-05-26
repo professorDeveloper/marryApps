@@ -20,8 +20,8 @@ export function CategoryGoodsModal({ isOpen, onClose, category }: CategoryGoodsM
                 sx: {
                     height: '80vh',
                     maxHeight: '80vh',
-                    backgroundColor: 'var(--color-surface-0)',
-                    border: '1px solid var(--color-border)',
+                    backgroundColor: 'var(--bg)',
+                    border: '1px solid var(--border)',
                     backdropFilter: 'blur(12px)',
                 },
             }}
@@ -32,8 +32,8 @@ export function CategoryGoodsModal({ isOpen, onClose, category }: CategoryGoodsM
                     justifyContent: 'space-between',
                     alignItems: 'center',
                     pb: 2,
-                    borderBottom: '1px solid var(--color-border)',
-                    backgroundColor: 'var(--color-surface-1)',
+                    borderBottom: '1px solid var(--border)',
+                    backgroundColor: 'var(--surface)',
                 }}
             >
                 <Typography sx={{ color: 'primary.main', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>
@@ -43,17 +43,17 @@ export function CategoryGoodsModal({ isOpen, onClose, category }: CategoryGoodsM
                     onClick={onClose}
                     size="small"
                     sx={{
-                        backgroundColor: 'var(--color-primary-soft)',
+                        backgroundColor: 'var(--accent-soft)',
                         color: 'text.primary',
                         '&:hover': {
-                            backgroundColor: 'var(--color-primary-ring)',
+                            backgroundColor: 'var(--accent-soft)',
                         },
                     }}
                 >
                     <Iconify icon="solar:close-circle-bold" width={24} />
                 </IconButton>
             </DialogTitle>
-            <DialogContent sx={{ p: 0, backgroundColor: 'var(--color-surface-0)' }}>
+            <DialogContent sx={{ p: 0, backgroundColor: 'var(--bg)' }}>
                 {category && <CategoryGoodsTable categoryId={category.id} />}
             </DialogContent>
         </Dialog>

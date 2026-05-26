@@ -21,9 +21,9 @@ const ROW_SX = {
     py: 0.75,
     m: 0,
     borderBottom: 1,
-    borderColor: 'var(--color-border)',
+    borderColor: 'var(--border)',
     cursor: 'pointer',
-    '&:hover': { bgcolor: 'var(--color-primary-soft)' },
+    '&:hover': { bgcolor: 'var(--accent-soft)' },
     boxSizing: 'border-box',
     fontFamily: '"Inter", sans-serif',
 } as const;

@@ -50,6 +50,7 @@ export type IMealsItem = {
     category?: {
         id: string;
         name: string;
+        color_code?: string;
     };
     department_id: string;
     department?: {

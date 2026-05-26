@@ -6,7 +6,7 @@ import { Box, ListItemText, Typography } from '@mui/material';
 
 import type { IDepartmentItem } from 'src/types/departments.tsx';
 import { RenderCell } from 'src/components/RenderCell';
-import { CELL_SX } from 'src/sections/warehouse/deduction/components/utility-data-table/utils/constants';
+import { CELL_SX } from 'src/sections/common/data-table/utils/constants';
 
 interface CellRenderParams {
   row: IDepartmentItem;

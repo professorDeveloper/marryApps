@@ -71,10 +71,10 @@ export function useModifierForm({
 
         if (isNew) {
           await createModifierWithCalculations(payload);
-          toast.success(t('success.created', 'Successfully created'));
+          toast.success(t('success.created'));
         } else if (id) {
           await updateModifierWithCalculations(id, payload);
-          toast.success(t('success.updated', 'Successfully updated'));
+          toast.success(t('success.updated'));
         }
 
         router.push(paths.menu.modifiers.root);
@@ -82,8 +82,8 @@ export function useModifierForm({
         console.error('Error saving modifier:', err);
         toast.error(
           isNew
-            ? t('error.createFailed', 'Failed to create')
-            : t('error.updateFailed', 'Failed to update')
+            ? t('error.createFailed')
+            : t('error.updateFailed')
         );
         throw err;
       }
@@ -106,7 +106,7 @@ export function useModifierForm({
       router.push(paths.menu.modifiers.root);
     } catch (err) {
       console.error('Error deleting modifier:', err);
-      toast.error(t('error.deleteFailed', 'Failed to delete'));
+      toast.error(t('error.deleteFailed'));
       throw err;
     }
   }, [id, deleteModifier, router, t]);
