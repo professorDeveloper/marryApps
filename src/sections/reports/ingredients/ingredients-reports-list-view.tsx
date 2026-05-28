@@ -523,7 +523,7 @@ export function IngredientReportsListView() {
                     <TableBody>
                         {movements.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={5} align="center" sx={{ color: 'text.secondary', py: 4 }}>
+                                <TableCell colSpan={5} align="center" sx={{ color: theme.palette.text.secondary, py: 4 }}>
                                     {noDataText}
                                 </TableCell>
                             </TableRow>
@@ -585,8 +585,7 @@ export function IngredientReportsListView() {
                             display: 'grid',
                             gridTemplateColumns: 'repeat(8, 1fr)',
                             borderRadius: 1,
-                            border: '1px solid',
-                            borderColor: 'divider',
+                            border: `1px solid ${theme.palette.divider}`,
                             overflow: 'hidden',
                         }}
                     >
@@ -622,7 +621,7 @@ export function IngredientReportsListView() {
                 )}
             </Box>
         );
-    }, [t, movementsLoading, movements, movementsTotals, movementsGroupFilter, noDataText]);
+    }, [t, theme, movementsLoading, movements, movementsTotals, movementsGroupFilter, noDataText]);
 
     const renderAmountsDetailsContent = useCallback((data: any) => {
         if (!data) return null;
