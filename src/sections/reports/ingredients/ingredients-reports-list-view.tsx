@@ -25,6 +25,7 @@ import {
   ToggleButton,
   CircularProgress,
   ToggleButtonGroup,
+  useTheme,
 } from '@mui/material';
 
 import { DashboardContent } from 'src/layouts/dashboard';
@@ -95,6 +96,7 @@ const initialFilters: IngredientReportsFilters = {
 
 export function IngredientReportsListView() {
     const { t } = useTranslation('menu');
+    const theme = useTheme();
     const noDataText = t('noDataAvailable');
 
     // Get filter options from metadata endpoint
@@ -480,7 +482,7 @@ export function IngredientReportsListView() {
 
             if (!lines.length) return null;
             return (
-                <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 0.25 }}>
+                <Typography variant="caption" sx={{ color: theme.palette.text.secondary, display: 'block', mt: 0.25 }}>
                     {lines.join(' · ')}
                 </Typography>
             );
@@ -545,22 +547,22 @@ export function IngredientReportsListView() {
                                             </Typography>
                                             {renderAdditionalData(mov)}
                                         </TableCell>
-                                        <TableCell align="right" sx={{ color: 'text.secondary' }}>
+                                        <TableCell align="right" sx={{ color: theme.palette.text.secondary }}>
                                             {stockBefore.toFixed(2)}
                                         </TableCell>
                                         <TableCell align="right">
                                             {hasIn && (
-                                                <Typography variant="body2" component="span" sx={{ color: 'success.main', display: 'block' }}>
+                                                <Typography variant="body2" component="span" sx={{ color: theme.palette.success.main, display: 'block' }}>
                                                     +{qtyIn.toFixed(2)}
                                                 </Typography>
                                             )}
                                             {hasOut && (
-                                                <Typography variant="body2" component="span" sx={{ color: 'error.main', display: 'block' }}>
+                                                <Typography variant="body2" component="span" sx={{ color: theme.palette.error.main, display: 'block' }}>
                                                     -{qtyOut.toFixed(2)}
                                                 </Typography>
                                             )}
                                             {!hasIn && !hasOut && (
-                                                <Typography variant="body2" component="span" sx={{ color: 'text.secondary' }}>
+                                                <Typography variant="body2" component="span" sx={{ color: theme.palette.text.secondary }}>
                                                     —
                                                 </Typography>
                                             )}
@@ -590,8 +592,8 @@ export function IngredientReportsListView() {
                     >
                         {[
                             { label: t('ingredientReports.beginQty') || 'Begin', value: movementsTotals.begin_qty },
-                            { label: t('ingredientReports.in') || 'In', value: movementsTotals.total_qty_in, color: 'success.main', bg: 'rgba(34,197,94,0.08)' },
-                            { label: t('ingredientReports.out') || 'Out', value: movementsTotals.total_qty_out, color: 'error.main', bg: 'rgba(239,68,68,0.08)' },
+                            { label: t('ingredientReports.in') || 'In', value: movementsTotals.total_qty_in, color: theme.palette.success.main, bg: `${theme.palette.success.main}14` },
+                            { label: t('ingredientReports.out') || 'Out', value: movementsTotals.total_qty_out, color: theme.palette.error.main, bg: `${theme.palette.error.main}14` },
                             { label: t('ingredientReports.surplus') || 'Surplus', value: movementsTotals.surplus_qty },
                             { label: t('ingredientReports.shortage') || 'Shortage', value: movementsTotals.shortage_qty },
                             { label: t('ingredientReports.endQty') || 'End', value: movementsTotals.end_qty },
@@ -603,16 +605,15 @@ export function IngredientReportsListView() {
                                 sx={{
                                     px: 1.5,
                                     py: 1.25,
-                                    backgroundColor: bg ?? 'rgba(0,0,0,0.02)',
-                                    borderRight: i < arr.length - 1 ? '1px solid' : 'none',
-                                    borderColor: 'divider',
+                                    backgroundColor: bg ?? theme.palette.action.hover,
+                                    borderRight: i < arr.length - 1 ? `1px solid ${theme.palette.divider}` : 'none',
                                     textAlign: 'center',
                                 }}
                             >
-                                <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.25, textTransform: 'uppercase', letterSpacing: 0.5, fontSize: '0.65rem' }}>
+                                <Typography variant="caption" sx={{ color: theme.palette.text.secondary, display: 'block', mb: 0.25, textTransform: 'uppercase', letterSpacing: 0.5, fontSize: '0.65rem' }}>
                                     {label}
                                 </Typography>
-                                <Typography variant="body1" sx={{ fontWeight: 700, color: color ?? 'text.primary', lineHeight: 1 }}>
+                                <Typography variant="body1" sx={{ fontWeight: 700, color: color ?? theme.palette.text.primary, lineHeight: 1 }}>
                                     {Number(value).toFixed(2)}
                                 </Typography>
                             </Box>
