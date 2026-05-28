@@ -15,6 +15,7 @@ node_modules
 dist/
 gemini/
 test/
+api-docs/
 # testing
 # coverage
 

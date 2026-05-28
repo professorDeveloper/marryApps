@@ -110,73 +110,67 @@ function groupEndpointsByModule(paths) {
   return modules;
 }
 
-function generateModuleMarkdown(moduleName, modulePaths, apiDoc) {
-  const { info, host, basePath, definitions } = apiDoc;
-  
-  let markdown = `# ${moduleName.charAt(0).toUpperCase() + moduleName.slice(1)} API
+function endpointPathToFileName(endpointPath) {
+  // Convert /api/v1/some-resource/{id}/action -> some-resource_{id}_action
+  return endpointPath
+    .replace(/^\/+/, '')           // strip leading slashes
+    .replace(/\//g, '_')           // replace slashes with underscores
+    .replace(/[{}]/g, '')          // strip curly braces from path params
+    .replace(/[^a-zA-Z0-9_\-]/g, '') // strip any remaining unsafe chars
+    || 'index';
+}
 
-> **Module:** ${moduleName}  
-> **Base URL:** https://${host}${basePath}  
-> **Last Updated:** ${new Date().toISOString()}
+function generateEndpointMarkdown(endpointPath, methods, apiDoc) {
+  const { host, basePath } = apiDoc;
 
----
+  let markdown = `# ${endpointPath}\n\n`;
+  markdown += `> **Base URL:** https://${host}${basePath}  \n`;
+  markdown += `> **Last Updated:** ${new Date().toISOString()}\n\n---\n\n`;
 
-## Endpoints
+  for (const [method, details] of Object.entries(methods)) {
+    const methodUpper = method.toUpperCase();
+    const security = details.security && details.security.length > 0 ? '🔒' : '🔓';
 
-`;
+    markdown += `## ${methodUpper} ${endpointPath} ${security}\n\n`;
+    markdown += `**Summary:** ${details.summary || '-'}\n\n`;
+    markdown += `**Description:** ${details.description || '-'}\n\n`;
 
-  // Generate endpoints documentation for this module
-  for (const [path, methods] of Object.entries(modulePaths)) {
-    markdown += `## ${path}\n\n`;
-    
-    for (const [method, details] of Object.entries(methods)) {
-      const methodUpper = method.toUpperCase();
-      const security = details.security && details.security.length > 0 ? '🔒' : '🔓';
-      
-      markdown += `### ${methodUpper} ${path} ${security}\n\n`;
-      markdown += `**Summary:** ${details.summary}\n\n`;
-      markdown += `**Description:** ${details.description}\n\n`;
-      
-      // Parameters
-      if (details.parameters && details.parameters.length > 0) {
-        markdown += `**Parameters:**\n\n`;
-        markdown += `| Name | Location | Type | Required | Description |\n`;
-        markdown += `|------|----------|------|----------|-------------|\n`;
-        
-        for (const param of details.parameters) {
-          const required = param.required ? 'Yes' : 'No';
-          const type = param.type || param.schema?.type || 'object';
-          markdown += `| ${param.name} | ${param.in} | ${type} | ${required} | ${param.description || '-'} |\n`;
-        }
-        markdown += '\n';
-      }
-      
-      // Request body
-      if (details.parameters && details.parameters.some(p => p.in === 'body')) {
-        const bodyParam = details.parameters.find(p => p.in === 'body');
-        if (bodyParam && bodyParam.schema) {
-          markdown += `**Request Body:**\n\n`;
-          markdown += `\`\`\`json\n${JSON.stringify(bodyParam.schema, null, 2)}\n\`\`\`\n\n`;
-        }
-      }
-      
-      // Responses
-      markdown += `**Responses:**\n\n`;
-      for (const [statusCode, response] of Object.entries(details.responses)) {
-        markdown += `- **${statusCode}**: ${response.description}\n`;
-        if (response.schema) {
-          markdown += `  \`\`\`json\n${JSON.stringify(response.schema, null, 2)}\n\`\`\`\n\n`;
-        }
+    if (details.parameters && details.parameters.length > 0) {
+      markdown += `**Parameters:**\n\n`;
+      markdown += `| Name | Location | Type | Required | Description |\n`;
+      markdown += `|------|----------|------|----------|-------------|\n`;
+
+      for (const param of details.parameters) {
+        const required = param.required ? 'Yes' : 'No';
+        const type = param.type || param.schema?.type || 'object';
+        markdown += `| ${param.name} | ${param.in} | ${type} | ${required} | ${param.description || '-'} |\n`;
       }
       markdown += '\n';
     }
+
+    if (details.parameters && details.parameters.some(p => p.in === 'body')) {
+      const bodyParam = details.parameters.find(p => p.in === 'body');
+      if (bodyParam && bodyParam.schema) {
+        markdown += `**Request Body:**\n\n`;
+        markdown += `\`\`\`json\n${JSON.stringify(bodyParam.schema, null, 2)}\n\`\`\`\n\n`;
+      }
+    }
+
+    markdown += `**Responses:**\n\n`;
+    for (const [statusCode, response] of Object.entries(details.responses)) {
+      markdown += `- **${statusCode}**: ${response.description}\n`;
+      if (response.schema) {
+        markdown += `  \`\`\`json\n${JSON.stringify(response.schema, null, 2)}\n\`\`\`\n\n`;
+      }
+    }
+    markdown += '\n';
   }
-  
+
   return markdown;
 }
 
 function generateIndexMarkdown(modules, apiDoc) {
-  const { info, host, basePath, definitions } = apiDoc;
+  const { info, host, basePath } = apiDoc;
   
   let markdown = `# ${info.title} Documentation
 
@@ -214,8 +208,13 @@ This documentation is organized by functional modules for easier navigation:
   for (const [moduleName, modulePaths] of Object.entries(modules)) {
     const description = moduleDescriptions[moduleName] || `📁 ${moduleName} module`;
     const endpointCount = Object.keys(modulePaths).length;
-    markdown += `### [${moduleName.toUpperCase()}](./${moduleName}.md) - ${description}\n`;
+    markdown += `### [${moduleName.toUpperCase()}](./${moduleName}/) - ${description}\n`;
     markdown += `*${endpointCount} endpoints*\n\n`;
+    for (const endpointPath of Object.keys(modulePaths)) {
+      const fileName = endpointPathToFileName(endpointPath);
+      markdown += `- [\`${endpointPath}\`](./${moduleName}/${fileName}.md)\n`;
+    }
+    markdown += '\n';
   }
 
   markdown += `---
@@ -262,21 +261,26 @@ Common data models are shared across modules. Refer to individual module documen
 
 function generateModularDocumentation(apiDoc) {
   const modules = groupEndpointsByModule(apiDoc.paths);
-  
-  // Ensure output directory exists
+
   if (!fs.existsSync(OUTPUT_DIR)) {
     fs.mkdirSync(OUTPUT_DIR, { recursive: true });
   }
-  
-  // Generate individual module files
+
   for (const [moduleName, modulePaths] of Object.entries(modules)) {
-    const moduleMarkdown = generateModuleMarkdown(moduleName, modulePaths, apiDoc);
-    const moduleFile = path.join(OUTPUT_DIR, `${moduleName}.md`);
-    fs.writeFileSync(moduleFile, moduleMarkdown, 'utf8');
-    console.log(`📝 Generated ${moduleName} module documentation`);
+    const moduleDir = path.join(OUTPUT_DIR, moduleName);
+    if (!fs.existsSync(moduleDir)) {
+      fs.mkdirSync(moduleDir, { recursive: true });
+    }
+
+    for (const [endpointPath, methods] of Object.entries(modulePaths)) {
+      const fileName = endpointPathToFileName(endpointPath);
+      const fileContent = generateEndpointMarkdown(endpointPath, methods, apiDoc);
+      fs.writeFileSync(path.join(moduleDir, `${fileName}.md`), fileContent, 'utf8');
+    }
+
+    console.log(`📝 Generated ${moduleName}/ (${Object.keys(modulePaths).length} endpoints)`);
   }
-  
-  // Generate index file
+
   const indexMarkdown = generateIndexMarkdown(modules, apiDoc);
   fs.writeFileSync(INDEX_FILE, indexMarkdown, 'utf8');
   console.log(`📋 Generated index documentation`);

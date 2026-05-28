@@ -193,9 +193,13 @@ export function GenericTableView<T extends Record<string, any>>({
     return filtered;
   }, [normalizedTableData, filters.state]);
 
+  const [internalPaginationModel, setInternalPaginationModel] = useState<GridPaginationModel>({ page: 0, pageSize: 20 });
+  const useControlledPagination = Boolean(paginationModel && onPaginationModelChange);
+
   // Add row number column when checkboxes are hidden
   const columnsWithRowNumber = useMemo(() => {
     if (hideCheckboxes) {
+      const activePagination = useControlledPagination ? paginationModel! : internalPaginationModel;
       const rowNumberColumn: GridColDef = {
         field: '__rowNumber__',
         headerName: 'N',
@@ -209,13 +213,15 @@ export function GenericTableView<T extends Record<string, any>>({
           const rowIndex = dataFiltered.findIndex(
             (row) => row[idField] === params.row[idField]
           );
-          return rowIndex + 1;
+          const pageOffset = activePagination.page * activePagination.pageSize;
+          return pageOffset + rowIndex + 1;
         },
       };
       return [rowNumberColumn, ...columns];
     }
     return columns;
-  }, [hideCheckboxes, columns, dataFiltered, idField]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hideCheckboxes, columns, dataFiltered, idField, useControlledPagination, paginationModel, internalPaginationModel]);
 
   const handleDeleteRow = useCallback(
     (id: string) => {
@@ -339,7 +345,6 @@ export function GenericTableView<T extends Record<string, any>>({
     );
   }, [renderFooter]);
 
-  const useControlledPagination = Boolean(paginationModel && onPaginationModelChange);
   const effectiveRowCount = useMemo(() => {
     if (typeof rowCount === 'number' && (!loading || rowCount > 0)) {
       rowCountRef.current = rowCount;
@@ -428,8 +433,8 @@ export function GenericTableView<T extends Record<string, any>>({
             pageSizeOptions={pageSizeOptions || [10, 20, 50, 100, 500]}
             paginationMode={paginationMode}
             rowCount={paginationMode === 'server' ? effectiveRowCount : undefined}
-            paginationModel={useControlledPagination ? paginationModel : undefined}
-            onPaginationModelChange={useControlledPagination ? onPaginationModelChange : undefined}
+            paginationModel={useControlledPagination ? paginationModel : internalPaginationModel}
+            onPaginationModelChange={useControlledPagination ? onPaginationModelChange : setInternalPaginationModel}
             initialState={
               useControlledPagination ? undefined : { pagination: { paginationModel: { pageSize: 20 } } }
             }

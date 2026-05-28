@@ -22,6 +22,7 @@ const shouldForwardProp = (prop: string) =>
 export const ItemRoot = styled(ButtonBase, { shouldForwardProp })<StyledState>(({
   active,
   open,
+  variant,
   theme,
 }) => {
   const bulletSvg = `"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' fill='none' viewBox='0 0 14 14'%3E%3Cpath d='M1 1v4a8 8 0 0 0 8 8h4' stroke='%23efefef' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E"`;
@@ -44,36 +45,6 @@ export const ItemRoot = styled(ButtonBase, { shouldForwardProp })<StyledState>((
     }),
   };
 
-  const rootItemStyles: CSSObject = {
-    minHeight: 'var(--nav-item-root-height)',
-    ...(open && {
-      color: 'var(--text)',
-      backgroundColor: 'var(--hover)',
-    }),
-    ...(active && {
-      color: 'var(--accent)',
-      backgroundColor: 'color-mix(in srgb, var(--accent) 14%, transparent)',
-      borderLeft: '3px solid var(--accent)',
-      paddingLeft: 'calc(var(--nav-item-pl) - 3px)',
-      '&:hover': {
-        backgroundColor: 'color-mix(in srgb, var(--accent) 20%, transparent)',
-      },
-    }),
-  };
-
-  const subItemStyles: CSSObject = {
-    minHeight: 'var(--nav-item-sub-height)',
-    '&::before': bulletStyles,
-    ...(open && {
-      color: 'var(--text)',
-    }),
-    ...(active && {
-      color: 'var(--accent)',
-      backgroundColor: 'color-mix(in srgb, var(--accent) 14%, transparent)',
-      fontWeight: 600,
-    }),
-  };
-
   return {
     width: '100%',
     paddingTop: 'var(--nav-item-pt)',
@@ -85,11 +56,35 @@ export const ItemRoot = styled(ButtonBase, { shouldForwardProp })<StyledState>((
     transition: 'background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease',
     '&:hover': { backgroundColor: 'var(--hover)' },
     '&:active': { transform: 'scale(0.97)' },
-    variants: [
-      { props: { variant: 'rootItem' }, style: rootItemStyles },
-      { props: { variant: 'subItem' }, style: subItemStyles },
-      { props: { disabled: true }, style: navItemStyles.disabled },
-    ],
+    ...(variant === 'rootItem' && {
+      minHeight: 'var(--nav-item-root-height)',
+      ...(open && !active && {
+        color: 'var(--text)',
+        backgroundColor: 'var(--hover)',
+      }),
+      ...(active && {
+        color: 'var(--accent)',
+        backgroundColor: 'color-mix(in srgb, var(--accent) 14%, transparent)',
+        borderLeft: '3px solid var(--accent)',
+        paddingLeft: 'calc(var(--nav-item-pl) - 3px)',
+        '&:hover': {
+          backgroundColor: 'color-mix(in srgb, var(--accent) 20%, transparent)',
+        },
+      }),
+    }),
+    ...(variant === 'subItem' && {
+      minHeight: 'var(--nav-item-sub-height)',
+      '&::before': bulletStyles,
+      ...(open && !active && {
+        color: 'var(--text)',
+      }),
+      ...(active && {
+        color: 'var(--accent)',
+        backgroundColor: 'color-mix(in srgb, var(--accent) 14%, transparent)',
+        fontWeight: 600,
+      }),
+    }),
+    ...(navItemStyles.disabled && { '&.Mui-disabled': navItemStyles.disabled }),
   };
 });
 
@@ -118,7 +113,7 @@ export const ItemTitle = styled('span', { shouldForwardProp })<StyledState>(({ t
 /**
  * @slot info
  */
-export const ItemInfo = styled('span', { shouldForwardProp })<StyledState>(({ theme }) => ({
+export const ItemInfo = styled('span', { shouldForwardProp })<StyledState>(() => ({
   ...navItemStyles.info,
 }));
 

@@ -126,7 +126,7 @@ export const MealIngredientsSection = React.memo(function MealIngredientsSection
                 step: '0.01',
                 min: '0',
                 align: 'center' as const,
-                suffix: (item: PickerItem) => item.measurement ?? '',
+                suffix: (item: PickerItem) => item.measurement ? t(`units.${item.measurement}`, { defaultValue: item.measurement }) : '',
             },
         ],
         [t]

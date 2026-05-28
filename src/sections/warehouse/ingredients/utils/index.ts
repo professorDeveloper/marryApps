@@ -1,15 +1,7 @@
 
 export const getMeasurementLabel = (value: string, t: any): string => {
-  switch (value) {
-    case 'kg':
-      return t('ingredients.measurementKg');
-    case 'l':
-      return t('ingredients.measurementL');
-    case 'piece':
-      return t('ingredients.measurementDona');
-    default:
-      return value;
-  }
+  if (!value || value === '-') return value;
+  return t(`units.${value}`, { defaultValue: value });
 };
 
 export const formatIngredientPrice = (price: number | string | undefined): string => {

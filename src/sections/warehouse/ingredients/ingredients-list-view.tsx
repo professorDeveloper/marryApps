@@ -272,7 +272,7 @@ export function IngredientListView() {
                 <Typography variant="subtitle2" sx={{ color: 'text.secondary', mb: 0.5 }}>
                     {t('warehouse.measurement')}
                 </Typography>
-                <Typography variant="body2">{ingredient.measurement}</Typography>
+                <Typography variant="body2">{t(`units.${ingredient.measurement}`, { defaultValue: ingredient.measurement })}</Typography>
             </Box>
             <Box>
                 <Typography variant="subtitle2" sx={{ color: 'text.secondary', mb: 0.5 }}>

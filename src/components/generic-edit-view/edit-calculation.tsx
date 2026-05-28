@@ -1034,7 +1034,7 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
                                                     </Typography>
                                                 </Box>
                                                 <Box sx={{ width: '20%' }}>
-                                                    <Typography variant="body2" color="text.secondary">{ingredient.measurement}</Typography>
+                                                    <Typography variant="body2" color="text.secondary">{t(`units.${ingredient.measurement}`, { defaultValue: ingredient.measurement })}</Typography>
                                                 </Box>
                                                 <Box sx={{ width: '20%' }}>
                                                     <Typography variant="body2" color="text.secondary">
@@ -1265,7 +1265,7 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
                                                     </Typography>
                                                 </Box>
                                                 <Box sx={{ width: '30%' }}>
-                                                    <Typography variant="body2" color="text.secondary">{ingredient.measurement}</Typography>
+                                                    <Typography variant="body2" color="text.secondary">{t(`units.${ingredient.measurement}`, { defaultValue: ingredient.measurement })}</Typography>
                                                 </Box>
                                                 <Box sx={{ width: '30%' }}>
                                                     <TextField
@@ -1361,7 +1361,7 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
                                                 </Typography>
                                             </Box>
                                             <Box sx={{ width: '25%' }}>
-                                                <Typography variant="body2" color="text.secondary">{compound.measurement || 'kg'}</Typography>
+                                                <Typography variant="body2" color="text.secondary">{t(`units.${compound.measurement || 'kg'}`, { defaultValue: compound.measurement || 'kg' })}</Typography>
                                             </Box>
                                             <Box sx={{ width: '25%', textAlign: 'right' }}>
                                                 <Typography variant="body2" fontWeight="bold" color="text.primary">
@@ -1586,7 +1586,7 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
                                                     </Typography>
                                                 </Box>
                                                 <Box sx={{ width: '30%' }}>
-                                                    <Typography variant="body2" color="text.secondary">{compound.measurement || 'kg'}</Typography>
+                                                    <Typography variant="body2" color="text.secondary">{t(`units.${compound.measurement || 'kg'}`, { defaultValue: compound.measurement || 'kg' })}</Typography>
                                                 </Box>
                                                 <Box sx={{ width: '30%' }}>
                                                     <TextField

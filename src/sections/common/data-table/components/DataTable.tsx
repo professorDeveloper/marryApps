@@ -642,6 +642,7 @@ export function DataTable<T>({
           emptyTitle={emptyTitle}
           emptySubtitle={emptySubtitle}
           onRowClick={onRowClick}
+          pageOffset={page * rowsPerPage}
         />
 
         {showTotals && (

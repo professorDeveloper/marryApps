@@ -447,7 +447,7 @@ export function InventoryDetailsCalculation({
                                         </Box>
                                         <Box sx={{ width: '20%' }}>
                                             <Typography variant="caption" color="text.secondary">
-                                                {ingredient.measurement}
+                                                {t(`units.${ingredient.measurement}`, { defaultValue: ingredient.measurement })}
                                             </Typography>
                                         </Box>
                                         <Box sx={{ width: '30%', textAlign: 'right' }}>
@@ -590,7 +590,7 @@ export function InventoryDetailsCalculation({
                                         </Box>
                                         <Box sx={{ width: '30%' }}>
                                             <Typography variant="caption" color="text.secondary">
-                                                {ingredient.measurement}
+                                                {t(`units.${ingredient.measurement}`, { defaultValue: ingredient.measurement })}
                                             </Typography>
                                         </Box>
                                         <Box sx={{ width: '20%', textAlign: 'center' }}>

@@ -10,6 +10,7 @@ import {
     Paper,
     Stack,
     Button,
+    Checkbox,
     TextField,
     Typography,
     InputAdornment,
@@ -31,14 +32,15 @@ interface AvailableTableProps {
     onSearchChange: (value: string) => void;
     selectedKeys: Set<string>;
     onSelectChange: (key: string, checked: boolean) => void;
-    onSelectAll?: () => void;
+    onSelectAll: () => void;
     onAddItem: (item: MealItem) => void;
     onAddSelected: () => void;
-    allChecked?: boolean;
-    indeterminate?: boolean;
+    allChecked: boolean;
+    indeterminate: boolean;
     ingredientLabel: string;
     compoundLabel: string;
     tableHeight?: string | number;
+    metaFieldsOpen?: boolean;
 }
 
 export const AvailableTable = React.memo(function AvailableTable({
@@ -58,6 +60,7 @@ export const AvailableTable = React.memo(function AvailableTable({
     ingredientLabel,
     compoundLabel,
     tableHeight,
+    metaFieldsOpen,
 }: AvailableTableProps) {
     const renderStartedAtRef = React.useRef<number>(performance.now());
     renderStartedAtRef.current = performance.now();
@@ -71,27 +74,29 @@ export const AvailableTable = React.memo(function AvailableTable({
         overscan: 6,
     });
 
-    
+    const calculatedHeight = metaFieldsOpen !== undefined 
+        ? (metaFieldsOpen ? 'calc(100vh - 320px)' : 'calc(100vh - 200px)')
+        : tableHeight;
+
     React.useLayoutEffect(() => {
         const durationMs = performance.now() - renderStartedAtRef.current;
         if (durationMs < 80) return;
     });
 
     return (
-        <Paper
-         variant="outlined" 
-         sx={{ p: 2,
-          position: 'relative', 
-          display: 'flex', 
-          flexDirection: 'column', 
-          height: typeof tableHeight === 'number' ? tableHeight + 42 : 'auto', 
-          borderColor: 'var(--border)', 
-          bgcolor: 'var(--surface)', 
-          fontFamily: '"Inter", sans-serif',
-          mb:2.5,
-        
-          
-          }}>
+        <Paper 
+        variant="outlined"
+        elevation={2}
+        sx={{ p: 2, 
+        position: 'relative', 
+        display: 'flex', 
+        flexDirection: 'column',
+         height: calculatedHeight, 
+         borderColor: 'var(--color-border)', 
+         bgcolor: 'var(--color-surface-1)', 
+         fontFamily: '"Inter", sans-serif',
+         boxShadow: '0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.03)',
+         }}>
             <Stack
                 direction={{ xs: 'column' }}
                 spacing={1}
@@ -100,7 +105,7 @@ export const AvailableTable = React.memo(function AvailableTable({
                 sx={{ mb: 2, flexShrink: 1 }}
             >
                 <Typography variant="h6" sx={{ fontFamily: '"Inter", sans-serif' }}>
-                    {t('mealsProducts.availableItems')}
+                    {t('mealsProducts.availableItems', 'Available Items')}
                 </Typography>
                 {/* <Stack direction="row" spacing={1} alignItems="center" justifyContent="flex-end"> */}
                 <TypeFilterToggle
@@ -112,16 +117,23 @@ export const AvailableTable = React.memo(function AvailableTable({
 
                 {/* </Stack> */}
             </Stack>
-            <Box sx={{ mb: 2, flexShrink: 0 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2, flexShrink: 0 }}>
+                <Checkbox
+                    size="small"
+                    checked={allChecked}
+                    indeterminate={indeterminate}
+                    onChange={onSelectAll}
+                    slotProps={{ input: { 'aria-label': 'select all available' } }}
+                />
                 <TextField
                     size="small"
                     fullWidth
-                    placeholder={t('search')}
+                    placeholder={t('search', 'Search')}
                     value={search}
                     onChange={(e) => onSearchChange(e.target.value)}
                     sx={{
                         '& .MuiOutlinedInput-root': {
-                            bgcolor: 'var(--surface-2)',
+                            bgcolor: 'var(--color-surface-1)',
                         },
                     }}
                     InputProps={{
@@ -204,7 +216,7 @@ export const AvailableTable = React.memo(function AvailableTable({
                             boxShadow: 2,
                         }}
                     >
-                        {t('mealsProducts.addSelected')} ({selectedKeys.size})
+                        {t('mealsProducts.addSelected', 'Add Selected')} ({selectedKeys.size})
                     </Button>
                 </Box>
             )}

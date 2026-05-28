@@ -183,7 +183,7 @@ function CompoundCalculationsTable({
                                             fontSize: '0.875rem',
                                             fontWeight: 400
                                         }}>
-                                            {calc.measurement_unit}
+                                            {t(`units.${calc.measurement_unit}`, { defaultValue: calc.measurement_unit })}
                                         </Box>
                                     </TableCell>
                                     <TableCell align="right">
@@ -337,7 +337,7 @@ function renderCompoundSpecifications(item: ICompound, t: any) {
                     fontSize: '0.875rem',
                     fontWeight: 400
                 }}>
-                    {t(`semifinishedProducts.${item.measurement}`, item.measurement)}
+                    {t(`units.${item.measurement}`, { defaultValue: item.measurement })}
                 </Box>
             </Box>
             <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>

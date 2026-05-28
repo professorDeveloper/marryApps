@@ -446,6 +446,7 @@ export const endpoints = {
   ingredientReports: {
     list: '/api/v1/ingredient-reports',
     details: (ingredientId: string) => `/api/v1/ingredient-reports/${ingredientId}`,
+    movements: (ingredientId: string) => `/api/v1/ingredient-reports/${ingredientId}/movements`,
     inventoryStatus: '/api/v1/ingredient-reports/inventory-status',
   },
   goodsReports: {

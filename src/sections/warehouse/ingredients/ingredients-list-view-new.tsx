@@ -89,7 +89,7 @@ export function IngredientListView() {
                 {ingredient.measurement && (
                     <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                         <Box sx={{ fontWeight: 500 }}>{t('warehouse.measurement')}:</Box>
-                        <Box>{ingredient.measurement}</Box>
+                        <Box>{t(`units.${ingredient.measurement}`, { defaultValue: ingredient.measurement })}</Box>
                     </Box>
                 )}
                 {ingredient.price_per_unit && (

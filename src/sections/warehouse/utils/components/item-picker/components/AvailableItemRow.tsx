@@ -1,6 +1,7 @@
 import type { AvailableItemRowProps } from '../types';
 
 import { memo } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { Box, Checkbox, Typography } from '@mui/material';
 
@@ -19,6 +20,7 @@ export const AvailableItemRow = memo(function AvailableItemRow({
     onToggleSelect,
     onRowActivate,
 }: AvailableItemRowProps) {
+    const { t } = useTranslation('menu');
     return (
         <Box
             onClick={() => onRowActivate?.(item.id)}
@@ -50,7 +52,7 @@ export const AvailableItemRow = memo(function AvailableItemRow({
                 </Typography>
                 {item.measurement && (
                     <Typography variant="caption" color="text.secondary" noWrap>
-                        {item.measurement}
+                        {t(`units.${item.measurement}`, { defaultValue: item.measurement })}
                     </Typography>
                 )}
             </Box>

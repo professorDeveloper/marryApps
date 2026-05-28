@@ -340,7 +340,7 @@ export function DeductionsDetailsCalculation({
                                     <Box sx={{ flex: 1, ml: 1 }}>
                                         <Typography variant="subtitle2">{ing.name}</Typography>
                                         <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                                            {ing.measurement}
+                                            {t(`units.${ing.measurement}`, { defaultValue: ing.measurement })}
                                         </Typography>
                                     </Box>
                                 </Box>
@@ -420,7 +420,7 @@ export function DeductionsDetailsCalculation({
                                             InputProps={{
                                                 endAdornment: (
                                                     <InputAdornment position="end">
-                                                        {item.measurement}
+                                                        {t(`units.${item.measurement}`, { defaultValue: item.measurement })}
                                                     </InputAdornment>
                                                 ),
                                             }}
@@ -489,7 +489,7 @@ export function DeductionsDetailsCalculation({
                                     <TableRow key={item.id} hover>
                                         <TableCell>{item.name}</TableCell>
                                         <TableCell align="right">
-                                            {quantities[item.id] || '0'} {item.measurement}
+                                            {quantities[item.id] || '0'} {t(`units.${item.measurement}`, { defaultValue: item.measurement })}
                                         </TableCell>
                                         <TableCell align="right">{formatPrice(Number(item.price_per_unit))} UZS</TableCell>
                                         <TableCell align="right">

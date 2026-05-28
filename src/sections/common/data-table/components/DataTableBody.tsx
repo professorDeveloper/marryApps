@@ -30,6 +30,7 @@ export type DataTableBodyProps<T> = {
   emptyTitle: string;
   emptySubtitle: string;
   onRowClick?: (row: T) => void;
+  pageOffset?: number;
 };
 
 export function DataTableBody<T>({
@@ -52,6 +53,7 @@ export function DataTableBody<T>({
   emptyTitle,
   emptySubtitle,
   onRowClick,
+  pageOffset = 0,
 }: DataTableBodyProps<T>) {
   const rowVirtualizer = useVirtualizer({
     count: data.length,
@@ -123,7 +125,7 @@ export function DataTableBody<T>({
                 <DataTableRow<T>
                   row={row}
                   rowId={rowId}
-                  index={virtualRow.index}
+                  index={pageOffset + virtualRow.index}
                   columns={columns}
                   colOrder={colOrder}
                   visibility={visibility}

@@ -346,7 +346,7 @@ export function TransfersDetailsCalculation({
                     </Box>
                     <Box sx={{ width: '20%' }}>
                       <Typography variant="caption" color="text.secondary">
-                        {ingredient.measurement}
+                        {t(`units.${ingredient.measurement}`, { defaultValue: ingredient.measurement })}
                       </Typography>
                     </Box>
                     <Box sx={{ width: '15%', textAlign: 'center' }}>
@@ -442,7 +442,7 @@ export function TransfersDetailsCalculation({
                     </Box>
                     <Box sx={{ width: '20%' }}>
                       <Typography variant="caption" color="text.secondary">
-                        {ingredient.measurement}
+                        {t(`units.${ingredient.measurement}`, { defaultValue: ingredient.measurement })}
                       </Typography>
                     </Box>
                     <Box sx={{ width: '15%', textAlign: 'center' }}>

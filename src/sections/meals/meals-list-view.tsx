@@ -180,7 +180,7 @@ function MealCalculationsTable({ mealId }: { mealId: string }) {
                                     </TableCell>
 
                                     <TableCell align="center">
-                                        {calc.measurement_unit}
+                                        {t(`units.${calc.measurement_unit}`, { defaultValue: calc.measurement_unit })}
                                     </TableCell>
 
                                     <TableCell align="right">
