@@ -10,21 +10,26 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import {
   Box,
   Table,
+  Select,
   Tooltip,
+  MenuItem,
   TableRow,
   TextField,
   TableBody,
   TableCell,
   TableHead,
   IconButton,
+  InputLabel,
   Typography,
+  FormControl,
   ToggleButton,
   CircularProgress,
   ToggleButtonGroup,
 } from '@mui/material';
 
 import { DashboardContent } from 'src/layouts/dashboard';
-import { useGetIngredientReports, useGetIngredientReportDetail } from 'src/actions/ingredient-reports';
+import { useGetIngredientReports, useGetIngredientMovements } from 'src/actions/ingredient-reports';
+import { IngredientMovementEventType, MOVEMENT_FILTER_GROUPS } from 'src/types/ingredient-reports';
 import { useMetadata } from 'src/hooks/use-metadata';
 import { MetadataEntity } from 'src/types/metadata';
 import { usePaginationRows } from 'src/hooks/use-pagination-rows';
@@ -117,6 +122,9 @@ export function IngredientReportsListView() {
     const [openAmountsModal, setOpenAmountsModal] = useState(false);
     const [selectedAmountsData, setSelectedAmountsData] = useState<any | null>(null);
 
+    // Movements modal state — filter is a group label ('' = all)
+    const [movementsGroupFilter, setMovementsGroupFilter] = useState('');
+
     // Update filters when draft filters change
     useEffect(() => {
         setPaginationModel((prev) => ({ ...prev, page: 0 }));
@@ -181,12 +189,22 @@ export function IngredientReportsListView() {
         setRowCount(reportsPagination?.total ?? totals?.total_count ?? 0);
     }, [reportsPagination, totals]);
 
-    // Get ingredient report detail for modal
-    const { report: reportDetail, reportLoading } = useGetIngredientReportDetail(
-        selectedIngredientId || '',
-        selectedStorageId,
-        startDate ? toUtcDayBoundary(startDate) : '',
-        endDate ? toUtcDayBoundary(endDate, true) : ''
+    // Resolve selected group to its event type values
+    const movementsEventTypes = useMemo(() => {
+        if (!movementsGroupFilter) return [];
+        const group = MOVEMENT_FILTER_GROUPS.find((g) => g.label === movementsGroupFilter);
+        return group ? group.values : [];
+    }, [movementsGroupFilter]);
+
+    // Get ingredient movements for detail modal
+    const { movements, movementsTotals, movementsLoading } = useGetIngredientMovements(
+        selectedIngredientId,
+        {
+            storage_id: selectedStorageId,
+            start: startDate ? toUtcDayBoundary(startDate) : undefined,
+            end: endDate ? toUtcDayBoundary(endDate, true) : undefined,
+            event_types: movementsEventTypes,
+        }
     );
 
     // Prepare filter options from metadata
@@ -234,15 +252,19 @@ export function IngredientReportsListView() {
     }, []);
 
     // View ingredient details
+    const [selectedIngredientName, setSelectedIngredientName] = useState<string>('');
     const handleViewClick = useCallback((rowData: any) => {
         setSelectedIngredientId(rowData.ingredient_id);
+        setSelectedIngredientName(rowData.ingredient_name || '');
         setOpenDetailsModal(true);
     }, []);
 
     // Modal close handlers
     const handleDetailsModalClose = useCallback(() => {
         setSelectedIngredientId(null);
+        setSelectedIngredientName('');
         setOpenDetailsModal(false);
+        setMovementsGroupFilter('');
     }, []);
 
     const handleAmountsModalClose = useCallback(() => {
@@ -422,105 +444,184 @@ export function IngredientReportsListView() {
 
   
 
-    // Render ingredient report detail modal content
-    const renderReportDetailsContent = useCallback((data: any) => {
-        if (reportLoading) {
+    // Render ingredient movements in detail modal
+    const renderReportDetailsContent = useCallback((_data: any) => {
+        if (movementsLoading) {
             return (
-                <Box
-                    sx={{
-                        display: 'flex',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        minHeight: '300px',
-                    }}
-                >
+                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '300px' }}>
                     <CircularProgress />
                 </Box>
             );
         }
 
-        if (!data) return null;
+        const renderAdditionalData = (mov: any) => {
+            const ad = mov.additional_data;
+            if (!ad) return null;
 
-        const statsCards = [
-            {
-                label: t('ingredientReports.begin') || 'Begin',
-                qty: Number(data.begin_quantity).toFixed(2),
-            },
-            {
-                label: t('ingredientReports.end') || 'End',
-                qty: Number(data.end_quantity).toFixed(2),
-            },
-            {
-                label: t('ingredientReports.in') || 'In',
-                qty: Number(data.in).toFixed(2),
-            },
-            {
-                label: t('ingredientReports.out') || 'Out',
-                qty: Number(data.out).toFixed(2),
-            },
-            {
-                label: t('ingredientReports.surplus') || 'Surplus',
-                qty: Number(data.surplus).toFixed(2),
-            },
-            {
-                label: t('ingredientReports.shortage') || 'Shortage',
-                qty: Number(data.shortage).toFixed(2),
-            },
-        ];
+            const et: string = mov.event_type;
+            const lines: string[] = [];
+
+            if (et === 'order_out') {
+                const d = ad as { bill_no?: number; goods?: { name: string }[] };
+                if (d.bill_no != null) lines.push(`#${d.bill_no}`);
+                if (d.goods?.length) lines.push(d.goods.map((g: any) => g.name).join(', '));
+            } else if (et === 'invoice') {
+                const d = ad as { total_amount?: string; status?: string; date?: string };
+                if (d.status) lines.push(d.status);
+                if (d.total_amount) lines.push(d.total_amount);
+                if (d.date) lines.push(d.date.slice(0, 10));
+            } else {
+                const d = ad as { number?: number; description?: string; status?: string; total_amount?: string };
+                if (d.number != null) lines.push(`#${d.number}`);
+                if (d.description) lines.push(d.description);
+                if (d.status) lines.push(d.status);
+                if (d.total_amount) lines.push(d.total_amount);
+            }
+
+            if (!lines.length) return null;
+            return (
+                <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 0.25 }}>
+                    {lines.join(' · ')}
+                </Typography>
+            );
+        };
 
         return (
             <Box>
-                {/* Header Info */}
-                <Box sx={{ mb: 3, pb: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
-                    <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2 }}>
-                        <Box>
-                            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                                {t('ingredientReports.unit') || 'Unit'}
-                            </Typography>
-                            <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                {data.measurement === 'kg'
-                                    ? 'kg'
-                                    : data.measurement === 'l'
-                                        ? 'l'
-                                        : 'dona'}
-                            </Typography>
-                        </Box>
-                    </Box>
-                </Box>
+                {/* Group filter */}
+                <FormControl size="small" sx={{ mb: 2, minWidth: 200 }}>
+                    <InputLabel>{t('ingredientReports.eventType') || 'Event Type'}</InputLabel>
+                    <Select
+                        label={t('ingredientReports.eventType') || 'Event Type'}
+                        value={movementsGroupFilter}
+                        onChange={(e) => {
+                            setMovementsGroupFilter(e.target.value);
+                        }}
+                    >
+                        <MenuItem value="">{t('ingredientReports.allEventTypes') || 'All'}</MenuItem>
+                        {MOVEMENT_FILTER_GROUPS.map((group) => (
+                            <MenuItem key={group.label} value={group.label}>
+                                {t(`ingredientReports.filterGroups.${group.label}`, { defaultValue: group.label })}
+                            </MenuItem>
+                        ))}
+                    </Select>
+                </FormControl>
 
-                {/* Stats Grid */}
-                <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 2 }}>
-                    {t('ingredientReports.summary') || 'Summary'}
-                </Typography>
+                {/* Movements table */}
+                <Table size="small">
+                    <TableHead>
+                        <TableRow>
+                            <TableCell>{t('ingredientReports.date') || 'Date'}</TableCell>
+                            <TableCell>{t('ingredientReports.eventType') || 'Event Type'}</TableCell>
+                            <TableCell align="right">{t('ingredientReports.stockBefore') || 'Before'}</TableCell>
+                            <TableCell align="right">{t('ingredientReports.change') || 'Change'}</TableCell>
+                            <TableCell align="right">{t('ingredientReports.stockAfter') || 'After'}</TableCell>
+                        </TableRow>
+                    </TableHead>
+                    <TableBody>
+                        {movements.length === 0 ? (
+                            <TableRow>
+                                <TableCell colSpan={5} align="center" sx={{ color: 'text.secondary', py: 4 }}>
+                                    {noDataText}
+                                </TableCell>
+                            </TableRow>
+                        ) : (
+                            movements.map((mov, idx) => {
+                                const dateStr = mov.effective_at || mov.created_at;
+                                const qtyIn = Number(mov.qty_in ?? 0);
+                                const qtyOut = Number(mov.qty_out ?? 0);
+                                const stockBefore = Number(mov.stock_before ?? 0);
+                                const stockAfter = Number(mov.stock_after ?? 0);
+                                const hasIn = qtyIn > 0;
+                                const hasOut = qtyOut > 0;
+                                return (
+                                    <TableRow key={mov.id ?? idx}>
+                                        <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                                            {dateStr ? dateStr.slice(0, 10) : '—'}
+                                        </TableCell>
+                                        <TableCell>
+                                            <Typography variant="body2">
+                                                {t(`ingredientReports.eventTypes.${mov.event_type}`, { defaultValue: mov.event_type })}
+                                            </Typography>
+                                            {renderAdditionalData(mov)}
+                                        </TableCell>
+                                        <TableCell align="right" sx={{ color: 'text.secondary' }}>
+                                            {stockBefore.toFixed(2)}
+                                        </TableCell>
+                                        <TableCell align="right">
+                                            {hasIn && (
+                                                <Typography variant="body2" component="span" sx={{ color: 'success.main', display: 'block' }}>
+                                                    +{qtyIn.toFixed(2)}
+                                                </Typography>
+                                            )}
+                                            {hasOut && (
+                                                <Typography variant="body2" component="span" sx={{ color: 'error.main', display: 'block' }}>
+                                                    -{qtyOut.toFixed(2)}
+                                                </Typography>
+                                            )}
+                                            {!hasIn && !hasOut && (
+                                                <Typography variant="body2" component="span" sx={{ color: 'text.secondary' }}>
+                                                    —
+                                                </Typography>
+                                            )}
+                                        </TableCell>
+                                        <TableCell align="right" sx={{ fontWeight: 600 }}>
+                                            {stockAfter.toFixed(2)}
+                                        </TableCell>
+                                    </TableRow>
+                                );
+                            })
+                        )}
+                    </TableBody>
+                </Table>
 
-                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' }, gap: 2, mb: 3 }}>
-                    {statsCards.map((card, index) => (
-                        <Box
-                            key={index}
-                            sx={{
-                                p: 1.5,
-                                backgroundColor: 'rgba(0, 0, 0, 0.02)',
-                                borderRadius: 1,
-                                border: '1px solid',
-                                borderColor: 'divider',
-                            }}
-                        >
-                            <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5 }}>
-                                {card.label}
-                            </Typography>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <Box>
-                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                        {card.qty}
-                                    </Typography>
-                                </Box>
+                {/* Totals */}
+                {movementsTotals && (
+                    <Box
+                        sx={{
+                            mt: 2,
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(8, 1fr)',
+                            borderRadius: 1,
+                            border: '1px solid',
+                            borderColor: 'divider',
+                            overflow: 'hidden',
+                        }}
+                    >
+                        {[
+                            { label: t('ingredientReports.beginQty') || 'Begin', value: movementsTotals.begin_qty },
+                            { label: t('ingredientReports.in') || 'In', value: movementsTotals.total_qty_in, color: 'success.main', bg: 'rgba(34,197,94,0.08)' },
+                            { label: t('ingredientReports.out') || 'Out', value: movementsTotals.total_qty_out, color: 'error.main', bg: 'rgba(239,68,68,0.08)' },
+                            { label: t('ingredientReports.surplus') || 'Surplus', value: movementsTotals.surplus_qty },
+                            { label: t('ingredientReports.shortage') || 'Shortage', value: movementsTotals.shortage_qty },
+                            { label: t('ingredientReports.endQty') || 'End', value: movementsTotals.end_qty },
+                            { label: t('ingredientReports.beginCost') || 'Begin Price', value: movementsTotals.begin_price },
+                            { label: t('ingredientReports.endCost') || 'End Price', value: movementsTotals.end_price },
+                        ].map(({ label, value, color, bg }, i, arr) => (
+                            <Box
+                                key={label}
+                                sx={{
+                                    px: 1.5,
+                                    py: 1.25,
+                                    backgroundColor: bg ?? 'rgba(0,0,0,0.02)',
+                                    borderRight: i < arr.length - 1 ? '1px solid' : 'none',
+                                    borderColor: 'divider',
+                                    textAlign: 'center',
+                                }}
+                            >
+                                <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.25, textTransform: 'uppercase', letterSpacing: 0.5, fontSize: '0.65rem' }}>
+                                    {label}
+                                </Typography>
+                                <Typography variant="body1" sx={{ fontWeight: 700, color: color ?? 'text.primary', lineHeight: 1 }}>
+                                    {Number(value).toFixed(2)}
+                                </Typography>
                             </Box>
-                        </Box>
-                    ))}
-                </Box>
+                        ))}
+                    </Box>
+                )}
             </Box>
         );
-    }, [t, reportLoading]);
+    }, [t, movementsLoading, movements, movementsTotals, movementsGroupFilter, noDataText]);
 
     const renderAmountsDetailsContent = useCallback((data: any) => {
         if (!data) return null;
@@ -669,9 +770,9 @@ export function IngredientReportsListView() {
             <GenericViewModal
                 isOpen={openDetailsModal}
                 onClose={handleDetailsModalClose}
-                title={reportDetail ? reportDetail.ingredient_name : t('ingredientReports.title') || 'Ingredient Report'}
-                data={reportDetail}
-                loading={reportLoading}
+                title={selectedIngredientName || t('ingredientReports.movements') || 'Movements'}
+                data={movements}
+                loading={movementsLoading}
                 renderContent={renderReportDetailsContent}
                 maxWidth="lg"
                 position="right"

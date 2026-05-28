@@ -2,7 +2,8 @@
   "units": {
     "kg": "кг",
     "piece": "шт",
-    "l": "л"
+    "l": "л",
+    "ml": "мл"
   },
   "app": "Меню",
   "job": "Работа",
@@ -1127,7 +1128,43 @@
     "shortageAmount": "Сумма недостачи",
     "all": "Все",
     "totalCount": "Общее количество",
-    "totalOrderOutAmount": "Общая сумма расходов по заказам"
+    "totalOrderOutAmount": "Общая сумма расходов по заказам",
+    "movements": "Движения",
+    "eventType": "Тип события",
+    "allEventTypes": "Все",
+    "date": "Дата",
+    "stockBefore": "До",
+    "change": "Изменение",
+    "stockAfter": "После",
+    "eventTypes": {
+      "invoice": "Накладная",
+      "order_out": "Расход по заказу",
+      "deduction_in": "Списание (приход)",
+      "deduction_out": "Списание (расход)",
+      "transfer_in": "Перемещение (приход)",
+      "transfer_out": "Перемещение (расход)",
+      "outgoing_invoice": "Исходящая накладная",
+      "separation_act_in": "Акт разделения (приход)",
+      "separation_act_out": "Акт разделения (расход)",
+      "shipment_in": "Отгрузка (приход)",
+      "shipment_out": "Отгрузка (расход)",
+      "inventory_surplus": "Инвентаризация (излишек)",
+      "inventory_shortage": "Инвентаризация (недостача)",
+      "manual_in": "Ручной ввод (приход)",
+      "manual_out": "Ручной ввод (расход)",
+      "manual_adjustment": "Ручная корректировка"
+    },
+    "filterGroups": {
+      "Invoice": "Накладная",
+      "Order Out": "Расход по заказу",
+      "Outgoing Invoice": "Исходящая накладная",
+      "Transfer": "Перемещение",
+      "Deduction": "Списание",
+      "Shipment": "Отгрузка",
+      "Separation Act": "Акт разделения",
+      "Inventory": "Инвентаризация",
+      "Manual": "Ручной ввод"
+    }
   },
   "goodsReports": {
     "title": "Отчет по блюдам",

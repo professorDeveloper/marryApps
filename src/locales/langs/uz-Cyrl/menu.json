@@ -2,7 +2,8 @@
   "units": {
     "kg": "кг",
     "piece": "дона",
-    "l": "л"
+    "l": "л",
+    "ml": "мл"
   },
   "app": "Меню",
   "job": "Иш",
@@ -1122,7 +1123,43 @@
     "shortageAmount": "Камомад суммаси",
     "all": "Барчаси",
     "totalCount": "Жами сони",
-    "totalOrderOutAmount": "Жами чиқим суммаси"
+    "totalOrderOutAmount": "Жами чиқим суммаси",
+    "movements": "Ҳаракатлар",
+    "eventType": "Ҳодиса тури",
+    "allEventTypes": "Барчаси",
+    "date": "Сана",
+    "stockBefore": "Олдин",
+    "change": "Ўзгариш",
+    "stockAfter": "Кейин",
+    "eventTypes": {
+      "invoice": "Ҳисоб-фактура",
+      "order_out": "Буюртма чиқими",
+      "deduction_in": "Чегирма (кирим)",
+      "deduction_out": "Чегирма (чиқим)",
+      "transfer_in": "Кўчириш (кирим)",
+      "transfer_out": "Кўчириш (чиқим)",
+      "outgoing_invoice": "Чиқувчи ҳисоб-фактура",
+      "separation_act_in": "Ажратиш акти (кирим)",
+      "separation_act_out": "Ажратиш акти (чиқим)",
+      "shipment_in": "Етказиб бериш (кирим)",
+      "shipment_out": "Етказиб бериш (чиқим)",
+      "inventory_surplus": "Инвентаризация (ортиқча)",
+      "inventory_shortage": "Инвентаризация (камомад)",
+      "manual_in": "Қўлда киритиш (кирим)",
+      "manual_out": "Қўлда киритиш (чиқим)",
+      "manual_adjustment": "Қўлда тузатиш"
+    },
+    "filterGroups": {
+      "Invoice": "Ҳисоб-фактура",
+      "Order Out": "Буюртма чиқими",
+      "Outgoing Invoice": "Чиқувчи ҳисоб-фактура",
+      "Transfer": "Кўчириш",
+      "Deduction": "Чегирма",
+      "Shipment": "Етказиб бериш",
+      "Separation Act": "Ажратиш акти",
+      "Inventory": "Инвентаризация",
+      "Manual": "Қўлда киритиш"
+    }
   },
   "goodsReports": {
     "title": "Товарлар ҳисоботи",

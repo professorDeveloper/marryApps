@@ -3,6 +3,9 @@ import type {
     IIngredientReportsResponse,
     IIngredientReportsFilterParams,
     IIngredientReportDetailResponse,
+    IIngredientMovementsFilterParams,
+    IIngredientMovementsResponse,
+    IIngredientMovementsTotals,
 } from 'src/types/ingredient-reports';
 
 import useSWR from 'swr';
@@ -119,6 +122,59 @@ export function useGetIngredientReportDetail(
     );
 
     return memoizedValue;
+}
+
+/**
+ * Get ingredient stock movements for a specific ingredient.
+ * When event_types has multiple values (group filter), fetches without server-side
+ * event_type filter and applies client-side filtering within the page.
+ */
+export function useGetIngredientMovements(
+    ingredientId: string | null,
+    params: Partial<IIngredientMovementsFilterParams>
+) {
+    const shouldFetch = Boolean(ingredientId && params.storage_id);
+    const eventTypes = params.event_types ?? [];
+
+    const queryParams = new URLSearchParams();
+    if (params.storage_id) queryParams.append('storage_id', params.storage_id);
+    if (params.start) queryParams.append('start', params.start);
+    if (params.end) queryParams.append('end', params.end);
+    queryParams.append('limit', String(params.limit ?? 20));
+    queryParams.append('offset', String(params.offset ?? 0));
+
+    const url = shouldFetch
+        ? `${endpoints.ingredientReports.movements(ingredientId!)}?${queryParams.toString()}`
+        : null;
+
+    const { data, isLoading, error, isValidating } = useSWR<IIngredientMovementsResponse>(
+        url,
+        fetcher,
+        { ...swrOptions }
+    );
+
+    const movements = useMemo(() => {
+        if (!data?.data?.items) return [];
+        const all = data.data.items;
+        if (eventTypes.length > 0) {
+            return all.filter((m) => eventTypes.includes(m.event_type as any));
+        }
+        return all;
+    }, [data, eventTypes]);
+
+    const totals = useMemo<IIngredientMovementsTotals | undefined>(() => data?.data?.totals, [data]);
+
+    return useMemo(
+        () => ({
+            movements,
+            movementsTotals: totals,
+            movementsLoading: isLoading,
+            movementsError: error,
+            movementsValidating: isValidating,
+            movementsEmpty: !isLoading && !isValidating && !movements.length,
+        }),
+        [movements, totals, error, isLoading, isValidating]
+    );
 }
 
 /**

@@ -2,7 +2,8 @@
   "units": {
     "kg": "kg",
     "piece": "piece",
-    "l": "l"
+    "l": "l",
+    "ml": "ml"
   },
   "app": "Menu",
   "job": "Job",
@@ -1278,7 +1279,43 @@
     "shortageAmount": "Shortage Amount",
     "all": "All",
     "totalCount": "Total Count",
-    "totalOrderOutAmount": "Total Order Out Amount"
+    "totalOrderOutAmount": "Total Order Out Amount",
+    "movements": "Movements",
+    "eventType": "Event Type",
+    "allEventTypes": "All",
+    "date": "Date",
+    "stockBefore": "Before",
+    "change": "Change",
+    "stockAfter": "After",
+    "eventTypes": {
+      "invoice": "Invoice",
+      "order_out": "Order Out",
+      "deduction_in": "Deduction In",
+      "deduction_out": "Deduction Out",
+      "transfer_in": "Transfer In",
+      "transfer_out": "Transfer Out",
+      "outgoing_invoice": "Outgoing Invoice",
+      "separation_act_in": "Separation Act In",
+      "separation_act_out": "Separation Act Out",
+      "shipment_in": "Shipment In",
+      "shipment_out": "Shipment Out",
+      "inventory_surplus": "Inventory Surplus",
+      "inventory_shortage": "Inventory Shortage",
+      "manual_in": "Manual In",
+      "manual_out": "Manual Out",
+      "manual_adjustment": "Manual Adjustment"
+    },
+    "filterGroups": {
+      "Invoice": "Invoice",
+      "Order Out": "Order Out",
+      "Outgoing Invoice": "Outgoing Invoice",
+      "Transfer": "Transfer",
+      "Deduction": "Deduction",
+      "Shipment": "Shipment",
+      "Separation Act": "Separation Act",
+      "Inventory": "Inventory",
+      "Manual": "Manual"
+    }
   },
   "goodsReports": {
     "title": "Goods report",

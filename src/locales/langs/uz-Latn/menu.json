@@ -2,7 +2,8 @@
   "units": {
     "kg": "kg",
     "piece": "dona",
-    "l": "l"
+    "l": "l",
+    "ml": "ml"
   },
   "app": "Menyu",
   "job": "Ish",
@@ -1127,7 +1128,43 @@
     "shortageAmount": "Kamomad summasi",
     "all": "Barchasi",
     "totalCount": "Umumiy soni",
-    "totalOrderOutAmount": "Umumiy chiqim summasi"
+    "totalOrderOutAmount": "Umumiy chiqim summasi",
+    "movements": "Harakatlar",
+    "eventType": "Hodisa turi",
+    "allEventTypes": "Barchasi",
+    "date": "Sana",
+    "stockBefore": "Oldin",
+    "change": "O'zgarish",
+    "stockAfter": "Keyin",
+    "eventTypes": {
+      "invoice": "Hisob-faktura",
+      "order_out": "Buyurtma chiqimi",
+      "deduction_in": "Chegirma (kirim)",
+      "deduction_out": "Chegirma (chiqim)",
+      "transfer_in": "Ko'chirish (kirim)",
+      "transfer_out": "Ko'chirish (chiqim)",
+      "outgoing_invoice": "Chiquvchi hisob-faktura",
+      "separation_act_in": "Ajratish akti (kirim)",
+      "separation_act_out": "Ajratish akti (chiqim)",
+      "shipment_in": "Yetkazib berish (kirim)",
+      "shipment_out": "Yetkazib berish (chiqim)",
+      "inventory_surplus": "Inventarizatsiya (ortiqcha)",
+      "inventory_shortage": "Inventarizatsiya (kamomad)",
+      "manual_in": "Qo'lda kiritish (kirim)",
+      "manual_out": "Qo'lda kiritish (chiqim)",
+      "manual_adjustment": "Qo'lda tuzatish"
+    },
+    "filterGroups": {
+      "Invoice": "Hisob-faktura",
+      "Order Out": "Buyurtma chiqimi",
+      "Outgoing Invoice": "Chiquvchi hisob-faktura",
+      "Transfer": "Ko'chirish",
+      "Deduction": "Chegirma",
+      "Shipment": "Yetkazib berish",
+      "Separation Act": "Ajratish akti",
+      "Inventory": "Inventarizatsiya",
+      "Manual": "Qo'lda kiritish"
+    }
   },
   "goodsReports": {
     "title": "Tovarlar hisoboti",
