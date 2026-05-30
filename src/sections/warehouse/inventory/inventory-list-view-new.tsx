@@ -129,10 +129,10 @@ export function InventoryListView() {
                     <Box sx={{ fontWeight: 500 }}>{t('inventory.surplusAmount')}:</Box>
                     <Box>{(inventory as any)?.surplus_amount || 0}</Box>
                 </Box>
-                {inventory.created_at && (
+                {inventory.date && (
                     <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                         <Box sx={{ fontWeight: 500 }}>{t('inventory.createdAt')}:</Box>
-                        <Box>{new Date(inventory.created_at).toLocaleDateString()}</Box>
+                        <Box>{new Date(inventory.date).toLocaleDateString()}</Box>
                     </Box>
                 )}
             </Box>
