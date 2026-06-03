@@ -4,6 +4,8 @@ import type { ColumnDef, PickerItem, SummaryEntry } from 'src/sections/warehouse
 import React, { useRef, useMemo, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import LoadingButton from '@mui/lab/LoadingButton';
+
 import { Box, Button } from '@mui/material';
 
 import { useMetadata } from 'src/hooks/use-metadata';
@@ -368,15 +370,16 @@ export const InventoryItemsSection = React.memo(function InventoryItemsSection({
                     onClick={onCancel}
                     disabled={cancelDisabled}
                 >
-                    Cancel
+                    {t('cancel')}
                 </Button>
-                <Button
+                <LoadingButton
                     variant="contained"
                     onClick={() => void onSave()}
-                    disabled={saveDisabled || isSaving}
+                    disabled={saveDisabled}
+                    loading={isSaving}
                 >
-                    {isSaving ? 'Saving...' : 'Save'}
-                </Button>
+                    {t('save')}
+                </LoadingButton>
             </Box>
         </Box>
     );

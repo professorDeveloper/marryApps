@@ -630,7 +630,8 @@
         "pending": "Кутилмокда",
         "arrived": "Келди",
         "completed": "Тамомланди",
-        "cancelled": "Бекор қилинди"
+        "cancelled": "Бекор қилинди",
+        "received": "Қабул қилинди"
       },
       "supplierNameRequired": "Етказиб берарчи номи киритилиши шарт"
     },
@@ -1568,20 +1569,20 @@
     "deleteFailed": "Қурилмани ўчириб бўлмади"
   },
   "nav": {
-    "staffing": "Ходимлар",
+    "staffing": "Ходим",
     "employees": "Ходимлар рўйхати",
     "shifts": "Сменалар",
     "kpi": "KPI",
     "salary": "Маош",
     "dashboard": {
-      "overview": "Умумий кўриниш"
+      "overview": "Таҳлил"
     },
-    "storageOrg": "Омбор ва ташкилот",
+    "storageOrg": "Омборлар",
     "storage": "Омбор",
     "departments": "Бўлимлар",
     "categories": "Категориялар",
     "ingredientGroups": "Ингредиент гуруҳлари",
-    "menuSetup": "Меню созламалари",
+    "menuSetup": "Меню",
     "meals": "Таомлар",
     "modifiers": "Модификаторлар",
     "ingredients": "Ингредиентлар",
@@ -1593,12 +1594,12 @@
     "deductions": "Чиқимлар",
     "deductionGroups": "Чиқим гуруҳлари",
     "inventory": "Инвентаризация",
-    "pos": "Касса",
+    "pos": "Трансакциялар",
     "orderManagement": "Буюртмаларни бошқариш",
     "transactions": "Трансакциялар",
     "transactionGroups": "Трансакция гуруҳлари",
     "cashboxReport": "Касса ҳисоботи",
-    "dataReports": "Маълумотлар ва ҳисоботлар",
+    "dataReports": "Ҳисоботлар",
     "billReports": "Ҳисоб-фактуралар ҳисоботи",
     "ingredientReports": "Ингредиентлар ҳисоботи",
     "goodsReport": "Товарлар ҳисоботи",
@@ -1606,7 +1607,7 @@
     "inventoryReport": "Инвентаризация ҳисоботи",
     "customReports": "Махсус ҳисоботлар",
     "archives": "Архивлар",
-    "systemSettings": "Тизим созламалари",
+    "systemSettings": "Созламалар",
     "restaurantInfo": "Ресторан маълумотлари",
     "devices": "Қурилмалар",
     "halls": "Заллар",
@@ -1614,4 +1615,3 @@
     "cashiers": "Кассалар"
   }
 }
-

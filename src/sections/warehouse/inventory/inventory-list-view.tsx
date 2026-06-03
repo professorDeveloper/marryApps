@@ -26,7 +26,6 @@ import {
     TableContainer,
 } from '@mui/material';
 
-import { DataGrid } from '@mui/x-data-grid';
 
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
@@ -661,70 +660,9 @@ export function InventoryListView() {
                 slideDirection="left"
                 maxWidth="lg"
                 renderContent={() => {
-                    const columns = [
-                        { field: 'id', headerName: '#', width: 50 },
-                        { field: 'ingredient_name', headerName: t('calculation.productName'), flex: 1 },
-                        { field: 'ingredient_measurement', headerName: t('calculation.unit'), width: 100 },
-                        { field: 'system_quantity', headerName: t('calculation.systemQty'), width: 120, renderCell: (params: any) => <Box sx={{ textAlign: 'right', width: '100%' }}>{params.value ?? '-'}</Box> },
-                        { field: 'counted_quantity', headerName: t('calculation.countedQty'), width: 120, renderCell: (params: any) => <Box sx={{ textAlign: 'right', width: '100%' }}>{params.value ?? '-'}</Box> },
-                        { 
-                            field: 'difference_quantity', 
-                            headerName: t('calculation.difference'), 
-                            width: 120,
-                            renderCell: (params: any) => (
-                                <Box sx={{ textAlign: 'right', width: '100%' }}>
-                                    <Typography
-                                        variant="body2"
-                                        sx={{
-                                            color:
-                                                params.value > 0
-                                                    ? 'success.main'
-                                                    : params.value < 0
-                                                        ? 'error.main'
-                                                        : 'text.secondary',
-                                        }}
-                                    >
-                                        {params.value ?? '-'}
-                                    </Typography>
-                                </Box>
-                            )
-                        },
-                        { field: 'price_per_unit', headerName: t('calculation.pricePerUnit'), width: 120, renderCell: (params: any) => <Box sx={{ textAlign: 'right', width: '100%' }}>{formatAmount(params.value)}</Box> },
-                        { 
-                            field: 'surplus_amount', 
-                            headerName: t('calculation.surplus'), 
-                            width: 120,
-                            renderCell: (params: any) => (
-                                <Box sx={{ textAlign: 'right', width: '100%' }}>
-                                    <Typography sx={{ color: 'success.main', fontWeight: 600 }}>
-                                        {formatAmount(params.value)}
-                                    </Typography>
-                                </Box>
-                            )
-                        },
-                        { 
-                            field: 'shortage_amount', 
-                            headerName: t('calculation.shortage'), 
-                            width: 120,
-                            renderCell: (params: any) => (
-                                <Box sx={{ textAlign: 'right', width: '100%' }}>
-                                    <Typography sx={{ color: 'error.main', fontWeight: 600 }}>
-                                        {formatAmount(params.value)}
-                                    </Typography>
-                                </Box>
-                            )
-                        },
-                        { field: 'remaining_amount', headerName: t('calculation.remaining'), width: 120, renderCell: (params: any) => <Box sx={{ textAlign: 'right', width: '100%' }}>{formatAmount(params.value)}</Box> },
-                    ];
-
-                    const rows = inventoryItems.map((item, index) => ({
-                        id: index + 1,
-                        ...item,
-                    }));
-
                     if (inventoryItems.length === 0) {
                         return (
-                            <Box sx={{ py: 2, textAlign: 'center' }}>
+                            <Box sx={{ py: 4, textAlign: 'center' }}>
                                 <Typography variant="body2" color="text.secondary">
                                     {t('common.noData')}
                                 </Typography>
@@ -732,48 +670,94 @@ export function InventoryListView() {
                         );
                     }
 
+                    const totalSurplus = inventoryItems.reduce((sum, item) => sum + (parseFloat(String(item.surplus_amount)) || 0), 0);
+                    const totalShortage = inventoryItems.reduce((sum, item) => sum + (parseFloat(String(item.shortage_amount)) || 0), 0);
+                    const totalRemaining = inventoryItems.reduce((sum, item) => sum + (parseFloat(String(item.remaining_amount)) || 0), 0);
+
+                    const headerCellSx = {
+                        fontWeight: 600,
+                        fontSize: '0.75rem',
+                        color: 'text.secondary',
+                        textTransform: 'uppercase' as const,
+                        py: 1.5,
+                        px: 1.5,
+                        whiteSpace: 'nowrap',
+                        borderBottom: `1px solid ${theme.vars.palette.divider}`,
+                        bgcolor: 'action.hover',
+                    };
+                    const cellSx = {
+                        py: 1.25,
+                        px: 1.5,
+                        fontSize: '0.875rem',
+                        verticalAlign: 'middle',
+                        borderBottom: `1px solid ${theme.vars.palette.divider}`,
+                    };
+                    const totalCellSx = {
+                        ...cellSx,
+                        fontWeight: 700,
+                        borderTop: `2px solid ${theme.vars.palette.divider}`,
+                        borderBottom: 'none',
+                        bgcolor: 'action.hover',
+                    };
+
                     return (
-                        <Box sx={{ height: 500, width: '100%' }}>
-                            <DataGrid
-                                rows={rows}
-                                columns={columns}
-                                autoHeight
-                                disableRowSelectionOnClick
-                                disableColumnFilter
-                                disableColumnMenu
-                                disableColumnSelector
-                                disableDensitySelector
-                                hideFooterSelectedRowCount
-                                pagination
-                                pageSizeOptions={[10, 25, 50, 100]}
-                                initialState={{
-                                    pagination: {
-                                        paginationModel: { page: 0, pageSize: 50 },
-                                    },
-                                }}
-                                sx={{
-                                    '& .MuiDataGrid-toolbarContainer, & .MuiDataGrid-toolbarContainer button': {
-                                        display: 'none !important',
-                                    },
-                                    '& .MuiDataGrid-columnHeaders': {
-                                        backgroundColor: 'background.paper',
-                                    },
-                                    '& .MuiDataGrid-menuIcon': {
-                                        display: 'none !important',
-                                    },
-                                    '& .MuiDataGrid-columnHeader:focus, & .MuiDataGrid-cell:focus': {
-                                        outline: 'none !important',
-                                    },
-                                    '& .MuiDataGrid-columnSeparator': {
-                                        display: 'none',
-                                    },
-                                }}
-                                slots={{
-                                    toolbar: () => null,
-                                    columnMenu: () => null,
-                                }}
-                            />
-                        </Box>
+                        <TableContainer>
+                            <Table size="small">
+                                <TableHead>
+                                    <TableRow>
+                                        <TableCell sx={{ ...headerCellSx, width: 40 }}>#</TableCell>
+                                        <TableCell sx={headerCellSx}>{t('calculation.productName')}</TableCell>
+                                        <TableCell sx={headerCellSx}>{t('calculation.unit')}</TableCell>
+                                        <TableCell sx={{ ...headerCellSx, textAlign: 'right' }}>{t('calculation.systemQty')}</TableCell>
+                                        <TableCell sx={{ ...headerCellSx, textAlign: 'right' }}>{t('calculation.countedQty')}</TableCell>
+                                        <TableCell sx={{ ...headerCellSx, textAlign: 'right' }}>{t('calculation.difference')}</TableCell>
+                                        <TableCell sx={{ ...headerCellSx, textAlign: 'right' }}>{t('calculation.pricePerUnit')}</TableCell>
+                                        <TableCell sx={{ ...headerCellSx, textAlign: 'right' }}>{t('calculation.surplus')}</TableCell>
+                                        <TableCell sx={{ ...headerCellSx, textAlign: 'right' }}>{t('calculation.shortage')}</TableCell>
+                                        <TableCell sx={{ ...headerCellSx, textAlign: 'right' }}>{t('calculation.remaining')}</TableCell>
+                                    </TableRow>
+                                </TableHead>
+                                <TableBody>
+                                    {inventoryItems.map((item, index) => {
+                                        const diff = parseFloat(String(item.difference_quantity));
+                                        const diffColor = diff > 0 ? 'success.main' : diff < 0 ? 'error.main' : 'text.secondary';
+                                        return (
+                                            <TableRow key={item.inventory_item_id} hover>
+                                                <TableCell sx={{ ...cellSx, color: 'text.secondary' }}>{index + 1}</TableCell>
+                                                <TableCell sx={{ ...cellSx, fontWeight: 500 }}>{item.ingredient_name}</TableCell>
+                                                <TableCell sx={{ ...cellSx, color: 'text.secondary' }}>{item.ingredient_measurement}</TableCell>
+                                                <TableCell sx={{ ...cellSx, textAlign: 'right' }}>{item.system_quantity ?? '-'}</TableCell>
+                                                <TableCell sx={{ ...cellSx, textAlign: 'right' }}>{item.counted_quantity ?? '-'}</TableCell>
+                                                <TableCell sx={{ ...cellSx, textAlign: 'right', fontWeight: 600, color: diffColor }}>
+                                                    {Number.isNaN(diff) ? '-' : diff > 0 ? `+${diff}` : String(diff)}
+                                                </TableCell>
+                                                <TableCell sx={{ ...cellSx, textAlign: 'right' }}>{formatAmount(item.price_per_unit)}</TableCell>
+                                                <TableCell sx={{ ...cellSx, textAlign: 'right', color: 'success.main', fontWeight: 600 }}>
+                                                    {formatAmount(item.surplus_amount)}
+                                                </TableCell>
+                                                <TableCell sx={{ ...cellSx, textAlign: 'right', color: 'error.main', fontWeight: 600 }}>
+                                                    {formatAmount(item.shortage_amount)}
+                                                </TableCell>
+                                                <TableCell sx={{ ...cellSx, textAlign: 'right' }}>{formatAmount(item.remaining_amount)}</TableCell>
+                                            </TableRow>
+                                        );
+                                    })}
+                                    {/* Totals row */}
+                                    <TableRow>
+                                        <TableCell sx={totalCellSx} colSpan={7}>{t('common.total')}</TableCell>
+                                        <TableCell sx={{ ...totalCellSx, textAlign: 'right', color: 'success.main' }}>
+                                            {formatAmount(totalSurplus)}
+                                        </TableCell>
+                                        <TableCell sx={{ ...totalCellSx, textAlign: 'right', color: 'error.main' }}>
+                                            {formatAmount(totalShortage)}
+                                        </TableCell>
+                                        <TableCell sx={{ ...totalCellSx, textAlign: 'right' }}>
+                                            {formatAmount(totalRemaining)}
+                                        </TableCell>
+                                    </TableRow>
+                                </TableBody>
+                            </Table>
+                        </TableContainer>
                     );
                 }}
             />

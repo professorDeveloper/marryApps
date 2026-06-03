@@ -631,7 +631,8 @@
         "pending": "В ожидании",
         "arrived": "Прибыла",
         "completed": "Завершено",
-        "cancelled": "Отменено"
+        "cancelled": "Отменено",
+        "received": "Получено"
       },
       "supplierNameRequired": "Требуется указать наименование поставщика"
     },
@@ -1573,20 +1574,20 @@
     "deleteFailed": "Не удалось удалить устройство"
   },
   "nav": {
-    "staffing": "Персонал",
+    "staffing": "Сотрудник",
     "employees": "Сотрудники",
     "shifts": "Смены",
     "kpi": "KPI",
     "salary": "Зарплата",
     "dashboard": {
-      "overview": "Обзор"
+      "overview": "Аналитика"
     },
-    "storageOrg": "Склад и организация",
+    "storageOrg": "Склады",
     "storage": "Склад",
     "departments": "Отделы",
     "categories": "Категории",
     "ingredientGroups": "Группы ингредиентов",
-    "menuSetup": "Настройка меню",
+    "menuSetup": "Меню",
     "meals": "Блюда",
     "modifiers": "Модификаторы",
     "ingredients": "Ингредиенты",
@@ -1598,12 +1599,12 @@
     "deductions": "Списания",
     "deductionGroups": "Группы списаний",
     "inventory": "Инвентаризация",
-    "pos": "Касса",
+    "pos": "Транзакции",
     "orderManagement": "Управление заказами",
     "transactions": "Транзакции",
     "transactionGroups": "Группы транзакций",
     "cashboxReport": "Отчет по кассе",
-    "dataReports": "Данные и отчеты",
+    "dataReports": "Отчёты",
     "billReports": "Отчет по счетам",
     "ingredientReports": "Отчет по ингредиентам",
     "goodsReport": "Отчет по блюдам",
@@ -1611,7 +1612,7 @@
     "inventoryReport": "Отчет по инвентарю",
     "customReports": "Пользовательские отчеты",
     "archives": "Архивы",
-    "systemSettings": "Системные настройки",
+    "systemSettings": "Настройки",
     "restaurantInfo": "Информация о ресторане",
     "devices": "Устройства",
     "halls": "Залы",
@@ -1619,4 +1620,3 @@
     "cashiers": "Кассы"
   }
 }
-

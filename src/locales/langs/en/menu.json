@@ -589,7 +589,8 @@
         "pending": "Pending",
         "arrived": "Arrived",
         "completed": "Completed",
-        "cancelled": "Cancelled"
+        "cancelled": "Cancelled",
+        "received": "Received"
       },
       "supplierNameRequired": "Supplier name is required"
     },
@@ -1459,20 +1460,20 @@
     }
   },
   "nav": {
-    "staffing": "Staffing",
+    "staffing": "Employee",
     "employees": "Employees",
     "shifts": "Shifts",
     "kpi": "KPI",
     "salary": "Salary",
     "dashboard": {
-      "overview": "Overview"
+      "overview": "Analytics"
     },
-    "storageOrg": "Storage & Org",
+    "storageOrg": "Storages",
     "storage": "Storage",
     "departments": "Departments",
     "categories": "Categories",
     "ingredientGroups": "Ingredient Groups",
-    "menuSetup": "Menu Setup",
+    "menuSetup": "Menu",
     "meals": "Meals",
     "modifiers": "Modifiers",
     "ingredients": "Ingredients",
@@ -1484,12 +1485,12 @@
     "deductions": "Deductions",
     "deductionGroups": "Deduction Groups",
     "inventory": "Inventory",
-    "pos": "POS",
+    "pos": "Transactions",
     "orderManagement": "Order Management",
     "transactions": "Transactions",
     "transactionGroups": "Transaction Groups",
     "cashboxReport": "Cashbox Report",
-    "dataReports": "Data & Reports",
+    "dataReports": "Reports",
     "billReports": "Bill Reports",
     "ingredientReports": "Ingredient Reports",
     "goodsReport": "Goods Report",
@@ -1497,7 +1498,7 @@
     "inventoryReport": "Inventory Report",
     "customReports": "Custom Reports",
     "archives": "Archives",
-    "systemSettings": "System Settings",
+    "systemSettings": "Settings",
     "restaurantInfo": "Restaurant Info",
     "devices": "Devices",
     "halls": "Halls",

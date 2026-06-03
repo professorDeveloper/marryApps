@@ -65,7 +65,6 @@ SlideLeftTransition.displayName = 'SlideLeftTransition';
  * Render fields as key-value pairs
  */
 function RenderFieldsList({ data, fields }: { data: any; fields: Array<{ key: string; label: string; render?: (value: any) => React.ReactNode }> }) {
-  const theme = useTheme();
 
   return (
     <Stack spacing={2}>
@@ -105,8 +104,6 @@ function RenderFieldsList({ data, fields }: { data: any; fields: Array<{ key: st
  * Render list items
  */
 function RenderListItems({ items }: { items: Array<{ id: string; label: string; value?: string }> }) {
-  const theme = useTheme();
-
   return (
     <Stack spacing={1}>
       {items.map((item) => (
@@ -274,10 +271,7 @@ export function GenericViewModal({
       BackdropProps={{
         sx: {
           backdropFilter: 'blur(6px)',
-          backgroundColor: (theme) =>
-            theme.palette.mode === 'dark'
-              ? 'rgba(0, 0, 0, 0.8)'
-              : 'rgba(0, 0, 0, 0.4)',
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
         },
       }}
     >

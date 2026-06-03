@@ -627,7 +627,8 @@
         "pending": "Kutilmoqda",
         "arrived": "Keldi",
         "completed": "Tamomlandi",
-        "cancelled": "Bekor qilindi"
+        "cancelled": "Bekor qilindi",
+        "received": "Qabul qilindi"
       },
       "supplierNameRequired": "Yetkazib beruvchi nomi kiritilishi shart",
       "supplier": "Yetkazib beruvchi",
@@ -1580,20 +1581,20 @@
     "deleteFailed": "Qurilmani o'chirib bo'lmadi"
   },
   "nav": {
-    "staffing": "Xodimlar",
+    "staffing": "Xodim",
     "employees": "Xodimlar ro'yxati",
     "shifts": "Smenalar",
     "kpi": "KPI",
     "salary": "Maosh",
     "dashboard": {
-      "overview": "Umumiy ko'rinish"
+      "overview": "Tahlil"
     },
-    "storageOrg": "Ombor va tashkilot",
+    "storageOrg": "Omborlar",
     "storage": "Ombor",
     "departments": "Bo'limlar",
     "categories": "Kategoriyalar",
     "ingredientGroups": "Ingredient guruhlari",
-    "menuSetup": "Menyu sozlamalari",
+    "menuSetup": "Menyu",
     "meals": "Taomlar",
     "modifiers": "Modifikatorlar",
     "ingredients": "Ingredientlar",
@@ -1605,12 +1606,12 @@
     "deductions": "Chiqimlar",
     "deductionGroups": "Chiqim guruhlari",
     "inventory": "Inventarizatsiya",
-    "pos": "Kassa",
+    "pos": "Tranzaksiyalar",
     "orderManagement": "Buyurtmalarni boshqarish",
     "transactions": "Tranzaksiyalar",
     "transactionGroups": "Tranzaksiya guruhlari",
     "cashboxReport": "Kassa hisoboti",
-    "dataReports": "Ma'lumotlar va hisobotlar",
+    "dataReports": "Hisobotlar",
     "billReports": "Hisob-kitoblar hisoboti",
     "ingredientReports": "Ingredientlar hisoboti",
     "goodsReport": "Tovarlar hisoboti",
@@ -1618,7 +1619,7 @@
     "inventoryReport": "Inventarizatsiya hisoboti",
     "customReports": "Maxsus hisobotlar",
     "archives": "Arxivlar",
-    "systemSettings": "Tizim sozlamalari",
+    "systemSettings": "Sozlamalar",
     "restaurantInfo": "Restoran ma'lumotlari",
     "devices": "Qurilmalar",
     "halls": "Zallar",
@@ -1626,4 +1627,3 @@
     "cashiers": "Kassalar"
   }
 }
-
