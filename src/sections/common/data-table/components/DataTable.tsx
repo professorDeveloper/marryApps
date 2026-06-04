@@ -95,6 +95,7 @@ export type DataTableProps<T> = {
   showRowNumbers?: boolean;
   showTotals?: boolean;
   onRowClick?: (row: T) => void;
+  onRowHover?: (row: T) => void;
   onCellEdit?: (args: { row: T; key: string; value: unknown }) => void | Promise<void>;
   batchActions?: Array<BatchAction<T>>;
   rowActions?: Array<RowAction<T>>;
@@ -132,6 +133,7 @@ export function DataTable<T>({
   emptyTitle = 'No results',
   emptySubtitle = 'Try adjusting filters or columns.',
   onRowClick,
+  onRowHover,
   showTotals = true,
 }: DataTableProps<T>) {
   // Unpack grouped props
@@ -642,6 +644,7 @@ export function DataTable<T>({
           emptyTitle={emptyTitle}
           emptySubtitle={emptySubtitle}
           onRowClick={onRowClick}
+          onRowHover={onRowHover}
           pageOffset={page * rowsPerPage}
         />
 

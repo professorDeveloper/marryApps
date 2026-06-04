@@ -30,6 +30,7 @@ export type DataTableBodyProps<T> = {
   emptyTitle: string;
   emptySubtitle: string;
   onRowClick?: (row: T) => void;
+  onRowHover?: (row: T) => void;
   pageOffset?: number;
 };
 
@@ -53,6 +54,7 @@ export function DataTableBody<T>({
   emptyTitle,
   emptySubtitle,
   onRowClick,
+  onRowHover,
   pageOffset = 0,
 }: DataTableBodyProps<T>) {
   const rowVirtualizer = useVirtualizer({
@@ -140,6 +142,7 @@ export function DataTableBody<T>({
                   commitEdit={commitEdit}
                   cancelEdit={cancelEdit}
                   onRowClick={onRowClick}
+                  onRowHover={onRowHover}
                 />
               </Box>
             );

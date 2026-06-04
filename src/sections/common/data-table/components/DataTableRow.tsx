@@ -34,6 +34,7 @@ export type DataTableRowProps<T> = {
   commitEdit: (rowId: string, key: string, next: unknown) => void;
   cancelEdit: () => void;
   onRowClick?: (row: T) => void;
+  onRowHover?: (row: T) => void;
 };
 
 export const DataTableRow = memo(function DataTableRow<T>({
@@ -54,6 +55,7 @@ export const DataTableRow = memo(function DataTableRow<T>({
   commitEdit,
   cancelEdit,
   onRowClick,
+  onRowHover,
 }: DataTableRowProps<T>) {
   const visibleCols = useMemo(() => {
     const byKey = new Map(columns.map((c) => [c.key, c]));
@@ -72,6 +74,7 @@ export const DataTableRow = memo(function DataTableRow<T>({
   return (
     <Box
       onClick={() => onRowClick?.(row)}
+      onMouseEnter={() => onRowHover?.(row)}
       sx={{
         display: 'grid',
         gridTemplateColumns,

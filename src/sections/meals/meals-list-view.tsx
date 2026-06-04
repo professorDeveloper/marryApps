@@ -20,7 +20,9 @@ import {
 
 import { paths } from 'src/routes/paths';
 
-import { useGetCompounds } from 'src/hooks/use-compounds';
+import { preload } from 'swr';
+
+import { fetcher, endpoints } from 'src/lib/axios';
 import { useGenericViewModal } from 'src/hooks/use-generic-view-modal';
 import { useDeleteMeal, useDeleteMeals, useGetMealsPage, useGetMealWithCalculations } from 'src/hooks/use-meals';
 import { useMetadata } from 'src/hooks/use-metadata';
@@ -28,7 +30,6 @@ import { MetadataEntity } from 'src/types/metadata';
 
 import { DashboardContent } from 'src/layouts/dashboard';
 import { useGetDepartments, useGetStorages } from 'src/actions/departments';
-import { useGetIngredients } from 'src/actions/ingredients';
 import { usePaginationRows } from 'src/hooks/use-pagination-rows';
 
 import { Iconify } from 'src/components/iconify';
@@ -73,39 +74,21 @@ const initialFilters = {
 
 
 function MealCalculationsTable({ mealId }: { mealId: string }) {
-    const { t, i18n } = useTranslation('menu');
+    const { t } = useTranslation('menu');
     const { mealWithCalculations, loading } = useGetMealWithCalculations(mealId);
-    const { ingredients } = useGetIngredients();
-    const { compounds } = useGetCompounds();
-    // Create maps for quick name lookup with translations
+    const { data: meta } = useMetadata([MetadataEntity.INGREDIENTS, MetadataEntity.COMPOUNDS]);
+
     const ingredientMap = useMemo(() => {
         const map = new Map<string, string>();
-        const currentLang = i18n.language || 'uz';
-
-        ingredients.forEach((ing: any) => {
-            let displayName = ing.name || '-';
-
-            // Get translated name based on current language
-            if (currentLang === 'en' && ing.name_en) {
-                displayName = ing.name_en;
-            } else if (currentLang === 'ru' && ing.name_ru) {
-                displayName = ing.name_ru;
-            } else if ((currentLang === 'uz' || currentLang === 'uz-Latn' || currentLang === 'uz-Cyrl') && ing.name_uz) {
-                displayName = ing.name_uz;
-            }
-
-            map.set(ing.id, displayName);
-        });
+        (meta.ingredients ?? []).forEach((ing: any) => { map.set(ing.id, ing.name || '-'); });
         return map;
-    }, [ingredients, i18n.language]);
+    }, [meta.ingredients]);
 
     const compoundMap = useMemo(() => {
         const map = new Map<string, string>();
-        compounds.forEach((compound: any) => {
-            map.set(compound.id, compound.name || '-');
-        });
+        (meta.compounds ?? []).forEach((c: any) => { map.set(c.id, c.name || '-'); });
         return map;
-    }, [compounds]);
+    }, [meta.compounds]);
 
     // Remove duplicate calculations - keep only unique ingredient_id or component_compound_id
     // HOOKS MUST BE CALLED BEFORE ANY EARLY RETURNS!
@@ -480,6 +463,19 @@ export function Meals() {
         }));
     };
 
+    const handleRowHover = useCallback((row: IMealsItem) => {
+        preload(endpoints.meals.withCalculations(row.id), fetcher);
+    }, []);
+
+    const handleRowClick = useCallback((row: IMealsItem) => {
+        // Kick off the detail fetch synchronously on click so it's already in flight
+        // by the time the panel's content mounts.
+        preload(endpoints.meals.withCalculations(row.id), fetcher);
+        // Open the panel urgently so it appears instantly with its loading state —
+        // the content fills in when the (already in-flight) fetch resolves.
+        openModal(row);
+    }, [openModal]);
+
     const handleConfirmDelete = useCallback(async () => {
         if (mealToDelete) {
             try {
@@ -628,7 +624,8 @@ export function Meals() {
                         setDraftFilters(initialFilters);
                         setSortState({ key: null, dir: null });
                     }}
-                    onRowClick={openModal}
+                    onRowClick={handleRowClick}
+                    onRowHover={handleRowHover}
                     headerActions={
                         <Button
                             variant="contained"
@@ -645,7 +642,7 @@ export function Meals() {
                         {
                             label: t('mealsProducts.view'),
                             icon: <Iconify icon="solar:eye-bold" width={18} />,
-                            onClick: (row: IMealsItem) => openModal(row),
+                            onClick: (row: IMealsItem) => handleRowClick(row),
                         },
                         {
                             label: t('mealsProducts.edit'),

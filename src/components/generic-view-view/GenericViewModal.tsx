@@ -262,7 +262,11 @@ export function GenericViewModal({
                 ? 0
                 : 2,
           backgroundColor: 'var(--bg)',
-          backdropFilter: 'blur(12px)',
+          // The Paper background is opaque, so a backdrop-filter blur here is invisible —
+          // but it forces the browser to recompute the blur over the whole panel on every
+          // frame as it slides in, which makes the open animation janky. Promote the Paper
+          // to its own GPU layer instead for a smooth slide.
+          willChange: 'transform',
           boxShadow: 'var(--shadow-lg)',
           border: '1px solid var(--border)',
           ...paperSx,
@@ -283,7 +287,6 @@ export function GenericViewModal({
           pb: 2,
           borderBottom: '1px solid var(--border)',
           backgroundColor: 'var(--surface)',
-          backdropFilter: 'blur(10px)',
           position: 'sticky',
           top: 0,
           zIndex: 10,
