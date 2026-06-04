@@ -1,6 +1,11 @@
+import dayjs from 'dayjs';
+
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
+
+const toLocalDateString = (d: Date) => dayjs(d).format('YYYY-MM-DD');
+const parseLocalDate = (s: string) => dayjs(s).startOf('day').toDate();
 
 export type PeriodId = 'day' | 'week' | 'month' | 'year';
 
@@ -46,9 +51,9 @@ export function RangeChips({
         <Box
           component="input"
           type="date"
-          value={startDate ? startDate.toISOString().split('T')[0] : ''}
+          value={startDate ? toLocalDateString(startDate) : ''}
           onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-            const d = e.target.value ? new Date(e.target.value) : null;
+            const d = e.target.value ? parseLocalDate(e.target.value) : null;
             onStartDateChange(d);
           }}
           sx={{
@@ -72,9 +77,9 @@ export function RangeChips({
         <Box
           component="input"
           type="date"
-          value={endDate ? endDate.toISOString().split('T')[0] : ''}
+          value={endDate ? toLocalDateString(endDate) : ''}
           onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-            const d = e.target.value ? new Date(e.target.value) : null;
+            const d = e.target.value ? parseLocalDate(e.target.value) : null;
             onEndDateChange(d);
           }}
           sx={{
