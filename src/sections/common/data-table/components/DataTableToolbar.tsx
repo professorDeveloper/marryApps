@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import type { BatchAction, SearchMode, SearchOutput } from '../types/types';
 
+import dayjs from 'dayjs';
 import { useCallback } from 'react';
 
 import Box from '@mui/material/Box';
@@ -122,11 +123,11 @@ export function DataTableToolbar<T>({
                     type="date"
                     value={
                       periodPickerProps?.startDate
-                        ? periodPickerProps.startDate.toISOString().split('T')[0]
+                        ? dayjs(periodPickerProps.startDate).format('YYYY-MM-DD')
                         : ''
                     }
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                      const date = e.target.value ? new Date(e.target.value) : null;
+                      const date = e.target.value ? dayjs(e.target.value).startOf('day').toDate() : null;
                       periodPickerProps?.onStartDateChange?.(date);
                     }}
                     sx={{
@@ -154,11 +155,11 @@ export function DataTableToolbar<T>({
                     type="date"
                     value={
                       periodPickerProps?.endDate
-                        ? periodPickerProps.endDate.toISOString().split('T')[0]
+                        ? dayjs(periodPickerProps.endDate).format('YYYY-MM-DD')
                         : ''
                     }
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                      const date = e.target.value ? new Date(e.target.value) : null;
+                      const date = e.target.value ? dayjs(e.target.value).endOf('day').toDate() : null;
                       periodPickerProps?.onEndDateChange?.(date);
                     }}
                     sx={{
