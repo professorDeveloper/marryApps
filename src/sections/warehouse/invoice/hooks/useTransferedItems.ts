@@ -25,8 +25,7 @@ export const useTransferredItems = () => {
             uniqueOrdered.push(id);
         }
 
-        return [...uniqueOrdered]
-            .sort()
+        return uniqueOrdered
             .map((id) => ({
                 ingredient_id: id,
                 quantity: quantities[id] ?? 0,

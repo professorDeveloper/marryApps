@@ -8,6 +8,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import DeleteSweepIcon from '@mui/icons-material/DeleteSweep';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
+import SwapVertIcon from '@mui/icons-material/SwapVert';
 import {
     Box,
     Paper,
@@ -45,10 +46,7 @@ export const AddedItemsPanel = React.memo<AddedItemsPanelProps>(({
     const commitSeqRef = useRef(0);
 
     const [batchRemoveArmed, setBatchRemoveArmed] = useState(false);
-    const [sort, setSort] = useState<{ key: string; dir: 'asc' | 'desc' } | null>({
-        key: 'name',
-        dir: 'asc',
-    });
+    const [sort, setSort] = useState<{ key: string; dir: 'asc' | 'desc' } | null>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
 
     const cycleSort = useCallback((key: string) => {
@@ -229,11 +227,13 @@ export const AddedItemsPanel = React.memo<AddedItemsPanelProps>(({
                     <Typography variant="caption" sx={{ fontWeight: 700 }}>
                         {t('warehouse.invoiceDetails.product')}
                     </Typography>
-                    {sort?.key === 'name' && (sort.dir === 'asc' ? (
+                    {(!sort || sort.key !== 'name') ? (
+                        <SwapVertIcon sx={{ fontSize: 12, opacity: 0.4 }} />
+                    ) : sort.dir === 'asc' ? (
                         <ArrowUpwardIcon sx={{ fontSize: 12 }} />
                     ) : (
                         <ArrowDownwardIcon sx={{ fontSize: 12 }} />
-                    ))}
+                    )}
                 </Box>
                 {headerLabels.map((col) => (
                     <Box
@@ -260,11 +260,13 @@ export const AddedItemsPanel = React.memo<AddedItemsPanelProps>(({
                         >
                             {col.header}
                         </Typography>
-                        {sort?.key === col.key && (sort.dir === 'asc' ? (
+                        {(!sort || sort.key !== col.key) ? (
+                            <SwapVertIcon sx={{ fontSize: 12, opacity: 0.4 }} />
+                        ) : sort.dir === 'asc' ? (
                             <ArrowUpwardIcon sx={{ fontSize: 12 }} />
                         ) : (
                             <ArrowDownwardIcon sx={{ fontSize: 12 }} />
-                        ))}
+                        )}
                     </Box>
                 ))}
                 <Box />

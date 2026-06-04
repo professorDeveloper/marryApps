@@ -40,6 +40,8 @@ export interface InvoiceListFilters {
     general_search?: string;
     limit?: number;
     offset?: number;
+    sort_by?: string;
+    sort_order?: 'asc' | 'desc';
 }
 
 export interface InvoiceListResponse<T = any> {
@@ -91,6 +93,8 @@ export function useInvoiceDetailsAPI(): UseInvoiceDetailsAPIReturn {
         assignIfPresent('search', filters.search);
         assignIfPresent('limit', filters.limit);
         assignIfPresent('offset', filters.offset);
+        assignIfPresent('sort_by', filters.sort_by);
+        assignIfPresent('sort_order', filters.sort_order);
 
         if (filters.ingredient_ids && Array.isArray(filters.ingredient_ids) && filters.ingredient_ids.length > 0) {
             params.ingredient_ids = filters.ingredient_ids.join(',');
