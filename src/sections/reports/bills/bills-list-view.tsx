@@ -37,17 +37,8 @@ import { CELL_SX } from 'src/sections/common/data-table/utils/constants';
 
 // Helper functions
 const toUtcDayBoundary = (value: dayjs.Dayjs, endOfDay = false): string => {
-    const date = new Date(
-        Date.UTC(
-            value.year(),
-            value.month(),
-            value.date(),
-            endOfDay ? 23 : 0,
-            endOfDay ? 59 : 0,
-            endOfDay ? 59 : 0
-        )
-    );
-    return date.toISOString().replace('.000Z', 'Z');
+  const boundary = endOfDay ? value.endOf('day') : value.startOf('day');
+  return boundary.toISOString().replace('.000Z', 'Z');
 };
 
 const getTodayUtcBoundary = (): string => {
@@ -60,12 +51,12 @@ const getTomorrowUtcBoundary = (endOfDay = false): string => {
     return toUtcDayBoundary(tomorrow, endOfDay);
 };
 
-const toPickerDate = (value?: string): dayjs.Dayjs | null => (value ? dayjs(value.slice(0, 10)) : null);
+const toPickerDate = (value?: string): dayjs.Dayjs | null => (value ? dayjs(value) : null);
 
 
 const initialFilters: BillsListFilters = {
     start: getTodayUtcBoundary(),
-    end: getTomorrowUtcBoundary(true),
+    end: getTodayUtcBoundary(true),
     bill_status: [],
     payment_type: [],
     waiter_id: '',

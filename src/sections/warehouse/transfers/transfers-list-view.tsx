@@ -55,34 +55,14 @@ type StoragesByBranchResponse = BackendResponse<Storage[]> | Storage[] | { data?
 // Date utility functions
 const getTodayUtcBoundary = (endOfDay = false): string => {
     const now = dayjs();
-    const date = new Date(
-        Date.UTC(
-            now.year(),
-            now.month(),
-            now.date(),
-            endOfDay ? 23 : 0,
-            endOfDay ? 59 : 0,
-            endOfDay ? 59 : 0,
-            0
-        )
-    );
-    return date.toISOString().replace('.000Z', 'Z');
+    const boundary = endOfDay ? now.endOf('day') : now.startOf('day');
+    return boundary.toISOString().replace('.000Z', 'Z');
 };
 
 const getTomorrowUtcBoundary = (endOfDay = false): string => {
     const now = dayjs().add(1, 'day');
-    const date = new Date(
-        Date.UTC(
-            now.year(),
-            now.month(),
-            now.date(),
-            endOfDay ? 23 : 0,
-            endOfDay ? 59 : 0,
-            endOfDay ? 59 : 0,
-            0
-        )
-    );
-    return date.toISOString().replace('.000Z', 'Z');
+    const boundary = endOfDay ? now.endOf('day') : now.startOf('day');
+    return boundary.toISOString().replace('.000Z', 'Z');
 };
 
 const toPickerDate = (dateString: string): dayjs.Dayjs | null => {
@@ -91,18 +71,8 @@ const toPickerDate = (dateString: string): dayjs.Dayjs | null => {
 };
 
 const toUtcDayBoundary = (value: dayjs.Dayjs, endOfDay = false): string => {
-    const date = new Date(
-        Date.UTC(
-            value.year(),
-            value.month(),
-            value.date(),
-            endOfDay ? 23 : 0,
-            endOfDay ? 59 : 0,
-            endOfDay ? 59 : 0
-        )
-    );
-
-    return date.toISOString().replace('.000Z', 'Z');
+  const boundary = endOfDay ? value.endOf('day') : value.startOf('day');
+  return boundary.toISOString().replace('.000Z', 'Z');
 };
 
 const filterSelectSx = {
@@ -147,7 +117,7 @@ export function TransfersListView() {
   const [draftFilters, setDraftFilters] = useState({
     status: '',
     date_from: getTodayUtcBoundary(),
-    date_to: getTomorrowUtcBoundary(true),
+    date_to: getTodayUtcBoundary(true),
     from_storage_id: '',
     to_storage_id: '',
     act_group_id: '',
@@ -782,7 +752,7 @@ export function TransfersListView() {
           onReset={() => setDraftFilters({
     status: '',
     date_from: getTodayUtcBoundary(),
-    date_to: getTomorrowUtcBoundary(true),
+    date_to: getTodayUtcBoundary(true),
     from_storage_id: '',
     to_storage_id: '',
     act_group_id: '',

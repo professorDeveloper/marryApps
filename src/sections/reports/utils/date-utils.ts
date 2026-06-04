@@ -24,4 +24,4 @@ export const getTomorrowUtcBoundary = (endOfDay = false): string => {
 };
 
 export const toPickerDate = (value?: string): dayjs.Dayjs | null =>
-  value ? dayjs(value.slice(0, 10)) : null;
+  value ? dayjs(value) : null;

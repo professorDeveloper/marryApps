@@ -24,34 +24,14 @@ import { RouterLink } from 'src/routes/components';
 // Date utility functions
 const getTodayUtcBoundary = (endOfDay = false): string => {
     const now = dayjs();
-    const date = new Date(
-        Date.UTC(
-            now.year(),
-            now.month(),
-            now.date(),
-            endOfDay ? 23 : 0,
-            endOfDay ? 59 : 0,
-            endOfDay ? 59 : 0,
-            0
-        )
-    );
-    return date.toISOString().replace('.000Z', 'Z');
+    const boundary = endOfDay ? now.endOf('day') : now.startOf('day');
+    return boundary.toISOString().replace('.000Z', 'Z');
 };
 
 const getTomorrowUtcBoundary = (endOfDay = false): string => {
     const now = dayjs().add(1, 'day');
-    const date = new Date(
-        Date.UTC(
-            now.year(),
-            now.month(),
-            now.date(),
-            endOfDay ? 23 : 0,
-            endOfDay ? 59 : 0,
-            endOfDay ? 59 : 0,
-            0
-        )
-    );
-    return date.toISOString().replace('.000Z', 'Z');
+    const boundary = endOfDay ? now.endOf('day') : now.startOf('day');
+    return boundary.toISOString().replace('.000Z', 'Z');
 };
 
 const toPickerDate = (dateString: string): dayjs.Dayjs | null => {

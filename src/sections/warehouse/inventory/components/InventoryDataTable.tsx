@@ -25,34 +25,13 @@ import {
 // Date utility functions
 const getTodayUtcBoundary = (endOfDay = false): string => {
     const now = dayjs();
-    const date = new Date(
-        Date.UTC(
-            now.year(),
-            now.month(),
-            now.date(),
-            endOfDay ? 23 : 0,
-            endOfDay ? 59 : 0,
-            endOfDay ? 59 : 0,
-            0
-        )
-    );
-    return date.toISOString().replace('.000Z', 'Z');
+    const boundary = endOfDay ? now.endOf('day') : now.startOf('day');
+    return boundary.toISOString().replace('.000Z', 'Z');
 };
 
-const getTomorrowUtcBoundary = (endOfDay = false): string => {
-    const now = dayjs().add(1, 'day');
-    const date = new Date(
-        Date.UTC(
-            now.year(),
-            now.month(),
-            now.date(),
-            endOfDay ? 23 : 0,
-            endOfDay ? 59 : 0,
-            endOfDay ? 59 : 0,
-            0
-        )
-    );
-    return date.toISOString().replace('.000Z', 'Z');
+const toUtcDayBoundary = (value: dayjs.Dayjs, endOfDay = false): string => {
+    const boundary = endOfDay ? value.endOf('day') : value.startOf('day');
+    return boundary.toISOString().replace('.000Z', 'Z');
 };
 
 const toPickerDate = (dateString: string): dayjs.Dayjs | null => {
@@ -307,10 +286,10 @@ export function InventoryDataTable({
       periodFilter={enablePeriodPicker || enablePeriodButtons ? {
         startDate: toPickerDate(filters.date_from || '')?.toDate() || null,
         endDate: toPickerDate(filters.date_to || '')?.toDate() || null,
-        onStartDateChange: (date: Date | null) => { setFilters({ ...filters, date_from: date ? getTodayUtcBoundary(false) : undefined }); },
-        onEndDateChange: (date: Date | null) => { setFilters({ ...filters, date_to: date ? getTomorrowUtcBoundary(true) : undefined }); },
+        onStartDateChange: (date: Date | null) => { setFilters({ ...filters, date_from: date ? toUtcDayBoundary(dayjs(date), false) : undefined }); },
+        onEndDateChange: (date: Date | null) => { setFilters({ ...filters, date_to: date ? toUtcDayBoundary(dayjs(date), true) : undefined }); },
         onPeriodChange: (period: 'day' | 'week' | 'month' | 'year') => {
-          setFilters({ ...filters, date_from: getTodayUtcBoundary(false), date_to: getTomorrowUtcBoundary(true) });
+          setFilters({ ...filters, date_from: getTodayUtcBoundary(false), date_to: getTodayUtcBoundary(true) });
         },
       } : undefined}
       getRowId={(row: any) => (row as Inventory).id}

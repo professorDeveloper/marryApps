@@ -43,49 +43,21 @@ const toPickerDate = (dateString: string): dayjs.Dayjs | null => {
 };
 
 const getTodayUtcBoundary = (endOfDay = false): string => {
-    const now = dayjs();
-    const date = new Date(
-        Date.UTC(
-            now.year(),
-            now.month(),
-            now.date(),
-            endOfDay ? 23 : 0,
-            endOfDay ? 59 : 0,
-            endOfDay ? 59 : 0
-        )
-    );
-    return date.toISOString().replace('.000Z', 'Z');
+  const now = dayjs();
+  const boundary = endOfDay ? now.endOf('day') : now.startOf('day');
+  return boundary.toISOString().replace('.000Z', 'Z');
 };
 
 const getTomorrowUtcBoundary = (endOfDay = false): string => {
-    const now = dayjs().add(1, 'day');
-    const date = new Date(
-        Date.UTC(
-            now.year(),
-            now.month(),
-            now.date(),
-            endOfDay ? 23 : 0,
-            endOfDay ? 59 : 0,
-            endOfDay ? 59 : 0
-        )
-    );
-    return date.toISOString().replace('.000Z', 'Z');
+  const now = dayjs().add(1, 'day');
+  const boundary = endOfDay ? now.endOf('day') : now.startOf('day');
+  return boundary.toISOString().replace('.000Z', 'Z');
 };
 
 // Helper to convert a dayjs date to UTC boundary string
 const toUtcDayBoundary = (date: dayjs.Dayjs, endOfDay = false): string => {
-    const d = new Date(
-        Date.UTC(
-            date.year(),
-            date.month(),
-            date.date(),
-            endOfDay ? 23 : 0,
-            endOfDay ? 59 : 0,
-            endOfDay ? 59 : 0,
-            0
-        )
-    );
-    return d.toISOString().replace('.000Z', 'Z');
+    const boundary = endOfDay ? date.endOf('day') : date.startOf('day');
+    return boundary.toISOString().replace('.000Z', 'Z');
 };
 
 import { DashboardContent } from 'src/layouts/dashboard';
@@ -139,7 +111,7 @@ export function InventoryListView() {
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
     const [dateFrom, setDateFrom] = useState(getTodayUtcBoundary());
-    const [dateTo, setDateTo] = useState(getTomorrowUtcBoundary(true));
+    const [dateTo, setDateTo] = useState(getTodayUtcBoundary(true));
     const [itemsLoading, setItemsLoading] = useState(false);
     const [inventoryItems, setInventoryItems] = useState<IInventoryItem[]>([]);
     const [pagination, setPagination] = useState<IBackendPagination | undefined>(undefined);
@@ -160,7 +132,7 @@ export function InventoryListView() {
         status: '',
         storage_id: '',
         date_from: getTodayUtcBoundary(),
-        date_to: getTomorrowUtcBoundary(true),
+        date_to: getTodayUtcBoundary(true),
     });
 
     const { isOpen, selectedData, openModal, closeModal } = useGenericViewModal<IInventory>();
@@ -569,13 +541,13 @@ export function InventoryListView() {
                     onReset={() => {
                     setSearchQuery('');
                     setDateFrom(getTodayUtcBoundary());
-                    setDateTo(getTomorrowUtcBoundary(true));
+                    setDateTo(getTodayUtcBoundary(true));
                     setActivePeriod('day');
                     setDraftFilters({ 
                         status: '', 
                         storage_id: '',
                         date_from: getTodayUtcBoundary(),
-                        date_to: getTomorrowUtcBoundary(true),
+                        date_to: getTodayUtcBoundary(true),
                     });
                 }}
                     periodFilter={{

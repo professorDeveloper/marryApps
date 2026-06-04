@@ -50,18 +50,8 @@ import { RouterLink } from 'src/routes/components';
 
 const getTodayUtcBoundary = (endOfDay = false): string => {
   const now = dayjs();
-  const date = new Date(
-    Date.UTC(
-      now.year(),
-      now.month(),
-      now.date(),
-      endOfDay ? 23 : 0,
-      endOfDay ? 59 : 0,
-      endOfDay ? 59 : 0
-    )
-  );
-
-  return date.toISOString().replace('.000Z', 'Z');
+  const boundary = endOfDay ? now.endOf('day') : now.startOf('day');
+  return boundary.toISOString().replace('.000Z', 'Z');
 };
 
 // Remove empty-string UUID params before sending to API (backend 500s on invalid UUID format)
@@ -96,22 +86,12 @@ interface BackendResponse<T> {
 }
 
 const toUtcDayBoundary = (value: dayjs.Dayjs, endOfDay = false): string => {
-  const date = new Date(
-    Date.UTC(
-      value.year(),
-      value.month(),
-      value.date(),
-      endOfDay ? 23 : 0,
-      endOfDay ? 59 : 0,
-      endOfDay ? 59 : 0
-    )
-  );
-
-  return date.toISOString().replace('.000Z', 'Z');
+  const boundary = endOfDay ? value.endOf('day') : value.startOf('day');
+  return boundary.toISOString().replace('.000Z', 'Z');
 };
 
 const toPickerDate = (value?: string): dayjs.Dayjs | null =>
-  value ? dayjs(value.slice(0, 10)) : null;
+  value ? dayjs(value) : null;
 
 const filterSelectSx = {
   minWidth: 140,

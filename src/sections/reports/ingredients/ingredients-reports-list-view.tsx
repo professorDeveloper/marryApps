@@ -44,17 +44,8 @@ import { StorageFilter } from 'src/sections/common/data-table/components/Storage
 
 // Helper functions
 const toUtcDayBoundary = (value: dayjs.Dayjs, endOfDay = false): string => {
-    const date = new Date(
-        Date.UTC(
-            value.year(),
-            value.month(),
-            value.date(),
-            endOfDay ? 23 : 0,
-            endOfDay ? 59 : 0,
-            endOfDay ? 59 : 0
-        )
-    );
-    return date.toISOString().replace('.000Z', 'Z');
+  const boundary = endOfDay ? value.endOf('day') : value.startOf('day');
+  return boundary.toISOString().replace('.000Z', 'Z');
 };
 
 const getTodayUtcBoundary = (): string => {
@@ -67,7 +58,7 @@ const getTomorrowUtcBoundary = (endOfDay = false): string => {
     return toUtcDayBoundary(tomorrow, endOfDay);
 };
 
-const toPickerDate = (value?: string): dayjs.Dayjs | null => (value ? dayjs(value.slice(0, 10)) : null);
+const toPickerDate = (value?: string): dayjs.Dayjs | null => (value ? dayjs(value) : null);
 
 // Filter types
 interface IngredientReportsFilters {
@@ -85,7 +76,7 @@ interface IngredientReportsFilters {
 const initialFilters: IngredientReportsFilters = {
     storage_id: '',
     start: getTodayUtcBoundary(),
-    end: getTomorrowUtcBoundary(true),
+    end: getTodayUtcBoundary(true),
     ingredient_id: '',
     ingredient_ids: [],
     sort_by: '',
