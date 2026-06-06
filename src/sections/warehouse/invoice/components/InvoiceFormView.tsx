@@ -129,7 +129,7 @@ const InvoiceFormView = React.memo(function InvoiceFormView() {
                 const d = invoice.date;
                 setInvoiceDate(typeof d === 'string' && d ? d : new Date().toISOString());
 
-                const response = await fetcher<any>(`/api/v1/invoice-details/invoice/${invoiceId}`);
+                const response = await fetcher<any>([`/api/v1/invoice-details/invoice/${invoiceId}`, { params: { limit: 2000, offset: 0 } }]);
                 if (cancelled) return;
                 const raw = Array.isArray(response) ? response : response?.data;
                 const details = Array.isArray(raw) ? raw : raw ? [raw] : [];
