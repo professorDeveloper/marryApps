@@ -309,7 +309,7 @@ export function InvoiceDetailsStandaloneListView() {
         setSelectedInvoice(invoice);
         setSelectedInvoiceDetails([]);
         try {
-            const response = await fetcher<any>(`/api/v1/invoice-details/invoice/${invoice.id}`);
+            const response = await fetcher<any>([`/api/v1/invoice-details/invoice/${invoice.id}`, { params: { limit: 500, offset: 0 } }]);
             const details = Array.isArray(response?.data)
                 ? response.data
                 : Array.isArray(response?.data?.data)
