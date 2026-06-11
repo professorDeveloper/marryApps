@@ -331,7 +331,7 @@ const TransfersFormView = React.memo(function TransfersFormView({
             dispatch(
                 transfersFormPickerActions.setFormState({
                     formName,
-                    items: mapBatchItemsToPickerItems(batchData as Array<Record<string, unknown>>),
+                    items: mapBatchItemsToPickerItems(batchData),
                     meta: {
                         isNew,
                         transferId: effectiveTransferId ?? null,

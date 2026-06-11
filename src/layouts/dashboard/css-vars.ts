@@ -1,7 +1,5 @@
-import type { Theme, CSSObject } from '@mui/material/styles';
+import type { Theme } from '@mui/material/styles';
 import type { SettingsState } from 'src/components/settings';
-
-import { varAlpha } from 'minimal-shared/utils';
 
 // import { bulletColor } from 'src/components/nav-section';
 // export const bulletColor = { dark: '#2370c8', light: '#EDEFF2' };

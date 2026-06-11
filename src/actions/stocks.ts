@@ -1,6 +1,7 @@
 import type { SWRConfiguration } from 'swr';
 
-import useSWR, { mutate } from 'swr';
+import useSWR from 'swr';
+import { mutate } from 'src/lib/swr';
 import { useCallback } from 'react';
 
 import { poster, fetcher, deleter, endpoints } from 'src/lib/axios';

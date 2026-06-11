@@ -78,7 +78,21 @@ export const getNavData = (t: TFunction): NavSectionProps['data'] => [
           { title: t('nav.separationActs'), path: paths.warehouse.separationActs.root },
           { title: t('nav.deductions'),         path: paths.warehouse.deductions.root },
           { title: t('nav.deductionGroups'), path: paths.warehouse.deductionGroups.root },
+          { title: t('nav.transfers'),           path: paths.warehouse.transfers.root },
           { title: t('nav.inventory'),           path: paths.menu.inventory.root },
+        ],
+      },
+
+      // ── Data & Reports ────────────────────────────────────────────────
+      {
+        title: t('nav.dataReports'),
+        path: paths.menu.reports.bills.root,
+        icon: ICONS.reports,
+        deepMatch: true,
+        children: [
+          { title: t('nav.billReports'),          path: paths.menu.reports.bills.root },
+          { title: t('nav.ingredientReports'), path: paths.menu.reports.ingredients.root },
+          { title: t('nav.goodsReport'),          path: paths.menu.reports.goods.root },
         ],
       },
 
@@ -93,23 +107,6 @@ export const getNavData = (t: TFunction): NavSectionProps['data'] => [
           { title: t('nav.transactions'),        path: paths.cashbox.transactions },
           { title: t('nav.transactionGroups'), path: paths.cashbox.transactionGroups },
           { title: t('nav.cashboxReport'),     path: paths.cashbox.report },
-        ],
-      },
-
-      // ── Data & Reports ────────────────────────────────────────────────
-      {
-        title: t('nav.dataReports'),
-        path: paths.menu.reports.bills.root,
-        icon: ICONS.reports,
-        deepMatch: true,
-        children: [
-          { title: t('nav.billReports'),          path: paths.menu.reports.bills.root },
-          { title: t('nav.ingredientReports'), path: paths.menu.reports.ingredients.root },
-          { title: t('nav.goodsReport'),          path: paths.menu.reports.goods.root },
-          { title: t('nav.salesReport'),                 path: paths.menu.reports.sales.root },
-          { title: t('nav.inventoryReport'),  path: paths.menu.reports.inventory.root },
-          { title: t('nav.customReports'),      path: paths.menu.reports.custom.root },
-          { title: t('nav.archives'),                 path: paths.menu.reports.archives.root },
         ],
       },
 
@@ -137,7 +134,6 @@ export const getNavData = (t: TFunction): NavSectionProps['data'] => [
           { title: t('nav.restaurantInfo'), path: paths.settings.notifications.root },
           { title: t('nav.devices'),                path: paths.settings.general.root },
           { title: t('nav.halls'),                    path: paths.settings.halls },
-          { title: t('nav.management'),          path: paths.settings.profile.root },
           { title: t('nav.cashiers'),              path: paths.cashbox.cashiers },
         ],
       },

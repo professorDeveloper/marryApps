@@ -6,6 +6,21 @@ import axiosInstance from 'src/lib/axios';
 
 const imageUrlCache = new Map<string, Promise<string>>();
 
+// Blob URLs hold their image bytes in memory until revoked, so the cache is
+// capped LRU-style; evicted entries get their blob URL revoked.
+const IMAGE_URL_CACHE_MAX = 100;
+
+const evictOldestImageUrl = () => {
+    const oldestKey = imageUrlCache.keys().next().value;
+    if (oldestKey === undefined) return;
+
+    const evicted = imageUrlCache.get(oldestKey);
+    imageUrlCache.delete(oldestKey);
+    evicted?.then((url) => {
+        if (url.startsWith('blob:')) URL.revokeObjectURL(url);
+    });
+};
+
 /**
  * Get full image URL from object name by downloading via API
  * @param objectName - The object name returned from upload API (e.g., "c0f18a64-7f5c-4425-9414-1b01cddee9d9/{extension}")
@@ -21,6 +36,9 @@ export const getFullImageUrl = async (objectName: string | null | undefined): Pr
 
     const cachedUrl = imageUrlCache.get(objectName);
     if (cachedUrl) {
+        // Refresh recency so frequently shown images aren't evicted first
+        imageUrlCache.delete(objectName);
+        imageUrlCache.set(objectName, cachedUrl);
         return cachedUrl;
     }
 
@@ -37,6 +55,9 @@ export const getFullImageUrl = async (objectName: string | null | undefined): Pr
         return '';
     });
 
+    if (imageUrlCache.size >= IMAGE_URL_CACHE_MAX) {
+        evictOldestImageUrl();
+    }
     imageUrlCache.set(objectName, imageRequest);
 
     return imageRequest;

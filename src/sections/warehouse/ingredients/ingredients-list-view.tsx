@@ -53,6 +53,20 @@ export function IngredientListView() {
         setPaginationModel((prev) => ({ ...prev, pageSize: rowsPerPage }));
     }, [rowsPerPage]);
     const { data: metadata } = useMetadata([MetadataEntity.INGREDIENT_GROUPS]);
+
+    // Exclude deleted groups from filter options (their data may still appear in ingredient rows)
+    const activeIngredientGroups = useMemo(
+        () => (metadata?.ingredient_groups || []).filter((g: any) => !g.is_deleted),
+        [metadata?.ingredient_groups]
+    );
+
+    const groupNameById = useMemo(() => {
+        const map = new Map<string, string>();
+        (metadata?.ingredient_groups || []).forEach((g: any) => {
+            if (g?.id) map.set(String(g.id), g.name);
+        });
+        return map;
+    }, [metadata?.ingredient_groups]);
     const { ingredients, ingredientsTotal } = useGetIngredients(
         debouncedSearchQuery,
         {
@@ -61,6 +75,17 @@ export function IngredientListView() {
         }
     );
     const { deleteIngredient } = useDeleteIngredient();
+
+    const filteredIngredients = useMemo(() => {
+        const rows = Array.isArray(ingredients) ? ingredients : [];
+        if (!groupFilter && !measurementFilter) return rows;
+        return rows.filter((row: IIngredientItem) => {
+            const groupName = groupNameById.get(String(row.group_id)) || row?.group_id || '';
+            const matchesGroup = !groupFilter || groupName === groupFilter;
+            const matchesMeasurement = !measurementFilter || row.measurement === measurementFilter;
+            return matchesGroup && matchesMeasurement;
+        });
+    }, [ingredients, groupFilter, measurementFilter, groupNameById]);
     const [viewModalOpen, setViewModalOpen] = useState(false);
     const [selectedIngredient, setSelectedIngredient] = useState<IIngredientItem | null>(null);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -126,15 +151,10 @@ export function IngredientListView() {
                 sortable: true,
                 width: '1.2fr',
                 align: 'left' as const,
-                getValue: (row: IIngredientItem) => {
-                    const ingredientGroups = metadata?.ingredient_groups || [];
-                    const group = ingredientGroups.find((g: any) => g.id === row.group_id);
-                    return group?.name || row?.group_id || '-';
-                },
+                getValue: (row: IIngredientItem) =>
+                    groupNameById.get(String(row.group_id)) || row?.group_id || '-',
                 renderCell: ({ row }: { row: IIngredientItem }) => {
-                    const ingredientGroups = metadata?.ingredient_groups || [];
-                    const group = ingredientGroups.find((g: any) => g.id === row.group_id);
-                    const groupName = group?.name || row?.group_id || '-';
+                    const groupName = groupNameById.get(String(row.group_id)) || row?.group_id || '-';
                     return <RenderCell label={groupName} />;
                 },
             },
@@ -241,7 +261,7 @@ export function IngredientListView() {
                 ),
             },
         ],
-        [t, handleEditIngredient, handleViewIngredient, metadata]
+        [t, handleEditIngredient, handleViewIngredient, groupNameById]
     );
 
     const renderIngredientSpecifications = useCallback((ingredient: IIngredientItem) => (
@@ -265,7 +285,7 @@ export function IngredientListView() {
                     {t('warehouse.group')}
                 </Typography>   
                 <Typography variant="body2">
-                    { metadata?.ingredient_groups?.find((g: any) => g.id === ingredient.group_id)?.name || '-' }
+                    { groupNameById.get(String(ingredient.group_id)) || '-' }
                 </Typography>
             </Box>
             <Box>
@@ -281,7 +301,7 @@ export function IngredientListView() {
                 <Typography variant="body2">{ingredient.price_per_unit || '-'}</Typography>
             </Box>
         </Box>
-    ), [t, metadata]);
+    ), [t, groupNameById]);
 
     return (
         <>
@@ -297,14 +317,7 @@ export function IngredientListView() {
             >
                 <DeductionUtilityDataTable
                     persistKey="warehouse-ingredients"
-                    data={(Array.isArray(ingredients) ? ingredients : []).filter((row) => {
-                        const ingredientGroups = metadata?.ingredient_groups || [];
-                        const group = ingredientGroups.find((g: any) => g.id === row.group_id);
-                        const groupName = group?.name || row?.group_id || '';
-                        const matchesGroup = !groupFilter || groupName === groupFilter;
-                        const matchesMeasurement = !measurementFilter || row.measurement === measurementFilter;
-                        return matchesGroup && matchesMeasurement;
-                    })}
+                    data={filteredIngredients}
                     getRowId={(row: IIngredientItem) => String(row?.id)}
                     columns={columns}
                     search={{
@@ -358,7 +371,7 @@ export function IngredientListView() {
                                 }}
                             >
                                 <MenuItem value="">{t('common.all')}</MenuItem>
-                                {(metadata?.ingredient_groups || []).map((g: any) => (
+                                {activeIngredientGroups.map((g: any) => (
                                     <MenuItem key={g.id} value={g.name}>{g.name}</MenuItem>
                                 ))}
                             </TextField>

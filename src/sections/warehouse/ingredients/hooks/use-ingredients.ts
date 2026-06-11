@@ -83,7 +83,6 @@ export const useIngredients = (options: UseIngredientsOptions = {}): UseIngredie
 
   const handleView = useCallback((ingredient: Ingredient) => {
     // This will be handled by the component for modal/view logic
-    console.log('View ingredient:', ingredient);
   }, []);
 
   const refreshData = useCallback(() => {

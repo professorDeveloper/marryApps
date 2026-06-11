@@ -1,6 +1,7 @@
 import type { DataTableColumn } from 'src/sections/common/data-table/types/types';
 
-import useSWR, { mutate } from 'swr';
+import useSWR from 'swr';
+import { mutate } from 'src/lib/swr';
 import { useTranslation } from 'react-i18next';
 import { useMemo, useState, useCallback } from 'react';
 

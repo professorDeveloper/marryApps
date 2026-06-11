@@ -42,8 +42,8 @@ const IconWrapper = styled(Box, {
   justifyContent: 'center',
   transition: isLogo ? 'none' : 'all 1s cubic-bezier(0.68, -0.55, 0.265, 1.55)',
   opacity: isVisible ? 1 : 0,
-  transform: isVisible 
-    ? (isLogo ? 'scale(1) rotate(0deg)' : 'scale(1) rotate(0deg)')
+  transform: isVisible
+    ? 'scale(1) rotate(0deg)'
     : (isLogo ? 'scale(0) rotate(-180deg)' : 'scale(0) rotate(180deg)'),
   zIndex: isVisible ? 2 : 1,
 }));
@@ -52,143 +52,47 @@ export const AnimatedToggleButton = ({ onToggle }: { onToggle: () => void }) => 
   const [isAnimating, setIsAnimating] = useState(false);
   const [showLogo, setShowLogo] = useState(false);
   const theme = useTheme();
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const showTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const resetTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Auto animation every 30 seconds
-  useEffect(() => {
-    const startAutoAnimation = () => {
-      intervalRef.current = setInterval(() => {
-        if (!isAnimating) {
-          // Show logo
-          setShowLogo(true);
-          
-          // Hide logo after 12 seconds (full animation cycle)
-          timeoutRef.current = setTimeout(() => {
-            setShowLogo(false);
-          }, 12000);
-        }
-      }, 30000); // 30 seconds
-    };
-
-    startAutoAnimation();
-
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    };
-  }, [isAnimating]);
+  useEffect(() => () => {
+    if (showTimeoutRef.current) clearTimeout(showTimeoutRef.current);
+    if (resetTimeoutRef.current) clearTimeout(resetTimeoutRef.current);
+  }, []);
 
   const handleClick = () => {
     setIsAnimating(true);
-    
-    // Clear any existing auto-animation timers
-    if (intervalRef.current) clearInterval(intervalRef.current);
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    
-    // Start logo animation
-    setTimeout(() => {
+
+    if (showTimeoutRef.current) clearTimeout(showTimeoutRef.current);
+    if (resetTimeoutRef.current) clearTimeout(resetTimeoutRef.current);
+
+    // Play the logo animation once per click
+    showTimeoutRef.current = setTimeout(() => {
       setShowLogo(true);
     }, 200);
-    
-    // Call the toggle function
+
     onToggle();
-    
-    // Reset animations after 12 seconds (full animation cycle)
-    setTimeout(() => {
+
+    // Reset after the full 12s animation cycle
+    resetTimeoutRef.current = setTimeout(() => {
       setShowLogo(false);
       setIsAnimating(false);
-      
-      // Restart auto-animation after manual interaction
-      intervalRef.current = setInterval(() => {
-        if (!isAnimating) {
-          setShowLogo(true);
-          timeoutRef.current = setTimeout(() => {
-            setShowLogo(false);
-          }, 12000);
-        }
-      }, 30000);
     }, 12000);
   };
 
   return (
-    <AnimatedButtonContainer 
-      onClick={handleClick}
-      sx={{
-        // ...(showLogo && {
-        //   width: 'auto',
-        //   height: 'auto',
-        //   minWidth: 140,
-        //   minHeight: 140,
-        //   padding: '10px',
-        // }),
-      }}
-    >
-      {/* Animated background glow effect */}
-      <Box
-        sx={{
-          position: 'absolute',
-          width: '100%',
-          height: '100%',
-          borderRadius: '50%',
-          background: `radial-gradient(circle, ${theme.palette.primary.main}20 0%, transparent 70%)`,
-          animation: 'glow 2s ease-in-out infinite alternate',
-          '@keyframes glow': {
-            '0%': {
-              transform: 'scale(0.8)',
-              opacity: 0.3,
-            },
-            '100%': {
-              transform: 'scale(1.2)',
-              opacity: 0.7,
-            },
-          },
-        }}
-      />
-      
-      {/* Normal Icon - Widgets with continuous movement */}
+    <AnimatedButtonContainer onClick={handleClick}>
+      {/* Normal Icon - Widgets */}
       <IconWrapper isVisible={!showLogo} isLogo={false}>
-        <Box
+        <WidgetsIcon
           sx={{
-            animation: 'iconFloat 3s ease-in-out infinite',
-            '@keyframes iconFloat': {
-              '0%, 100%': {
-                transform: 'translateY(0px) rotate(0deg)',
-              },
-              '25%': {
-                transform: 'translateY(-2px) rotate(5deg)',
-              },
-              '50%': {
-                transform: 'translateY(0px) rotate(0deg)',
-              },
-              '75%': {
-                transform: 'translateY(2px) rotate(-5deg)',
-              },
-            },
+            color: theme.palette.primary.main,
+            fontSize: 24,
           }}
-        >
-          <WidgetsIcon 
-            sx={{ 
-              color: theme.palette.primary.main,
-              fontSize: 24,
-              filter: `drop-shadow(0 0 8px ${theme.palette.primary.main}40)`,
-              animation: 'lightPulse 2s ease-in-out infinite',
-              '@keyframes lightPulse': {
-                '0%, 100%': {
-                  opacity: 0.7,
-                  filter: `drop-shadow(0 0 8px ${theme.palette.primary.main}40)`,
-                },
-                '50%': {
-                  opacity: 1,
-                  filter: `drop-shadow(0 0 16px ${theme.palette.primary.main}60)`,
-                },
-              },
-            }} 
-          />
-        </Box>
+        />
       </IconWrapper>
-      
-      {/* Logo - Regular version during animation */}
+
+      {/* Logo - shown during the click animation */}
       {showLogo && (
         <Box
           sx={{
@@ -204,7 +108,7 @@ export const AnimatedToggleButton = ({ onToggle }: { onToggle: () => void }) => 
           <Logo size={40} forceRestart={showLogo} showLabel={false}/>
         </Box>
       )}
-      
+
       {/* Pulse effect during animation */}
       {isAnimating && (
         <Box

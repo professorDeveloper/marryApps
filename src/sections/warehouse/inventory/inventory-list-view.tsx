@@ -54,6 +54,12 @@ const getTomorrowUtcBoundary = (endOfDay = false): string => {
   return boundary.toISOString().replace('.000Z', 'Z');
 };
 
+const getYearAgoUtcBoundary = (endOfDay = false): string => {
+  const now = dayjs().subtract(365, 'day');
+  const boundary = endOfDay ? now.endOf('day') : now.startOf('day');
+  return boundary.toISOString().replace('.000Z', 'Z');
+};
+
 // Helper to convert a dayjs date to UTC boundary string
 const toUtcDayBoundary = (date: dayjs.Dayjs, endOfDay = false): string => {
     const boundary = endOfDay ? date.endOf('day') : date.startOf('day');
@@ -110,7 +116,7 @@ export function InventoryListView() {
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
-    const [dateFrom, setDateFrom] = useState(getTodayUtcBoundary());
+    const [dateFrom, setDateFrom] = useState(getYearAgoUtcBoundary());
     const [dateTo, setDateTo] = useState(getTodayUtcBoundary(true));
     const [itemsLoading, setItemsLoading] = useState(false);
     const [inventoryItems, setInventoryItems] = useState<IInventoryItem[]>([]);
@@ -125,13 +131,13 @@ export function InventoryListView() {
     useEffect(() => {
         setPaginationModel((prev) => ({ ...prev, pageSize: rowsPerPage }));
     }, [rowsPerPage]);
-    const [activePeriod, setActivePeriod] = useState<'day' | 'week' | 'month' | 'year' | undefined>('day');
+    const [activePeriod, setActivePeriod] = useState<'day' | 'week' | 'month' | 'year' | undefined>('year');
     const [storageOptions, setStorageOptions] = useState<Array<{ id: string; name: string }>>([]);
     const [sort, setSort] = useState({ by: 'date', order: 'desc' as 'asc' | 'desc' });
     const [draftFilters, setDraftFilters] = useState({
         status: '',
         storage_id: '',
-        date_from: getTodayUtcBoundary(),
+        date_from: getYearAgoUtcBoundary(),
         date_to: getTodayUtcBoundary(true),
     });
 
@@ -540,13 +546,13 @@ export function InventoryListView() {
                     }}
                     onReset={() => {
                     setSearchQuery('');
-                    setDateFrom(getTodayUtcBoundary());
+                    setDateFrom(getYearAgoUtcBoundary());
                     setDateTo(getTodayUtcBoundary(true));
-                    setActivePeriod('day');
-                    setDraftFilters({ 
-                        status: '', 
+                    setActivePeriod('year');
+                    setDraftFilters({
+                        status: '',
                         storage_id: '',
-                        date_from: getTodayUtcBoundary(),
+                        date_from: getYearAgoUtcBoundary(),
                         date_to: getTodayUtcBoundary(true),
                     });
                 }}

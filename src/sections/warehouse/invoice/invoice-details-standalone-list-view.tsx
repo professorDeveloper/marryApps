@@ -79,8 +79,14 @@ const getTomorrowUtcBoundary = (endOfDay = false): string => {
   return boundary.toISOString().replace('.000Z', 'Z');
 };
 
+const getYearAgoUtcBoundary = (endOfDay = false): string => {
+  const now = dayjs().subtract(365, 'day');
+  const boundary = endOfDay ? now.endOf('day') : now.startOf('day');
+  return boundary.toISOString().replace('.000Z', 'Z');
+};
+
 const initialFilters: InvoiceListFilters = {
-    date_from: getTodayUtcBoundary(),
+    date_from: getYearAgoUtcBoundary(),
     date_to: getTodayUtcBoundary(true),
     storage_id: '',
     supplier_id: '',
@@ -143,7 +149,7 @@ export function InvoiceDetailsStandaloneListView() {
   const [draftFilters, setDraftFilters] = useState<InvoiceListFilters>(initialFilters);
   const [rowCount, setRowCount] = useState(0);
   const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 20 });
-  const [activePeriod, setActivePeriod] = useState<'day' | 'week' | 'month' | 'year' | undefined>(undefined);
+  const [activePeriod, setActivePeriod] = useState<'day' | 'week' | 'month' | 'year' | undefined>('year');
   const lastInvoicesKeyRef = useRef('');
 
   useEffect(() => {
@@ -259,7 +265,9 @@ export function InvoiceDetailsStandaloneListView() {
     }, [rawInvoices, suppliers, storages]);
 
     const ingredientOptions = useMemo(
-        () => ingredients.map((ing: any) => ({ id: ing.id, label: ing.name })),
+        () => ingredients
+            .filter((ing: any) => !ing.is_deleted)
+            .map((ing: any) => ({ id: ing.id, label: ing.name })),
         [ingredients]
     );
 
@@ -549,8 +557,15 @@ export function InvoiceDetailsStandaloneListView() {
                         options: ingredientOptions,
                         onSearch: handleSearch,
                     }}
-                    toolbarActions={
-                        <>
+                    filterRow={
+                        <Box
+                            sx={{
+                                display: 'grid',
+                                gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(5, 1fr)' },
+                                gap: 1,
+                                width: '100%',
+                            }}
+                        >
                             <TextField
                                 select size="small" label={t('invoices.supplier')}
                                 value={draftFilters.supplier_id}
@@ -584,7 +599,7 @@ export function InvoiceDetailsStandaloneListView() {
                                     <MenuItem key={v} value={v}>{v}</MenuItem>
                                 ))}
                             </TextField>
-                        </>
+                        </Box>
                     }
                     pagination={{
                         page: paginationModel.page,
@@ -684,6 +699,7 @@ export function InvoiceDetailsStandaloneListView() {
                     }}
                     onReset={() => {
                         setDraftFilters(initialFilters);
+                        setActivePeriod('year');
                     }}
                     onRowClick={handleViewClick}
                     headerActions={

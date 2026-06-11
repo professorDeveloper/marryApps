@@ -6,6 +6,7 @@ import { useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Box } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 
 import { paths } from 'src/routes/paths';
 
@@ -128,8 +129,8 @@ export function GoodsReportListView() {
   const getRowId = useCallback((row: IGoodsReportItem) => String(row.good_id), []);
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, px:2 }}>
- 
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, px: 2 }}>
+
 
       <DataTable
         persistKey={PERSIST_KEY}
@@ -211,38 +212,83 @@ export function GoodsReportListView() {
   );
 }
 
+// Shared pill styles for markup columns — stable references so they aren't
+// recreated for every visible cell on each render.
+const PILL_BASE_SX = {
+  display: 'inline-flex',
+  px: '9px',
+  py: '3px',
+  borderRadius: '999px',
+  fontSize: 12,
+  fontWeight: 500,
+  letterSpacing: '0.04em',
+} as const;
+
+const PILL_POSITIVE_SX = (theme: any) => ({
+  ...PILL_BASE_SX,
+  backgroundColor: alpha(theme.palette.success.main, 0.08),
+  color: theme.palette.success.dark,
+});
+
+const PILL_NEGATIVE_SX = (theme: any) => ({
+  ...PILL_BASE_SX,
+  backgroundColor: alpha(theme.palette.error.main, 0.08),
+  color: theme.palette.error.dark,
+});
+
+const PILL_NEUTRAL_SX = (theme: any) => ({
+  ...PILL_BASE_SX,
+  backgroundColor: theme.palette.action.selected,
+  color: theme.palette.text.secondary,
+});
+
+const pillSx = (value: unknown) => {
+  const n = Number(value) || 0;
+  if (n > 0) return PILL_POSITIVE_SX;
+  if (n < 0) return PILL_NEGATIVE_SX;
+  return PILL_NEUTRAL_SX;
+};
+
 // Helper functions to convert columns and create default config
 function useDataTableColumns(): DataTableColumn<IGoodsReportItem>[] {
   const { t } = useTranslation('menu');
 
-  return [
+  return useMemo(() => [
     {
       key: 'name',
       label: t('goodsReports.good'),
-      width: 220,
+      width: '1.5fr',
       sortable: true,
-      filterable: true,
       reorderable: false,
       getValue: (row) => row.name,
     },
     {
       key: 'total_qty',
       label: t('goodsReports.totalQty'),
-      width: 120,
+      width: '1fr',
       sortable: true,
       align: 'right',
       mono: true,
       getValue: (row) => row.total_qty,
       total: {
         aggregation: 'custom',
-        compute: (rows) => rows.reduce((sum, row) => sum + (Number(row.total_qty) || 0), 0),
+        compute: (rows) => formatAmount(rows.reduce((sum, row) => sum + (Number(row.total_qty) || 0), 0)),
         label: 'Total',
       },
+      renderCell: ({ value }) => {
+        return (
+          <span style={{ textAlign: 'center', marginRight:70 }}>
+            {formatAmount(value as string | number | undefined)}
+          </span>
+
+        )
+      }
+
     },
     {
       key: 'avg_sell_price',
-      label: t('goodsReports.avgSellPrice'),
-      width: 160,
+      label: <span style={{  width:'100%', textAlign:'center' }}>{t('goodsReports.avgSellPrice')}</span>,
+      width: '1fr',
       sortable: true,
       align: 'right',
       mono: true,
@@ -252,7 +298,7 @@ function useDataTableColumns(): DataTableColumn<IGoodsReportItem>[] {
     {
       key: 'total_sell',
       label: t('goodsReports.totalSell'),
-      width: 160,
+      width: '1fr',
       sortable: true,
       align: 'right',
       mono: true,
@@ -260,14 +306,14 @@ function useDataTableColumns(): DataTableColumn<IGoodsReportItem>[] {
       renderCell: ({ value }) => formatAmount(value as string | number | undefined),
       total: {
         aggregation: 'custom',
-        compute: (rows) => rows.reduce((sum, row) => sum + (Number(row.total_sell) || 0), 0),
+        compute: (rows) => formatAmount(rows.reduce((sum, row) => sum + (Number(row.total_sell) || 0), 0)),
         label: 'Total',
       },
     },
     {
       key: 'avg_cost_price',
       label: t('goodsReports.avgCostPrice'),
-      width: 160,
+      width: '1fr',
       sortable: true,
       align: 'right',
       mono: true,
@@ -277,7 +323,7 @@ function useDataTableColumns(): DataTableColumn<IGoodsReportItem>[] {
     {
       key: 'total_cost',
       label: t('goodsReports.totalCost'),
-      width: 160,
+      width: '1fr',
       sortable: true,
       align: 'right',
       mono: true,
@@ -285,59 +331,70 @@ function useDataTableColumns(): DataTableColumn<IGoodsReportItem>[] {
       renderCell: ({ value }) => formatAmount(value as string | number | undefined),
       total: {
         aggregation: 'custom',
-        compute: (rows) => rows.reduce((sum, row) => sum + (Number(row.total_cost) || 0), 0),
+        compute: (rows) => formatAmount(rows.reduce((sum, row) => sum + (Number(row.total_cost) || 0), 0)),
         label: 'Total',
       },
     },
     {
       key: 'avg_markup',
       label: t('goodsReports.avgMarkup'),
-      width: 150,
+      width: '1fr',
       sortable: true,
       align: 'right',
       mono: true,
       getValue: (row) => row.avg_markup,
-      renderCell: ({ value }) => formatAmount(value as string | number | undefined),
+      renderCell: ({ value }) => (
+        <Box sx={pillSx(value)}>
+          {formatAmount(value as string | number | undefined)}
+        </Box>
+      ),
     },
     {
       key: 'total_markup',
       label: t('goodsReports.totalMarkup'),
-      width: 160,
+      width: '1fr',
       sortable: true,
       align: 'right',
       mono: true,
       getValue: (row) => row.total_markup,
-      renderCell: ({ value }) => formatAmount(value as string | number | undefined),
+      renderCell: ({ value }) => (
+        <Box sx={pillSx(value)}>
+          {formatAmount(value as string | number | undefined)}
+        </Box>
+      ),
       total: {
         aggregation: 'custom',
-        compute: (rows) => rows.reduce((sum, row) => sum + (Number(row.total_markup) || 0), 0),
+        compute: (rows) => formatAmount(rows.reduce((sum, row) => sum + (Number(row.total_markup) || 0), 0)),
         label: 'Total',
       },
     },
     {
       key: 'avg_markup_pct',
       label: t('goodsReports.avgMarkupPct'),
-      width: 150,
+      width: '1fr',
       sortable: true,
       align: 'right',
       mono: true,
       getValue: (row) => row.avg_markup_pct,
-      renderCell: ({ value }) => formatPercent(value as string | number | undefined),
+      renderCell: ({ value }) => (
+        <Box sx={pillSx(value)}>
+          {formatPercent(value as string | number | undefined)}
+        </Box>
+      ),
       total: {
         aggregation: 'custom',
         compute: (rows) => {
           const totalMarkup = rows.reduce((sum, row) => sum + (Number(row.total_markup) || 0), 0);
           const totalCost = rows.reduce((sum, row) => sum + (Number(row.total_cost) || 0), 0);
-          return totalCost > 0 ? (totalMarkup / totalCost) * 100 : 0;
+          return formatPercent(totalCost > 0 ? (totalMarkup / totalCost) * 100 : 0);
         },
         label: 'Avg %',
       },
     },
-  ];
+  ], [t]);
 }
 
-function useDefaultConfig(): DataTableDefaultConfig {
-  return {
+const DEFAULT_CONFIG: DataTableDefaultConfig = {
     order: [
       'name',
       'total_qty',
@@ -361,15 +418,18 @@ function useDefaultConfig(): DataTableDefaultConfig {
       avg_markup_pct: true,
     },
     widths: {
-      name: 220,
-      total_qty: 120,
-      avg_sell_price: 160,
-      total_sell: 160,
-      avg_cost_price: 160,
-      total_cost: 160,
-      avg_markup: 150,
-      total_markup: 160,
-      avg_markup_pct: 150,
+      name: '1.5fr',
+      total_qty: '1fr',
+      avg_sell_price: '1fr',
+      total_sell: '1fr',
+      avg_cost_price: '1fr',
+      total_cost: '1fr',
+      avg_markup: '1fr',
+      total_markup: '1fr',
+      avg_markup_pct: '1fr',
     },
-  };
+};
+
+function useDefaultConfig(): DataTableDefaultConfig {
+  return DEFAULT_CONFIG;
 }

@@ -9,6 +9,9 @@ export enum MetadataEntity {
   MODIFIERS = 'modifiers',
   DEDICATION_GROUPS = 'dedication_groups',
   TRANSACTION_GROUPS = 'transaction_groups',
+  HALLS = 'halls',
+  CAFE_TABLES = 'cafetables',
+  USERS = 'users',
 }
 
 export interface MetadataRecord {

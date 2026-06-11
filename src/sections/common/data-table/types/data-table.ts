@@ -7,7 +7,7 @@ export type DataTableProps<T> = {
   data: T[];
   columns: Array<any>; // DataTableColumn<T> from main types
   defaultConfig: any; // DataTableDefaultConfig from main types
-  onReset: () => void;
+  onReset?: () => void;
 
   headerActions?: ReactNode;
 

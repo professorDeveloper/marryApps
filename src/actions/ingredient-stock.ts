@@ -7,7 +7,8 @@ import type {
 import type { MetadataRecord } from 'src/types/metadata';
 import type { IIngredientItem } from 'src/types/ingredients';
 
-import useSWR, { mutate } from 'swr';
+import useSWR from 'swr';
+import { mutate } from 'src/lib/swr';
 import { useMemo, useCallback } from 'react';
 
 import { putter, fetcher, deleter, endpoints } from 'src/lib/axios';

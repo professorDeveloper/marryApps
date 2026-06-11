@@ -2,7 +2,8 @@ import type { SWRConfiguration } from 'swr';
 import type { ICompound } from 'src/types/compounds';
 import type { ITranslationItem } from 'src/types/departments.tsx';
 
-import useSWR, { mutate } from 'swr';
+import useSWR from 'swr';
+import { mutate } from 'src/lib/swr';
 import { useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 

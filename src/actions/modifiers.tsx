@@ -6,7 +6,8 @@ import type {
   IModifierWithCalculations,
 } from 'src/types/modifiers';
 
-import useSWR, { mutate } from 'swr';
+import useSWR from 'swr';
+import { mutate } from 'src/lib/swr';
 import { useMemo, useCallback } from 'react';
 
 import { poster, putter, deleter, fetcher, endpoints } from 'src/lib/axios';

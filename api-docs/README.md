@@ -3,7 +3,7 @@
 > **Version:** 1.0  
 > **Base URL:** https://api.maryai.uz/  
 > **Description:** MaryAI API server with multi-language support (uz, ru, en)  
-> **Last Updated:** 2026-05-28T09:14:46.491Z
+> **Last Updated:** 2026-06-11T11:28:03.568Z
 
 ---
 
@@ -37,7 +37,7 @@ This documentation is organized by functional modules for easier navigation:
 - [`/api/v1/bills/{id}`](./billing/api_v1_bills_id.md)
 
 ### [BRANCHES](./branches/) - 🏪 Branch management and operations
-*7 endpoints*
+*8 endpoints*
 
 - [`/api/v1/branches`](./branches/api_v1_branches.md)
 - [`/api/v1/branches-lang`](./branches/api_v1_branches-lang.md)
@@ -46,9 +46,10 @@ This documentation is organized by functional modules for easier navigation:
 - [`/api/v1/branches/{branch_id}/employee-shifts`](./branches/api_v1_branches_branch_id_employee-shifts.md)
 - [`/api/v1/branches/{id}`](./branches/api_v1_branches_id.md)
 - [`/api/v1/branches/{id}/restore`](./branches/api_v1_branches_id_restore.md)
+- [`/api/v1/reports/branches`](./branches/api_v1_reports_branches.md)
 
 ### [CORE](./core/) - ⚙️ Core system endpoints
-*166 endpoints*
+*168 endpoints*
 
 - [`/api/v1/brand/info`](./core/api_v1_brand_info.md)
 - [`/api/v1/calculations/preview`](./core/api_v1_calculations_preview.md)
@@ -92,10 +93,12 @@ This documentation is organized by functional modules for easier navigation:
 - [`/api/v1/goods-lang`](./core/api_v1_goods-lang.md)
 - [`/api/v1/goods-lang/{id}`](./core/api_v1_goods-lang_id.md)
 - [`/api/v1/goods/calculations`](./core/api_v1_goods_calculations.md)
+- [`/api/v1/goods/calculations/history`](./core/api_v1_goods_calculations_history.md)
 - [`/api/v1/goods/calculations/{id}`](./core/api_v1_goods_calculations_id.md)
 - [`/api/v1/goods/with-calculations`](./core/api_v1_goods_with-calculations.md)
 - [`/api/v1/goods/{good_id}/details`](./core/api_v1_goods_good_id_details.md)
 - [`/api/v1/goods/{id}`](./core/api_v1_goods_id.md)
+- [`/api/v1/goods/{id}/markup`](./core/api_v1_goods_id_markup.md)
 - [`/api/v1/goods/{id}/price`](./core/api_v1_goods_id_price.md)
 - [`/api/v1/goods/{id}/restore`](./core/api_v1_goods_id_restore.md)
 - [`/api/v1/goods/{id}/with-calculations`](./core/api_v1_goods_id_with-calculations.md)
@@ -371,7 +374,7 @@ Authorization: Bearer <your-token>
 ## 📊 Quick Stats
 
 - **Total Modules**: 13
-- **Total Endpoints**: 293
+- **Total Endpoints**: 296
 
 ---
 
@@ -392,4 +395,4 @@ Common data models are shared across modules. Refer to individual module documen
 ---
 
 *This documentation is automatically generated from the Swagger/OpenAPI specification*  
-*Last updated: 2026-05-28T09:14:46.492Z*
+*Last updated: 2026-06-11T11:28:03.569Z*

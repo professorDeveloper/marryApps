@@ -6,7 +6,7 @@ import type { TFunction } from 'i18next';
 import type { ICategoryFormData } from 'src/types/category';
 import type { CardSection, GenericEditViewConfig } from 'src/components/generic-edit-view';
 
-import { mutate } from 'swr';
+import { mutate } from 'src/lib/swr';
 import { useParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { useMemo, useState, useCallback } from 'react';

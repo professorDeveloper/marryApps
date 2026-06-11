@@ -53,6 +53,8 @@ export const AvailableItemsPanel = React.memo<AvailableItemsPanelProps>(({
     const [searchTerm, setSearchTerm] = useState('');
     const [sortDir, setSortDir] = useState<'asc' | 'desc' | null>('asc');
     const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+    const [highlightedIndex, setHighlightedIndex] = useState(0);
+    const [isSearchFocused, setIsSearchFocused] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
     const selectedCountRef = useRef(0);
     const filteredCountRef = useRef(0);
@@ -84,6 +86,15 @@ export const AvailableItemsPanel = React.memo<AvailableItemsPanelProps>(({
     useEffect(() => {
         filteredCountRef.current = filtered.length;
     }, [filtered.length]);
+
+    // Keep the keyboard highlight within bounds whenever the filtered list changes.
+    useEffect(() => {
+        setHighlightedIndex((prev) => {
+            if (filtered.length === 0) return -1;
+            if (prev < 0) return 0;
+            return Math.min(prev, filtered.length - 1);
+        });
+    }, [filtered]);
 
     useEffect(() => {
         selectedCountRef.current = selectedItems.size;
@@ -139,6 +150,25 @@ export const AvailableItemsPanel = React.memo<AvailableItemsPanelProps>(({
         setSelectedItems(new Set());
     }, []);
 
+    const handleSearchKeyDown = useCallback(
+        (e: React.KeyboardEvent<HTMLInputElement>) => {
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (filtered.length === 0) return;
+                setHighlightedIndex((prev) => Math.min(prev < 0 ? 0 : prev + 1, filtered.length - 1));
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (filtered.length === 0) return;
+                setHighlightedIndex((prev) => Math.max((prev < 0 ? 0 : prev) - 1, 0));
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                const item = filtered[highlightedIndex];
+                if (item) handleRowActivate(item.id);
+            }
+        },
+        [filtered, highlightedIndex, handleRowActivate]
+    );
+
     const rowVirtualizer = useVirtualizer({
         count: filtered.length,
         getScrollElement: () => scrollRef.current,
@@ -149,6 +179,13 @@ export const AvailableItemsPanel = React.memo<AvailableItemsPanelProps>(({
 
     const virtualRows = rowVirtualizer.getVirtualItems();
     const isAllSelected = filtered.length > 0 && filtered.length === selectedItems.size;
+
+    // Keep the keyboard-highlighted row scrolled into view.
+    useEffect(() => {
+        if (highlightedIndex >= 0) {
+            rowVirtualizer.scrollToIndex(highlightedIndex, { align: 'auto' });
+        }
+    }, [highlightedIndex, rowVirtualizer]);
 
     useLayoutEffect(() => {
         const seq = ++commitSeqRef.current;
@@ -282,6 +319,9 @@ export const AvailableItemsPanel = React.memo<AvailableItemsPanelProps>(({
                         placeholder={t('search')}
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
+                        onKeyDown={handleSearchKeyDown}
+                        onFocus={() => setIsSearchFocused(true)}
+                        onBlur={() => setIsSearchFocused(false)}
                         style={{
                             border: 'none',
                             outline: 'none',
@@ -355,6 +395,7 @@ export const AvailableItemsPanel = React.memo<AvailableItemsPanelProps>(({
                                     <AvailableItemRow
                                         item={item}
                                         isSelected={selectedItems.has(item.id)}
+                                        isHighlighted={isSearchFocused && vi.index === highlightedIndex}
                                         onToggleSelect={handleToggleSelect}
                                         onRowActivate={handleRowActivate}
                                     />

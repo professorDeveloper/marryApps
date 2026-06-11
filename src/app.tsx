@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 
 import { usePathname } from 'src/routes/hooks';
 
+import { AppSWRProvider } from 'src/lib/swr';
 import { themeConfig, ThemeProvider } from 'src/theme';
 import { I18nProvider } from 'src/locales/i18n-provider';
 import { LocalizationProvider } from 'src/locales/localization-provider';
@@ -26,24 +27,26 @@ export default function App({ children }: AppProps) {
 
   return (
     <I18nProvider>
-      <AuthProvider>
-        <BranchProvider>
-          <SettingsProvider defaultSettings={defaultSettings}>
-            <ThemeProvider
-              modeStorageKey={themeConfig.modeStorageKey}
-              defaultMode={themeConfig.defaultMode}
-            >
-              <LocalizationProvider>
-                <MotionLazy>
-                  <ProgressBar />
-                  <SettingsDrawer defaultSettings={defaultSettings} />
-                  {children}
-                </MotionLazy>
-              </LocalizationProvider>
-            </ThemeProvider>
-          </SettingsProvider>
-        </BranchProvider>
-      </AuthProvider>
+      <AppSWRProvider>
+        <AuthProvider>
+          <BranchProvider>
+            <SettingsProvider defaultSettings={defaultSettings}>
+              <ThemeProvider
+                modeStorageKey={themeConfig.modeStorageKey}
+                defaultMode={themeConfig.defaultMode}
+              >
+                <LocalizationProvider>
+                  <MotionLazy>
+                    <ProgressBar />
+                    <SettingsDrawer defaultSettings={defaultSettings} />
+                    {children}
+                  </MotionLazy>
+                </LocalizationProvider>
+              </ThemeProvider>
+            </SettingsProvider>
+          </BranchProvider>
+        </AuthProvider>
+      </AppSWRProvider>
     </I18nProvider>
   );
 }

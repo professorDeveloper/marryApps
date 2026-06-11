@@ -8,24 +8,24 @@ import type { SearchOutput } from 'src/sections/common/data-table/types/types';
 
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import {
-  Box,
-  Table,
-  Select,
-  Tooltip,
-  MenuItem,
-  TableRow,
-  TextField,
-  TableBody,
-  TableCell,
-  TableHead,
-  IconButton,
-  InputLabel,
-  Typography,
-  FormControl,
-  ToggleButton,
-  CircularProgress,
-  ToggleButtonGroup,
-  useTheme,
+    Box,
+    Table,
+    Select,
+    Tooltip,
+    MenuItem,
+    TableRow,
+    TextField,
+    TableBody,
+    TableCell,
+    TableHead,
+    IconButton,
+    InputLabel,
+    Typography,
+    FormControl,
+    ToggleButton,
+    CircularProgress,
+    ToggleButtonGroup,
+    useTheme,
 } from '@mui/material';
 
 import { DashboardContent } from 'src/layouts/dashboard';
@@ -41,11 +41,18 @@ import { GenericViewModal } from 'src/components/generic-view-view/GenericViewMo
 
 import { DataTable } from 'src/sections/common/data-table';
 import { StorageFilter } from 'src/sections/common/data-table/components/StorageFilter';
+import { numberCell } from './utils/numberCell';
+
+const fmtNum = (value: unknown): string => {
+    const n = Number(value);
+    if (Number.isNaN(n)) return '—';
+    return n.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+};
 
 // Helper functions
 const toUtcDayBoundary = (value: dayjs.Dayjs, endOfDay = false): string => {
-  const boundary = endOfDay ? value.endOf('day') : value.startOf('day');
-  return boundary.toISOString().replace('.000Z', 'Z');
+    const boundary = endOfDay ? value.endOf('day') : value.startOf('day');
+    return boundary.toISOString().replace('.000Z', 'Z');
 };
 
 const getTodayUtcBoundary = (): string => {
@@ -76,7 +83,7 @@ interface IngredientReportsFilters {
 const initialFilters: IngredientReportsFilters = {
     storage_id: '',
     start: getTodayUtcBoundary(),
-    end: getTodayUtcBoundary(true),
+    end: getTodayUtcBoundary(),
     ingredient_id: '',
     ingredient_ids: [],
     sort_by: '',
@@ -92,6 +99,12 @@ export function IngredientReportsListView() {
 
     // Get filter options from metadata endpoint
     const { data: metadata } = useMetadata([MetadataEntity.INGREDIENTS, MetadataEntity.STORAGES]);
+
+    // Exclude deleted storages from filter options (their data may still appear in report rows)
+    const activeStorages = useMemo(
+        () => (metadata.storages || []).filter((storage: any) => !storage.is_deleted),
+        [metadata.storages]
+    );
 
     // Get global rows per page
     const { rowsPerPage: globalRowsPerPage } = usePaginationRows();
@@ -112,9 +125,6 @@ export function IngredientReportsListView() {
     // Modal states
     const [openDetailsModal, setOpenDetailsModal] = useState(false);
     const [selectedIngredientId, setSelectedIngredientId] = useState<string | null>(null);
-    const [openAmountsModal, setOpenAmountsModal] = useState(false);
-    const [selectedAmountsData, setSelectedAmountsData] = useState<any | null>(null);
-
     // Movements modal state — filter is a group label ('' = all)
     const [movementsGroupFilter, setMovementsGroupFilter] = useState('');
 
@@ -149,7 +159,7 @@ export function IngredientReportsListView() {
 
     // Set default storage on component mount
     useEffect(() => {
-        const storages = metadata.storages || [];
+        const storages = activeStorages;
         if (storages.length > 0) {
             const firstStorageId = storages[0].id;
             setSelectedStorageId(firstStorageId);
@@ -162,7 +172,7 @@ export function IngredientReportsListView() {
                 end: toUtcDayBoundary(dayjs(), true),
             }));
         }
-    }, [metadata.storages]);
+    }, [activeStorages]);
 
     // Get reports with applied filters
     const { reports, reportsLoading, totals, reportsPagination } = useGetIngredientReports({
@@ -207,12 +217,12 @@ export function IngredientReportsListView() {
                 value: ingredient.id,
                 label: ingredient.name,
             })),
-            storage_id: (metadata.storages || []).map((storage: any) => ({
+            storage_id: activeStorages.map((storage: any) => ({
                 value: storage.id,
                 label: storage.name,
             })),
         }),
-        [metadata]
+        [metadata, activeStorages]
     );
 
     const isStoragesEmpty = filterOptions.storage_id.length === 0;
@@ -239,11 +249,6 @@ export function IngredientReportsListView() {
         }));
     }, []);
 
-    const handleOpenAmountsModal = useCallback((row: any) => {
-        setSelectedAmountsData(row);
-        setOpenAmountsModal(true);
-    }, []);
-
     // View ingredient details
     const [selectedIngredientName, setSelectedIngredientName] = useState<string>('');
     const handleViewClick = useCallback((rowData: any) => {
@@ -260,10 +265,6 @@ export function IngredientReportsListView() {
         setMovementsGroupFilter('');
     }, []);
 
-    const handleAmountsModalClose = useCallback(() => {
-        setSelectedAmountsData(null);
-        setOpenAmountsModal(false);
-    }, []);
 
     // DataTable columns
     const columns = useMemo(
@@ -271,7 +272,7 @@ export function IngredientReportsListView() {
             {
                 key: 'ingredient_name',
                 label: t('ingredientReports.ingredient') || 'Ingredient',
-                sortable: true,
+                sortable: false,
                 width: '1.5fr',
                 align: 'left' as const,
                 getValue: (row: any) => row?.ingredient_name ?? '',
@@ -284,7 +285,7 @@ export function IngredientReportsListView() {
             {
                 key: 'measurement',
                 label: t('ingredientReports.unit') || 'Unit',
-                sortable: true,
+                sortable: false,
                 width: '0.8fr',
                 align: 'left' as const,
                 getValue: (row: any) => {
@@ -299,106 +300,112 @@ export function IngredientReportsListView() {
             },
             {
                 key: 'begin_price',
-                label: 'Starting Price',
-                sortable: true,
+                label: (
+                    <span style={{ display: 'block', textAlign: 'center', width: '100%' }}>{t('ingredientReports.costStart')}</span>
+                ),
+                sortable: false,
                 width: '1fr',
-                align: 'left' as const,
+                align: 'right' as const,
                 getValue: (row: any) => Number(row?.begin_price || 0),
-                renderCell: ({ value }: { value: unknown }) => `${Number(value).toFixed(2)}`,
+                renderCell: ({ value }: { value: unknown }) => numberCell(value as number),
             },
             {
                 key: 'begin_quantity',
-                label: t('ingredientReports.beginQty') || 'Begin Qty',
+                label: (
+                    <span style={{ display: 'block', textAlign: 'center', width: '100%' }}>{t('ingredientReports.beginQty') || 'Begin Qty'}</span>
+                ),
                 sortable: true,
                 width: '1fr',
-                align: 'left' as const,
+                align: 'right' as const,
                 getValue: (row: any) => Number(row?.begin_quantity || 0),
-                renderCell: ({ value }: { value: unknown }) => `${Number(value).toFixed(2)}`,
+                renderCell: ({ value }: { value: unknown }) => numberCell(value as number),
                 total: { aggregation: 'sum' as const },
             },
             {
                 key: 'in',
-                label: t('ingredientReports.in') || 'In',
+                label: (
+                    <span style={{ display: 'block', textAlign: 'center', width: '100%' }}>{t('ingredientReports.in') || 'In'}</span>
+                ),
                 sortable: true,
                 width: '0.8fr',
-                align: 'left' as const,
+                align: 'right' as const,
                 getValue: (row: any) => Number(row?.in || 0),
-                renderCell: ({ value }: { value: unknown }) => `${Number(value).toFixed(2)}`,
+                renderCell: ({ value }: { value: unknown }) => numberCell(value as number),
                 total: { aggregation: 'sum' as const },
             },
             {
                 key: 'out',
-                label: t('ingredientReports.out') || 'Out',
+                label: (
+                    <span style={{ display: 'block', textAlign: 'center', width: '100%' }}>{t('ingredientReports.out') || 'Out'}</span>
+                ),
                 sortable: true,
                 width: '0.8fr',
-                align: 'left' as const,
+                align: 'right' as const,
                 getValue: (row: any) => Number(row?.out || 0),
-                renderCell: ({ value }: { value: unknown }) => `${Number(value).toFixed(2)}`,
+                renderCell: ({ value }: { value: unknown }) => numberCell(value as number),
                 total: { aggregation: 'sum' as const },
             },
             {
                 key: 'surplus',
-                label: t('ingredientReports.surplus'),
+                label: (
+                    <span style={{ display: 'block', textAlign: 'center', width: '100%' }}>{t('ingredientReports.surplus')}</span>
+                ),
                 sortable: true,
                 width: '1fr',
-                align: 'left' as const,
+                align: 'right' as const,
                 getValue: (row: any) => Number(row?.surplus || 0),
-                renderCell: ({ value }: { value: unknown }) => `${Number(value).toFixed(2)}`,
+                renderCell: ({ value }: { value: unknown }) => numberCell(value as number),
                 total: { aggregation: 'sum' as const },
             },
             {
                 key: 'shortage',
-                label: t('ingredientReports.shortage'),
+                label: (
+                    <span style={{ display: 'block', textAlign: 'center', width: '100%' }}>{t('ingredientReports.shortage')}</span>
+                ),
                 sortable: true,
                 width: '1fr',
-                align: 'left' as const,
+                align: 'right' as const,
                 getValue: (row: any) => Number(row?.shortage || 0),
-                renderCell: ({ value }: { value: unknown }) => `${Number(value).toFixed(2)}`,
+                renderCell: ({ value }: { value: unknown }) => numberCell(value as number),
                 total: { aggregation: 'sum' as const },
             },
             {
                 key: 'end_quantity',
-                label: t('ingredientReports.endQty') || 'End Qty',
+                label: (
+                    <span style={{ display: 'block', textAlign: 'center', width: '100%' }}>{t('ingredientReports.endQty') || 'End Qty'}</span>
+                ),
                 sortable: true,
                 width: '1fr',
-                align: 'left' as const,
+                align: 'right' as const,
                 getValue: (row: any) => Number(row?.end_quantity || 0),
-                renderCell: ({ value }: { value: unknown }) => `${Number(value).toFixed(2)}`,
+                renderCell: ({ value }: { value: unknown }) => numberCell(value as number),
                 total: { aggregation: 'sum' as const },
             },
             {
                 key: 'end_price',
-                label: 'Ending Price',
-                sortable: true,
+                label: (
+                    <span style={{ display: 'block', textAlign: 'center', width: '100%' }}>{t('ingredientReports.costEnd')}</span>
+                ),
+                sortable: false,
                 width: '1fr',
-                align: 'left' as const,
+                align: 'right' as const,
                 getValue: (row: any) => Number(row?.end_price || 0),
-                renderCell: ({ value }: { value: unknown }) => `${Number(value).toFixed(2)}`,
+                renderCell: ({ value }: { value: unknown }) => numberCell(value as number),
             },
             {
-                key: 'actions',
-                label: t('actions'),
-                sortable: false,
-                filterable: false,
-                width: '0.7fr',
-                align: 'center' as const,
-                renderCell: ({ row }: { row: any }) => (
-                    <Box sx={{ display: 'flex', gap: 0.5 }}>
-                        <IconButton
-                            size="small"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                handleOpenAmountsModal(row);
-                            }}
-                            sx={{ color: 'text.secondary' }}
-                        >
-                            <Iconify icon="solar:chart-square-outline" width={18} />
-                        </IconButton>
-                    </Box>
+                key: 'end_value',
+                label: (
+                    <span style={{ display: 'block', textAlign: 'center', width: '100%' }}>{t('ingredientReports.endValue')}</span>
                 ),
+                sortable: false,
+                width: '1fr',
+                align: 'right' as const,
+                getValue: (row: any) => Number(row?.end_quantity || 0) * Number(row?.end_price || 0),
+                renderCell: (row: any) => numberCell(Number(row?.end_quantity || 0) * Number(row?.end_price || 0)),
+                total: { aggregation: 'sum' as const },
             },
         ],
-        [t, handleViewClick, handleOpenAmountsModal]
+        [t, handleViewClick]
     );
 
     // Filter handlers adapted for invoice pattern
@@ -413,7 +420,7 @@ export function IngredientReportsListView() {
     const handleResetFilters = useCallback(() => {
         setDraftFilters(initialFilters);
         resetTimeFilter();
-        const storages = metadata.storages || [];
+        const storages = activeStorages;
         if (storages.length > 0) {
             setSelectedStorageId(storages[0].id);
             setDraftFilters((prev) => ({
@@ -421,7 +428,7 @@ export function IngredientReportsListView() {
                 storage_id: storages[0].id,
             }));
         }
-    }, [metadata.storages, resetTimeFilter]);
+    }, [activeStorages, resetTimeFilter]);
 
     // Apply date range changes
     useEffect(() => {
@@ -435,7 +442,7 @@ export function IngredientReportsListView() {
     }, [startDate, endDate]);
 
 
-  
+
 
     // Render ingredient movements in detail modal
     const renderReportDetailsContent = useCallback((_data: any) => {
@@ -614,70 +621,6 @@ export function IngredientReportsListView() {
         );
     }, [t, theme, movementsLoading, movements, movementsTotals, movementsGroupFilter, noDataText]);
 
-    const renderAmountsDetailsContent = useCallback((data: any) => {
-        if (!data) return null;
-
-        const amountRows = [
-            {
-                label: t('ingredientReports.beginQty') || 'Begin Qty',
-                value: Number(data.begin_quantity).toFixed(2),
-            },
-            {
-                label: t('ingredientReports.in') || 'In',
-                value: Number(data.in).toFixed(2),
-            },
-            {
-                label: t('ingredientReports.out') || 'Out',
-                value: Number(data.out).toFixed(2),
-            },
-            {
-                label: t('ingredientReports.surplus'),
-                value: Number(data.surplus).toFixed(2),
-            },
-            {
-                label: t('ingredientReports.shortage'),
-                value: Number(data.shortage).toFixed(2),
-            },
-            {
-                label: t('ingredientReports.endQty') || 'End Qty',
-                value: Number(data.end_quantity).toFixed(2),
-            },
-        ];
-
-        return (
-            <Box>
-                <Table size="small">
-                    <TableHead>
-                        <TableRow>
-                            <TableCell>{t('common.name') || 'Name'}</TableCell>
-                            <TableCell align="right">{t('common.amount') || 'Amount'}</TableCell>
-                        </TableRow>
-                    </TableHead>
-                    <TableBody>
-                        {amountRows.map((row) => (
-                            <TableRow key={row.label}>
-                                <TableCell>{row.label}</TableCell>
-                                <TableCell align="right" sx={{ fontWeight: 600 }}>
-                                    {row.value}
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </Box>
-        );
-    }, [t]);
-
-    const handleAmountRowClick = useCallback(
-        (id: string) => {
-            const selectedRow = reports.find((row: any) => row.ingredient_id === id);
-            if (selectedRow) {
-                handleOpenAmountsModal(selectedRow);
-            }
-        },
-        [reports, handleOpenAmountsModal]
-    );
-
     return (
         <>
             <DashboardContent
@@ -714,17 +657,26 @@ export function IngredientReportsListView() {
                         activePeriod: activeRange,
                         onPeriodChange: applyRange,
                     }}
-                    toolbarActions={
-                      <StorageFilter
-                        storageId={selectedStorageId}
-                        storages={(metadata.storages || []).map((s: any) => ({ id: s.id, name: s.name }))}
-                        onStorageChange={handleStorageChange}
-                        label={t('ingredientReports.storage') || 'Storage'}
-                        disabled={isStoragesEmpty}
-                      />
+                    filterRow={
+                        <Box
+                            sx={{
+                                display: 'grid',
+                                gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(5, 1fr)' },
+                                gap: 1,
+                                width: '100%',
+                            }}
+                        >
+                            <StorageFilter
+                                storageId={selectedStorageId}
+                                storages={activeStorages.map((s: any) => ({ id: s.id, name: s.name }))}
+                                onStorageChange={handleStorageChange}
+                                label={t('ingredientReports.storage') || 'Storage'}
+                                disabled={isStoragesEmpty}
+                            />
+                        </Box>
                     }
                     defaultConfig={{
-                        order: ['ingredient_name', 'measurement', 'begin_price', 'begin_quantity', 'in', 'out', 'surplus', 'shortage', 'end_quantity', 'end_price', 'actions'],
+                        order: ['ingredient_name', 'measurement', 'begin_price', 'begin_quantity', 'in', 'out', 'surplus', 'shortage', 'end_quantity', 'end_price', 'end_value'],
                         visibility: {
                             ingredient_name: true,
                             measurement: true,
@@ -736,7 +688,7 @@ export function IngredientReportsListView() {
                             shortage: true,
                             end_quantity: true,
                             end_price: true,
-                            actions: true,
+                            end_value: true,
                         },
                         widths: {
                             ingredient_name: '1.5fr',
@@ -749,7 +701,7 @@ export function IngredientReportsListView() {
                             shortage: '1fr',
                             end_quantity: '1fr',
                             end_price: '1fr',
-                            actions: '0.7fr',
+                            end_value: '1fr',
                         },
                     }}
                     onReset={handleResetFilters}
@@ -766,18 +718,6 @@ export function IngredientReportsListView() {
                 loading={movementsLoading}
                 renderContent={renderReportDetailsContent}
                 maxWidth="lg"
-                position="right"
-                slideDirection="left"
-            />
-
-            {/* Amounts Modal */}
-            <GenericViewModal
-                isOpen={openAmountsModal}
-                onClose={handleAmountsModalClose}
-                title={selectedAmountsData ? `${t('ingredientReports.amountDetails')} - ${selectedAmountsData.ingredient_name}` : t('ingredientReports.amountDetails')}
-                data={selectedAmountsData}
-                renderContent={renderAmountsDetailsContent}
-                maxWidth="md"
                 position="right"
                 slideDirection="left"
             />

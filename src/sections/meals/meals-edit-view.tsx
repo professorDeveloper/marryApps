@@ -1,6 +1,6 @@
 import type { SyntheticEvent } from 'react';
 
-import { mutate } from 'swr';
+import { mutate } from 'src/lib/swr';
 import { toast } from 'sonner';
 import { useParams } from 'react-router';
 import { useTranslation } from 'react-i18next';

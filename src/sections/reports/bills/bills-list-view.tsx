@@ -4,38 +4,52 @@ import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
 import { useMemo, useState, useEffect, useCallback } from 'react';
 
-import { useTimeFilter } from 'src/hooks/use-time-filter';
-
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import {
     Box,
-    Table,
-    Button,
+    Chip,
     MenuItem,
-    TableRow,
     TextField,
-    TableBody,
-    TableCell,
-    TableHead,
-    Typography,
-    ToggleButton,
-    ToggleButtonGroup,
 } from '@mui/material';
 
-import { useGetHalls } from 'src/actions/halls';
-import { useGetUsersByRole } from 'src/actions/users';
-import { DashboardContent } from 'src/layouts/dashboard';
-import { useGetBills, useGetBillDetails } from 'src/actions/bills';
+import { useMetadata } from 'src/hooks/use-metadata';
+import { useTimeFilter } from 'src/hooks/use-time-filter';
 import { usePaginationRows } from 'src/hooks/use-pagination-rows';
 
-import { Iconify } from 'src/components/iconify';
-import { NoDataTooltip } from 'src/components/no-data-tooltip';
+import { DashboardContent } from 'src/layouts/dashboard';
+import { useGetBills, useGetBillDetails } from 'src/actions/bills';
+
 import { GenericViewModal } from 'src/components/generic-view-view/GenericViewModal';
 
 import { DataTable } from 'src/sections/common/data-table';
 import { CELL_SX } from 'src/sections/common/data-table/utils/constants';
 
-// Helper functions
+import { MetadataEntity } from 'src/types/metadata';
+
+import { fmtNum } from './utils/format';
+import { BillReceiptDetail } from './components/bill-receipt-detail';
+
+const BILL_STATUS_CHIP_COLOR: Record<string, 'info' | 'warning' | 'success'> = {
+    opened: 'info',
+    closed: 'warning',
+    paid: 'success',
+};
+
+const DATE_TIME_CELL_SX = { lineHeight: 1.2, fontSize: '0.85em' };
+
+const renderDateTimeCell = ({ value }: { value: unknown }) => {
+    const dateObj = dayjs(value as string);
+    if (!dateObj.isValid()) return '';
+
+    return (
+        <Box sx={CELL_SX}>
+            <Box sx={DATE_TIME_CELL_SX}>
+                <Box>{dateObj.format('DD.MM.YYYY')}</Box>
+                <Box>{dateObj.format('HH:mm')}</Box>
+            </Box>
+        </Box>
+    );
+};
+
 const toUtcDayBoundary = (value: dayjs.Dayjs, endOfDay = false): string => {
   const boundary = endOfDay ? value.endOf('day') : value.startOf('day');
   return boundary.toISOString().replace('.000Z', 'Z');
@@ -46,17 +60,9 @@ const getTodayUtcBoundary = (): string => {
     return toUtcDayBoundary(today);
 };
 
-const getTomorrowUtcBoundary = (endOfDay = false): string => {
-    const tomorrow = dayjs().add(1, 'day');
-    return toUtcDayBoundary(tomorrow, endOfDay);
-};
-
-const toPickerDate = (value?: string): dayjs.Dayjs | null => (value ? dayjs(value) : null);
-
-
 const initialFilters: BillsListFilters = {
     start: getTodayUtcBoundary(),
-    end: getTodayUtcBoundary(true),
+    end: getTodayUtcBoundary(),
     bill_status: [],
     payment_type: [],
     waiter_id: '',
@@ -70,53 +76,52 @@ const initialFilters: BillsListFilters = {
 
 export function BillsListView() {
     const { t, i18n } = useTranslation('menu');
-    const noDataText = t('noDataAvailable');
-
     // Modal state
     const [selectedBillId, setSelectedBillId] = useState<string | null>(null);
     const [selectedBill, setSelectedBill] = useState<any | null>(null);
     const [openDetailsModal, setOpenDetailsModal] = useState(false);
 
-    // Get filter options from APIs
-    const { halls } = useGetHalls();
-    const { users: waiters } = useGetUsersByRole('waiter');
+    // Metadata (halls, users, cafetables)
+    const { data: metadata } = useMetadata([MetadataEntity.HALLS, MetadataEntity.USERS, MetadataEntity.CAFE_TABLES]);
+    const halls = (metadata.halls || []) as any[];
+    const users = (metadata.users || []) as any[];
+    const cafetables = (metadata.cafetables || []) as any[];
+    const cafeTableMap = useMemo(
+        () => new Map(cafetables.map((tbl) => [tbl.id, tbl.number ?? tbl.name])),
+        [cafetables]
+    );
+
+    // Exclude deleted entities from filter options (their data may still appear in bill rows)
+    const activeHalls = useMemo(() => halls.filter((h: any) => !h.is_deleted), [halls]);
+    const activeUsers = useMemo(() => users.filter((u: any) => !u.is_deleted), [users]);
+    const activeCafetables = useMemo(() => cafetables.filter((tbl: any) => !tbl.is_deleted), [cafetables]);
 
     // Get bill details when modal opens
     const { bill, billLoading } = useGetBillDetails(selectedBillId || '');
 
-    // Get global rows per page
+    // Resolve global rows per page and time filter BEFORE state declarations so lazy init is correct
     const { rowsPerPage: globalRowsPerPage } = usePaginationRows();
+    const { startDate, endDate, activePeriod: activeRange, setDates, applyRange } = useTimeFilter();
 
-    // Filter states
-    const [filters, setFilters] = useState<BillsListFilters>(initialFilters);
-    const [draftFilters, setDraftFilters] = useState<BillsListFilters>(initialFilters);
-    const [searchQuery, setSearchQuery] = useState('');
-    const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+    // Filter states — lazy init so initial values match Redux/localStorage, preventing extra requests
+    const [filters, setFilters] = useState<BillsListFilters>(() => ({
+        ...initialFilters,
+        limit: globalRowsPerPage,
+        start: startDate ? toUtcDayBoundary(startDate) : getTodayUtcBoundary(),
+        end: endDate ? toUtcDayBoundary(endDate, true) : getTodayUtcBoundary(),
+    }));
+    const [draftFilters, setDraftFilters] = useState<BillsListFilters>(() => ({
+        ...initialFilters,
+        limit: globalRowsPerPage,
+        start: startDate ? toUtcDayBoundary(startDate) : getTodayUtcBoundary(),
+        end: endDate ? toUtcDayBoundary(endDate, true) : getTodayUtcBoundary(),
+    }));
     const [rowCount, setRowCount] = useState(0);
     const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: globalRowsPerPage });
 
     useEffect(() => {
         setPaginationModel((prev) => ({ ...prev, pageSize: globalRowsPerPage }));
     }, [globalRowsPerPage]);
-
-    const { startDate, endDate, activePeriod: activeRange, setDates, applyRange, reset: resetTimeFilter } = useTimeFilter();
-
-    // Debounced search
-    useEffect(() => {
-        const timeout = setTimeout(() => {
-            setDebouncedSearchQuery(searchQuery);
-        }, 400);
-
-        return () => clearTimeout(timeout);
-    }, [searchQuery]);
-
-    // Update draft filters with search
-    useEffect(() => {
-        setDraftFilters((prev) => ({
-            ...prev,
-            q: debouncedSearchQuery,
-        }));
-    }, [debouncedSearchQuery]);
 
     // Update filters when draft filters change
     useEffect(() => {
@@ -157,178 +162,12 @@ export function BillsListView() {
         setRowCount(pagination?.total || 0);
     }, [pagination]);
 
-    // Prepare filter options
-    const filterOptions = useMemo(
-        () => ({
-            bill_status: [
-                { value: 'opened', label: t('Ochiq') || 'Opened' },
-                { value: 'closed', label: t('Yopilgan') || 'Closed' },
-                { value: 'paid', label: t('To\'langan') || 'Paid' },
-            ],
-            payment_type: [
-                { value: 'cash', label: t('Naxt') || 'Cash' },
-                { value: 'card', label: t('Karta') || 'Card' },
-            ],
-            waiter_id: waiters.map((waiter) => ({
-                value: waiter.id,
-                label: waiter.full_name || waiter.username || 'Unknown',
-            })),
-            hall_id: halls.map((hall) => ({
-                value: hall.id,
-                label: hall.name,
-            })),
-        }),
-        [waiters, halls, t]
-    );
-
-    const isWaitersEmpty = filterOptions.waiter_id.length === 0;
-    const isHallsEmpty = filterOptions.hall_id.length === 0;
 
     // Render bill details modal content
-    const renderBillDetailsContent = useCallback((billData: any) => {
-        if (!billData) return null;
-
-        const paymentTypeLabel =
-            billData.payment_type === 'cash'
-                ? t('bills.cash')
-                : billData.payment_type === 'card'
-                    ? t('bills.card')
-                    : '-';
-
-        return (
-            <Box>
-                {/* Bill Header Summary */}
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, pb: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
-                    <Box>
-                        <Typography variant="body2" sx={{ color: 'text.secondary', mb: 0.5 }}>
-                            {t('bills.waiter') || 'Waiter'}
-                        </Typography>
-                        <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                            {billData.waiter_name || '-'}
-                        </Typography>
-                    </Box>
-                    <Box>
-                        <Typography variant="body2" sx={{ color: 'text.secondary', mb: 0.5 }}>
-                            {t('bills.hall') || 'Hall'}
-                        </Typography>
-                        <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                            {billData.hall_name || '-'}
-                        </Typography>
-                    </Box>
-                    <Box>
-                        <Typography variant="body2" sx={{ color: 'text.secondary', mb: 0.5 }}>
-                            {t('bills.table') || 'Table #'}
-                        </Typography>
-                        <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                            {billData.table_number}
-                        </Typography>
-                    </Box>
-                    <Box>
-                        <Typography variant="body2" sx={{ color: 'text.secondary', mb: 0.5 }}>
-                            {t('bills.status') || 'Status'}
-                        </Typography>
-                        <Typography
-                            variant="subtitle2"
-                            sx={{
-                                fontWeight: 700,
-                                color:
-                                    billData.bill_status === 'opened'
-                                        ? 'var(--warning)'
-                                        : billData.bill_status === 'closed'
-                                            ? 'var(--success)'
-                                            : '#60A5FA',
-                            }}
-                        >
-                            {billData.bill_status === 'opened'
-                                ? t('bills.opened') || 'Opened'
-                                : billData.bill_status === 'closed'
-                                    ? t('bills.closed') || 'Closed'
-                                    : t('bills.paid') || 'Paid'}
-                        </Typography>
-                    </Box>
-                </Box>
-
-                {/* Items Table */}
-                {billData.items && billData.items.length > 0 && (
-                    <Box sx={{ mb: 2 }}>
-                        <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
-                            {t('bills.items') || 'Items'} ({billData.items.length || billData.quantity || 0})
-                        </Typography>
-                        <Table size="small" sx={{ '& td': { py: 0.75 } }}>
-                            <TableHead sx={{ backgroundColor: 'rgba(0, 0, 0, 0.04)' }}>
-                                <TableRow>
-                                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>{t('bills.product') || 'Product'}</TableCell>
-                                    <TableCell align="right" sx={{ fontWeight: 600, fontSize: '0.875rem', width: 60 }}>
-                                        {t('bills.quantity') || 'Qty'}
-                                    </TableCell>
-                                    <TableCell align="right" sx={{ fontWeight: 600, fontSize: '0.875rem', width: 80 }}>
-                                        {t('bills.price') || 'Price'}
-                                    </TableCell>
-                                    <TableCell align="right" sx={{ fontWeight: 600, fontSize: '0.875rem', width: 80 }}>
-                                        {t('bills.total') || 'Total'}
-                                    </TableCell>
-                                </TableRow>
-                            </TableHead>
-                            <TableBody>
-                                {billData.items.map((item: any, index: number) => (
-                                    <TableRow key={item.id || index} sx={{ '&:last-child td': { borderBottom: 0 } }}>
-                                        <TableCell sx={{ fontSize: '0.875rem' }}>{item.good_name}</TableCell>
-                                        <TableCell align="right" sx={{ fontSize: '0.875rem' }}>{item.quantity}</TableCell>
-                                        <TableCell align="right" sx={{ fontSize: '0.875rem' }}>{Number(item.price).toLocaleString()}</TableCell>
-                                        <TableCell align="right" sx={{ fontSize: '0.875rem', fontWeight: 600 }}>
-                                            {(Number(item.price) * item.quantity).toLocaleString()}
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </Box>
-                )}
-
-                {/* Summary */}
-                <Box sx={{ backgroundColor: 'rgba(0, 0, 0, 0.02)', p: 1.5, borderRadius: 1 }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.75 }}>
-                        <Typography variant="body2">{t('bills.foodCost')}:</Typography>
-                        <Typography variant="body2">{Number(billData.food_cost).toLocaleString()}</Typography>
-                    </Box>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.75 }}>
-                        <Typography variant="body2">{t('bills.foodTotal') || 'Food Total'}:</Typography>
-                        <Typography variant="body2">{Number(billData.food_total).toLocaleString()}</Typography>
-                    </Box>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.75 }}>
-                        <Typography variant="body2">{t('bills.paymentType') || 'Payment Type'}:</Typography>
-                        <Typography variant="body2">{paymentTypeLabel}</Typography>
-                    </Box>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.75 }}>
-                        <Typography variant="body2">{t('bills.closedAt')}:</Typography>
-                        <Typography variant="body2">
-                            {billData.closed_at ? dayjs(billData.closed_at).format('YYYY-MM-DD HH:mm') : '-'}
-                        </Typography>
-                    </Box>
-                    {Number(billData.service_amount) > 0 && (
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.75 }}>
-                            <Typography variant="body2">{t('bills.service') || 'Service'} ({billData.service_percent}%):</Typography>
-                            <Typography variant="body2">+{Number(billData.service_amount).toLocaleString()}</Typography>
-                        </Box>
-                    )}
-                    {Number(billData.discount_amount) > 0 && (
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.75, color: 'var(--success)' }}>
-                            <Typography variant="body2">{t('bills.discount') || 'Discount'}:</Typography>
-                            <Typography variant="body2">-{Number(billData.discount_amount).toLocaleString()}</Typography>
-                        </Box>
-                    )}
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 1, pt: 1, borderTop: '2px solid', borderColor: 'divider' }}>
-                        <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                            {t('bills.grandTotal') || 'Grand Total'}
-                        </Typography>
-                        <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                            {Number(billData.grand_total).toLocaleString()} so'm
-                        </Typography>
-                    </Box>
-                </Box>
-            </Box>
-        );
-    }, [t]);
+    const renderBillDetailsContent = useCallback(
+        (billData: any) => <BillReceiptDetail billData={billData} cafeTableMap={cafeTableMap} t={t} />,
+        [t, cafeTableMap]
+    );
 
     // View bill details
     const handleViewClick = useCallback((billData: any) => {
@@ -343,6 +182,15 @@ export function BillsListView() {
         setSelectedBill(null);
         setOpenDetailsModal(false);
     }, []);
+
+    const statusLabels = useMemo<Record<string, string>>(
+        () => ({
+            opened: t('bills.opened') || 'Opened',
+            closed: t('bills.closed') || 'Closed',
+            paid: t('bills.paid') || 'Paid',
+        }),
+        [t]
+    );
 
     // DataTable columns
     const columns = useMemo(
@@ -361,27 +209,31 @@ export function BillsListView() {
                 ),
             },
             {
+                key: 'bill_status',
+                label: t('bills.status') || 'Status',
+                sortable: true,
+                width: '0.9fr',
+                align: 'left' as const,
+                getValue: (row: any) => row?.bill_status || '',
+                renderCell: ({ value }: { value: unknown }) => {
+                    const status = String(value ?? '').toLowerCase();
+                    return (
+                        <Chip
+                            label={statusLabels[status] || status}
+                            color={BILL_STATUS_CHIP_COLOR[status] ?? 'default'}
+                            size="small"
+                            variant="soft"
+                        />
+                    );
+                },
+            },
+            {
                 key: 'opened_at',
                 label: t('bills.opened'),
                 sortable: true,
                 width: '0.8fr',
                 align: 'left' as const,
-                renderCell: ({ value }: { value: unknown }) => {
-                    const dateObj = dayjs(value as string);
-                    if (!dateObj.isValid()) return '';
-
-                    const dateLine = dateObj.format('DD.MM.YYYY');
-                    const timeLine = dateObj.format('HH:mm');
-
-                    return (
-                        <Box sx={CELL_SX}>
-                            <Box sx={{ lineHeight: 1.2, fontSize: '0.85em' }}>
-                                <Box>{dateLine}</Box>
-                                <Box>{timeLine}</Box>
-                            </Box>
-                        </Box>
-                    );
-                },
+                renderCell: renderDateTimeCell,
             },
             {
                 key: 'closed_at',
@@ -389,22 +241,7 @@ export function BillsListView() {
                 sortable: true,
                 width: '0.8fr',
                 align: 'left' as const,
-                renderCell: ({ value }: { value: unknown }) => {
-                    const dateObj = dayjs(value as string);
-                    if (!dateObj.isValid()) return '';
-
-                    const dateLine = dateObj.format('DD.MM.YYYY');
-                    const timeLine = dateObj.format('HH:mm');
-
-                    return (
-                        <Box sx={CELL_SX}>
-                            <Box sx={{ lineHeight: 1.2, fontSize: '0.85em' }}>
-                                <Box>{dateLine}</Box>
-                                <Box>{timeLine}</Box>
-                            </Box>
-                        </Box>
-                    );
-                },
+                renderCell: renderDateTimeCell,
             },
             {
                 key: 'waiter_name',
@@ -423,11 +260,6 @@ export function BillsListView() {
                 key: 'hall_id',
                 label: t('bills.hall') || 'Hall',
                 sortable: true,
-                filter: {
-                    type: 'multi' as const,
-                    options: halls.map((h) => h.id),
-                    getOptionLabel: (id: string) => halls.find((h) => h.id === id)?.name || id,
-                },
                 width: '1fr',
                 align: 'left' as const,
                 getValue: (row: any) => row?.hall_name ?? '-',
@@ -438,10 +270,23 @@ export function BillsListView() {
                 ),
             },
             {
+                key: 'table_number',
+                label: t('bills.table') || 'Table',
+                sortable: true,
+                width: '0.6fr',
+                align: 'left' as const,
+                getValue: (row: any) => row?.table_number ?? '-',
+                renderCell: ({ row }: { row: any }) => (
+                    <Box sx={CELL_SX}>
+                        {row?.table_number || '-'}
+                    </Box>
+                ),
+            },
+            {
                 key: 'guest_count',
                 label: t('bills.guests'),
                 sortable: true,
-                width: '0.7fr',
+                width: '0.8fr',
                 align: 'left' as const,
                 getValue: (row: any) => row?.guest_count ?? 0,
                 renderCell: ({ row }: { row: any }) => (
@@ -458,17 +303,24 @@ export function BillsListView() {
                 align: 'left' as const,
                 mono: true,
                 getValue: (row: any) => Number(row?.food_cost || 0),
-                renderCell: ({ value }: { value: unknown }) => {
-                    const amount = Number(value ?? 0);
-                    return (
-                        <Box sx={CELL_SX}>
-                            {amount.toLocaleString()}
-                        </Box>
-                    );
-                },
+                renderCell: ({ value }: { value: unknown }) => (
+                    <Box sx={CELL_SX}>{fmtNum(Number(value ?? 0))}</Box>
+                ),
                 total: { aggregation: 'sum' as const },
             },
-
+            {
+                key: 'food_total',
+                label: t('bills.foodTotal') || 'Food Total',
+                sortable: true,
+                width: '1fr',
+                align: 'left' as const,
+                mono: true,
+                getValue: (row: any) => Number(row?.food_total || 0),
+                renderCell: ({ value }: { value: unknown }) => (
+                    <Box sx={CELL_SX}>{fmtNum(Number(value ?? 0))}</Box>
+                ),
+                total: { aggregation: 'sum' as const },
+            },
             {
                 key: 'payment_type',
                 label: t('bills.paymentType') || 'Payment type',
@@ -481,11 +333,7 @@ export function BillsListView() {
                     let displayValue = '-';
                     if (val === 'cash') displayValue = t('bills.cash');
                     else if (val === 'card') displayValue = t('bills.card');
-                    return (
-                        <Box sx={CELL_SX}>
-                            {displayValue}
-                        </Box>
-                    );
+                    return <Box sx={CELL_SX}>{displayValue}</Box>;
                 },
             },
             {
@@ -496,11 +344,13 @@ export function BillsListView() {
                 align: 'left' as const,
                 mono: true,
                 getValue: (row: any) => Number(row?.service_amount || 0),
-                renderCell: ({ value }: { value: unknown }) => {
-                    const amount = Number(value ?? 0);
+                renderCell: ({ row }: { row: any }) => {
+                    const percent = Number(row?.service_percent || 0);
+                    const amount = Number(row?.service_amount || 0);
                     return (
-                        <Box sx={CELL_SX}>
-                            {amount.toLocaleString()} so'm
+                        <Box sx={{ ...CELL_SX, flexDirection: 'column', alignItems: 'flex-start', lineHeight: 1.2, fontSize: '0.85em' }}>
+                            <Box sx={{ color: 'text.secondary' }}>{percent > 0 ? `${percent.toFixed(2)}%` : '-'}</Box>
+                            <Box>{fmtNum(amount)}</Box>
                         </Box>
                     );
                 },
@@ -516,11 +366,7 @@ export function BillsListView() {
                 getValue: (row: any) => Number(row?.discount_amount || 0),
                 renderCell: ({ value }: { value: unknown }) => {
                     const amount = Number(value ?? 0);
-                    return (
-                        <Box sx={CELL_SX}>
-                            {amount > 0 ? `${amount.toLocaleString()} so'm` : '-'}
-                        </Box>
-                    );
+                    return <Box sx={CELL_SX}>{amount > 0 ? fmtNum(amount) : '-'}</Box>;
                 },
                 total: { aggregation: 'sum' as const },
             },
@@ -532,51 +378,13 @@ export function BillsListView() {
                 align: 'left' as const,
                 mono: true,
                 getValue: (row: any) => Number(row?.grand_total || 0),
-                renderCell: ({ value }: { value: unknown }) => {
-                    const amount = Number(value ?? 0);
-                    return (
-                        <Box sx={CELL_SX}>
-                            {amount.toLocaleString()}
-                        </Box>
-                    );
-                },
+                renderCell: ({ value }: { value: unknown }) => (
+                    <Box sx={CELL_SX}>{fmtNum(Number(value ?? 0))}</Box>
+                ),
                 total: { aggregation: 'sum' as const },
             },
-            {
-                key: 'bill_status',
-                label: t('bills.status') || 'Status',
-                sortable: true,
-                width: '0.9fr',
-                align: 'left' as const,
-                getValue: (row: any) => row?.bill_status || '',
-                renderCell: ({ value }: { value: unknown }) => {
-                    const status = String(value ?? '').toLowerCase();
-                    const statusColors: Record<string, string> = {
-                        opened: 'var(--warning)',
-                        closed: 'var(--success)',
-                        paid: '#60A5FA',
-                    };
-                    const statusLabels: Record<string, string> = {
-                        opened: t('bills.opened') || 'Opened',
-                        closed: t('bills.closed') || 'Closed',
-                        paid: t('bills.paid') || 'Paid',
-                    };
-                    return (
-                        <Box sx={CELL_SX}>
-                            <Typography
-                                sx={{
-                                    color: statusColors[status] || 'text.primary',
-                                    fontWeight: 500,
-                                }}
-                            >
-                                {statusLabels[status] || status}
-                            </Typography>
-                        </Box>
-                    );
-                },
-            }
         ],
-        [t, i18n.language, halls]
+        [t, i18n.language, halls, statusLabels]
     );
 
     // Filter handlers adapted for invoice pattern
@@ -608,14 +416,20 @@ export function BillsListView() {
         []
     );
 
-    const handleResetFilters = useCallback(() => {
-        setDraftFilters(initialFilters);
-        resetTimeFilter();
-    }, [resetTimeFilter]);
+    const handleTableChange = useCallback(
+        (tableId: string) => {
+            setDraftFilters((prev) => ({ ...prev, table_id: tableId }));
+        },
+        []
+    );
 
-    // Date picker values
-    const startDateValue = useMemo(() => toPickerDate(draftFilters.start), [draftFilters.start]);
-    const endDateValue = useMemo(() => toPickerDate(draftFilters.end), [draftFilters.end]);
+    const handleResetFilters = useCallback(() => {
+        setDraftFilters((prev) => ({
+            ...initialFilters,
+            start: prev.start,
+            end: prev.end,
+        }));
+    }, []);
 
     // Apply date range changes
     useEffect(() => {
@@ -628,190 +442,6 @@ export function BillsListView() {
         setPaginationModel((prev) => ({ ...prev, page: 0 }));
     }, [startDate, endDate]);
 
-
-    const renderFiltersContent = () => (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-            <Box
-                sx={{
-                    display: 'grid',
-                    gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(5, 1fr)', lg: 'repeat(7, 1fr)' },
-                    gap: 1.5,
-                    alignItems: 'end',
-                }}
-            >
-                <ToggleButtonGroup
-                    exclusive
-                    value={activeRange}
-                    onChange={(_, value) => {
-                        if (!value) return;
-                        applyRange(value);
-                    }}
-                    size="small"
-                    sx={{
-                        alignSelf: 'end',
-                        '& .MuiToggleButton-root': {
-                            textTransform: 'uppercase',
-                            fontWeight: 600,
-                            px: 2.5,
-                            border: 'none',
-                            borderRadius: 0,
-                            borderBottom: '2px solid transparent',
-                        },
-                        '& .MuiToggleButton-root.Mui-selected': {
-                            borderBottomColor: 'primary.main',
-                            backgroundColor: 'transparent',
-                        },
-                        '& .MuiToggleButton-root:hover': {
-                            backgroundColor: 'transparent',
-                        },
-                    }}
-                >
-                    <ToggleButton value="day">D</ToggleButton>
-                    <ToggleButton value="week">W</ToggleButton>
-                    <ToggleButton value="month">M</ToggleButton>
-                    <ToggleButton value="year">Y</ToggleButton>
-                </ToggleButtonGroup>
-                {/* Start Date */}
-                <DatePicker
-                    label={t('bills.startDate') || 'Start Date'}
-                    value={startDate}
-                    onChange={(value) => {
-                        setDates(value, endDate, 'day');
-                    }}
-                    format="DD.MM.YYYY"
-                    slotProps={{
-                        textField: {
-                            fullWidth: true,
-                            size: 'small',
-                            inputProps: { readOnly: true },
-                            sx: { cursor: 'pointer', minWidth: 200 },
-                        },
-                    }}
-                />
-
-                {/* End Date */}
-                <DatePicker
-                    label={t('bills.endDate') || 'End Date'}
-                    value={endDate}
-                    onChange={(value) => {
-                        setDates(startDate, value, 'day');
-                    }}
-                    format="DD.MM.YYYY"
-                    slotProps={{
-                        textField: {
-                            fullWidth: true,
-                            size: 'small',
-                            inputProps: { readOnly: true },
-                            sx: { cursor: 'pointer', minWidth: 200 },
-                        },
-                    }}
-                />
-
-                {/* Status */}
-                <TextField
-                    select
-                    label={t('bills.status') || 'Status'}
-                    value={draftFilters.bill_status}
-                    onChange={(e) => handleStatusChange(e.target.value)}
-                    SelectProps={{ native: true }}
-                    size="small"
-                    fullWidth
-                    InputLabelProps={{ shrink: true }}
-                >
-                    <option value="">
-                        {t('ingredientReports.all') || 'All'}
-                    </option>
-                    {filterOptions.bill_status.map((option) => (
-                        <option key={option.value} value={option.value}>
-                            {option.label}
-                        </option>
-                    ))}
-                </TextField>
-
-                {/* Payment Type */}
-                <TextField
-                    select
-                    label={t('bills.paymentType') || 'Payment Type'}
-                    value={draftFilters.payment_type}
-                    onChange={(e) => handlePaymentTypeChange(e.target.value)}
-                    SelectProps={{ native: true }}
-                    size="small"
-                    fullWidth
-                    InputLabelProps={{ shrink: true }}
-                >
-                    <option value="">
-                        {t('ingredientReports.all') || 'All'}
-                    </option>
-                    {filterOptions.payment_type.map((option) => (
-                        <option key={option.value} value={option.value}>
-                            {option.label}
-                        </option>
-                    ))}
-                </TextField>
-
-                {/* Waiter */}
-                <NoDataTooltip enabled={isWaitersEmpty} title={noDataText}>
-                    <TextField
-                        select
-                        label={t('bills.waiter') || 'Waiter'}
-                        value={draftFilters.waiter_id}
-                        onChange={(e) => handleWaiterChange(e.target.value)}
-                        SelectProps={{ native: true }}
-                        size="small"
-                        fullWidth
-                        InputLabelProps={{ shrink: true }}
-                        disabled={isWaitersEmpty}
-                    >
-                        <option value="">
-                            {t('ingredientReports.all') || 'All'}
-                        </option>
-                        {filterOptions.waiter_id.map((option) => (
-                            <option key={option.value} value={option.value}>
-                                {option.label}
-                            </option>
-                        ))}
-                    </TextField>
-                </NoDataTooltip>
-
-                {/* Hall */}
-                <NoDataTooltip enabled={isHallsEmpty} title={noDataText}>
-                    <TextField
-                        select
-                        label={t('bills.hall') || 'Hall'}
-                        value={draftFilters.hall_id}
-                        onChange={(e) => handleHallChange(e.target.value)}
-                        SelectProps={{ native: true }}
-                        size="small"
-                        fullWidth
-                        InputLabelProps={{ shrink: true }}
-                        disabled={isHallsEmpty}
-                    >
-                        <option value="">
-                            {t('ingredientReports.all') || 'All'}
-                        </option>
-                        {filterOptions.hall_id.map((option) => (
-                            <option key={option.value} value={option.value}>
-                                {option.label}
-                            </option>
-                        ))}
-                    </TextField>
-                </NoDataTooltip>
-
-                {/* Action Buttons */}
-                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                    <Button
-                        variant="outlined"
-                        size="medium"
-                        startIcon={<Iconify icon="solar:restart-bold" />}
-                        onClick={handleResetFilters}
-                        sx={{ minWidth: 'auto', flex: 1 }}
-                    >
-                        {t('bills.reset') || 'Reset'}
-                    </Button>
-                </Box>
-            </Box>
-        </Box>
-    );
 
     return (
         <>
@@ -831,7 +461,6 @@ export function BillsListView() {
                     data={bills || []}
                     getRowId={(row: any) => String(row?.id)}
                     columns={columns}
-                    search={{ value: searchQuery, onChange: (value: string) => { setSearchQuery(value); setPaginationModel((prev) => ({ ...prev, page: 0 })); } }}
                     toolbarActions={
                         <>
                             <TextField
@@ -855,6 +484,39 @@ export function BillsListView() {
                                 <MenuItem value="cash">{t('bills.cash')}</MenuItem>
                                 <MenuItem value="card">{t('bills.card')}</MenuItem>
                             </TextField>
+                            <TextField
+                                select size="small" label={t('bills.waiter') || 'Waiter'}
+                                value={draftFilters.waiter_id || ''}
+                                onChange={(e) => handleWaiterChange(e.target.value)}
+                                sx={{ minWidth: 160 }}
+                            >
+                                <MenuItem value="">All</MenuItem>
+                                {activeUsers.map((u) => (
+                                    <MenuItem key={u.id} value={u.id}>{u.name}</MenuItem>
+                                ))}
+                            </TextField>
+                            <TextField
+                                select size="small" label={t('bills.hall') || 'Hall'}
+                                value={draftFilters.hall_id?.[0] || ''}
+                                onChange={(e) => handleHallChange(e.target.value)}
+                                sx={{ minWidth: 140 }}
+                            >
+                                <MenuItem value="">All</MenuItem>
+                                {activeHalls.map((h) => (
+                                    <MenuItem key={h.id} value={h.id}>{h.name}</MenuItem>
+                                ))}
+                            </TextField>
+                            <TextField
+                                select size="small" label={t('bills.table') || 'Table'}
+                                value={draftFilters.table_id || ''}
+                                onChange={(e) => handleTableChange(e.target.value)}
+                                sx={{ minWidth: 120 }}
+                            >
+                                <MenuItem value="">All</MenuItem>
+                                {activeCafetables.map((tbl) => (
+                                    <MenuItem key={tbl.id} value={tbl.id}>{tbl.name}</MenuItem>
+                                ))}
+                            </TextField>
                         </>
                     }
                     pagination={{
@@ -875,34 +537,38 @@ export function BillsListView() {
                         onPeriodChange: applyRange,
                     }}
                     defaultConfig={{
-                        order: ['bill_no', 'opened_at', 'closed_at', 'waiter_name', 'hall_id', 'guest_count', 'food_cost', 'grand_total', 'payment_type', 'service_amount', 'discount_amount', 'bill_status'],
+                        order: ['bill_no', 'bill_status', 'opened_at', 'closed_at', 'waiter_name', 'hall_id', 'table_number', 'guest_count', 'payment_type', 'food_cost', 'food_total',  'discount_amount', 'service_amount','grand_total'],
                         visibility: {
                             bill_no: true,
+                            bill_status: true,
                             opened_at: true,
                             closed_at: true,
                             waiter_name: true,
                             hall_id: true,
+                            table_number: true,
                             guest_count: true,
                             food_cost: true,
+                            food_total: true,
                             grand_total: true,
                             payment_type: true,
                             service_amount: true,
                             discount_amount: true,
-                            bill_status: true,
                         },
                         widths: {
-                            bill_no: '0.5fr',
-                            opened_at: '1.2fr',
-                            closed_at: '1fr',
+                            bill_no: '0.4fr',
+                            bill_status: '0.9fr',
+                            opened_at: '0.8fr',
+                            closed_at: '0.8fr',
                             waiter_name: '1.2fr',
-                            hall_id: '0.8fr',
-                            guest_count: '0.5fr',
-                            food_cost: '1fr',
-                            grand_total: '1fr',
-                            payment_type: '0.8fr',
+                            hall_id: '1fr',
+                            table_number: '0.6fr',
+                            guest_count: '0.8fr',
+                            food_cost: '1.4fr',
+                            food_total: '1fr',
+                            grand_total: '0.8fr',
+                            payment_type: '1.2fr',
                             service_amount: '1fr',
                             discount_amount: '0.8fr',
-                            bill_status: '0.8fr',
                         },
                     }}
                     onReset={handleResetFilters}
@@ -920,6 +586,7 @@ export function BillsListView() {
                 maxWidth="lg"
                 position="right"
                 slideDirection="left"
+                paperSx={{ width: { md: '440px' }, maxWidth: { md: '440px' } }}
             />
         </>
     );

@@ -2,7 +2,8 @@ import type { IModifierItem } from 'src/types/modifiers';
 import type { SWRConfiguration } from 'swr';
 
 import { toast } from 'sonner';
-import useSWR, { mutate } from 'swr';
+import useSWR from 'swr';
+import { mutate } from 'src/lib/swr';
 import { useMemo, useCallback } from 'react';
 
 import { poster, deleter, fetcher, endpoints } from 'src/lib/axios';

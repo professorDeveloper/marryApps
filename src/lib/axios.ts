@@ -130,8 +130,6 @@ export const fetcher = async <T = unknown>(
   try {
     const [url, config] = Array.isArray(args) ? args : [args, {}];
 
-    console.log('Fetcher called with:', { url, config });
-    console.log('Final URL will be:', url, config.params ? `?${new URLSearchParams(config.params as any).toString()}` : '');
 
     const res = await axiosInstance.get<T>(url, config);
 

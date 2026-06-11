@@ -73,7 +73,7 @@ export type DataTableProps<T> = {
   columns: Array<DataTableColumn<T>>;
   defaultConfig: DataTableDefaultConfig;
   getRowId: (row: T) => string;
-  onReset: () => void;
+  onReset?: () => void;
   storageStrategy?: StorageStrategy;
 
   // Toolbar slots
@@ -378,12 +378,14 @@ export function DataTable<T>({
   // ---- Reset -------------------------------------------------------------
   const reset = useCallback(() => {
     storageStrategy.clear(persistKey);
-    setOrder(merged.order);
-    setVisibility(merged.visibility);
+    const defaults = mergeConfig(columns, defaultConfig, null);
+    setOrder(defaults.order);
+    setVisibility(defaults.visibility);
     setWidths(getDefaultWidths());
     handleSortChange({ key: null, dir: null });
     setSelectedIds(new Set());
-  }, [storageStrategy, persistKey, merged, getDefaultWidths, handleSortChange]);
+    onReset?.();
+  }, [storageStrategy, persistKey, columns, defaultConfig, getDefaultWidths, handleSortChange, onReset]);
 
   // ---- Settings slot in tabs bar -----------------------------------------
   const { setSettingsSlot, clearSettingsSlot } = useDataTableActionsContext();

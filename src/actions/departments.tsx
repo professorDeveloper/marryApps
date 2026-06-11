@@ -10,7 +10,8 @@ import type {
   ITranslationFormData,
 } from 'src/types/departments.tsx';
 
-import useSWR, { mutate } from 'swr';
+import useSWR from 'swr';
+import { mutate } from 'src/lib/swr';
 import { useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -436,7 +437,13 @@ export function useDeleteDepartment() {
         await deleter(endpoints.department.delete(departmentId));
 
         // Revalidate departments list
-        await mutate(endpoints.department.list);
+        await mutate(
+          (key) =>
+            key === endpoints.department.list ||
+            (Array.isArray(key) && key[0] === endpoints.department.list),
+          undefined,
+          { revalidate: true }
+        );
 
         return true;
       } catch (error) {
@@ -893,7 +900,13 @@ export function useDeleteStorage() {
   const deleteStorage = useCallback(
     async (storageId: string) => {
       await deleter(endpoints.storage.delete(storageId));
-      await mutate(endpoints.storage.list);
+      await mutate(
+        (key) =>
+          key === endpoints.storage.list ||
+          (Array.isArray(key) && key[0] === endpoints.storage.list),
+        undefined,
+        { revalidate: true }
+      );
       return true;
     },
     []

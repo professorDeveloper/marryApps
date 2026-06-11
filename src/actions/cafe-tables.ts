@@ -2,7 +2,8 @@ import type { SWRConfiguration } from 'swr';
 import type { ICafeTableItem, ICafeTableFormData } from 'src/types/cafe-tables';
 
 import { toast } from 'sonner';
-import useSWR, { mutate } from 'swr';
+import useSWR from 'swr';
+import { mutate } from 'src/lib/swr';
 import { useMemo, useCallback } from 'react';
 
 import { poster, putter, deleter, fetcher, endpoints } from 'src/lib/axios';
@@ -132,14 +133,12 @@ export function useCreateCafeTable() {
                 hall_id: hallId,
             };
 
-            console.log('Creating cafe table:', payload);
 
             const response = await poster<BackendResponse<ICafeTableItem>>(
                 endpoints.cafeTables.create,
                 payload
             );
 
-            console.log('Response:', response);
 
             // Extract data from wrapped response
             let tableData: ICafeTableItem;

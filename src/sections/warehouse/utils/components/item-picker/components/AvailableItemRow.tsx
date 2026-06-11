@@ -9,6 +9,7 @@ function areEqual(prev: AvailableItemRowProps, next: AvailableItemRowProps) {
     return (
         prev.item === next.item &&
         prev.isSelected === next.isSelected &&
+        prev.isHighlighted === next.isHighlighted &&
         prev.onToggleSelect === next.onToggleSelect &&
         prev.onRowActivate === next.onRowActivate
     );
@@ -17,6 +18,7 @@ function areEqual(prev: AvailableItemRowProps, next: AvailableItemRowProps) {
 export const AvailableItemRow = memo(function AvailableItemRow({
     item,
     isSelected,
+    isHighlighted,
     onToggleSelect,
     onRowActivate,
 }: AvailableItemRowProps) {
@@ -31,6 +33,8 @@ export const AvailableItemRow = memo(function AvailableItemRow({
                 py: 0.75,
                 borderRadius: 1,
                 backgroundColor: isSelected ? 'var(--glow-md)' : 'var(--bg)',
+                outline: isHighlighted ? '2px solid var(--accent)' : 'none',
+                outlineOffset: '-2px',
                 cursor: onRowActivate ? 'pointer' : 'default',
                 '&:hover': { bgcolor: isSelected ? 'var(--glow-md)' : 'var(--surface)' },
                 contentVisibility: 'auto',

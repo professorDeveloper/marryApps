@@ -1,6 +1,7 @@
 export interface BillsListFilters {
   start: string;
   end: string;
+  bill_no?: number;
   bill_status: string[];
   payment_type: string[];
   waiter_id: string;

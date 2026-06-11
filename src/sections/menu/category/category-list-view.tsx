@@ -61,6 +61,10 @@ export function CategoryListView() {
         handleSortChange,
     } = useCategoryData();
 
+    // Exclude deleted entities from filter options (their data may still appear in category rows)
+    const activeStorages = useMemo(() => storages.filter((s: any) => !s.is_deleted), [storages]);
+    const activeDepartments = useMemo(() => departments.filter((d: any) => !d.is_deleted), [departments]);
+
     // Define DataTable columns
     const columns = useMemo<DataTableColumn<ICategory>[]>(
         () => [
@@ -290,7 +294,7 @@ export function CategoryListView() {
                         <>
                             <StorageFilter
                                 storageId={storageFilterId}
-                                storages={storages.map((s) => ({ id: s.id, name: s.name }))}
+                                storages={activeStorages.map((s: any) => ({ id: s.id, name: s.name }))}
                                 onStorageChange={(id) => {
                                     setStorageFilterId(id);
                                     handleFilterChange({ storage_id: id || undefined, department_id: departmentFilterId || undefined });
@@ -300,7 +304,7 @@ export function CategoryListView() {
                             />
                             <DepartmentFilter
                                 departmentId={departmentFilterId}
-                                departments={departments.map((d) => ({ id: d.id, name: d.name }))}
+                                departments={activeDepartments.map((d: any) => ({ id: d.id, name: d.name }))}
                                 onDepartmentChange={(id) => {
                                     setDepartmentFilterId(id);
                                     handleFilterChange({ storage_id: storageFilterId || undefined, department_id: id || undefined });

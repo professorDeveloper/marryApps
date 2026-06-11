@@ -102,7 +102,6 @@ export const useInventory = (options: UseInventoryOptions = {}): UseInventoryRet
 
   const handleView = useCallback((inventory: Inventory) => {
     // This will be handled by the component for modal/view logic
-    console.log('View inventory:', inventory);
   }, []);
 
   const refreshData = useCallback(() => {

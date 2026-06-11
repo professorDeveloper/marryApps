@@ -1,7 +1,8 @@
 import type { SWRConfiguration } from 'swr';
 import type { ICashier, ITransaction, ICashRegister, ICashierFormData, IGroupTransaction, ITransactionFormData, ICashRegisterFormData, IGroupTransactionFormData } from 'src/types/cashbox';
 
-import useSWR, { mutate } from 'swr';
+import useSWR from 'swr';
+import { mutate } from 'src/lib/swr';
 import { useMemo, useCallback } from 'react';
 
 import { poster, putter, deleter, fetcher, endpoints } from 'src/lib/axios';

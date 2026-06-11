@@ -111,14 +111,12 @@ export function useDashboardAPI() {
           Object.entries(params).filter(([, value]) => value !== '' && value !== undefined && value !== null)
         );
 
-        console.log('Dashboard API Params:', queryParams);
 
         const response = await fetcher<BackendResponse<DashboardOverviewResponse>>([
           endpoints.dashboard.overview,
           { params: queryParams },
         ]);
 
-        console.log('Dashboard API Response:', response);
         return response.data || null;
       } catch (error) {
         const errorMsg = getErrorMessage(error, 'Failed to fetch dashboard overview');

@@ -21,7 +21,7 @@ export type ColumnTotalRule<T> =
 
 export interface DataTableColumn<T> {
   key: string;
-  label: string;
+  label: string | ReactNode;
   /** Width in px (number) or CSS value like '20%', '1fr', 'minmax(120px, 1fr)' */
   width?: number | string;
   minWidth?: number;

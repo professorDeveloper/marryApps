@@ -27,6 +27,7 @@ import { paths } from 'src/routes/paths';
 import { useStorageAPI } from 'src/hooks/use-storage-api';
 import { useSupplierAPI } from 'src/hooks/use-supplier-api';
 import { useShipmentsAPI } from 'src/hooks/use-shipments-api';
+
 import { useAppDispatch } from 'src/store';
 import {
     PICKER_FORM_NAMES,
@@ -40,17 +41,6 @@ import { useIngredients } from 'src/sections/warehouse/invoice/hooks/useIngredie
 
 import { ShipmentsMetaFields } from './ShipmentsMetaFields';
 import { ShipmentsLineItems, type ShipmentsLineItemsApi } from './ShipmentsLineItems';
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-interface BackendResponse<T> {
-    status: string;
-    message: string;
-    data: T;
-    code: number;
-}
 
 // ---------------------------------------------------------------------------
 // Props
@@ -145,13 +135,9 @@ const ShipmentsFormView = React.memo(function ShipmentsFormView({
 
     // ── Load existing shipment (edit mode) ─────────────────────────────────
     useEffect(() => {
-        if (isNew) {
+        if (isNew || !id) {
             setPageLoading(false);
-            return;
-        }
-        if (!id) {
-            setPageLoading(false);
-            return;
+            return undefined;
         }
 
         let cancelled = false;
@@ -255,7 +241,7 @@ const ShipmentsFormView = React.memo(function ShipmentsFormView({
             dispatch(
                 shipmentsFormPickerActions.setFormState({
                     formName,
-                    items: mapBatchItemsToPickerItems(batchData as Array<Record<string, unknown>>),
+                    items: mapBatchItemsToPickerItems(batchData),
                     meta: {
                         isNew,
                         shipmentId: effectiveShipmentId ?? null,
@@ -282,7 +268,7 @@ const ShipmentsFormView = React.memo(function ShipmentsFormView({
         } finally {
             setSubmitting(false);
         }
-    }, [formData, isNew, effectiveShipmentId, createShipmentBatch, getShipmentById, t, dispatch, formName]);
+    }, [formData, isNew, effectiveShipmentId, createShipmentBatch, updateShipment, t, dispatch, formName]);
 
     // ── Cancel ────────────────────────────────────────────────────────────
     const handleCancel = useCallback(() => {
@@ -361,9 +347,7 @@ const ShipmentsFormView = React.memo(function ShipmentsFormView({
     );
 
     // ── Derived ───────────────────────────────────────────────────────────
-    const saveLabel = isNew
-        ? t('common.save')
-        : t('common.save');
+    const saveLabel = t('common.save');
 
     const breadcrumbs = useMemo(
         () => [

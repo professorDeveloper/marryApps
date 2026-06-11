@@ -129,30 +129,6 @@ export const paths = {
       new: `${ROOTS.REPORTS}/new`,
       details: (id: string) => `${ROOTS.REPORTS}/${id}`,
       edit: (id: string) => `${ROOTS.REPORTS}/${id}/edit`,
-      sales: {
-        root: `${ROOTS.REPORTS}/sales`,
-        new: `${ROOTS.REPORTS}/sales/new`,
-        details: (id: string) => `${ROOTS.REPORTS}/sales/${id}`,
-        edit: (id: string) => `${ROOTS.REPORTS}/sales/${id}/edit`,
-      },
-      inventory: {
-        root: `${ROOTS.REPORTS}/inventory`,
-        new: `${ROOTS.REPORTS}/inventory/new`,
-        details: (id: string) => `${ROOTS.REPORTS}/inventory/${id}`,
-        edit: (id: string) => `${ROOTS.REPORTS}/inventory/${id}/edit`,
-      },
-      custom: {
-        root: `${ROOTS.REPORTS}/custom`,
-        new: `${ROOTS.REPORTS}/custom/new`,
-        details: (id: string) => `${ROOTS.REPORTS}/custom/${id}`,
-        edit: (id: string) => `${ROOTS.REPORTS}/custom/${id}/edit`,
-      },
-      archives: {
-        root: `${ROOTS.REPORTS}/archives`,
-        new: `${ROOTS.REPORTS}/archives/new`,
-        details: (id: string) => `${ROOTS.REPORTS}/archives/${id}`,
-        edit: (id: string) => `${ROOTS.REPORTS}/archives/${id}/edit`,
-      },
       bills: {
         root: `${ROOTS.REPORTS}/bills`,
         details: (id: string) => `${ROOTS.REPORTS}/bills/${id}`,
@@ -278,9 +254,6 @@ export const paths = {
     devices: `${ROOTS.SETTING}/devices`,
     general: {
       root: `${ROOTS.SETTING}/devices`,
-    },
-    profile: {
-      root: `${ROOTS.SETTING}/management`,
     },
     notifications: {
       root: `${ROOTS.SETTING}/restaurant-info`,

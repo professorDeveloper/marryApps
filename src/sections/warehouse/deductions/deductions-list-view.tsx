@@ -547,16 +547,12 @@ export function DeductionsListView() {
                             icon: <Iconify icon="solar:notes-bold-duotone" width={18} />,
                             onClick: (rows: Deduction[]) => {
                                 // temporary: makes it easy to confirm selection UX
-                                 
-                                console.log('selected deductions', rows);
                             },
                         },
                     ]}
                   
                     onCellEdit={async ({ row, key, value }) => {
                         // temporary: prove inline editing; real persistence can be wired to API later
-                         
-                        console.log('edit', { id: (row as any)?.id, key, value });
                     }}
                 />
             </DashboardContent>

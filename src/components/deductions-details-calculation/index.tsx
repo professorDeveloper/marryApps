@@ -129,14 +129,11 @@ export function DeductionsDetailsCalculation({
     // Initialize transferred items from initialItems prop (only once after ingredients are loaded)
     useEffect(() => {
         if (!initialized && initialItems && initialItems.length > 0 && ingredients.length > 0) {
-            console.log('Initializing items from initialItems:', initialItems);
             const ids = initialItems.map((item) => item.ingredient_id);
             const newQuantities: Record<string, string> = {};
             initialItems.forEach((item) => {
                 newQuantities[item.ingredient_id] = item.quantity || '1';
             });
-            console.log('Setting transferredIds:', ids);
-            console.log('Setting quantities:', newQuantities);
             setTransferredIds(ids);
             setQuantities(newQuantities);
             setInitialized(true);

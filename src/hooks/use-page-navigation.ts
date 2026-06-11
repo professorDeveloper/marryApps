@@ -123,23 +123,7 @@ export function usePageNavigation() {
       const title = tMenu('overview.reports.goods', 'Goods Report');
       return isNew ? `New ${title.toLowerCase()}` : title;
     }
-    if (pathname.includes('/reports/sales')) {
-      const title = tMenu('overview.reports.sales', 'Sales');
-      return isNew ? `New ${title.toLowerCase()}` : title;
-    }
-    if (pathname.includes('/reports/inventory')) {
-      const title = tMenu('overview.reports.inventory', 'Inventory');
-      return isNew ? `New ${title.toLowerCase()}` : title;
-    }
-    if (pathname.includes('/reports/custom')) {
-      const title = tMenu('overview.reports.custom', 'Custom');
-      return isNew ? `New ${title.toLowerCase()}` : title;
-    }
-    if (pathname.includes('/reports/archives')) {
-      const title = tMenu('overview.reports.archives', 'Archives');
-      return isNew ? `New ${title.toLowerCase()}` : title;
-    }
-    
+
     // Cashbox
     if (pathname.includes('/cashbox/cashbox')) {
       const title = tMenu('cashbox.sidebar.title', 'Cashbox');
@@ -181,10 +165,6 @@ export function usePageNavigation() {
       const title = tMenu('overview.settings.connecteddevices', 'Connected Devices');
       return isNew ? `New ${title.toLowerCase()}` : title;
     }
-    if (pathname.includes('/settings/management')) {
-      const title = tMenu('overview.settings.deviceManagement', 'Device Management');
-      return isNew ? `New ${title.toLowerCase()}` : title;
-    }
     if (pathname.includes('/settings/restaurant-info')) {
       const title = tMenu('overview.settings.restaurantInfo', 'Restaurant Information');
       return isNew ? `New ${title.toLowerCase()}` : title;
@@ -219,17 +199,7 @@ export function usePageNavigation() {
     const links = [];
     
     // Debug: log the pathname
-    console.log('Current pathname:', pathname);
-    console.log('Current pathname:', pathname);
-    console.log('Current pathname:', pathname);
-    console.log('Current pathname:', pathname);
-    console.log('Current pathname:', pathname);
-    console.log('Current pathname:', pathname);
-    console.log('Current pathname:', pathname);
-    console.log('Current pathname:', pathname);
-    console.log('Current pathname:', pathname);
-    console.log('Current pathname:', pathname);
-    console.log('Current pathname:', pathname);
+
     
     // Dashboard
     if (pathname === '/' || pathname.includes('/dashboard')) {
@@ -264,15 +234,12 @@ export function usePageNavigation() {
 
     // Warehouse
     if (pathname.includes('/warehouse')) {
-      console.log('Adding Warehouse breadcrumb');
       links.push({ name: tMenu('overview.warehouse.title', 'Warehouse'), href: '/warehouse/storage' });
     }
     if (pathname.includes('/warehouse/storage')) {
-      console.log('Adding Storage breadcrumb');
       links.push({ name: tMenu('overview.warehouse.storage', 'Storage'), href: '/warehouse/storage' });
     }
     if (pathname.includes('/warehouse/ingredient-stock')) {
-      console.log('Adding Ingredient Stock breadcrumb');
       links.push({ name: tMenu('ingredientStock.title', 'Ingredient Stock'), href: '/warehouse/ingredient-stock' });
     }
     if (pathname.includes('/warehouse/invoice-details')) {
@@ -330,19 +297,7 @@ export function usePageNavigation() {
     if (pathname.includes('/reports/goods')) {
       links.push({ name: tMenu('overview.reports.goods', 'Goods Report'), href: '/reports/goods' });
     }
-    if (pathname.includes('/reports/sales')) {
-      links.push({ name: tMenu('overview.reports.sales', 'Sales'), href: '/reports/sales' });
-    }
-    if (pathname.includes('/reports/inventory')) {
-      links.push({ name: tMenu('overview.reports.inventory', 'Inventory'), href: '/reports/inventory' });
-    }
-    if (pathname.includes('/reports/custom')) {
-      links.push({ name: tMenu('overview.reports.custom', 'Custom'), href: '/reports/custom' });
-    }
-    if (pathname.includes('/reports/archives')) {
-      links.push({ name: tMenu('overview.reports.archives', 'Archives'), href: '/reports/archives' });
-    }
-    
+
     // Cashbox
     if (pathname.includes('/cashbox')) {
       links.push({ name: tMenu('cashbox.sidebar.title', 'Cashbox'), href: '/cashbox/cashiers' });
@@ -378,9 +333,6 @@ export function usePageNavigation() {
     if (pathname.includes('/settings/connected-device')) {
       links.push({ name: tMenu('overview.settings.connecteddevices', 'Connected Devices'), href: '/settings/connected-device' });
     }
-    if (pathname.includes('/settings/management')) {
-      links.push({ name: tMenu('overview.settings.deviceManagement', 'Device Management'), href: '/settings/management' });
-    }
     if (pathname.includes('/settings/restaurant-info')) {
       links.push({ name: tMenu('overview.settings.restaurantInfo', 'Restaurant Information'), href: '/settings/restaurant-info' });
     }
@@ -399,7 +351,6 @@ export function usePageNavigation() {
       links.push({ name: tMenu('management.group.title', 'Group'), href: '/group' });
     }
     
-    console.log('Final breadcrumb links:', links);
     return links;
   }, [pathname, tMenu]);
 

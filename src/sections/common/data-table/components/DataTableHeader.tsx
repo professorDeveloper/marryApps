@@ -1,8 +1,6 @@
 import type { MutableRefObject } from 'react';
 import type { SortDirection, DataTableColumn } from '../types/types';
 
-import { m } from 'framer-motion';
-
 import Box from '@mui/material/Box';
 import Tooltip from '@mui/material/Tooltip';
 import Checkbox from '@mui/material/Checkbox';
@@ -56,8 +54,6 @@ export function DataTableHeader<T>({
   const { t } = useTranslate('common');
   return (
     <Box
-      component={m.div}
-      layout
       sx={{
         display: 'grid',
         gridTemplateColumns,
@@ -106,7 +102,8 @@ export function DataTableHeader<T>({
       )}
 
       {visibleColumns.map((col) => {
-        const isActiveSort = sort.key === col.key && sort.dir != null;
+        const colSortKey = col.sortKey ?? col.key;
+        const isActiveSort = sort.key === colSortKey && sort.dir != null;
         const canSort = col.sortable !== false;
         const canFilter = col.filterable === true || Boolean(col.filter);
         const canReorder = col.reorderable !== false;
@@ -115,8 +112,6 @@ export function DataTableHeader<T>({
         return (
           <Box
             key={col.key}
-            component={m.div}
-            // layout
             draggable={canReorder}
             onDragStart={() => {
               headerDragKey.current = col.key;
@@ -147,7 +142,7 @@ export function DataTableHeader<T>({
             <Tooltip title={col.label} placement="top" enterDelay={500}>
               <Typography
                 sx={{
-                  flex: col.headerActionsAlign === 'end' ? 1 : '0 1 auto',
+                  flex: 1,
                   minWidth: 0,
                   fontSize: '11px',
                   lineHeight: 1.2,
@@ -180,8 +175,8 @@ export function DataTableHeader<T>({
                   <IconButton
                     size="small"
                     onClick={() => {
-                      const nextDir = sort.key !== col.key ? 'asc' : nextSort(sort.dir);
-                      onSortChange({ key: nextDir ? col.key : null, dir: nextDir });
+                      const nextDir = sort.key !== colSortKey ? 'asc' : nextSort(sort.dir);
+                      onSortChange({ key: nextDir ? colSortKey : null, dir: nextDir });
                     }}
                     sx={{
                       width: 24,
@@ -190,7 +185,7 @@ export function DataTableHeader<T>({
                       '&:hover': { color: ACCENT },
                     }}
                   >
-                    {sort.key === col.key && sort.dir != null ? (
+                    {sort.key === colSortKey && sort.dir != null ? (
                       <KeyboardDoubleArrowDownIcon 
                         sx={{ 
                           fontSize: 16,

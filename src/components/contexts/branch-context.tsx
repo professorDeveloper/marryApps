@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-import { mutate } from 'swr';
+import { mutate } from 'src/lib/swr';
 import { useMemo, useState, useEffect, useContext, useCallback, createContext } from 'react';
 
 interface BranchContextType {
@@ -34,9 +34,11 @@ export function BranchProvider({ children }: { children: ReactNode }) {
             localStorage.removeItem(BRANCH_STORAGE_KEY);
         }
 
-        // Branch o'zgarganda SWR query'larini qayta yuklaymiz
+        // Branch o'zgarganda SWR query'larini qayta yuklaymiz.
+        // includes() kerak: array key'lar ([url, { params }]) serializatsiyada
+        // `@"/api/..."` ko'rinishga keladi va startsWith('/api/') ularni o'tkazib yuboradi.
         void mutate(
-            (key) => typeof key === 'string' && key.startsWith('/api/'),
+            (key) => typeof key === 'string' && key.includes('/api/'),
             undefined,
             { revalidate: true }
         );

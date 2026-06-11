@@ -684,7 +684,6 @@ export function TransfersListView() {
             },
             activePeriod,
             onPeriodChange: (period: 'day' | 'week' | 'month' | 'year') => {
-              console.log('Period changed from', activePeriod, 'to', period); // Debug log
               setActivePeriod(period);
               const now = dayjs();
               let startDate = '';

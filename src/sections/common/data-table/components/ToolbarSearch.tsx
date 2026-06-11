@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect, useLayoutEffect } from 'react';
+import { useState, useCallback, useMemo, useRef, useEffect, useLayoutEffect } from 'react';
 
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
@@ -32,9 +32,22 @@ export function ToolbarSearch({
   const [showNoMatchTooltip, setShowNoMatchTooltip] = useState(false);
   const [containerWidth, setContainerWidth] = useState<number | undefined>(undefined);
   const tooltipTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const focusTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const lastParentValueRef = useRef<string>(value);
+
+  const focusInputSoon = useCallback((delay: number) => {
+    if (focusTimeoutRef.current) clearTimeout(focusTimeoutRef.current);
+    focusTimeoutRef.current = setTimeout(() => {
+      inputRef.current?.focus();
+    }, delay);
+  }, []);
+
+  useEffect(() => () => {
+    if (focusTimeoutRef.current) clearTimeout(focusTimeoutRef.current);
+    if (tooltipTimeoutRef.current) clearTimeout(tooltipTimeoutRef.current);
+  }, []);
 
   const updateSearch = useCallback(
     (updatedChips: Chip_Item[]) => {
@@ -153,8 +166,9 @@ export function ToolbarSearch({
     );
   }
 
-  const filteredOptions = options.filter((o) =>
-    o.label.toLowerCase().includes(inputVal.toLowerCase()),
+  const filteredOptions = useMemo(
+    () => options.filter((o) => o.label.toLowerCase().includes(inputVal.toLowerCase())),
+    [options, inputVal],
   );
 
   const handleOptionSelect = useCallback(
@@ -163,11 +177,7 @@ export function ToolbarSearch({
       if (alreadyExists) {
         setInputVal('');
         setHighlightedOption(null);
-        setTimeout(() => {
-          if (inputRef.current) {
-            inputRef.current.focus();
-          }
-        }, 100);
+        focusInputSoon(100);
         return;
       }
 
@@ -177,13 +187,9 @@ export function ToolbarSearch({
       setInputVal('');
       setHighlightedOption(null);
       updateSearch(updated);
-      setTimeout(() => {
-        if (inputRef.current) {
-          inputRef.current.focus();
-        }
-      }, 100);
+      focusInputSoon(100);
     },
-    [chips, updateSearch],
+    [chips, updateSearch, focusInputSoon],
   );
 
   const handleKeyDown = useCallback(
@@ -211,11 +217,7 @@ export function ToolbarSearch({
             const alreadyExists = chips.some((c) => c.type === 'custom' && c.label === trimmed);
             if (alreadyExists) {
               setInputVal('');
-              setTimeout(() => {
-                if (inputRef.current) {
-                  inputRef.current.focus();
-                }
-              }, 0);
+              focusInputSoon(0);
               return;
             }
 
@@ -224,11 +226,7 @@ export function ToolbarSearch({
             setChips(updated);
             setInputVal('');
             updateSearch(updated);
-            setTimeout(() => {
-              if (inputRef.current) {
-                inputRef.current.focus();
-              }
-            }, 0);
+            focusInputSoon(0);
           }
           return;
         }
@@ -255,6 +253,7 @@ export function ToolbarSearch({
       filteredOptions,
       handleOptionSelect,
       updateSearch,
+      focusInputSoon,
     ],
   );
 
@@ -271,8 +270,8 @@ export function ToolbarSearch({
           backgroundColor: 'var(--surface)',
           borderRadius: 1,
           border: '1px solid var(--border)',
+          width: '50%',
           minWidth: 200,
-          maxWidth: 600,
           position: 'relative',
         }}
       >
@@ -296,9 +295,14 @@ export function ToolbarSearch({
         selectOnFocus={false}
         open={inputVal.length > 0}
         inputValue={inputVal}
-        onInputChange={(_, newInputValue) => {
-          setInputVal(newInputValue);
-          setHighlightedOption(null);
+        onInputChange={(_, newInputValue, reason) => {
+          // Only track live typing; ignore MUI's internal resets after a
+          // selection or Enter, which would otherwise re-populate the input
+          // with stale text after we've already cleared it.
+          if (reason === 'input') {
+            setInputVal(newInputValue);
+            setHighlightedOption(null);
+          }
         }}
         options={filteredOptions}
         getOptionLabel={(option) =>
@@ -308,8 +312,12 @@ export function ToolbarSearch({
           setHighlightedOption(option || null);
         }}
         onChange={(_, value) => {
-          // Clear input to prevent MUI from setting it to the selected option's label
-          setInputVal('');
+          if (value && typeof value !== 'string') {
+            handleOptionSelect(value);
+          } else {
+            setInputVal('');
+            setHighlightedOption(null);
+          }
         }}
         onKeyDown={handleKeyDown}
         renderInput={(params) => (

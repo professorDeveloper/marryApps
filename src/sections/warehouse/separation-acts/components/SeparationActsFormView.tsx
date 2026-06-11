@@ -296,7 +296,7 @@ const SeparationActsFormView = React.memo(function SeparationActsFormView({
             dispatch(
                 separationActsFormPickerActions.setFormState({
                     formName,
-                    items: mapBatchItemsToPickerItems(transformedItems as Array<Record<string, unknown>>),
+                    items: mapBatchItemsToPickerItems(transformedItems),
                     meta: {
                         isNew,
                         separationActId: effectiveActId ?? null,

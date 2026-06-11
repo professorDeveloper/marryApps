@@ -51,11 +51,24 @@ export function isValidToken(accessToken: string) {
 
 // ----------------------------------------------------------------------
 
+// Single tracked timeout — setSession can run multiple times per session
+// (init, re-login), which previously stacked expiry timeouts and alerts.
+let tokenExpiryTimeoutId: ReturnType<typeof setTimeout> | null = null;
+
+export function clearTokenExpiryTimeout() {
+  if (tokenExpiryTimeoutId !== null) {
+    clearTimeout(tokenExpiryTimeoutId);
+    tokenExpiryTimeoutId = null;
+  }
+}
+
 export function tokenExpired(exp: number) {
   const currentTime = Date.now();
   const timeLeft = exp * 1000 - currentTime;
 
-  setTimeout(() => {
+  clearTokenExpiryTimeout();
+
+  tokenExpiryTimeoutId = setTimeout(() => {
     try {
       alert('Token expired!');
       sessionStorage.removeItem(JWT_STORAGE_KEY);
@@ -107,6 +120,7 @@ export async function setSession(accessToken: string | null, brandId?: string) {
         localStorage.setItem('user_role', String(resolvedRole));
       }
     } else {
+      clearTokenExpiryTimeout();
       sessionStorage.removeItem(JWT_STORAGE_KEY);
       sessionStorage.removeItem('accessToken');
       localStorage.removeItem(JWT_STORAGE_KEY);

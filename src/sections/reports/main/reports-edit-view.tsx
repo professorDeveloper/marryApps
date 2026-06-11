@@ -11,7 +11,6 @@ export function ReportsEditView({ isNew = false }: { isNew?: boolean }) {
   const router = useRouter();
 
   const handleSubmit = useCallback(async (formData: Record<string, any>) => {
-    console.log('Saving report', formData);
     router.push(paths.menu.reports.root);
   }, [router]);
 

@@ -11,7 +11,6 @@ export function LocationsEditView({ isNew = false }: { isNew?: boolean }) {
   const router = useRouter();
 
   const handleSubmit = useCallback(async (formData: Record<string, any>) => {
-    console.log('Saving location', formData);
     router.push(paths.warehouse.locations.root);
   }, [router]);
 

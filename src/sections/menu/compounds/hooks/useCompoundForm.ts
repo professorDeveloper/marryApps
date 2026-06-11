@@ -1,6 +1,6 @@
 import type { MealItemPickerApi } from 'src/sections/meals/components/MealItemPicker/types';
 
-import { mutate } from 'swr';
+import { mutate } from 'src/lib/swr';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 

@@ -3,7 +3,8 @@ import type { BackendResponse } from 'src/types/inventory';
 import type { IDevice, IDeviceFormData } from 'src/sections/settings/devices/types';
 
 import { useCallback } from 'react';
-import useSWR, { mutate } from 'swr';
+import useSWR from 'swr';
+import { mutate } from 'src/lib/swr';
 
 import { poster, putter, deleter, fetcher, endpoints } from 'src/lib/axios';
 

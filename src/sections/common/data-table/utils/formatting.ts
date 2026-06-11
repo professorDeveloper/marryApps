@@ -3,7 +3,12 @@ export function clamp(n: number, min: number, max: number) {
 }
 
 export function defaultNumberFormat(value: number) {
-  return new Intl.NumberFormat('uz-UZ', { maximumFractionDigits: 2 }).format(value);
+  const negative = value < 0;
+  const fixed = Math.abs(value).toFixed(2);
+  const [intPart, decPart] = fixed.split('.');
+  const grouped = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  const result = `${grouped},${decPart}`;
+  return negative ? `-${result}` : result;
 }
 
 export function getCellValue<T>(col: any, row: T): unknown {

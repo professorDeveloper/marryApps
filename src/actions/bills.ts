@@ -27,6 +27,7 @@ const buildQueryString = (params: IBillsFilterParams): string => {
 
     if (params.start) queryParams.append('start', params.start);
     if (params.end) queryParams.append('end', params.end);
+    if (params.bill_no != null) queryParams.append('bill_no', String(params.bill_no));
     const billStatus = params.bill_status;
     if (Array.isArray(billStatus) && billStatus.length > 0) {
         queryParams.append('bill_status', billStatus.join(','));

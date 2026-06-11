@@ -13,11 +13,6 @@ const ConnectedDeviceListView = lazy(() =>
     default: m.ConnectedDeviceListView,
   }))
 );
-const ManagementListView = lazy(() =>
-  import('src/sections/settings/manegment-list-view').then((m) => ({
-    default: m.ManagementListView,
-  }))
-);
 const RestaurantInfoListView = lazy(() =>
   import('src/sections/settings/restaurant-info').then((m) => ({
     default: m.RestaurantInfoListView,
@@ -52,7 +47,6 @@ export const settingRoutes: RouteObject[] = [
   { path: 'settings/users/new', element: <EmployeeFormView isNew /> },
   { path: 'settings/users/:id/edit', element: <EmployeeFormView /> },
   { path: 'settings/devices', element: <ConnectedDeviceListView /> },
-  { path: 'settings/management', element: <ManagementListView /> },
   { path: 'settings/restaurant-info', element: <RestaurantInfoListView /> },
   { path: 'settings/floor-plan', element: <FloorPlanPage /> },
   { path: 'settings/halls', element: <HallsPage /> },

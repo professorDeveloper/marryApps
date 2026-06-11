@@ -273,6 +273,8 @@ export function DepartmentsListView() {
   }, [rowsPerPage]);
   const { data: metadata } = useMetadata([MetadataEntity.STORAGES]);
   const storages = metadata.storages || [];
+  // Exclude deleted storages from filter options (their data may still appear in department rows)
+  const activeStorages = useMemo(() => storages.filter((s: any) => !s.is_deleted), [storages]);
 
   // Debounce quick filter input before hitting search API
   useEffect(() => {
@@ -465,7 +467,7 @@ export function DepartmentsListView() {
           toolbarActions={
             <StorageFilter
               storageId={storageId || ''}
-              storages={(storages || []).map((s: any) => ({ id: s.id, name: s.name }))}
+              storages={activeStorages.map((s: any) => ({ id: s.id, name: s.name }))}
               onStorageChange={(id: string) => {
                 setStorageId(id);
                 setPaginationModel((prev) => ({ ...prev, page: 0 }));

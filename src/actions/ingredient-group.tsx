@@ -5,7 +5,8 @@ import type {
   IIngredientGroupResponse,
 } from 'src/types/ingredient-group';
 
-import useSWR, { mutate } from 'swr';
+import useSWR from 'swr';
+import { mutate } from 'src/lib/swr';
 import { useMemo, useCallback } from 'react';
 
 import { poster, putter, fetcher, deleter, endpoints } from 'src/lib/axios';
@@ -196,7 +197,13 @@ export function useDeleteIngredientGroup() {
         endpoints.ingredientGroups.delete(groupId)
       );
 
-      await mutate(endpoints.ingredientGroups.list);
+      await mutate(
+        (key) =>
+          key === endpoints.ingredientGroups.list ||
+          (Array.isArray(key) && key[0] === endpoints.ingredientGroups.list),
+        undefined,
+        { revalidate: true }
+      );
 
       toast.success('Ingredient group deleted successfully');
       return response;

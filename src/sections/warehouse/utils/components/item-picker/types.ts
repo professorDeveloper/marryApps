@@ -49,6 +49,8 @@ export interface AvailableItemRowProps {
     item: PickerItem;
     batchAddArmed?: boolean;
     isSelected?: boolean;
+    /** Whether this row is the keyboard-navigation highlight target. */
+    isHighlighted?: boolean;
     /** Toggle checkbox selection for this row (stable reference from parent). */
     onToggleSelect?: (itemId: string) => void;
     /** Click row (outside checkbox) to move/add this item — stable reference from parent. */

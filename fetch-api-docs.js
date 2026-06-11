@@ -137,13 +137,16 @@ function generateEndpointMarkdown(endpointPath, methods, apiDoc) {
 
     if (details.parameters && details.parameters.length > 0) {
       markdown += `**Parameters:**\n\n`;
-      markdown += `| Name | Location | Type | Required | Description |\n`;
-      markdown += `|------|----------|------|----------|-------------|\n`;
+      markdown += `| Name | Location | Type | Required | Description | Enum |\n`;
+      markdown += `|------|----------|------|----------|-------------|------|\n`;
 
       for (const param of details.parameters) {
         const required = param.required ? 'Yes' : 'No';
         const type = param.type || param.schema?.type || 'object';
-        markdown += `| ${param.name} | ${param.in} | ${type} | ${required} | ${param.description || '-'} |\n`;
+        const enumVals = param.enum || param.schema?.enum;
+        const enumStr = enumVals ? enumVals.map(v => `\`${v}\``).join(', ') : '-';
+        const defaultVal = param.default !== undefined ? ` (default: \`${param.default}\`)` : '';
+        markdown += `| ${param.name} | ${param.in} | ${type} | ${required} | ${(param.description || '-') + defaultVal} | ${enumStr} |\n`;
       }
       markdown += '\n';
     }

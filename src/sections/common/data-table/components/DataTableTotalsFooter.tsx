@@ -39,7 +39,7 @@ export function DataTableTotalsFooter<T>({
         <Typography
           sx={{
             fontFamily: 'var(--font-sans)',
-            fontSize: 12.5,
+            fontSize: 14,
             color: 'var(--text)',
             textAlign: 'center',
             fontWeight: 700,
@@ -64,9 +64,9 @@ export function DataTableTotalsFooter<T>({
           <Typography
             noWrap
             sx={{
-              fontSize: 12.5,
+              fontSize: 14,
               fontWeight: 700,
-              color: col.total ? 'var(--text)' : 'var(--text3)',
+              color: col.total ? 'var(--accent)' : 'var(--text3)',
               opacity: col.total ? 1 : 0.5,
               fontFamily: 'var(--font-sans)',
             }}

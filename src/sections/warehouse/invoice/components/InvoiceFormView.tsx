@@ -191,7 +191,7 @@ const InvoiceFormView = React.memo(function InvoiceFormView() {
             dispatch(
                 invoiceFormPickerActions.setFormState({
                     formName,
-                    items: mapBatchItemsToPickerItems(batchData as Array<Record<string, unknown>>),
+                    items: mapBatchItemsToPickerItems(batchData),
                     meta: { isNew, invoiceId, source: 'submit' },
                 })
             );

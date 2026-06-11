@@ -9,7 +9,7 @@ const COLORS = {
   core: "var(--accent-fg)" // White text on primary from global CSS
 };
 
-type AnimationState = "idle" | "building" | "solidifying" | "pure" | "unsolidifying" | "unbuilding";
+type AnimationState = "idle" | "building" | "solidifying" | "pure" | "settled" | "unsolidifying" | "unbuilding";
 
 export interface LogoProps {
   className?: string;
@@ -24,22 +24,15 @@ const Logo = ({ className = "", size = "15%", style, disabled, forceRestart, sho
   const [state, setState] = useState<AnimationState>("idle");
 
   useEffect(() => {
-    let timeoutIds: ReturnType<typeof setTimeout>[] = [];
-
-    const runCycle = () => {
-      setState("building");
-      timeoutIds.push(setTimeout(() => setState("solidifying"), 4000));
-      timeoutIds.push(setTimeout(() => setState("pure"), 6000));
-      timeoutIds.push(setTimeout(() => setState("unsolidifying"), 14000));
-      timeoutIds.push(setTimeout(() => setState("unbuilding"), 16000));
-      timeoutIds.push(setTimeout(() => setState("idle"), 20000));
-    };
-
-    runCycle();
-    const intervalId = setInterval(runCycle, 22000);
+    // Play the build-up once, then settle into a static visible state —
+    // a looping cycle here kept blur-filtered SVG repaints running forever.
+    const timeoutIds: ReturnType<typeof setTimeout>[] = [
+      setTimeout(() => setState("solidifying"), 4000),
+      setTimeout(() => setState("settled"), 6000),
+    ];
+    setState("building");
 
     return () => {
-      clearInterval(intervalId);
       timeoutIds.forEach(clearTimeout);
     };
   }, [forceRestart]);
@@ -58,6 +51,11 @@ const Logo = ({ className = "", size = "15%", style, disabled, forceRestart, sho
       transition: { duration: 2 }
     },
     pure: {
+      pathLength: 1,
+      opacity: 0,
+      transition: { duration: 1, ease: "easeOut" }
+    },
+    settled: {
       pathLength: 1,
       opacity: 0,
       transition: { duration: 1, ease: "easeOut" }
@@ -85,6 +83,7 @@ const Logo = ({ className = "", size = "15%", style, disabled, forceRestart, sho
     },
     solidifying: { opacity: 0 },
     pure: { opacity: 0 },
+    settled: { opacity: 0 },
     unsolidifying: { opacity: 0 },
     unbuilding: {
       pathLength: 0.02,
@@ -118,6 +117,12 @@ const Logo = ({ className = "", size = "15%", style, disabled, forceRestart, sho
         repeat: Infinity
       }
     },
+    settled: {
+      opacity: 1,
+      y: 0,
+      filter: 'drop-shadow(0 5px 15px rgba(255,48,48,0.5))',
+      transition: { duration: 1, ease: "easeOut" }
+    },
     unsolidifying: {
       opacity: 0,
       y: 0,
@@ -133,6 +138,7 @@ const Logo = ({ className = "", size = "15%", style, disabled, forceRestart, sho
     building: { opacity: 1, transition: { duration: 1, ease: "easeOut" } },
     solidifying: { opacity: 1, transition: { duration: 1, ease: "easeIn" } },
     pure: { opacity: 1 },
+    settled: { opacity: 1 },
     unsolidifying: { opacity: 1 },
     unbuilding: { opacity: 1 }
   };

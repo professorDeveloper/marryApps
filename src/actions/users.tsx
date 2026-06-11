@@ -1,7 +1,8 @@
 import type { SWRConfiguration } from 'swr';
 import type { IUser, IUserFormData, IUserRegisterData } from 'src/types/user';
 
-import useSWR, { mutate } from 'swr';
+import useSWR from 'swr';
+import { mutate } from 'src/lib/swr';
 import { useMemo, useCallback } from 'react';
 import { uuidv4 } from 'minimal-shared/utils';
 
@@ -279,7 +280,13 @@ export function useDeleteUser() {
     const callback = useCallback(
         async (userId: string) => {
             await deleter(endpoints.users.delete(userId));
-            await mutate(endpoints.users.list);
+            await mutate(
+                (key) =>
+                    typeof key === 'string' &&
+                    (key === endpoints.users.list || key.startsWith(`${endpoints.users.list}?`)),
+                undefined,
+                { revalidate: true }
+            );
             const roles = ['admin', 'manager', 'cashier', 'waiter', 'kitchen', 'user'];
             roles.forEach(role => {
                 const roleUrl = endpoints.users.byRole(role);

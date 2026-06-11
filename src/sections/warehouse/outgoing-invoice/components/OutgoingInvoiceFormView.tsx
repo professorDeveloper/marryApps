@@ -252,7 +252,7 @@ const OutgoingInvoiceFormView = React.memo(function OutgoingInvoiceFormView() {
             dispatch(
                 outgoingInvoiceFormPickerActions.setFormState({
                     formName,
-                    items: mapBatchItemsToPickerItems(batchData as Array<Record<string, unknown>>),
+                    items: mapBatchItemsToPickerItems(batchData),
                     meta: {
                         isNew,
                         outgoingInvoiceId: id ?? batchResponse?.data?.invoice?.id ?? null,

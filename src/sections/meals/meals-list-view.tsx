@@ -4,7 +4,7 @@ import type { DataTableColumn } from 'src/sections/common/data-table/types/types
 import { useTranslation } from 'react-i18next';
 import { useMemo, useState, useEffect, useCallback } from 'react';
 
-import { useTheme } from '@mui/material/styles';
+import { alpha, useTheme } from '@mui/material/styles';
 import {
     Box, Table, Paper, Button, Dialog, TableRow,
     TableBody,
@@ -20,7 +20,7 @@ import {
 
 import { paths } from 'src/routes/paths';
 
-import { preload } from 'swr';
+import { preload } from 'src/lib/swr';
 
 import { fetcher, endpoints } from 'src/lib/axios';
 import { useGenericViewModal } from 'src/hooks/use-generic-view-modal';
@@ -34,8 +34,7 @@ import { usePaginationRows } from 'src/hooks/use-pagination-rows';
 
 import { Iconify } from 'src/components/iconify';
 import { formatPrice } from 'src/components/generic-view-view/modal-formatters';
-import { GenericViewModal, SpecificationsTable } from 'src/components/generic-view-view';
-import TextField from '@mui/material/TextField';
+import { GenericViewModal } from 'src/components/generic-view-view';
 
 import { DataTable } from 'src/sections/common/data-table';
 import { StorageFilter } from 'src/sections/common/data-table/components/StorageFilter';
@@ -43,25 +42,55 @@ import { DepartmentFilter } from 'src/sections/common/data-table/components/Depa
 import { CategoryFilter } from 'src/sections/common/data-table/components/CategoryFilter';
 import { RouterLink } from 'src/routes/components';
 
-const filterFieldSx = {
-    minWidth: 120,
-    '& .MuiInputBase-root': {
-        height: 36,
-        fontSize: 13.5,
-        backgroundColor: 'transparent',
-        borderRadius: '6px',
-        fontFamily: 'var(--font-sans)',
-    },
-    '& .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--border)' },
-    '& .MuiInputBase-root:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--border2)' },
-    '& .MuiInputBase-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
-        borderColor: 'var(--brand)',
-        boxShadow: '0 0 0 2px var(--accent-soft)',
-    },
-    '& .MuiInputLabel-root.Mui-focused': { color: 'var(--brand)' },
-    '& input::placeholder': { color: 'var(--text3)', opacity: 1 },
-    '& input[type=number]': { fontFamily: 'var(--font-sans)' },
-};
+
+// Shared pill styles — stable references so a new sx isn't created per cell
+const PILL_BASE_SX = {
+    display: 'inline-flex',
+    px: '9px',
+    py: '3px',
+    borderRadius: '999px',
+    fontSize: 12,
+    fontWeight: 500,
+    letterSpacing: '0.04em',
+} as const;
+
+const PILL_POSITIVE_SX = (theme: any) => ({
+    ...PILL_BASE_SX,
+    backgroundColor: alpha(theme.palette.success.main, 0.08),
+    color: theme.palette.success.dark,
+});
+
+const PILL_NEGATIVE_SX = (theme: any) => ({
+    ...PILL_BASE_SX,
+    backgroundColor: alpha(theme.palette.error.main, 0.08),
+    color: theme.palette.error.dark,
+});
+
+const PILL_NEUTRAL_SX = (theme: any) => ({
+    ...PILL_BASE_SX,
+    backgroundColor: theme.palette.action.selected,
+    color: theme.palette.text.secondary,
+});
+
+const pillSx = (n: number) => (n > 0 ? PILL_POSITIVE_SX : n < 0 ? PILL_NEGATIVE_SX : PILL_NEUTRAL_SX);
+
+const CATEGORY_PILL_SX = {
+    display: 'inline-flex',
+    alignItems: 'left',
+    px: '9px',
+    py: '3px',
+    ml: '16px',
+    borderRadius: '999px',
+    fontSize: 12,
+    fontWeight: 450,
+    backgroundColor: 'var(--bg3)',
+    color: 'var(--text2)',
+    border: '1px solid var(--border)',
+    maxWidth: '100%',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+} as const;
 
 const initialFilters = {
     category_id: '',
@@ -202,7 +231,6 @@ function MealCalculationsTable({ mealId }: { mealId: string }) {
 export function Meals() {
     const theme = useTheme();
     const { t, i18n } = useTranslation('menu');
-    const noDataText = t('noDataAvailable');
     const { rowsPerPage: globalRowsPerPage } = usePaginationRows();
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
@@ -219,7 +247,7 @@ export function Meals() {
     const { storages } = useGetStorages();
 
     // SWR hooks
-    const { meals, mealsLoading, mutate, pagination } = useGetMealsPage({
+    const { meals, mutate, pagination } = useGetMealsPage({
         ...filters,
         limit: paginationModel.pageSize,
         offset: paginationModel.page * paginationModel.pageSize,
@@ -265,7 +293,8 @@ export function Meals() {
     const categoryMap = useMemo(() => {
         const map = new Map<string, string>();
         const currentLang = i18n.language || 'uz';
-        const categories = metadata.categories || [];
+        // Exclude deleted categories from filter options (their data may still appear in meal rows)
+        const categories = (metadata.categories || []).filter((c: any) => !c.is_deleted);
 
         categories.forEach((category: any) => {
             if (!category?.id) return;
@@ -309,9 +338,6 @@ export function Meals() {
 
     const departmentOptions = useMemo(() => Array.from(departmentMap.entries()).map(([id, name]) => ({ id, name })), [departmentMap]);
 
-    const isCategoryEmpty = categoryOptions.length === 0;
-    const isDepartmentEmpty = departmentOptions.length === 0;
-
     // View modal hook'i
     const { isOpen, selectedData, openModal, closeModal } = useGenericViewModal<IMealsItem>();
 
@@ -320,9 +346,9 @@ export function Meals() {
         () => [
             {
                 key: 'name',
-                label: t('mealsProducts.name'),
+                label: <span style={{ display: 'block', textAlign: 'left', width: '20%' }}>{t('mealsProducts.name')}</span>,
                 width: '2fr',
-                sortable: true,
+                sortable: false,
                 getValue: (row) => {
                     // Get translation based on current language
                     const currentLang = i18n.language || 'uz';
@@ -354,57 +380,75 @@ export function Meals() {
                 renderCell: ({ value }: { row: IMealsItem; value: unknown }) => {
                     const label = String(value);
                     if (!label || label === '-') return <span>–</span>;
-                    return (
-                        <Box
-                            sx={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                px: '9px',
-                                py: '3px',
-                                borderRadius: '999px',
-                                fontSize: 12,
-                                fontWeight: 450,
-                                backgroundColor: 'var(--bg3)',
-                                color: 'var(--text2)',
-                                border: '1px solid var(--border)',
-                                maxWidth: '100%',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                whiteSpace: 'nowrap',
-                            }}
-                        >
-                            {label}
-                        </Box>
-                    );
+                    return <Box sx={CATEGORY_PILL_SX}>{label}</Box>;
                 },
             },
             {
                 key: 'price',
-                label: t('mealsProducts.price'),
+                label: <span style={{ display: 'block', textAlign: 'right', width: '100%' }}>{t('mealsProducts.price')}</span>,
                 width: '1fr',
                 sortable: true,
                 align: 'right',
                 mono: true,
                 getValue: (row) => Number(row.price || 0),
-                renderCell: ({ value }) => `${Number(value).toLocaleString()} ${t('mealsProducts.som')}`,
+                renderCell: ({ value }: { row: IMealsItem; value: unknown }) => (
+                    <span style={{ letterSpacing: '0.04em' }}>
+                        {Number(value).toLocaleString('fr-FR')}
+                    </span>
+                ),
             },
             {
                 key: 'cost_price',
-                label: t('mealsProducts.costPrice'),
+                label: <span style={{ display: 'block', textAlign: 'right', width: '100%' }}>{t('mealsProducts.costPrice')}</span>,
                 width: '1fr',
                 sortable: true,
                 align: 'right',
                 mono: true,
                 getValue: (row) => row.cost_price ? Number(row.cost_price) : null,
                 renderCell: ({ value }) => value !== null && value !== undefined
-                    ? `${Number(value).toLocaleString()}`
+                    ? <span style={{ letterSpacing: '0.04em' }}>{Number(value).toLocaleString('fr-FR')}</span>
                     : '–',
+            },
+            {
+                key: 'markup',
+                label: <span style={{ display: 'block', textAlign: 'center', width: '100%',  paddingLeft:25 }}>{t('mealsProducts.profitnumber')}</span>,
+                width: '1fr',
+                sortable: true,
+                sortKey: 'profit',
+                align: 'right',
+                mono: true,
+                getValue: (row) => (row.cost_price != null && row.price != null)
+                    ? Number(row.price) - Number(row.cost_price)
+                    : null,
+                renderCell: ({ value }) => {
+                    if (value === null || value === undefined) return '–';
+                    const n = Number(value);
+                    return <Box sx={pillSx(n)}>{n.toLocaleString('fr-FR')}</Box>;
+                },
+            },
+            {
+                key: 'markup_pct',
+                label: <span style={{ display: 'block', textAlign: 'center', width: '100%' }}>{t('mealsProducts.profitnumber')} %</span>,
+                width: '1fr',
+                sortable: true,
+                sortKey: 'profit_markup',
+                align: 'right',
+                mono: true,
+                getValue: (row) => (row.cost_price != null && Number(row.cost_price) > 0)
+                    ? ((Number(row.price) - Number(row.cost_price)) / Number(row.cost_price)) * 100
+                    : null,
+                renderCell: ({ value }) => {
+                    if (value === null || value === undefined) return '–';
+                    const n = Number(value);
+                    return <Box sx={pillSx(n)}>{n.toFixed(1)}%</Box>;
+                },
             },
             {
                 key: 'cook_time',
                 label: t('mealsProducts.cookingTime'),
-                width: '0.8fr',
+                width: '1fr',
                 sortable: true,
+                sortKey: 'cooking_time',
                 align: 'center',
                 getValue: (row) => Number(row.cook_time || 0),
                 renderCell: ({ value }) => Number(value) > 0 ? `${value} ${t('mealsProducts.min')}` : '–',
@@ -412,7 +456,7 @@ export function Meals() {
             {
                 key: 'actions',
                 label: t('actions'),
-                width: '0.8fr',
+                width: '1fr',
                 sortable: false,
                 align: 'center',
                 getValue: (row) => row,
@@ -550,15 +594,7 @@ export function Meals() {
                     }}
                     toolbarActions={
                         <>
-                            <CategoryFilter
-                                categoryId={filters.category_id || ''}
-                                categories={categoryOptions}
-                                onCategoryChange={(categoryId: string) => {
-                                    setDraftFilters((prev) => ({ ...prev, category_id: categoryId }));
-                                    setPaginationModel((prev) => ({ ...prev, page: 0 }));
-                                }}
-                                label={t('mealsProducts.category')}
-                            />
+                       
                             <DepartmentFilter
                                 departmentId={filters.department_id || ''}
                                 departments={departmentOptions}
@@ -567,6 +603,15 @@ export function Meals() {
                                     setPaginationModel((prev) => ({ ...prev, page: 0 }));
                                 }}
                                 label={t('common.department')}
+                            />
+                                 <CategoryFilter
+                                categoryId={filters.category_id || ''}
+                                categories={categoryOptions}
+                                onCategoryChange={(categoryId: string) => {
+                                    setDraftFilters((prev) => ({ ...prev, category_id: categoryId }));
+                                    setPaginationModel((prev) => ({ ...prev, page: 0 }));
+                                }}
+                                label={t('mealsProducts.category')}
                             />
                             <StorageFilter
                                 storageId={filters.storage_id || ''}
@@ -577,37 +622,17 @@ export function Meals() {
                                 }}
                                 label={t('common.storage')}
                             />
-                            <TextField
-                                size="small"
-                                label={t('mealsProducts.minPrice')}
-                                type="number"
-                                value={filters.min_price}
-                                onChange={(e) => {
-                                    setDraftFilters((prev) => ({ ...prev, min_price: e.target.value }));
-                                    setPaginationModel((prev) => ({ ...prev, page: 0 }));
-                                }}
-                                sx={filterFieldSx}
-                            />
-                            <TextField
-                                size="small"
-                                label={t('mealsProducts.maxPrice')}
-                                type="number"
-                                value={filters.max_price}
-                                onChange={(e) => {
-                                    setDraftFilters((prev) => ({ ...prev, max_price: e.target.value }));
-                                    setPaginationModel((prev) => ({ ...prev, page: 0 }));
-                                }}
-                                sx={filterFieldSx}
-                            />
                         </>
                     }
                     defaultConfig={{
-                        order: ['name', 'category_id', 'price', 'cost_price', 'cook_time', 'actions'],
+                        order: ['name', 'category_id', 'price', 'cost_price', 'markup', 'markup_pct', 'cook_time', 'actions'],
                         visibility: {
                             name: true,
                             category_id: true,
                             price: true,
                             cost_price: true,
+                            markup: true,
+                            markup_pct: true,
                             cook_time: true,
                             actions: true,
                         },
@@ -616,8 +641,10 @@ export function Meals() {
                             category_id: '1fr',
                             price: '1fr',
                             cost_price: '1fr',
-                            cook_time: '0.8fr',
-                            actions: '0.8fr',
+                            markup: '1fr',
+                            markup_pct: '1fr',
+                            cook_time: '1fr',
+                            actions: '1fr',
                         },
                     }}
                     onReset={() => {

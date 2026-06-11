@@ -25,6 +25,8 @@ interface ImageUploadFieldProps {
     sx?: object;
 }
 
+let uploadIdCounter = 0;
+
 const ImageUploadComponent: FC<ImageUploadFieldProps> = ({
     label,
     value,
@@ -35,6 +37,7 @@ const ImageUploadComponent: FC<ImageUploadFieldProps> = ({
 }) => {
     const { t } = useTranslation('menu');
     const inputRef = useRef<HTMLInputElement>(null);
+    const [inputId] = useState(() => `image-upload-${++uploadIdCounter}`);
     const [uploadLoading, setUploadLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -53,12 +56,8 @@ const ImageUploadComponent: FC<ImageUploadFieldProps> = ({
         setError(null);
 
         try {
-            // Upload file to backend
             const objectName = await uploadImage(file);
-
-            // Update form data with the object name (not blob URL)
             onChange(objectName);
-
             toast.success(t('mealsProducts.upload_success') || 'Image uploaded successfully');
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Failed to upload image';
@@ -67,20 +66,15 @@ const ImageUploadComponent: FC<ImageUploadFieldProps> = ({
             console.error('Image upload error:', err);
         } finally {
             setUploadLoading(false);
-            // Reset input
             if (inputRef.current) {
                 inputRef.current.value = '';
             }
         }
     }, [onChange, t]);
 
-    const handleClick = useCallback(() => {
-        if (!loading) {
-            inputRef.current?.click();
-        }
-    }, [loading]);
-
-    const handleRemove = useCallback(() => {
+    const handleRemove = useCallback((e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
         if (inputRef.current) {
             inputRef.current.value = '';
         }
@@ -97,27 +91,16 @@ const ImageUploadComponent: FC<ImageUploadFieldProps> = ({
                 ...sx,
             }}
         >
-
             <Box
-                onClick={handleClick}
+                component="label"
+                htmlFor={loading ? undefined : inputId}
                 sx={{
                     display: 'flex',
                     position: 'relative',
+                    cursor: loading ? 'wait' : 'pointer',
                     '&:hover .upload-box': {
                         borderColor: error ? 'error.main' : 'var(--accent)',
                         bgcolor: displayUrl ? 'transparent' : 'action.hover',
-                        animation: 'borderPulse 1.5s infinite',
-                    },
-                    '@keyframes borderPulse': {
-                        '0%': {
-                            borderColor: error ? 'error.main' : 'var(--accent-soft)',
-                        },
-                        '50%': {
-                            borderColor: error ? 'error.light' : 'var(--accent)',
-                        },
-                        '100%': {
-                            borderColor: error ? 'error.main' : 'var(--accent)',
-                        },
                     },
                 }}
             >
@@ -142,7 +125,7 @@ const ImageUploadComponent: FC<ImageUploadFieldProps> = ({
                             sx={{
                                 position: 'relative',
                                 width: dynamicWidth,
-                                height: height,
+                                height,
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
@@ -160,19 +143,18 @@ const ImageUploadComponent: FC<ImageUploadFieldProps> = ({
                             <Typography variant="caption" color="text.secondary" align="center">
                                 {t('mealsProducts.file_types').split('-')[1]?.trim()}
                             </Typography>
-
                         </Box>
                         <Box
                             className="upload-box"
                             sx={{
                                 position: 'relative',
                                 width: dynamicWidth,
-                                height: height,
+                                height,
                                 bgcolor: displayUrl ? 'transparent' : 'action.hover',
                                 borderTopRightRadius: 1,
                                 borderBottomRightRadius: 1,
-                                borderTopLeftRadius: "35%",
-                                borderBottomLeftRadius: "35%",
+                                borderTopLeftRadius: '35%',
+                                borderBottomLeftRadius: '35%',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
@@ -185,38 +167,18 @@ const ImageUploadComponent: FC<ImageUploadFieldProps> = ({
                                     opacity: 1,
                                 },
                             }}
-                            role="button"
-                            tabIndex={loading ? -1 : 0}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter' || e.key === ' ') {
-                                    if (!loading) handleClick();
-                                }
-                            }}
                         >
                             {displayUrl ? (
-                                <Box
-                                    sx={{
-                                        position: 'relative',
-                                        width: '100%',
-                                        height: '100%',
-                                    }}
-                                >
+                                <Box sx={{ position: 'relative', width: '100%', height: '100%' }}>
                                     <Box
                                         component="img"
                                         src={displayUrl}
                                         alt="Preview"
-                                        sx={{
-                                            width: '100%',
-                                            height: '100%',
-                                            objectFit: 'cover',
-                                        }}
+                                        sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                     />
-                                    {/* Remove button - appears on hover */}
                                     <Box
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleRemove();
-                                        }}
+                                        onClick={handleRemove}
+                                        className="remove-button"
                                         sx={{
                                             position: 'absolute',
                                             top: 4,
@@ -237,20 +199,19 @@ const ImageUploadComponent: FC<ImageUploadFieldProps> = ({
                                                 opacity: 1,
                                             },
                                         }}
-                                        className="remove-button"
                                     >
-                                        <Iconify 
-                                            icon="solar:close-circle-bold" 
-                                            sx={{ 
-                                                fontSize: 16, 
-                                                color: 'white',
-                                                '&:hover': {
-                                                    color: 'white',
-                                                }
-                                            }} 
-                                        />
+                                        <Iconify icon="solar:close-circle-bold" sx={{ fontSize: 16, color: 'white' }} />
                                     </Box>
                                 </Box>
+                            ) : error ? (
+                                <Stack alignItems="center" spacing={0.5} sx={{ px: 2 }}>
+                                    <Typography variant="caption" color="warning.main" align="center" sx={{ fontWeight: 600 }}>
+                                        {error}
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary" align="center">
+                                        {t('mealsProducts.upload_prompt')}
+                                    </Typography>
+                                </Stack>
                             ) : (
                                 <Stack alignItems="center" spacing={1}>
                                     <Iconify icon="eva:cloud-upload-fill" sx={{ fontSize: 32, color: 'text.secondary' }} />
@@ -279,7 +240,9 @@ const ImageUploadComponent: FC<ImageUploadFieldProps> = ({
                         </Box>
                     </Box>
                 </Tooltip>
+
                 <input
+                    id={inputId}
                     ref={inputRef}
                     type="file"
                     accept="image/*"
@@ -287,12 +250,6 @@ const ImageUploadComponent: FC<ImageUploadFieldProps> = ({
                     style={{ display: 'none' }}
                     disabled={loading}
                 />
-
-                {error && (
-                    <Typography variant="caption" color="error">
-                        {error}
-                    </Typography>
-                )}
             </Box>
         </Box>
     );

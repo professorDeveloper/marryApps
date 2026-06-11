@@ -137,11 +137,12 @@ export function mapMealCalculationsToPickerItems(payload: {
   return [...ingredientItems, ...compoundItems];
 }
 
-export function mapBatchItemsToPickerItems(
-  items: Array<Record<string, unknown>>,
+export function mapBatchItemsToPickerItems<T extends object>(
+  items: readonly T[],
   idKey: string = 'ingredient_id'
 ): PickerFormItem[] {
-  return items.map((item, index) => {
+  return items.map((row, index) => {
+    const item = row as Record<string, unknown>;
     const baseId = String(item[idKey] ?? item.id ?? index);
     return {
       id: `${idKey}:${baseId}`,

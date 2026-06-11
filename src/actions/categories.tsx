@@ -2,7 +2,8 @@ import type { SWRConfiguration } from 'swr';
 import type { ITranslationItem } from 'src/types/departments.tsx';
 import type { ICategory, IGoodsItem, ICategoryFormData } from 'src/types/category';
 
-import useSWR, { mutate } from 'swr';
+import useSWR from 'swr';
+import { mutate } from 'src/lib/swr';
 import { useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -394,7 +395,13 @@ export function useDeleteCategory() {
                 await deleter(endpoints.category.delete(categoryId));
 
                 // Revalidate categories list
-                await mutate(endpoints.category.list);
+                await mutate(
+                    (key) =>
+                        key === endpoints.category.list ||
+                        (Array.isArray(key) && key[0] === endpoints.category.list),
+                    undefined,
+                    { revalidate: true }
+                );
 
                 return true;
             } catch (error) {

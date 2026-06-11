@@ -2,7 +2,7 @@
  * Custom hook for department form submission and deletion logic
  */
 
-import { mutate } from 'swr';
+import { mutate } from 'src/lib/swr';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 

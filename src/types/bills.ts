@@ -2,6 +2,8 @@ export type IBillStatus = 'opened' | 'closed' | 'paid';
 export type IPaymentType = 'cash' | 'card';
 export type IBillItemStatus = 'pending' | 'completed' | 'cancelled';
 export type IAmountValue = string | number;
+export type ITableType = 'time_based' | 'fixed' | string;
+export type ITableSessionState = 'running' | 'paused' | 'finished' | string;
 
 export interface IBillItemDetail {
     id: string;
@@ -36,10 +38,48 @@ export interface IBillItem {
     quantity: number;
 }
 
+export interface IPauseInterval {
+    paused_at?: string;
+    resumed_at?: string;
+    start?: string;
+    end?: string;
+    duration_seconds?: number;
+}
+
+export interface ITableSessionSegment {
+    segment_id: string;
+    table_id: string;
+    entered_at: string;
+    exited_at?: string | null;
+    move_in_reason: string;
+    move_out_reason?: string | null;
+    active_seconds: number;
+    paused_seconds: number;
+    pause_intervals: IPauseInterval[];
+}
+
+export interface ITableSession {
+    session_id: string;
+    table_id: string;
+    table_type: ITableType;
+    state: ITableSessionState;
+    started_at: string;
+    ended_at?: string | null;
+    total_active_sec: number;
+    amount: IAmountValue;
+    segments: ITableSessionSegment[];
+}
+
 export interface IBillDetail extends IBillItem {
     table_id: string;
     comment?: string;
     items: IBillItemDetail[];
+    table_type?: ITableType;
+    price_per_hour?: IAmountValue;
+    table_charge?: IAmountValue;
+    table_amount?: IAmountValue;
+    table_started_at?: string;
+    table_sessions?: ITableSession[];
 }
 
 export interface IBillsListData {
@@ -75,6 +115,7 @@ export interface IBillDetailResponse {
 export interface IBillsFilterParams {
     start?: string;
     end?: string;
+    bill_no?: number;
     bill_status?: IBillStatus | IBillStatus[];
     payment_type?: IPaymentType | IPaymentType[];
     waiter_id?: string;

@@ -193,7 +193,7 @@ const InventoryFormView = React.memo(function InventoryFormView() {
             dispatch(
                 inventoryFormPickerActions.setFormState({
                     formName,
-                    items: mapBatchItemsToPickerItems(batchData as Array<Record<string, unknown>>),
+                    items: mapBatchItemsToPickerItems(batchData),
                     meta: { isNew, inventoryId: effectiveId ?? null, source: 'submit' },
                 })
             );

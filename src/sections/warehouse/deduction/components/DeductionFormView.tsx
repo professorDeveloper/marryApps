@@ -270,7 +270,7 @@ const DeductionFormView = React.memo(function DeductionFormView({
             dispatch(
                 deductionFormPickerActions.setFormState({
                     formName,
-                    items: mapBatchItemsToPickerItems(batchData as Array<Record<string, unknown>>),
+                    items: mapBatchItemsToPickerItems(batchData),
                     meta: {
                         isNew,
                         deductionId: targetId ?? null,

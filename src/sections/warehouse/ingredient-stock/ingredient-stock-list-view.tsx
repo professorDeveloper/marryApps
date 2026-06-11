@@ -37,7 +37,6 @@ function IngredientStockListView() {
     // Debounce search query
     useEffect(() => {
         const timeout = setTimeout(() => {
-            console.log('Setting debounced search query:', searchQuery);
             setDebouncedSearchQuery(searchQuery);
         }, 400);
 
@@ -51,10 +50,8 @@ function IngredientStockListView() {
     
     // Debug search state changes
     useEffect(() => {
-        console.log('Search state changed:', { searchQuery, debouncedSearchQuery });
     }, [searchQuery, debouncedSearchQuery]);
     const handleSearchChange = (value: string) => {
-        console.log('Search input changed:', value);
         setSearchQuery(value);
     };
     const { updateStock } = useUpdateIngredientStock();

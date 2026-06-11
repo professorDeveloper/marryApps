@@ -65,6 +65,7 @@ export const ItemPickerSection = React.memo(function ItemPickerSection({
     const warehouseOptions = useMemo(
         () =>
             (metadata.storages ?? [])
+                .filter((s: any) => !s.is_deleted)
                 .map((s) => ({ id: String(s.id), name: String(s.name ?? '') }))
                 .sort(localeSort),
         [metadata.storages]
@@ -72,6 +73,7 @@ export const ItemPickerSection = React.memo(function ItemPickerSection({
     const groupOptions = useMemo(
         () =>
             (metadata.ingredient_groups ?? [])
+                .filter((g: any) => !g.is_deleted)
                 .map((g) => ({ id: String(g.id), name: String(g.name ?? '') }))
                 .sort(localeSort),
         [metadata.ingredient_groups]
