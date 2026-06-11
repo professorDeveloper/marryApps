@@ -16,6 +16,7 @@ dist/
 gemini/
 test/
 api-docs/
+*lighthouse*
 # testing
 # coverage
 
