@@ -11,10 +11,10 @@ import type {
 } from 'src/types/departments.tsx';
 
 import useSWR from 'swr';
-import { mutate } from 'src/lib/swr';
 import { useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { mutate } from 'src/lib/swr';
 import { poster, putter, deleter, fetcher, endpoints } from 'src/lib/axios';
 
 // ----------------------------------------------------------------------

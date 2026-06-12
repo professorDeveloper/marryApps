@@ -1,16 +1,16 @@
 import type { DataTableColumn } from 'src/sections/common/data-table/types/types';
 
 import useSWR from 'swr';
-import { useTranslation } from 'react-i18next';
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { Box, ToggleButton, ToggleButtonGroup } from '@mui/material';
 
+import { fetcher, endpoints } from 'src/lib/axios';
 import { DashboardContent } from 'src/layouts/dashboard';
 
 import { CELL_SX } from 'src/sections/common/data-table/utils/constants';
 import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
-import { fetcher, endpoints } from 'src/lib/axios';
 
 // ----------------------------------------------------------------------
 

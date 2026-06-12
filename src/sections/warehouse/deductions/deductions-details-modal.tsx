@@ -1,18 +1,11 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { DataGrid } from '@mui/x-data-grid';
 import {
   Box,
-  Table,
-  TableRow,
-  TableHead,
-  TableBody,
-  TableCell,
   Typography,
-  TableContainer,
 } from '@mui/material';
-
-import { DataGrid } from '@mui/x-data-grid';
 
 import { GenericViewModal } from 'src/components/generic-view-view';
 

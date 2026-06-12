@@ -20,7 +20,7 @@ import { MainSection, LayoutSection, HeaderSection } from '../core';
 
 // ----------------------------------------------------------------------
 
-type LayoutBaseProps = Pick<LayoutSectionProps, 'sx' | 'children' | 'cssVars'>;
+type LayoutBaseProps = Pick<LayoutSectionProps, 'sx' | 'children'>;
 
 export type SimpleLayoutProps = LayoutBaseProps & {
   layoutQuery?: Breakpoint;
@@ -33,7 +33,6 @@ export type SimpleLayoutProps = LayoutBaseProps & {
 
 export function SimpleLayout({
   sx,
-  cssVars,
   children,
   slotProps,
   layoutQuery = 'md',
@@ -109,7 +108,6 @@ export function SimpleLayout({
       /** **************************************
        * @Styles
        *************************************** */
-      cssVars={{ '--layout-simple-content-compact-width': '448px', ...cssVars }}
       sx={sx}
     >
       {renderMain()}

@@ -1,22 +1,24 @@
 import type { SWRConfiguration } from 'swr';
+import type { MetadataRecord } from 'src/types/metadata';
+import type { IIngredientItem } from 'src/types/ingredients';
 import type {
     IIngredientStock,
     IIngredientStockFormData,
     IIngredientStockResponse,
 } from 'src/types/ingredient-stock';
-import type { MetadataRecord } from 'src/types/metadata';
-import type { IIngredientItem } from 'src/types/ingredients';
 
 import useSWR from 'swr';
-import { mutate } from 'src/lib/swr';
 import { useMemo, useCallback } from 'react';
 
-import { putter, fetcher, deleter, endpoints } from 'src/lib/axios';
 import { useMetadata } from 'src/hooks/use-metadata';
-import { MetadataEntity } from 'src/types/metadata';
+
+import { mutate } from 'src/lib/swr';
 import { useGetIngredients } from 'src/actions/ingredients';
+import { putter, fetcher, deleter, endpoints } from 'src/lib/axios';
 
 import { toast } from 'src/components/snackbar';
+
+import { MetadataEntity } from 'src/types/metadata';
 
 const swrOptions: SWRConfiguration = {
     revalidateIfStale: true,

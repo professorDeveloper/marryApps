@@ -7,17 +7,17 @@ import { useMemo, useState, useEffect, useCallback } from 'react';
 
 import {
     Box,
+    Chip,
     Table,
     Button,
-    Chip,
     Dialog,
     MenuItem,
     TableRow,
+    useTheme,
     TableBody,
     TableCell,
     TableHead,
     TextField,
-    useTheme,
     IconButton,
     Typography,
     DialogTitle,
@@ -26,15 +26,14 @@ import {
     TableContainer,
 } from '@mui/material';
 
-
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
-
-import { getStatusColor, formatStatusLabel } from 'src/utils/status-colors';
 
 import { useStorageAPI } from 'src/hooks/use-storage-api';
 import { useInventoryAPI } from 'src/hooks/use-inventory-api';
 import { useGenericViewModal } from 'src/hooks/use-generic-view-modal';
+
+import { getStatusColor, formatStatusLabel } from 'src/utils/status-colors';
 
 // Date utility functions
 const toPickerDate = (dateString: string): dayjs.Dayjs | null => {
@@ -66,6 +65,10 @@ const toUtcDayBoundary = (date: dayjs.Dayjs, endOfDay = false): string => {
     return boundary.toISOString().replace('.000Z', 'Z');
 };
 
+import { RouterLink } from 'src/routes/components';
+
+import { usePaginationRows } from 'src/hooks/use-pagination-rows';
+
 import { DashboardContent } from 'src/layouts/dashboard';
 
 import { toast } from 'src/components/snackbar';
@@ -73,8 +76,6 @@ import { Iconify } from 'src/components/iconify';
 import { GenericViewModal } from 'src/components/generic-view-view';
 
 import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
-import { usePaginationRows } from 'src/hooks/use-pagination-rows';
-import { RouterLink } from 'src/routes/components';
 
 const filterSelectSx = {
     minWidth: 140,
@@ -578,6 +579,7 @@ export function InventoryListView() {
                                 case 'week': start = toUtcDayBoundary(now.subtract(7, 'day'), false); end = toUtcDayBoundary(now, true); break;
                                 case 'month': start = toUtcDayBoundary(now.subtract(30, 'day'), false); end = toUtcDayBoundary(now, true); break;
                                 case 'year': start = toUtcDayBoundary(now.subtract(365, 'day'), false); end = toUtcDayBoundary(now, true); break;
+                                default: break;
                             }
                             setDateFrom(start);
                             setDateTo(end);

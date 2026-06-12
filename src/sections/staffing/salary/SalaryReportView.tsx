@@ -1,6 +1,6 @@
 import useSWR from 'swr';
-import { useTranslation } from 'react-i18next';
 import { useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import {
   Box,
@@ -19,8 +19,8 @@ import {
   CircularProgress,
 } from '@mui/material';
 
-import { DashboardContent } from 'src/layouts/dashboard';
 import { fetcher, endpoints } from 'src/lib/axios';
+import { DashboardContent } from 'src/layouts/dashboard';
 
 // ----------------------------------------------------------------------
 
@@ -210,7 +210,7 @@ export function SalaryReportView() {
                   </TableHead>
                   <TableBody>
                     {report.entries.map((entry, idx) => (
-                      // eslint-disable-next-line react/no-array-index-key
+                       
                       <TableRow key={idx}>
                         <TableCell>{entry.date ?? '-'}</TableCell>
                         <TableCell align="right">{entry.hours_worked ?? '-'}</TableCell>

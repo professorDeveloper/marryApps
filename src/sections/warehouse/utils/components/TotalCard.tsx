@@ -1,6 +1,6 @@
 import {
-    alpha,
     Box,
+    alpha,
     Typography,
 } from '@mui/material';
 
@@ -15,8 +15,7 @@ export const TotalCard = ({
     totalLabel,
     totalValue,
     color,
-}: TotalCardProps) => {
-    return (
+}: TotalCardProps) => (
         <Box
             sx={{
                 bgcolor: alpha(color, 0.2),
@@ -33,7 +32,7 @@ export const TotalCard = ({
                 variant="body2"
                 sx={{
                     fontWeight: 600,
-                    color: color,
+                    color,
                 }}
             >
                 {totalLabel || 'Total Amount'}:
@@ -43,11 +42,10 @@ export const TotalCard = ({
                 variant="h5"    
                 sx={{
                     fontWeight: 800,
-                    color: color,
+                    color,
                 }}
             >
                 {totalValue}
             </Typography>
         </Box>
     );
-};

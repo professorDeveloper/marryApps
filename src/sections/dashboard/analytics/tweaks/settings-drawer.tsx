@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { Tweaks } from './use-tweaks';
+
+import { useState, useEffect } from 'react';
 
 interface SettingsDrawerProps {
   open: boolean;

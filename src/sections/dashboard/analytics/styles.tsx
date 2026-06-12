@@ -1,6 +1,7 @@
-import { Global, css } from '@emotion/react';
-import { useTheme } from '@mui/material/styles';
+import { css, Global } from '@emotion/react';
 import { varAlpha } from 'minimal-shared/utils';
+
+import { useTheme } from '@mui/material/styles';
 
 // Maps the app's theme tokens → reference CSS variables, scoped to .mary-analytics.
 // IMPORTANT: the app runs in CSS-variables / colorSchemes mode, so we read

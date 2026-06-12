@@ -1,30 +1,29 @@
-import { useRef, useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useRef, useState, useEffect, useCallback } from 'react';
 
 import { Box, Stack, Button, CircularProgress } from '@mui/material';
 
 import { paths } from 'src/routes/paths';
 import { useRouter, useParams } from 'src/routes/hooks';
+
 import { useAppDispatch } from 'src/store';
+import {
+  useGetModifier,
+  useGetModifierWithCalculations,
+} from 'src/actions/modifiers';
 import {
   PICKER_FORM_NAMES,
   modifierFormPickerActions,
   mapMealCalculationsToPickerItems,
 } from 'src/store/slices/pickerFormSlices';
 
-import {
-  useGetModifier,
-  useGetModifierWithCalculations,
-} from 'src/actions/modifiers';
-
 import { toast } from 'src/components/snackbar';
 
-import { GeneralInformation } from 'src/sections/warehouse/utils/components/GeneralInformation';
+import { MealItemPickerCache } from 'src/sections/meals/components/MealItemPicker/MealItemPickerCache';
 import {
   MealItemPicker,
   type MealItemPickerApi,
 } from 'src/sections/meals/components/MealItemPicker';
-import { MealItemPickerCache } from 'src/sections/meals/components/MealItemPicker/MealItemPickerCache';
 
 import { useModifierForm } from './hooks/useModifierForm';
 import { ModifierGeneralInformation } from './components/ModifierGeneralInformation';

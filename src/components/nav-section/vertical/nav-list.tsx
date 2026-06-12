@@ -6,9 +6,9 @@ import { isActiveLink, isExternalLink } from 'minimal-shared/utils';
 
 import { usePathname } from 'src/routes/hooks';
 
+import { navSectionClasses } from '../styles';
 import { SidebarFolder } from './sidebar-folder';
 import { SidebarFolderItem } from './sidebar-folder-item';
-import { navSectionClasses } from '../styles';
 import { NavUl, NavLi, NavCollapse } from '../components';
 
 // ----------------------------------------------------------------------

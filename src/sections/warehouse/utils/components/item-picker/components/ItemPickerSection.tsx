@@ -5,8 +5,10 @@ import React, { useMemo, useState } from 'react';
 import { Box } from '@mui/material';
 
 import { useMetadata } from 'src/hooks/use-metadata';
-import { MetadataEntity } from 'src/types/metadata';
+
 import { useGetIngredientReports } from 'src/actions/ingredient-reports';
+
+import { MetadataEntity } from 'src/types/metadata';
 
 import { buildGridTemplate } from '../constants';
 import { AddedItemsPanel } from './AddedItemsPanel';

@@ -1,13 +1,14 @@
+import type { Tweaks } from '../tweaks/use-tweaks';
+import type { Kpi, Insight, AnalyticsPayload } from '../data/types';
+
 import { Panel } from '../modules/panel';
 import { KpiCard } from '../modules/kpi-card';
-import { SalesDynamics } from '../modules/sales-dynamics';
+import { TopDishes } from '../modules/top-dishes';
 import { CategoryList } from '../modules/category-list';
 import { PaymentSplit } from '../modules/payment-split';
-import { TopDishes } from '../modules/top-dishes';
 import { InsightsList } from '../modules/insights-list';
+import { SalesDynamics } from '../modules/sales-dynamics';
 import { HourlyHeatmap } from '../modules/hourly-heatmap';
-import type { AnalyticsPayload, Insight, Kpi } from '../data/types';
-import type { Tweaks } from '../tweaks/use-tweaks';
 
 interface Props {
   tweaks: Tweaks;

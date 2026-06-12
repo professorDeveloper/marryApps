@@ -2,8 +2,8 @@ import type { IconButtonProps } from '@mui/material/IconButton';
 import type { NotificationItemProps } from './notification-item';
 
 import { m } from 'framer-motion';
-import { useTranslation } from 'react-i18next';
 import { useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useBoolean } from 'minimal-shared/hooks';
 
 import Tab from '@mui/material/Tab';

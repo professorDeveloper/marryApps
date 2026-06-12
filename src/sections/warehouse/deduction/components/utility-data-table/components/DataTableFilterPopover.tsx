@@ -9,7 +9,7 @@ import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 
-import { ACCENT, BORDER, SURFACE_BG, getCellValue } from '../utils';
+import { getCellValue } from '../utils';
 
 type FilterState = Record<string, { type: 'text' | 'multi'; value: string | string[] }>;
 

@@ -1,6 +1,7 @@
-import type { NumFormat } from '../data/formatters';
-import { fmtNum } from '../data/formatters';
 import type { DishItem } from '../data/types';
+import type { NumFormat } from '../data/formatters';
+
+import { fmtNum } from '../data/formatters';
 
 export type DishesStyle = 'table' | 'cards' | 'podium';
 

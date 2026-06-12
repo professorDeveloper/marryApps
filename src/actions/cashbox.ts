@@ -2,9 +2,9 @@ import type { SWRConfiguration } from 'swr';
 import type { ICashier, ITransaction, ICashRegister, ICashierFormData, IGroupTransaction, ITransactionFormData, ICashRegisterFormData, IGroupTransactionFormData } from 'src/types/cashbox';
 
 import useSWR from 'swr';
-import { mutate } from 'src/lib/swr';
 import { useMemo, useCallback } from 'react';
 
+import { mutate } from 'src/lib/swr';
 import { poster, putter, deleter, fetcher, endpoints } from 'src/lib/axios';
 
 const swrOptions: SWRConfiguration = {
@@ -96,13 +96,10 @@ export function useGetGroupTransaction(id: string) {
 
 export function useCreateGroupTransaction() {
     const onSubmit = useCallback(async (payload: IGroupTransactionFormData) => {
-        try {
-            const res = await poster(endpoints.cashbox.groupTransactions.root, payload);
-            mutate(endpoints.cashbox.groupTransactions.root);
-            return res;
-        } catch (error) {
-            throw error;
-        }
+        const res = await poster(endpoints.cashbox.groupTransactions.root, payload);
+        mutate(endpoints.cashbox.groupTransactions.root);
+        return res;
+
     }, []);
 
     return { onSubmit };
@@ -110,13 +107,10 @@ export function useCreateGroupTransaction() {
 
 export function useUpdateGroupTransaction(id: string) {
     const onSubmit = useCallback(async (payload: IGroupTransactionFormData) => {
-        try {
-            const res = await putter(`${endpoints.cashbox.groupTransactions.root}/${id}`, payload);
-            mutate(endpoints.cashbox.groupTransactions.root);
-            return res;
-        } catch (error) {
-            throw error;
-        }
+        const res = await putter(`${endpoints.cashbox.groupTransactions.root}/${id}`, payload);
+        mutate(endpoints.cashbox.groupTransactions.root);
+        return res;
+
     }, [id]);
 
     return { onSubmit };
@@ -124,12 +118,9 @@ export function useUpdateGroupTransaction(id: string) {
 
 export function useDeleteGroupTransaction() {
     const onDelete = useCallback(async (id: string) => {
-        try {
-            await deleter(`${endpoints.cashbox.groupTransactions.root}/${id}`);
-            mutate(endpoints.cashbox.groupTransactions.root);
-        } catch (error) {
-            throw error;
-        }
+        await deleter(`${endpoints.cashbox.groupTransactions.root}/${id}`);
+        mutate(endpoints.cashbox.groupTransactions.root);
+
     }, []);
 
     return { onDelete };
@@ -174,13 +165,10 @@ export function useGetCashier(id: string) {
 
 export function useCreateCashier() {
     const onSubmit = useCallback(async (payload: ICashierFormData) => {
-        try {
-            const res = await poster(endpoints.cashbox.cashiers.root, payload);
-            mutate(endpoints.cashbox.cashiers.root);
-            return res;
-        } catch (error) {
-            throw error;
-        }
+        const res = await poster(endpoints.cashbox.cashiers.root, payload);
+        mutate(endpoints.cashbox.cashiers.root);
+        return res;
+
     }, []);
 
     return { onSubmit };
@@ -188,13 +176,10 @@ export function useCreateCashier() {
 
 export function useUpdateCashier(id: string) {
     const onSubmit = useCallback(async (payload: ICashierFormData) => {
-        try {
-            const res = await putter(`${endpoints.cashbox.cashiers.root}/${id}`, payload);
-            mutate(endpoints.cashbox.cashiers.root);
-            return res;
-        } catch (error) {
-            throw error;
-        }
+        const res = await putter(`${endpoints.cashbox.cashiers.root}/${id}`, payload);
+        mutate(endpoints.cashbox.cashiers.root);
+        return res;
+
     }, [id]);
 
     return { onSubmit };
@@ -202,12 +187,9 @@ export function useUpdateCashier(id: string) {
 
 export function useDeleteCashier() {
     const onDelete = useCallback(async (id: string) => {
-        try {
-            await deleter(`${endpoints.cashbox.cashiers.root}/${id}`);
-            mutate(endpoints.cashbox.cashiers.root);
-        } catch (error) {
-            throw error;
-        }
+        await deleter(`${endpoints.cashbox.cashiers.root}/${id}`);
+        mutate(endpoints.cashbox.cashiers.root);
+
     }, []);
 
     return { onDelete };
@@ -252,13 +234,10 @@ export function useGetTransaction(id: string) {
 
 export function useCreateTransaction() {
     const onSubmit = useCallback(async (payload: ITransactionFormData) => {
-        try {
-            const res = await poster(endpoints.cashbox.transactions.root, payload);
-            mutate(endpoints.cashbox.transactions.root);
-            return res;
-        } catch (error) {
-            throw error;
-        }
+        const res = await poster(endpoints.cashbox.transactions.root, payload);
+        mutate(endpoints.cashbox.transactions.root);
+        return res;
+
     }, []);
 
     return { onSubmit };
@@ -266,13 +245,10 @@ export function useCreateTransaction() {
 
 export function useUpdateTransaction(id: string) {
     const onSubmit = useCallback(async (payload: ITransactionFormData) => {
-        try {
-            const res = await putter(`${endpoints.cashbox.transactions.root}/${id}`, payload);
-            mutate(endpoints.cashbox.transactions.root);
-            return res;
-        } catch (error) {
-            throw error;
-        }
+        const res = await putter(`${endpoints.cashbox.transactions.root}/${id}`, payload);
+        mutate(endpoints.cashbox.transactions.root);
+        return res;
+
     }, [id]);
 
     return { onSubmit };
@@ -280,12 +256,9 @@ export function useUpdateTransaction(id: string) {
 
 export function useDeleteTransaction() {
     const onDelete = useCallback(async (id: string) => {
-        try {
-            await deleter(`${endpoints.cashbox.transactions.root}/${id}`);
-            mutate(endpoints.cashbox.transactions.root);
-        } catch (error) {
-            throw error;
-        }
+        await deleter(`${endpoints.cashbox.transactions.root}/${id}`);
+        mutate(endpoints.cashbox.transactions.root);
+
     }, []);
 
     return { onDelete };
@@ -330,13 +303,10 @@ export function useGetCashRegister(id: string) {
 
 export function useCreateCashRegister() {
     const onSubmit = useCallback(async (payload: ICashRegisterFormData) => {
-        try {
-            const res = await poster(endpoints.cashbox.cashRegisters.root, payload);
-            mutate(endpoints.cashbox.cashRegisters.root);
-            return res;
-        } catch (error) {
-            throw error;
-        }
+        const res = await poster(endpoints.cashbox.cashRegisters.root, payload);
+        mutate(endpoints.cashbox.cashRegisters.root);
+        return res;
+
     }, []);
 
     return { onSubmit };
@@ -344,13 +314,10 @@ export function useCreateCashRegister() {
 
 export function useUpdateCashRegister(id: string) {
     const onSubmit = useCallback(async (payload: ICashRegisterFormData) => {
-        try {
-            const res = await putter(`${endpoints.cashbox.cashRegisters.root}/${id}`, payload);
-            mutate(endpoints.cashbox.cashRegisters.root);
-            return res;
-        } catch (error) {
-            throw error;
-        }
+        const res = await putter(`${endpoints.cashbox.cashRegisters.root}/${id}`, payload);
+        mutate(endpoints.cashbox.cashRegisters.root);
+        return res;
+
     }, [id]);
 
     return { onSubmit };
@@ -358,12 +325,9 @@ export function useUpdateCashRegister(id: string) {
 
 export function useDeleteCashRegister() {
     const onDelete = useCallback(async (id: string) => {
-        try {
-            await deleter(`${endpoints.cashbox.cashRegisters.root}/${id}`);
-            mutate(endpoints.cashbox.cashRegisters.root);
-        } catch (error) {
-            throw error;
-        }
+        await deleter(`${endpoints.cashbox.cashRegisters.root}/${id}`);
+        mutate(endpoints.cashbox.cashRegisters.root);
+
     }, []);
 
     return { onDelete };

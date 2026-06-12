@@ -1,10 +1,10 @@
+import type { TransactionGroup } from './types';
 import type { RowAction, DataTableColumn, DataTableDefaultConfig } from 'src/sections/common/data-table/types/types';
 
 import { useTranslation } from 'react-i18next';
-import { useMemo, useState, useCallback, useEffect } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 
 import Box from '@mui/material/Box';
-import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
 
 import { DashboardContent } from 'src/layouts/dashboard';
@@ -13,7 +13,7 @@ import { useGetGroupTransactions } from 'src/actions/cashbox';
 import { Iconify } from 'src/components/iconify';
 
 import { DataTable } from 'src/sections/common/data-table/components/DataTable';
-import type { TransactionGroup } from './types';
+
 import { TRANSACTION_GROUPS_TABLE_PERSIST_KEY } from './constants';
 import { TransactionGroupDeleteDialog } from './components/TransactionGroupDeleteDialog';
 
@@ -26,8 +26,8 @@ export function CashRegistersListView() {
     const [sortState, setSortState] = useState<{ key: string | null; dir: string | null }>({ key: null, dir: null });
 
     useEffect(() => {
-        const t = setTimeout(() => setDebouncedSearch(searchValue), 400);
-        return () => clearTimeout(t);
+        const timeoutId = setTimeout(() => setDebouncedSearch(searchValue), 400);
+        return () => clearTimeout(timeoutId);
     }, [searchValue]);
 
     useEffect(() => {

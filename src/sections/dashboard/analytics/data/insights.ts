@@ -1,5 +1,6 @@
-import type { AnalyticsPayload, Insight } from './types';
-import { calcDelta, fmtCompact, fmtPct } from './formatters';
+import type { Insight, AnalyticsPayload } from './types';
+
+import { fmtPct, calcDelta, fmtCompact } from './formatters';
 
 export function buildInsights(payload: AnalyticsPayload): Insight[] {
   const cur = payload.current;

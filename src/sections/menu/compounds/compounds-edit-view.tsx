@@ -8,20 +8,19 @@ import { Box, Stack, Button, CircularProgress } from '@mui/material';
 
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
+
+// Hooks and Actions
+import { useGetCompound, useGetCompoundWithCalculations } from 'src/hooks/use-compounds';
+
 import { useAppDispatch } from 'src/store';
+import { useGetIngredientGroups } from 'src/actions/ingredient-group';
 import {
     PICKER_FORM_NAMES,
     compoundFormPickerActions,
     mapMealCalculationsToPickerItems,
 } from 'src/store/slices/pickerFormSlices';
 
-// Hooks and Actions
-import { useGetCompound, useGetCompoundWithCalculations } from 'src/hooks/use-compounds';
-
-import { useGetIngredientGroups } from 'src/actions/ingredient-group';
-
 // Components
-import { GeneralInformation } from 'src/sections/warehouse/utils/components/GeneralInformation';
 import { MealItemPicker, type MealItemPickerApi } from 'src/sections/meals/components/MealItemPicker';
 import { MealItemPickerCache } from 'src/sections/meals/components/MealItemPicker/MealItemPickerCache';
 

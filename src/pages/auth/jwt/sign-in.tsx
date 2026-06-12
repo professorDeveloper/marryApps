@@ -1,11 +1,9 @@
-import { AuthVisualLayout, SignInForm } from 'src/sections/auth/components';
+import { SignInForm, AuthVisualLayout } from 'src/sections/auth/components';
 
 export default function Page() {
   return (
-    <>
-      <AuthVisualLayout>
+    <AuthVisualLayout>
         <SignInForm />
       </AuthVisualLayout>
-    </>
   );
 }

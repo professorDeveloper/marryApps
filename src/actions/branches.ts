@@ -2,9 +2,9 @@ import type { SWRConfiguration } from 'swr';
 import type { IBranchItem, IBranchFormData } from 'src/types/branches';
 
 import useSWR from 'swr';
-import { mutate } from 'src/lib/swr';
 import { useMemo, useCallback } from 'react';
 
+import { mutate } from 'src/lib/swr';
 import { poster, putter, fetcher, deleter, endpoints } from 'src/lib/axios';
 
 const swrOptions: SWRConfiguration = {

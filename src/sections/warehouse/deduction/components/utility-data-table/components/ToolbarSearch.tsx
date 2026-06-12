@@ -1,15 +1,15 @@
-import { useState, useCallback, useMemo, useRef, useEffect, useLayoutEffect } from 'react';
+import type { SearchOutput, ToolbarSearchProps } from '../types/types';
+
+import { useRef, useMemo, useState, useEffect, useCallback, useLayoutEffect } from 'react';
 
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
-import TextField from '@mui/material/TextField';
 import Tooltip from '@mui/material/Tooltip';
+import TextField from '@mui/material/TextField';
 import Autocomplete from '@mui/material/Autocomplete';
 import InputAdornment from '@mui/material/InputAdornment';
 
 import { Iconify } from 'src/components/iconify';
-
-import type { ToolbarSearchProps, SearchOutput } from '../types/types';
 
 interface Chip_Item {
   type: 'option' | 'custom';
@@ -97,73 +97,30 @@ export function ToolbarSearch({
 
       return () => resizeObserver.disconnect();
     }
+    return undefined;
   }, [mode]);
 
-  if (mode === 'simple') {
+  const handleSimpleChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const newValue = event.target.value;
+      setSimpleInputVal(newValue);
 
-    const handleSimpleChange = useCallback(
-      (event: React.ChangeEvent<HTMLInputElement>) => {
-        const newValue = event.target.value;
-        setSimpleInputVal(newValue);
+      // Auto-trigger search when clearing the input
+      if (newValue === '' && simpleInputVal !== '') {
+        onSearch({ query: '' });
+      }
+    },
+    [onSearch, simpleInputVal],
+  );
 
-        // Auto-trigger search when clearing the input
-        if (newValue === '' && simpleInputVal !== '') {
-          onSearch({ query: '' });
-        }
-      },
-      [onSearch, simpleInputVal],
-    );
-
-    const handleSimpleKeyDown = useCallback(
-      (event: React.KeyboardEvent<HTMLInputElement>) => {
-        if (event.key === 'Enter') {
-          onSearch({ query: simpleInputVal });
-        }
-      },
-      [simpleInputVal, onSearch],
-    );
-
-    return (
-      <TextField
-        size="small"
-        placeholder="Search cases..."
-        value={simpleInputVal}
-        onChange={handleSimpleChange}
-        onKeyDown={handleSimpleKeyDown}
-        slotProps={{
-          input: {
-            startAdornment: (
-              <InputAdornment position="start">
-                <Iconify
-                  icon="eva:search-fill"
-                  width={18}
-                  sx={{ color: 'var(--text-3)' }}
-                />
-              </InputAdornment>
-            ),
-            endAdornment: null,
-          },
-        }}
-        sx={{
-          minWidth: 200,
-          maxWidth: 320,
-          '& .MuiInputBase-root': {
-            height: 36,
-            fontSize: 13.5,
-            backgroundColor: 'var(--bg2)',
-            borderRadius: '6px',
-            fontFamily: 'var(--font-sans)',
-          },
-          '& .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--border)' },
-          '& .MuiInputBase-root:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--border2)' },
-          '& .MuiInputBase-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
-            borderColor: 'var(--border2)',
-            boxShadow: 'none',
-          },
-        }}
-      />
-    );
-  }
+  const handleSimpleKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLInputElement>) => {
+      if (event.key === 'Enter') {
+        onSearch({ query: simpleInputVal });
+      }
+    },
+    [simpleInputVal, onSearch],
+  );
 
   const filteredOptions = useMemo(
     () => options.filter((o) => o.label.toLowerCase().includes(inputVal.toLowerCase())),
@@ -253,8 +210,52 @@ export function ToolbarSearch({
       handleOptionSelect,
       updateSearch,
       focusInputSoon,
+      handleChipDelete,
     ],
   );
+
+  if (mode === 'simple') {
+    return (
+      <TextField
+        size="small"
+        placeholder="Search cases..."
+        value={simpleInputVal}
+        onChange={handleSimpleChange}
+        onKeyDown={handleSimpleKeyDown}
+        slotProps={{
+          input: {
+            startAdornment: (
+              <InputAdornment position="start">
+                <Iconify
+                  icon="eva:search-fill"
+                  width={18}
+                  sx={{ color: 'var(--text-3)' }}
+                />
+              </InputAdornment>
+            ),
+            endAdornment: null,
+          },
+        }}
+        sx={{
+          minWidth: 200,
+          maxWidth: 320,
+          '& .MuiInputBase-root': {
+            height: 36,
+            fontSize: 13.5,
+            backgroundColor: 'var(--bg2)',
+            borderRadius: '6px',
+            fontFamily: 'var(--font-sans)',
+          },
+          '& .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--border)' },
+          '& .MuiInputBase-root:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--border2)' },
+          '& .MuiInputBase-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
+            borderColor: 'var(--border2)',
+            boxShadow: 'none',
+          },
+        }}
+      />
+    );
+  }
 
   return (
     <Tooltip title="No match found" open={showNoMatchTooltip} placement="top">
@@ -305,7 +306,7 @@ export function ToolbarSearch({
         onHighlightChange={(_, option) => {
           setHighlightedOption(option || null);
         }}
-        onChange={(_, value) => {
+        onChange={() => {
           // Clear input to prevent MUI from setting it to the selected option's label
           setInputVal('');
         }}

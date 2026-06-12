@@ -5,7 +5,6 @@ import { varAlpha } from 'minimal-shared/utils';
 
 import { createTheme } from '@mui/material/styles';
 
-import { grey, common } from './palette';
 
 // ----------------------------------------------------------------------
 

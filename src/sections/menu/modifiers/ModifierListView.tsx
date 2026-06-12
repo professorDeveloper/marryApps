@@ -2,33 +2,34 @@
  * Modifier list/view component with table and delete confirmation
  */
 
-import type { DataTableColumn, DataTableDefaultConfig } from 'src/sections/common/data-table/types/types';
 import type { IModifierItem } from 'src/types/modifiers';
+import type { DataTableColumn, DataTableDefaultConfig } from 'src/sections/common/data-table/types/types';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 
-import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, IconButton } from '@mui/material';
+import { Box, Button, Dialog, IconButton, DialogTitle, DialogActions, DialogContent } from '@mui/material';
 
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
+import { RouterLink } from 'src/routes/components';
 
-import { useDeleteModifier, useGetModifiers } from 'src/actions/modifiers';
+import { usePaginationRows } from 'src/hooks/use-pagination-rows';
+
+import { DashboardContent } from 'src/layouts/dashboard';
+import { useGetModifiers, useDeleteModifier } from 'src/actions/modifiers';
 
 import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
 
-import { DashboardContent } from 'src/layouts/dashboard';
 import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
-import { usePaginationRows } from 'src/hooks/use-pagination-rows';
 
-import { TABLE_COLUMN_ORDER, TABLE_COLUMN_VISIBILITY, TABLE_COLUMN_WIDTHS, MODIFIERS_TABLE_PERSIST_KEY } from './constants';
-import { RouterLink } from 'src/routes/components';
+import { TABLE_COLUMN_ORDER, TABLE_COLUMN_WIDTHS, TABLE_COLUMN_VISIBILITY, MODIFIERS_TABLE_PERSIST_KEY } from './constants';
 import {
-  RenderCellModifierName,
-  RenderCellModifierCode,
   RenderCellIsActive,
   RenderCellCreatedAt,
+  RenderCellModifierName,
+  RenderCellModifierCode,
 } from './components/ModifierTableCells';
 
 export function ModifierListView() {

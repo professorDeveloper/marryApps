@@ -1,6 +1,7 @@
 import type { NumFormat } from '../data/formatters';
-import { fmtNum } from '../data/formatters';
 import type { PaymentTypeItem } from '../data/types';
+
+import { fmtNum } from '../data/formatters';
 
 interface Props {
   items: PaymentTypeItem[];

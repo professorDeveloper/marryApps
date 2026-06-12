@@ -1,8 +1,6 @@
 import type { ICashier } from 'src/types/cashbox';
 import type { DataTableColumn } from 'src/sections/common/data-table/types/types';
-import { CELL_SX } from 'src/sections/common/data-table/utils/constants';
 
-import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
 import { useMemo, useState, useEffect, useCallback } from 'react';
 
@@ -11,14 +9,16 @@ import { Box, Button, IconButton } from '@mui/material';
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
 
-import { DashboardContent } from 'src/layouts/dashboard';
 import { useGetCashiers } from 'src/actions/cashbox';
+import { DashboardContent } from 'src/layouts/dashboard';
 
 import { Iconify } from 'src/components/iconify';
 
+import { CELL_SX } from 'src/sections/common/data-table/utils/constants';
 import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
+
 import { CashierDeleteDialog } from './components/CashierDeleteDialog';
-import { CASHIERS_TABLE_PERSIST_KEY, INITIAL_CASHIER_FILTERS } from './constants';
+import { INITIAL_CASHIER_FILTERS, CASHIERS_TABLE_PERSIST_KEY } from './constants';
 
 export function CashiersListView() {
     const { t } = useTranslation('menu');

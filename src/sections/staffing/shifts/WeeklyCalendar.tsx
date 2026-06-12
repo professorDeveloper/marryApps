@@ -1,11 +1,10 @@
 import type { Dayjs } from 'dayjs';
 
 import useSWR from 'swr';
-import { mutate } from 'src/lib/swr';
 import dayjs from 'dayjs';
+import { useMemo, useState } from 'react';
 import isoWeek from 'dayjs/plugin/isoWeek';
 import { useTranslation } from 'react-i18next';
-import { useMemo, useState } from 'react';
 
 import {
   Box,
@@ -17,21 +16,23 @@ import {
   Select,
   Tooltip,
   MenuItem,
+  useTheme,
   TextField,
   Typography,
   IconButton,
   InputLabel,
   DialogTitle,
-  ToggleButton,
   FormControl,
+  ToggleButton,
   DialogActions,
   DialogContent,
-  useTheme,
   ToggleButtonGroup,
 } from '@mui/material';
 
+import { mutate } from 'src/lib/swr';
+import { poster, fetcher, endpoints } from 'src/lib/axios';
+
 import { Iconify } from 'src/components/iconify';
-import { fetcher, poster, endpoints } from 'src/lib/axios';
 
 dayjs.extend(isoWeek);
 
@@ -323,9 +324,9 @@ export function WeeklyCalendar() {
 
   // Percentage helpers — positions within one day cell (0–100%)
   const toPct = (timeStr?: string): number => {
-    const t = parseTime(timeStr);
-    if (!t) return 0;
-    const mins = t.h * 60 + t.m - DAY_START * 60;
+    const parsed = parseTime(timeStr);
+    if (!parsed) return 0;
+    const mins = parsed.h * 60 + parsed.m - DAY_START * 60;
     return Math.max(0, Math.min(100, (mins / (HOURS_PER_DAY * 60)) * 100));
   };
 

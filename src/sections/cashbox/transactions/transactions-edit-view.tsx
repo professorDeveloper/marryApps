@@ -1,5 +1,5 @@
-import type { TransactionType } from 'src/types/transactions';
 import type { TFunction } from 'i18next';
+import type { TransactionType } from 'src/types/transactions';
 
 import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';

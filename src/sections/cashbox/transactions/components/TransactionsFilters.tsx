@@ -75,7 +75,7 @@ export function TransactionsFilters({
     (groupId: string) => {
       onFiltersChange({
         ...filters,
-        group_id: groupId,
+        group_transaction_id: groupId,
       });
     },
     [filters, onFiltersChange]
@@ -157,7 +157,7 @@ export function TransactionsFilters({
       <FormControl fullWidth size="small">
         <InputLabel shrink>{t('deductions.group')}</InputLabel>
         <Select
-          value={filters.group_id || ''}
+          value={filters.group_transaction_id || ''}
           label={t('deductions.group')}
           displayEmpty
           onChange={(event) => handleGroupChange(event.target.value)}

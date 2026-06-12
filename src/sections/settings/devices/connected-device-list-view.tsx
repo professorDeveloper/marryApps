@@ -1,7 +1,7 @@
 import type { IDevice } from './types';
 
 import { useTranslation } from 'react-i18next';
-import { useMemo, useState, useCallback, useEffect } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
@@ -44,8 +44,8 @@ export function ConnectedDeviceListView() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
 
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(searchQuery), 300);
-    return () => clearTimeout(t);
+    const timeoutId = setTimeout(() => setDebouncedSearch(searchQuery), 300);
+    return () => clearTimeout(timeoutId);
   }, [searchQuery]);
 
   // Detail view state

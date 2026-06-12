@@ -2,10 +2,12 @@
  * Department table cell renderers for the departments list view
  */
 
-import { Box, ListItemText, Typography } from '@mui/material';
-
 import type { IDepartmentItem } from 'src/types/departments.tsx';
+
+import { Box } from '@mui/material';
+
 import { RenderCell } from 'src/components/RenderCell';
+
 import { CELL_SX } from 'src/sections/common/data-table/utils/constants';
 
 interface CellRenderParams {

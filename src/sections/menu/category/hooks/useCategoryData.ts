@@ -6,8 +6,10 @@ import { useMemo, useState, useCallback } from 'react';
 
 import { paths } from 'src/routes/paths';
 
-import { useDeleteCategory, useGetCategoriesPage } from 'src/actions/categories';
 import { useMetadata } from 'src/hooks/use-metadata';
+
+import { useDeleteCategory, useGetCategoriesPage } from 'src/actions/categories';
+
 import { MetadataEntity } from 'src/types/metadata';
 
 /**

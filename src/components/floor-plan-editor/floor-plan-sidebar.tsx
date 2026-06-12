@@ -102,7 +102,7 @@ export const FloorPlanSidebar = ({
     const [hallCreating, setHallCreating] = useState(false);
     const [savingChanges, setSavingChanges] = useState(false);
 
-    const selectedTable = tables.find((t) => t.id === selectedTableId);
+    const selectedTable = tables.find((table) => table.id === selectedTableId);
 
     // Handle saving all changed tables
     const handleSaveTableChanges = async () => {
@@ -199,7 +199,7 @@ export const FloorPlanSidebar = ({
 
     // Table create/edit dialogs
     const handleCreateTableDialogOpen = () => {
-        const nextNumber = Math.max(0, ...tables.map(t => t.number)) + 1;
+        const nextNumber = Math.max(0, ...tables.map(table => table.number)) + 1;
         // Default form data in meters (0.8m x 0.6m)
         setCreateTableFormData({
             number: nextNumber,
@@ -368,7 +368,7 @@ export const FloorPlanSidebar = ({
 
                 {/* Save changes button */}
                 {changedTablesCount > 0 && (
-                    <Box sx={{ mt: 2, p: 1.5, borderRadius: 1, border: (t) => `1px solid ${t.palette.primary.main}` }}>
+                    <Box sx={{ mt: 2, p: 1.5, borderRadius: 1, border: (currentTheme) => `1px solid ${currentTheme.palette.primary.main}` }}>
                         <Typography variant="caption" sx={{ display: 'block', mb: 1, fontWeight: 'bold', color: 'primary.main' }}>
                             {changedTablesCount} {changedTablesCount > 1 ? t('floorPlan.tablesChanged') : t('floorPlan.tableChanged')}
                         </Typography>

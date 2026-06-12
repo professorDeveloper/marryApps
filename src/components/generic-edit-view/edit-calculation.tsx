@@ -516,13 +516,13 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
 
     useEffect(() => {
         // Only for existing entities (not new ones)
-        if (!entityId || !mealId) return;
+        if (!entityId || !mealId) return undefined;
 
         // Check if there are actual changes
         const idsChanged = JSON.stringify(transferredIds) !== JSON.stringify(prevTransferredIdsRef.current);
         const quantitiesChanged = JSON.stringify(quantities) !== JSON.stringify(prevQuantitiesRef.current);
 
-        if (!idsChanged && !quantitiesChanged) return;
+        if (!idsChanged && !quantitiesChanged) return undefined;
 
         prevTransferredIdsRef.current = transferredIds;
         prevQuantitiesRef.current = quantities;
@@ -1242,10 +1242,10 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
                                                             setQuantities(newQuantities);
 
                                                             if (entityId) {
-                                                                const calculation = ingredientCalculations?.find(calc => calc.ingredient_id === id);
-                                                                if (calculation) {
+                                                                const existingCalculation = ingredientCalculations?.find(calc => calc.ingredient_id === id);
+                                                                if (existingCalculation) {
                                                                     try {
-                                                                        await deleteCalculation(calculation.id);
+                                                                        await deleteCalculation(existingCalculation.id);
                                                                     } catch (error) {
                                                                         console.error('Error deleting calculation:', error);
                                                                         // Restore if delete failed

@@ -9,8 +9,9 @@ import {
     DialogContent,
 } from '@mui/material';
 
-import { toast } from 'src/components/snackbar';
 import { useDeleteGroupTransaction } from 'src/actions/cashbox';
+
+import { toast } from 'src/components/snackbar';
 
 export interface TransactionGroupDeleteDialogProps {
     open: boolean;

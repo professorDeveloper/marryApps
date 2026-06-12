@@ -3,20 +3,17 @@
  * Exports all public components and utilities
  */
 
-// Views
-export { DepartmentEditView, type DepartmentEditViewProps } from './DepartmentEditView';
-export { DepartmentListView } from './DepartmentListView';
-
-// Components
-export { CategoriesTable } from './components/CategoriesTable';
-export {
-  RenderCellColor,
-  RenderCellDepartmentName,
-  RenderCellStorageId,
-} from './components/DepartmentTableCells';
-
+// Constants
+export * from './constants';
 // Hooks
 export { useFormLogic } from './hooks/useFormLogic';
+
+export { DepartmentListView } from './DepartmentListView';
+// Components
+export { CategoriesTable } from './components/CategoriesTable';
+
+// Views
+export { DepartmentEditView, type DepartmentEditViewProps } from './DepartmentEditView';
 
 // Utils
 export {
@@ -25,8 +22,11 @@ export {
   buildColorAndStorageSection,
 } from './utils/form-sections';
 
-// Constants
-export * from './constants';
+export {
+  RenderCellColor,
+  RenderCellStorageId,
+  RenderCellDepartmentName,
+} from './components/DepartmentTableCells';
 
 // Types
 export type * from './types';

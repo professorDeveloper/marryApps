@@ -1,19 +1,19 @@
 import type { ReactNode } from 'react';
 import type { ITransaction } from 'src/types/transactions';
 import type { DataTableColumn } from 'src/sections/common/data-table/types/types';
-import type { DataTablePeriodFilterProps, DataTableSearchProps, DataTablePaginationProps } from 'src/sections/common/data-table/components/DataTable';
+import type { DataTableSearchProps, DataTablePaginationProps, DataTablePeriodFilterProps } from 'src/sections/common/data-table/components/DataTable';
 
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Box, Button, Chip, IconButton, MenuItem, TextField, Tooltip } from '@mui/material';
+import { Box, Chip, Button, Tooltip, MenuItem, TextField, IconButton } from '@mui/material';
 
 import { paths } from 'src/routes/paths';
 import { RouterLink } from 'src/routes/components';
 
 import { Iconify } from 'src/components/iconify';
-import { CELL_SX } from 'src/sections/common/data-table/utils/constants';
 
+import { CELL_SX } from 'src/sections/common/data-table/utils/constants';
 import { DataTable } from 'src/sections/common/data-table/components/DataTable';
 
 interface TransactionsDataTableProps {
@@ -173,7 +173,7 @@ export function TransactionsDataTable({
 
           return (
             <Box sx={CELL_SX}>
-              {'-'}
+              -
             </Box>
           );
         },

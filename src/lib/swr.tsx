@@ -1,6 +1,7 @@
 import type { State, BareFetcher } from 'swr/_internal';
 import type { Cache, ScopedMutator, SWRConfiguration } from 'swr';
 
+import { useEffect } from 'react';
 import { SWRConfig, useSWRConfig, preload as swrPreload, mutate as defaultMutate } from 'swr';
 
 // ----------------------------------------------------------------------
@@ -74,7 +75,9 @@ export function preload<Data = unknown>(key: string, fetcher: BareFetcher<Data>)
 
 function SWRMutateBridge() {
   const { mutate: contextMutate } = useSWRConfig();
-  scopedMutate = contextMutate;
+  useEffect(() => {
+    scopedMutate = contextMutate;
+  }, [contextMutate]);
   return null;
 }
 

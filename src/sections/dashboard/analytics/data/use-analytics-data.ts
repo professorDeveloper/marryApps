@@ -1,8 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useDashboardAPI } from 'src/hooks/use-dashboard-api';
+import type { Kpi, KpiKey, PeriodPayload, AnalyticsPayload } from './types';
 import type { DashboardOverviewResponse } from 'src/hooks/use-dashboard-api';
-import { calcDelta, toNumber } from './formatters';
-import type { AnalyticsPayload, Kpi, KpiKey, PeriodPayload } from './types';
+
+import { useMemo, useState, useEffect } from 'react';
+
+import { useDashboardAPI } from 'src/hooks/use-dashboard-api';
+
+import { toNumber, calcDelta } from './formatters';
 
 export type PeriodId = 'day' | 'week' | 'month' | 'year';
 
@@ -123,9 +126,12 @@ export function useAnalyticsData(start: Date, end: Date, period: PeriodId) {
   const [payload, setPayload] = useState<AnalyticsPayload | null>(null);
   const [loading, setLoading] = useState(false);
 
+  const startTime = start.getTime();
+  const endTime = end.getTime();
+
   const window = useMemo(
     () => buildWindow(start, end, period),
-    [start.getTime(), end.getTime(), period], // eslint-disable-line react-hooks/exhaustive-deps
+    [startTime, endTime, period], // eslint-disable-line react-hooks/exhaustive-deps
   );
 
   useEffect(() => {

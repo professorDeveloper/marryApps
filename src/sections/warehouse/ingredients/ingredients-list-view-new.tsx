@@ -149,8 +149,6 @@ export function IngredientListView() {
                     onEdit={handleEditIngredient}
                     onDelete={handleDeleteClick}
                     showHeaderActions
-                    enablePeriodPicker={false}
-                    enablePeriodButtons={false}
                 />
             </DashboardContent>
 

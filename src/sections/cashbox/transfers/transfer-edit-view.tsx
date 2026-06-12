@@ -1,3 +1,4 @@
+import type { Branch, Storage } from './types';
 import type { Transfer, TransferFormData, TransferBatchItemInput } from 'src/types/transfers';
 
 import dayjs from 'dayjs';
@@ -17,8 +18,6 @@ import { toast } from 'src/components/snackbar';
 import { GenericEditView } from 'src/components/generic-edit-view';
 import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 import TransfersDetailsCalculation from 'src/components/transfers-details-calculation';
-
-import type { Branch, Storage } from './types';
 
 interface BackendResponse<T> {
   status: string;

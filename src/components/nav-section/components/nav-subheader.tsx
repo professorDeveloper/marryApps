@@ -12,8 +12,7 @@ import { Iconify, iconifyClasses } from '../../iconify';
 
 export type NavSubheaderProps = ListSubheaderProps & { open?: boolean; active?: boolean };
 
-export const NavSubheader = styled(({ open, active, sx, children, className, ...other }: NavSubheaderProps) => {
-  return (
+export const NavSubheader = styled(({ open, active, sx, children, className, ...other }: NavSubheaderProps) => (
     <ListSubheader
       disableSticky
       component="div"
@@ -27,8 +26,7 @@ export const NavSubheader = styled(({ open, active, sx, children, className, ...
       />
       {children}
     </ListSubheader>
-  );
-})(({ theme }) => ({
+  ))(({ theme }) => ({
   ...theme.typography.overline,
   cursor: 'pointer',
   alignItems: 'center',

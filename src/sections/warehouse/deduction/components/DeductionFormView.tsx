@@ -15,14 +15,14 @@ import { Box, Button, Typography, CircularProgress } from '@mui/material';
 import { paths } from 'src/routes/paths';
 
 import { useDeductionsAPI } from 'src/hooks/use-deductions-api';
+
 import { useAppDispatch } from 'src/store';
+import { fetcher, endpoints } from 'src/lib/axios';
 import {
     PICKER_FORM_NAMES,
     deductionFormPickerActions,
     mapBatchItemsToPickerItems,
 } from 'src/store/slices/pickerFormSlices';
-
-import { fetcher, endpoints } from 'src/lib/axios';
 
 import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 
@@ -155,11 +155,11 @@ const DeductionFormView = React.memo(function DeductionFormView({
     useEffect(() => {
         if (isNew) {
             setPageLoading(false);
-            return;
+            return undefined;
         }
         if (!id) {
             setPageLoading(false);
-            return;
+            return undefined;
         }
 
         let cancelled = false;

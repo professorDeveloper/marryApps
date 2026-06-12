@@ -1,6 +1,6 @@
 import type { CategoryGoodsModalProps } from '../types';
 
-import { Dialog, IconButton, DialogTitle, DialogContent, Typography } from '@mui/material';
+import { Dialog, IconButton, Typography, DialogTitle, DialogContent } from '@mui/material';
 
 import { Iconify } from 'src/components/iconify';
 

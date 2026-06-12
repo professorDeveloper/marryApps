@@ -19,7 +19,6 @@ export function ErrorView() {
   
   return (
     <SimpleLayout
-      cssVars={{}}
       slotProps={{
         content: { compact: true },
       }}

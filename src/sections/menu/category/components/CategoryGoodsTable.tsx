@@ -107,7 +107,7 @@ export function CategoryGoodsTable({ categoryId }: CategoryGoodsTableProps) {
             headerName: t('mealsProducts.price'),
             width: 120,
             renderCell: (params) => (
-                <span>{parseFloat(params.row.price).toLocaleString()} so'm</span>
+                <span>{parseFloat(params.row.price).toLocaleString()} so&apos;m</span>
             ),
         },
         {

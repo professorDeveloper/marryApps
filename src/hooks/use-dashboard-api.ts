@@ -1,6 +1,8 @@
 import type { AxiosError } from 'axios';
+
 import { toast } from 'sonner';
 import { useCallback } from 'react';
+
 import { fetcher, endpoints } from 'src/lib/axios';
 
 export interface DashboardParams {

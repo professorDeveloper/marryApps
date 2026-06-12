@@ -9,12 +9,12 @@ import { useMemo, useState, useEffect, useCallback } from 'react';
 
 import {
     Box,
-    Button,
     Chip,
+    Button,
     Dialog,
     MenuItem,
-    TextField,
     useTheme,
+    TextField,
     IconButton,
     DialogTitle,
     DialogActions,
@@ -24,20 +24,20 @@ import {
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
 
-import { getStatusColor, formatStatusLabel } from 'src/utils/status-colors';
-import { RenderCell } from 'src/components/RenderCell';
-
+import { usePaginationRows } from 'src/hooks/use-pagination-rows';
 import {
     useDeductionsAPI
 } from 'src/hooks/use-deductions-api';
+
+import { getStatusColor, formatStatusLabel } from 'src/utils/status-colors';
 
 import { fetcher, endpoints } from 'src/lib/axios';
 import { DashboardContent } from 'src/layouts/dashboard';
 
 import { Iconify } from 'src/components/iconify';
+import { RenderCell } from 'src/components/RenderCell';
 
 import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
-import { usePaginationRows } from 'src/hooks/use-pagination-rows';
 
 import {
     DeductionsDetailsModal,
@@ -289,6 +289,8 @@ export function DeductionsListView() {
                 nextStart = now.startOf('year').toDate();
                 nextEnd = now.endOf('day').toDate();
                 break;
+            default:
+                return;
         }
 
         setStartDate(nextStart);

@@ -1,3 +1,4 @@
+import type { IStockFormData } from 'src/types/stocks';
 import type { CardSection, GenericEditViewConfig } from 'src/components/generic-edit-view';
 
 import { useCallback } from 'react';
@@ -5,9 +6,9 @@ import { useCallback } from 'react';
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
 
-import { GenericEditView } from 'src/components/generic-edit-view';
 import { useCreateStock, useUpdateStock, useGetStockById } from 'src/actions/stocks';
-import { IStockFormData } from 'src/types/stocks';
+
+import { GenericEditView } from 'src/components/generic-edit-view';
 
 export function StocksEditView({ isNew = false }: { isNew?: boolean }) {
   const router = useRouter();

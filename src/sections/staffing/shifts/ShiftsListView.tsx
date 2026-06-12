@@ -1,7 +1,6 @@
 import type { DataTableColumn } from 'src/sections/common/data-table/types/types';
 
 import useSWR from 'swr';
-import { mutate } from 'src/lib/swr';
 import { useTranslation } from 'react-i18next';
 import { useMemo, useState, useCallback } from 'react';
 
@@ -24,15 +23,16 @@ import {
   DialogContent,
 } from '@mui/material';
 
-import { WeeklyCalendar } from './WeeklyCalendar';
-
+import { mutate } from 'src/lib/swr';
 import { DashboardContent } from 'src/layouts/dashboard';
+import { poster, putter, fetcher, deleter, endpoints } from 'src/lib/axios';
 
 import { Iconify } from 'src/components/iconify';
 
 import { CELL_SX } from 'src/sections/common/data-table/utils/constants';
 import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
-import { fetcher, poster, putter, deleter, endpoints } from 'src/lib/axios';
+
+import { WeeklyCalendar } from './WeeklyCalendar';
 
 // ----------------------------------------------------------------------
 

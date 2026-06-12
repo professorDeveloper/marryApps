@@ -16,6 +16,9 @@ import {
 
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
+import { RouterLink } from 'src/routes/components';
+
+import { usePaginationRows } from 'src/hooks/use-pagination-rows';
 
 import { DashboardContent } from 'src/layouts/dashboard';
 import { useDeleteIngredientGroup, useGetIngredientGroupsPage } from 'src/actions/ingredient-group';
@@ -24,10 +27,8 @@ import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
 import { GenericViewModal } from 'src/components/generic-view-view';
 
-import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
-import { usePaginationRows } from 'src/hooks/use-pagination-rows';
 import { CELL_SX } from 'src/sections/common/data-table/utils';
-import { RouterLink } from 'src/routes/components';
+import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
 
 export function IngredientGroupListView() {
     const { t } = useTranslation('menu');

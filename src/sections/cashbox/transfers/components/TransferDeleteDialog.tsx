@@ -9,8 +9,9 @@ import {
     DialogContent,
 } from '@mui/material';
 
-import { toast } from 'src/components/snackbar';
 import { useTransfersAPI } from 'src/hooks/use-transfers-api';
+
+import { toast } from 'src/components/snackbar';
 
 export interface TransferDeleteDialogProps {
     open: boolean;

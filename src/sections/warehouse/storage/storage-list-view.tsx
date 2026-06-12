@@ -1,6 +1,5 @@
 import type { IStorageItem } from 'src/types/departments.tsx';
 import type { DataTableColumn, DataTableDefaultConfig } from 'src/sections/common/data-table/types/types';
-import { CELL_SX } from 'src/sections/common/data-table/utils/constants';
 
 import { useTranslation } from 'react-i18next';
 import { useMemo, useState, useEffect, useCallback } from 'react';
@@ -11,15 +10,17 @@ import { Box, Button, Dialog, IconButton, DialogTitle, DialogActions, DialogCont
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
 
+import { usePaginationRows } from 'src/hooks/use-pagination-rows';
+
 import { DashboardContent } from 'src/layouts/dashboard';
 import { useGetStorages, useDeleteStorage } from 'src/actions/departments';
-import { usePaginationRows } from 'src/hooks/use-pagination-rows';
 
 import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
-
-import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
 import { RenderCell } from 'src/components/RenderCell';
+
+import { CELL_SX } from 'src/sections/common/data-table/utils/constants';
+import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
 
 function RenderCellColor({ params }: { params: any }) {
   const colorCode = params.row.color_code;

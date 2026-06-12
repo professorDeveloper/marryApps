@@ -2,14 +2,24 @@
 
 import { m } from 'framer-motion';
 import React, { useState, useEffect } from "react";
-import { Box, useTheme, alpha } from "@mui/material";
+
+import { Box, alpha, useTheme } from "@mui/material";
 
 export const NeuralGrid = () => {
-  const [mounted, setMounted] = useState(false);
+  const [particles, setParticles] = useState<
+    { duration: number; delay: number; left: number; top: number }[]
+  >([]);
   const theme = useTheme();
 
   useEffect(() => {
-    setMounted(true);
+    setParticles(
+      [...Array(20)].map(() => ({
+        duration: Math.random() * 3 + 2,
+        delay: Math.random() * 5,
+        left: Math.random() * 100,
+        top: Math.random() * 100,
+      }))
+    );
   }, []);
 
   return (
@@ -22,7 +32,7 @@ export const NeuralGrid = () => {
         maskImage: 'radial-gradient(ellipse 60% 50% at 50% 0%, #000 70%, transparent 100%)'
       }} />
       <Box sx={{ position: 'absolute', inset: 0 }}>
-        {mounted && [...Array(20)].map((_, i) => (
+        {particles.map((particle, i) => (
           <m.div
             key={i}
             initial={{ opacity: 0 }}
@@ -31,9 +41,9 @@ export const NeuralGrid = () => {
               scale: [1, 1.5, 1],
             }}
             transition={{
-              duration: Math.random() * 3 + 2,
+              duration: particle.duration,
               repeat: Infinity,
-              delay: Math.random() * 5,
+              delay: particle.delay,
             }}
             style={{
               position: 'absolute',
@@ -42,8 +52,8 @@ export const NeuralGrid = () => {
               backgroundColor: theme.palette.primary.main,
               borderRadius: '50%',
               boxShadow: `0 0 8px ${theme.palette.primary.main}`,
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
+              left: `${particle.left}%`,
+              top: `${particle.top}%`,
             }}
           />
         ))}

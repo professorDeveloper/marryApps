@@ -11,18 +11,19 @@ import { alpha } from '@mui/material/styles';
 import { paths } from 'src/routes/paths';
 
 import { useMetadata } from 'src/hooks/use-metadata';
-import { MetadataEntity } from 'src/types/metadata';
+
 import { useGetHalls } from 'src/actions/halls';
 import { useGetUsersByRole } from 'src/actions/users';
-import { useGetGoodsReports } from 'src/actions/goods-reports';
-import { useGetDepartments } from 'src/actions/departments';
 import { useGetCategories } from 'src/actions/categories';
 import { useGetCafeTables } from 'src/actions/cafe-tables';
+import { useGetDepartments } from 'src/actions/departments';
+import { useGetGoodsReports } from 'src/actions/goods-reports';
 
 import { DataTable } from 'src/sections/common/data-table/components/DataTable';
 
-import { MultiSelectFilter } from './MultiSelectFilter';
+import { MetadataEntity } from 'src/types/metadata';
 
+import { MultiSelectFilter } from './MultiSelectFilter';
 import { PERSIST_KEY, PAGE_SIZE_OPTIONS } from '../constants';
 import { formatAmount, formatPercent } from '../utils/formatters';
 import { useGoodsReportFilters } from '../hooks/useGoodsReportFilters';
@@ -275,14 +276,12 @@ function useDataTableColumns(): DataTableColumn<IGoodsReportItem>[] {
         compute: (rows) => formatAmount(rows.reduce((sum, row) => sum + (Number(row.total_qty) || 0), 0)),
         label: 'Total',
       },
-      renderCell: ({ value }) => {
-        return (
+      renderCell: ({ value }) => (
           <span style={{ textAlign: 'center', marginRight:70 }}>
             {formatAmount(value as string | number | undefined)}
           </span>
 
         )
-      }
 
     },
     {

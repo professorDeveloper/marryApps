@@ -14,7 +14,7 @@ import KeyboardDoubleArrowDownIcon from '@mui/icons-material/KeyboardDoubleArrow
 
 import { useTranslate } from 'src/locales/use-locales';
 
-import { ACCENT, BORDER, nextSort, SURFACE_BG } from '../utils';
+import { ACCENT, nextSort } from '../utils';
 
 export type DataTableHeaderProps<T> = {
   gridTemplateColumns: string;

@@ -4,7 +4,6 @@ import { toast } from 'sonner';
 import { useCallback } from 'react';
 
 import { poster, putter, deleter, fetcher, endpoints } from 'src/lib/axios';
-import { useTranslationsAPI } from 'src/hooks/use-translations-api';
 
 export interface Supplier {
     id: string;
@@ -58,7 +57,6 @@ export function useSupplierAPI() {
     const getSupplierById = useCallback(async (id: string): Promise<Supplier | null> => {
         try {
             const response = await fetcher<BackendResponse<Supplier>>(endpoints.supplier.details(id));
-            // @ts-ignore
             return response.data || response || null;
         } catch (error) {
             const axiosError = error as AxiosError<any>;
@@ -79,9 +77,7 @@ export function useSupplierAPI() {
                 address: data.address || null,
             };
             const response = await poster<BackendResponse<Supplier>>(endpoints.supplier.create, payload);
-            // @ts-ignore
             toast.success('Supplier created successfully');
-            // @ts-ignore
             return response.data || response;
         } catch (error) {
             const axiosError = error as AxiosError<any>;
@@ -101,9 +97,7 @@ export function useSupplierAPI() {
                 address: data.address || null,
             };
             const response = await putter<BackendResponse<Supplier>>(endpoints.supplier.update(id), payload);
-            // @ts-ignore
             toast.success('Supplier updated successfully');
-            // @ts-ignore
             return response.data || response;
         } catch (error) {
             const axiosError = error as AxiosError<any>;

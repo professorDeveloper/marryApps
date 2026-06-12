@@ -32,14 +32,13 @@ import { paths } from 'src/routes/paths';
 import { useStorageAPI } from 'src/hooks/use-storage-api';
 import { useDeductionsAPI } from 'src/hooks/use-deductions-api';
 import { useSeparationActsAPI } from 'src/hooks/use-separation-acts-api';
+
 import { useAppDispatch } from 'src/store';
 import {
     PICKER_FORM_NAMES,
-    separationActsFormPickerActions,
     mapBatchItemsToPickerItems,
+    separationActsFormPickerActions,
 } from 'src/store/slices/pickerFormSlices';
-
-import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 
 import { useIngredients } from 'src/sections/warehouse/invoice/hooks/useIngredients';
 
@@ -154,11 +153,11 @@ const SeparationActsFormView = React.memo(function SeparationActsFormView({
     useEffect(() => {
         if (isNew) {
             setPageLoading(false);
-            return;
+            return undefined;
         }
         if (!id) {
             setPageLoading(false);
-            return;
+            return undefined;
         }
 
         let cancelled = false;

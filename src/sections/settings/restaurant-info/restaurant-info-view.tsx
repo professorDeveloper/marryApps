@@ -111,7 +111,7 @@ export function RestaurantInfoListView() {
 
         {branchError && !branchLoading && (
           <Alert severity="error">
-            Restoran ma'lumotlarini yuklashda xatolik yuz berdi
+            Restoran ma&apos;lumotlarini yuklashda xatolik yuz berdi
           </Alert>
         )}
 

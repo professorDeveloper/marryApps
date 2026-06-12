@@ -1,4 +1,5 @@
 import type { Delta } from '../data/formatters';
+
 import { fmtPct } from '../data/formatters';
 
 interface DeltaPillProps {

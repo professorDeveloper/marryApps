@@ -1,6 +1,7 @@
-import type { NumFormat } from '../data/formatters';
-import { fmtNum } from '../data/formatters';
 import type { CategoryItem } from '../data/types';
+import type { NumFormat } from '../data/formatters';
+
+import { fmtNum } from '../data/formatters';
 
 interface Props {
   items: CategoryItem[];

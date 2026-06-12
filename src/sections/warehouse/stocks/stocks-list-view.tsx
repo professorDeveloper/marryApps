@@ -1,17 +1,17 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Button, Box } from '@mui/material';
+import { Button } from '@mui/material';
 
 import { paths } from 'src/routes/paths';
+import { RouterLink } from 'src/routes/components';
 
 import { DashboardContent } from 'src/layouts/dashboard';
 
 import { Iconify } from 'src/components/iconify';
+import { RenderCell } from 'src/components/RenderCell';
 
 import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
-import { RouterLink } from 'src/routes/components';
-import { RenderCell } from 'src/components/RenderCell';
 
 export function StocksListView() {
     const { t } = useTranslation('menu');

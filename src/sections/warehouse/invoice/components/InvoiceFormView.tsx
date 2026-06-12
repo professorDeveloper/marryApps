@@ -108,7 +108,7 @@ const InvoiceFormView = React.memo(function InvoiceFormView() {
     useEffect(() => {
         if (isNew) {
             setPageLoading(false);
-            return;
+            return undefined;
         }
 
         let cancelled = false;

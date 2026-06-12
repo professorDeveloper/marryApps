@@ -10,20 +10,20 @@ import { useParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import React, { useRef, useMemo, useState, useEffect, useCallback } from 'react';
 
-import { Box, Dialog, Typography, DialogContent, CircularProgress } from '@mui/material';
+import { Box, Dialog, DialogContent, CircularProgress } from '@mui/material';
 
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks/use-router';
 
 import { useInventoryAPI } from 'src/hooks/use-inventory-api';
+
 import { useAppDispatch } from 'src/store';
+import { useGetStorages } from 'src/actions/departments';
 import {
     PICKER_FORM_NAMES,
     inventoryFormPickerActions,
     mapBatchItemsToPickerItems,
 } from 'src/store/slices/pickerFormSlices';
-
-import { useGetStorages } from 'src/actions/departments';
 
 import { IngredientEditView } from 'src/sections/warehouse/ingredients-edit-view';
 
@@ -109,9 +109,9 @@ const InventoryFormView = React.memo(function InventoryFormView() {
     useEffect(() => {
         if (isNew) {
             setPageLoading(false);
-            return;
+            return undefined;
         }
-        
+
         let cancelled = false;
         const load = async () => {
             setPageLoading(true);

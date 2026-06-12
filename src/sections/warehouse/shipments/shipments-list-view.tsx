@@ -4,6 +4,7 @@ import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
 import { useMemo, useState, useEffect, useCallback } from 'react';
 
+import { DataGrid } from '@mui/x-data-grid';
 import {
   Box,
   Chip,
@@ -24,16 +25,15 @@ import {
   TableContainer,
 } from '@mui/material';
 
-import { DataGrid } from '@mui/x-data-grid';
-
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
-
-import { getStatusColor, formatStatusLabel } from 'src/utils/status-colors';
+import { RouterLink } from 'src/routes/components';
 
 import { useStorageAPI } from 'src/hooks/use-storage-api';
 import { useSupplierAPI } from 'src/hooks/use-supplier-api';
 import { useShipmentsAPI } from 'src/hooks/use-shipments-api';
+
+import { getStatusColor, formatStatusLabel } from 'src/utils/status-colors';
 
 import { fetcher, endpoints } from 'src/lib/axios';
 import { DashboardContent } from 'src/layouts/dashboard';
@@ -42,7 +42,6 @@ import { Iconify } from 'src/components/iconify';
 import { GenericViewModal } from 'src/components/generic-view-view';
 
 import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
-import { RouterLink } from 'src/routes/components';
 
 const getTodayUtcBoundary = (endOfDay = false): string => {
   const now = dayjs();
@@ -558,21 +557,26 @@ export function ShipmentsListView() {
                   startDate = toUtcDayBoundary(dayjs());
                   endDate = toUtcDayBoundary(dayjs(), true);
                   break;
-                case 'week':
+                case 'week': {
                   const weekStart = new Date(now);
                   weekStart.setDate(now.getDate() - now.getDay());
                   startDate = toUtcDayBoundary(dayjs(weekStart));
                   endDate = toUtcDayBoundary(dayjs(), true);
                   break;
-                case 'month':
+                }
+                case 'month': {
                   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
                   startDate = toUtcDayBoundary(dayjs(monthStart));
                   endDate = toUtcDayBoundary(dayjs(), true);
                   break;
-                case 'year':
+                }
+                case 'year': {
                   const yearStart = new Date(now.getFullYear(), 0, 1);
                   startDate = toUtcDayBoundary(dayjs(yearStart));
                   endDate = toUtcDayBoundary(dayjs(), true);
+                  break;
+                }
+                default:
                   break;
               }
 

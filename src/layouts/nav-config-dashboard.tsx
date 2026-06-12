@@ -1,6 +1,5 @@
-import type { NavSectionProps } from 'src/components/nav-section';
-
 import type { TFunction } from 'i18next';
+import type { NavSectionProps } from 'src/components/nav-section';
 
 import { paths } from 'src/routes/paths';
 

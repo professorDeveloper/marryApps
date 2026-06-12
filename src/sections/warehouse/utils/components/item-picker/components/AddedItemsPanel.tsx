@@ -5,10 +5,10 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import React, { useRef, useMemo, useState, useEffect, useCallback, useLayoutEffect } from 'react';
 
 import SearchIcon from '@mui/icons-material/Search';
+import SwapVertIcon from '@mui/icons-material/SwapVert';
 import DeleteSweepIcon from '@mui/icons-material/DeleteSweep';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
-import SwapVertIcon from '@mui/icons-material/SwapVert';
 import {
     Box,
     Paper,
@@ -16,12 +16,11 @@ import {
     TextField,
     Typography,
     InputAdornment,
-    Divider,
 } from '@mui/material';
 
-import { AddedItemRow } from './AddedItemRow';
-import { LIST_MAX_HEIGHT, ADDED_ROW_ESTIMATE_PX, ADDED_LIST_MAX_HEIGHT } from '../constants';
 import { TotalCard } from '../../TotalCard';
+import { AddedItemRow } from './AddedItemRow';
+import { ADDED_ROW_ESTIMATE_PX } from '../constants';
 
 export const AddedItemsPanel = React.memo<AddedItemsPanelProps>(({
     items,

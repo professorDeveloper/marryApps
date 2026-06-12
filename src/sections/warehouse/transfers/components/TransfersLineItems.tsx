@@ -1,4 +1,4 @@
-import type { Ingredient, Transfer, TransferBatchItemInput } from '../types';
+import type { Ingredient, TransferBatchItemInput } from '../types';
 
 import { useTranslation } from 'react-i18next';
 import React, { useRef, useMemo, useState, useEffect, useCallback } from 'react';

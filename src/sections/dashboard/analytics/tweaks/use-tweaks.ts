@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState } from 'react';
-import type { ChartStyle } from '../modules/sales-dynamics';
-import type { DishesStyle } from '../modules/top-dishes';
 import type { NumFormat } from '../data/formatters';
+import type { DishesStyle } from '../modules/top-dishes';
+import type { ChartStyle } from '../modules/sales-dynamics';
+
+import { useState, useEffect, useCallback } from 'react';
 
 export type LayoutId = 'classic' | 'sidebar' | 'editorial' | 'bento';
 export type Density = 'comfortable' | 'compact';

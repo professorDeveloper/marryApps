@@ -119,7 +119,7 @@ export const FloorPlanSettings = ({
                             inputProps={{ min: 100, step: 50 }}
                         />
                         <Typography variant="caption" sx={{ color: theme.palette.text.disabled }}>
-                            Note: Tables' relative positions will be maintained when dimensions change.
+                            Note: Tables&apos; relative positions will be maintained when dimensions change.
                         </Typography>
                     </Stack>
                 </DialogContent>

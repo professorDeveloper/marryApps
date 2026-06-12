@@ -1,14 +1,17 @@
 import type { IDepartmentItem } from 'src/types/departments.tsx';
 import type { DataTableColumn, DataTableDefaultConfig } from 'src/sections/common/data-table/types/types';
-import { CELL_SX } from 'src/sections/common/data-table/utils/constants';
 
 import { useTranslation } from 'react-i18next';
 import { useMemo, useState, useEffect, useCallback } from 'react';
 
-import { Box, Avatar, Button, Dialog, IconButton, Typography, DialogTitle, ListItemText, DialogActions, DialogContent } from '@mui/material';
+import { Box, Avatar, Button, Dialog, IconButton, Typography, DialogTitle, DialogActions, DialogContent } from '@mui/material';
 
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
+import { RouterLink } from 'src/routes/components';
+
+import { useMetadata } from 'src/hooks/use-metadata';
+import { usePaginationRows } from 'src/hooks/use-pagination-rows';
 
 import { fDate } from 'src/utils/format-time';
 import { getInitials } from 'src/utils/avatar';
@@ -16,18 +19,17 @@ import { getFullImageUrl } from 'src/utils/image-url';
 
 import { DashboardContent } from 'src/layouts/dashboard';
 import { useGetDepartments, useDeleteDepartment, useGetCategoriesByDepartment } from 'src/actions/departments';
-import { useMetadata } from 'src/hooks/use-metadata';
-import { MetadataEntity } from 'src/types/metadata';
 
 import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
 import { GenericViewModal } from 'src/components/generic-view-view';
 
+import { CELL_SX } from 'src/sections/common/data-table/utils/constants';
 import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
-import { usePaginationRows } from 'src/hooks/use-pagination-rows';
-import { StorageFilter } from 'src/sections/common/data-table/components/StorageFilter';
 import { DEPARTMENTS_TABLE_PERSIST_KEY } from 'src/sections/menu/compounds/utilities';
-import { RouterLink } from 'src/routes/components';
+import { StorageFilter } from 'src/sections/common/data-table/components/StorageFilter';
+
+import { MetadataEntity } from 'src/types/metadata';
 
 interface CellRenderParams {
   row: IDepartmentItem;

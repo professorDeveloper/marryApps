@@ -657,20 +657,25 @@ export function InvoiceDetailsStandaloneListView() {
                                     startDate = toUtcDayBoundary(now, false);
                                     endDate = toUtcDayBoundary(now, true);
                                     break;
-                                case 'week':
+                                case 'week': {
                                     const weekStart = now.subtract(7, 'day');
                                     startDate = toUtcDayBoundary(weekStart, false);
                                     endDate = toUtcDayBoundary(now, true);
                                     break;
-                                case 'month':
+                                }
+                                case 'month': {
                                     const monthStart = now.subtract(30, 'day');
                                     startDate = toUtcDayBoundary(monthStart, false);
                                     endDate = toUtcDayBoundary(now, true);
                                     break;
-                                case 'year':
+                                }
+                                case 'year': {
                                     const yearStart = now.subtract(365, 'day');
                                     startDate = toUtcDayBoundary(yearStart, false);
                                     endDate = toUtcDayBoundary(now, true);
+                                    break;
+                                }
+                                default:
                                     break;
                             }
                             

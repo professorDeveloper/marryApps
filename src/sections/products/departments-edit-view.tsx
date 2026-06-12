@@ -1,7 +1,6 @@
 import type { IDepartmentFormData } from 'src/types/departments.tsx';
 import type { CardSection, GenericEditViewConfig } from 'src/components/generic-edit-view';
 
-import { mutate } from 'src/lib/swr';
 import { useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -12,6 +11,7 @@ import { useRouter, useParams } from 'src/routes/hooks';
 
 import { useTranslationsAPI } from 'src/hooks/use-translations-api';
 
+import { mutate } from 'src/lib/swr';
 import { endpoints } from 'src/lib/axios';
 import { useGetStorages, useGetDepartment, useCreateDepartment, useUpdateDepartment, useDeleteDepartment } from 'src/actions/departments';
 

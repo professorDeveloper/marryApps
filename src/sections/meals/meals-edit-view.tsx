@@ -1,6 +1,5 @@
 import type { SyntheticEvent } from 'react';
 
-import { mutate } from 'src/lib/swr';
 import { toast } from 'sonner';
 import { useParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
@@ -19,9 +18,11 @@ import {
     useCreateMealWithCalculations,
 } from 'src/hooks/use-meals';
 
+import { mutate } from 'src/lib/swr';
 import { endpoints } from 'src/lib/axios';
-import { useGetCategories } from 'src/actions/categories';
 import { useAppDispatch } from 'src/store';
+import { useGetCategories } from 'src/actions/categories';
+import { useGetGoodModifiers, useSyncGoodModifiers } from 'src/actions/good-modifiers';
 import {
     PICKER_FORM_NAMES,
     mealFormPickerActions,
@@ -29,10 +30,9 @@ import {
 } from 'src/store/slices/pickerFormSlices';
 
 import { MealRelatedSection } from './components/MealRelatedSection';
-import { MealModifiersSection, type MealModifiersApi } from './components/MealModifiersSection';
 import { MealGeneralInformation } from './components/MealGeneralInformation';
 import { MealItemPicker, type MealItemPickerApi } from './components/MealItemPicker';
-import { useGetGoodModifiers, useSyncGoodModifiers } from 'src/actions/good-modifiers';
+import { MealModifiersSection, type MealModifiersApi } from './components/MealModifiersSection';
 
 export interface MealEditViewProps {
     isNew?: boolean;

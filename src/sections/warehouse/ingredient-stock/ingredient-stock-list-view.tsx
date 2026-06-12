@@ -10,6 +10,8 @@ import {
     DialogContent,
 } from '@mui/material';
 
+import { usePaginationRows } from 'src/hooks/use-pagination-rows';
+
 import { DashboardContent } from 'src/layouts/dashboard';
 import {
     useUpdateIngredientStock,
@@ -17,9 +19,9 @@ import {
     useGetIngredientStocksPage,
 } from 'src/actions/ingredient-stock';
 
-import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
-import { usePaginationRows } from 'src/hooks/use-pagination-rows';
 import { RenderCell } from 'src/components/RenderCell';
+
+import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
 
 function IngredientStockListView() {
     const { t } = useTranslation('menu');

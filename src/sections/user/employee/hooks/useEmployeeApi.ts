@@ -2,7 +2,7 @@ import type { EmployeeApi } from '../types';
 
 import { useState, useCallback } from 'react';
 
-import { useDeleteUser, useGetUsers } from 'src/actions/users';
+import { useGetUsers, useDeleteUser } from 'src/actions/users';
 
 /**
  * Hook for employee management operations

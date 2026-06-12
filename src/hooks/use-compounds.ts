@@ -3,10 +3,10 @@ import type { ICompound } from 'src/types/compounds';
 import type { ITranslationItem } from 'src/types/departments.tsx';
 
 import useSWR from 'swr';
-import { mutate } from 'src/lib/swr';
 import { useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { mutate } from 'src/lib/swr';
 import { useGetIngredientGroups } from 'src/actions/ingredient-group';
 import { poster, putter, deleter, fetcher, endpoints } from 'src/lib/axios';
 

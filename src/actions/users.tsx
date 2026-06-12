@@ -2,10 +2,10 @@ import type { SWRConfiguration } from 'swr';
 import type { IUser, IUserFormData, IUserRegisterData } from 'src/types/user';
 
 import useSWR from 'swr';
-import { mutate } from 'src/lib/swr';
 import { useMemo, useCallback } from 'react';
 import { uuidv4 } from 'minimal-shared/utils';
 
+import { mutate } from 'src/lib/swr';
 import { poster, putter, fetcher, deleter, endpoints } from 'src/lib/axios';
 
 const swrOptions: SWRConfiguration = {

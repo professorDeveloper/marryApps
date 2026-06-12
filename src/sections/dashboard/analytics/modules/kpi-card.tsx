@@ -1,7 +1,8 @@
 import type { Kpi } from '../data/types';
 import type { NumFormat } from '../data/formatters';
-import { fmtInt, fmtNum } from '../data/formatters';
+
 import { DeltaPill } from './delta-pill';
+import { fmtInt, fmtNum } from '../data/formatters';
 
 interface KpiCardProps {
   kpi: Kpi;

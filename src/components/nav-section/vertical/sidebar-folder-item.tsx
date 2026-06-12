@@ -8,8 +8,8 @@ import { navSectionClasses } from '../styles';
 import { 
   ItemRoot, 
   ItemIcon, 
-  ItemTitle, 
-  ItemInfo
+  ItemInfo, 
+  ItemTitle
 } from './sidebar-folder-item.styles';
 
 // ----------------------------------------------------------------------

@@ -11,6 +11,7 @@ import Tooltip from '@mui/material/Tooltip';
 import IconButton from '@mui/material/IconButton';
 
 import { paths } from 'src/routes/paths';
+import { RouterLink } from 'src/routes/components';
 
 import { useGenericViewModal } from 'src/hooks/use-generic-view-modal';
 
@@ -28,7 +29,6 @@ import { useEmployeeApi } from '../hooks/useEmployeeApi';
 import { EmployeeStatusCell } from './EmployeeStatusCell';
 import { EmployeeDeleteDialog } from './EmployeeDeleteDialog';
 import { ROLE_COLORS, STATUS_COLORS, DEFAULT_DATATABLE_CONFIG, EMPLOYEE_DATATABLE_PERSIST_KEY } from '../constants';
-import { RouterLink } from 'src/routes/components';
 
 export function EmployeeListView({ role, useStaffApi = false, branchId }: EmployeeListProps) {
     const { t } = useTranslation('menu');

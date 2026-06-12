@@ -9,7 +9,6 @@ import SearchIcon from '@mui/icons-material/Search';
 import SortByAlphaIcon from '@mui/icons-material/SortByAlpha';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
-import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import {
     Box,
     Paper,

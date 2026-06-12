@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
 
-import { mutate } from 'src/lib/swr';
 import { useMemo, useState, useEffect, useContext, useCallback, createContext } from 'react';
+
+import { mutate } from 'src/lib/swr';
 
 interface BranchContextType {
     selectedBranchId: string | null;

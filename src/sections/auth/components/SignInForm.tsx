@@ -1,6 +1,7 @@
 import * as z from 'zod';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { Eye, EyeOff } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useBoolean } from 'minimal-shared/hooks';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -13,13 +14,12 @@ import InputAdornment from '@mui/material/InputAdornment';
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
 
-import { Form, Field } from 'src/components/hook-form';
 import { Logo } from 'src/components/logo/logo';
+import { Form, Field } from 'src/components/hook-form';
 
 import { useAuthContext } from 'src/auth/hooks';
 import { getErrorMessageKey } from 'src/auth/utils';
 import { signInWithPassword } from 'src/auth/context/jwt';
-import { Eye, EyeOff } from 'lucide-react';
 
 // ----------------------------------------------------------------------
 

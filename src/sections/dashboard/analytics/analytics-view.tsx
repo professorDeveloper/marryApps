@@ -1,19 +1,23 @@
-import { useEffect, useMemo, useState } from 'react';
+import type { PeriodId } from './controls/range-chips';
+import type { Kpi, Insight, AnalyticsPayload } from './data/types';
+
+import { useMemo, useState, useEffect } from 'react';
+
 import Box from '@mui/material/Box';
 import IconButton from '@mui/material/IconButton';
+
 import { Iconify } from 'src/components/iconify';
-import { AnalyticsGlobalStyles } from './styles';
-import { RangeChips } from './controls/range-chips';
-import type { PeriodId } from './controls/range-chips';
-import { useAnalyticsData, formatPeriodSummary, resolvePeriodRange } from './data/use-analytics-data';
+
 import { buildInsights } from './data/insights';
 import { useTweaks } from './tweaks/use-tweaks';
-import { SettingsDrawer } from './tweaks/settings-drawer';
+import { AnalyticsGlobalStyles } from './styles';
+import { RangeChips } from './controls/range-chips';
+import { LayoutBento } from './layouts/layout-bento';
 import { LayoutClassic } from './layouts/layout-classic';
 import { LayoutSidebar } from './layouts/layout-sidebar';
+import { SettingsDrawer } from './tweaks/settings-drawer';
 import { LayoutEditorial } from './layouts/layout-editorial';
-import { LayoutBento } from './layouts/layout-bento';
-import type { AnalyticsPayload, Insight, Kpi } from './data/types';
+import { useAnalyticsData, resolvePeriodRange, formatPeriodSummary } from './data/use-analytics-data';
 
 const EMPTY_PAYLOAD: AnalyticsPayload = {
   current: {

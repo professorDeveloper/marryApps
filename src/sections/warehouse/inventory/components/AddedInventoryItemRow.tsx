@@ -1,7 +1,7 @@
 import type { AddedInventoryItemRowProps } from '../types';
 
-import React, { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import React, { memo, useCallback } from 'react';
 
 import { Box, Typography, IconButton } from '@mui/material';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';

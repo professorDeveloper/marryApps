@@ -3,6 +3,7 @@
  */
 
 import type { CardSection } from 'src/components/generic-edit-view';
+
 import { COLOR_CODES } from '../constants';
 
 export function buildImageSection(): CardSection {

@@ -3,10 +3,10 @@ import type { ITranslationItem } from 'src/types/departments.tsx';
 import type { ICategory, IGoodsItem, ICategoryFormData } from 'src/types/category';
 
 import useSWR from 'swr';
-import { mutate } from 'src/lib/swr';
 import { useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { mutate } from 'src/lib/swr';
 import { poster, putter, deleter, fetcher, endpoints } from 'src/lib/axios';
 import { useGetStorages, useGetDepartments } from 'src/actions/departments';
 

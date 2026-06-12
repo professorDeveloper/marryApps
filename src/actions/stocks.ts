@@ -1,12 +1,13 @@
 import type { SWRConfiguration } from 'swr';
+import type { IStock, IStockFormData } from 'src/types/stocks';
 
 import useSWR from 'swr';
-import { mutate } from 'src/lib/swr';
 import { useCallback } from 'react';
 
+import { mutate } from 'src/lib/swr';
 import { poster, fetcher, deleter, endpoints } from 'src/lib/axios';
+
 import { toast } from 'src/components/snackbar';
-import { IStock, IStockFormData } from 'src/types/stocks';
 
 const swrOptions: SWRConfiguration = {
     revalidateIfStale: true,

@@ -1,6 +1,6 @@
 import { CONFIG } from 'src/global-config';
 
-import { AuthVisualLayout, SignUpForm } from 'src/sections/auth/components';
+import { SignUpForm, AuthVisualLayout } from 'src/sections/auth/components';
 
 // ----------------------------------------------------------------------
 

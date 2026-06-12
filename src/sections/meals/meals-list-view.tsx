@@ -19,28 +19,28 @@ import {
 } from '@mui/material';
 
 import { paths } from 'src/routes/paths';
+import { RouterLink } from 'src/routes/components';
 
-import { preload } from 'src/lib/swr';
-
-import { fetcher, endpoints } from 'src/lib/axios';
+import { useMetadata } from 'src/hooks/use-metadata';
+import { usePaginationRows } from 'src/hooks/use-pagination-rows';
 import { useGenericViewModal } from 'src/hooks/use-generic-view-modal';
 import { useDeleteMeal, useDeleteMeals, useGetMealsPage, useGetMealWithCalculations } from 'src/hooks/use-meals';
-import { useMetadata } from 'src/hooks/use-metadata';
-import { MetadataEntity } from 'src/types/metadata';
 
+import { preload } from 'src/lib/swr';
+import { fetcher, endpoints } from 'src/lib/axios';
 import { DashboardContent } from 'src/layouts/dashboard';
-import { useGetDepartments, useGetStorages } from 'src/actions/departments';
-import { usePaginationRows } from 'src/hooks/use-pagination-rows';
+import { useGetStorages, useGetDepartments } from 'src/actions/departments';
 
 import { Iconify } from 'src/components/iconify';
-import { formatPrice } from 'src/components/generic-view-view/modal-formatters';
 import { GenericViewModal } from 'src/components/generic-view-view';
+import { formatPrice } from 'src/components/generic-view-view/modal-formatters';
 
 import { DataTable } from 'src/sections/common/data-table';
 import { StorageFilter } from 'src/sections/common/data-table/components/StorageFilter';
-import { DepartmentFilter } from 'src/sections/common/data-table/components/DepartmentFilter';
 import { CategoryFilter } from 'src/sections/common/data-table/components/CategoryFilter';
-import { RouterLink } from 'src/routes/components';
+import { DepartmentFilter } from 'src/sections/common/data-table/components/DepartmentFilter';
+
+import { MetadataEntity } from 'src/types/metadata';
 
 
 // Shared pill styles — stable references so a new sx isn't created per cell

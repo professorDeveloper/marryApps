@@ -29,7 +29,7 @@ export function DeviceDeleteDialog({
       <DialogTitle>{t('devices.deleteTitle')}</DialogTitle>
       <DialogContent>
         <Typography>
-          {t('devices.deleteMessage', { ip: device?.ip_address ?? '' })}
+          {t('devices.deleteMessage', { ip: device?.ip ?? '' })}
         </Typography>
       </DialogContent>
       <DialogActions>

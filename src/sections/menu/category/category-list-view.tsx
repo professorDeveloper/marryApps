@@ -1,9 +1,8 @@
 import type { ICategory } from 'src/types/category';
 import type { DataTableColumn } from 'src/sections/common/data-table/types/types';
-import { CELL_SX } from 'src/sections/common/data-table/utils/constants';
 
 import { useTranslation } from 'react-i18next';
-import { useMemo, useState, useCallback, useEffect } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 
 import Box from '@mui/material/Box';
 import Dialog from '@mui/material/Dialog';
@@ -13,6 +12,9 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 
 import { paths } from 'src/routes/paths';
+import { RouterLink } from 'src/routes/components';
+
+import { usePaginationRows } from 'src/hooks/use-pagination-rows';
 
 import { DashboardContent } from 'src/layouts/dashboard';
 
@@ -20,15 +22,14 @@ import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
 import { GenericViewModal } from 'src/components/generic-view-view';
 
+import { CELL_SX } from 'src/sections/common/data-table/utils/constants';
 import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
-
-import { useCategoryData } from './hooks/useCategoryData';
-import { usePaginationRows } from 'src/hooks/use-pagination-rows';
-import { StorageNameCell } from './components/StorageNameCell';
 import { StorageFilter } from 'src/sections/common/data-table/components/StorageFilter';
 import { DepartmentFilter } from 'src/sections/common/data-table/components/DepartmentFilter';
+
+import { useCategoryData } from './hooks/useCategoryData';
+import { StorageNameCell } from './components/StorageNameCell';
 import { CategoryGoodsTable } from './components/CategoryGoodsTable';
-import { RouterLink } from 'src/routes/components';
 
 /**
  * Category List View Component

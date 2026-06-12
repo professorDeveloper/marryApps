@@ -6,9 +6,9 @@ import type {
 } from 'src/types/ingredient-group';
 
 import useSWR from 'swr';
-import { mutate } from 'src/lib/swr';
 import { useMemo, useCallback } from 'react';
 
+import { mutate } from 'src/lib/swr';
 import { poster, putter, fetcher, deleter, endpoints } from 'src/lib/axios';
 
 import { toast } from 'src/components/snackbar';

@@ -5,13 +5,13 @@ import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
 import { useMemo, useState, useEffect, useCallback } from 'react';
 
-import { useTimeFilter } from 'src/hooks/use-time-filter';
-
 import { Chip, Button, MenuItem, TextField } from '@mui/material';
 
 import { paths } from 'src/routes/paths';
+import { RouterLink } from 'src/routes/components';
 
 import { useOrdersAPI } from 'src/hooks/use-orders-api';
+import { useTimeFilter } from 'src/hooks/use-time-filter';
 
 import { DashboardContent } from 'src/layouts/dashboard';
 import { useGetCafeTables } from 'src/actions/cafe-tables';
@@ -19,7 +19,6 @@ import { useGetCafeTables } from 'src/actions/cafe-tables';
 import { Iconify } from 'src/components/iconify';
 
 import { DataTable } from 'src/sections/common/data-table';
-import { RouterLink } from 'src/routes/components';
 
 // Date utility functions
 const getTodayUtcBoundary = (endOfDay = false): string => {
@@ -125,12 +124,12 @@ export function OrdersManagementView() {
         align: 'left' as const,
         getValue: (row: OrderEntity) => row.status || 'open',
         renderCell: ({ value }: { value: unknown }) => {
-          const status = String(value || 'open');
+          const rowStatus = String(value || 'open');
           return (
             <Chip
               size="small"
-              label={status}
-              color={statusColorMap[status] || 'default'}
+              label={rowStatus}
+              color={statusColorMap[rowStatus] || 'default'}
               sx={{ textTransform: 'capitalize', m: 1 }}
             />
           );

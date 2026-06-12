@@ -44,8 +44,8 @@ export function SpecificationsTable({ rows }: SpecificationsTableProps) {
         <TableContainer
             component={Paper}
             sx={{
-                backgroundColor: (theme) =>
-                    theme.palette.mode === 'dark'
+                backgroundColor: (currentTheme) =>
+                    currentTheme.palette.mode === 'dark'
                         ? 'rgba(255, 255, 255, 0.05)'
                         : 'rgba(0, 0, 0, 0.02)',
                 border: `1px solid ${theme.palette.divider}`,
@@ -56,8 +56,8 @@ export function SpecificationsTable({ rows }: SpecificationsTableProps) {
                 <TableHead>
                     <TableRow
                         sx={{
-                            backgroundColor: (theme) =>
-                                theme.palette.mode === 'dark'
+                            backgroundColor: (currentTheme) =>
+                                currentTheme.palette.mode === 'dark'
                                     ? 'rgba(255, 255, 255, 0.05)'
                                     : 'rgba(0, 0, 0, 0.02)',
                             borderBottom: `2px solid ${theme.palette.divider}`,
@@ -87,14 +87,14 @@ export function SpecificationsTable({ rows }: SpecificationsTableProps) {
                             key={index}
                             sx={{
                                 '&:nth-of-type(odd)': {
-                                    backgroundColor: (theme) =>
-                                        theme.palette.mode === 'dark'
+                                    backgroundColor: (currentTheme) =>
+                                        currentTheme.palette.mode === 'dark'
                                             ? 'rgba(255, 255, 255, 0.05)'
                                             : 'rgba(0, 0, 0, 0.02)',
                                 },
                                 '&:hover': {
-                                    backgroundColor: (theme) =>
-                                        theme.palette.mode === 'dark'
+                                    backgroundColor: (currentTheme) =>
+                                        currentTheme.palette.mode === 'dark'
                                             ? 'rgba(255, 255, 255, 0.05)'
                                             : 'rgba(0, 0, 0, 0.02)',
                                 },

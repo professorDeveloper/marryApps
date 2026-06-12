@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import type { BatchAction, SearchMode, SearchOutput } from '../types/types';
+import type { SearchMode, BatchAction, SearchOutput } from '../types/types';
 
 import dayjs from 'dayjs';
 import { useCallback } from 'react';

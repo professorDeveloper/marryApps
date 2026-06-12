@@ -31,11 +31,12 @@ import { paths } from 'src/routes/paths';
 import { useStorageAPI } from 'src/hooks/use-storage-api';
 import { useDeductionsAPI } from 'src/hooks/use-deductions-api';
 import { useOutgoingInvoicesAPI } from 'src/hooks/use-outgoing-invoices-api';
+
 import { useAppDispatch } from 'src/store';
 import {
     PICKER_FORM_NAMES,
-    outgoingInvoiceFormPickerActions,
     mapBatchItemsToPickerItems,
+    outgoingInvoiceFormPickerActions,
 } from 'src/store/slices/pickerFormSlices';
 
 import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
@@ -165,7 +166,7 @@ const OutgoingInvoiceFormView = React.memo(function OutgoingInvoiceFormView() {
     useEffect(() => {
         if (isNew) {
             setPageLoading(false);
-            return;
+            return undefined;
         }
 
         let cancelled = false;

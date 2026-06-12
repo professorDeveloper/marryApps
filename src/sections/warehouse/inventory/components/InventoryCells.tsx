@@ -3,16 +3,16 @@ import type { Inventory } from '../types';
 import React, { memo } from 'react';
 
 import Box from '@mui/material/Box';
-import IconButton from '@mui/material/IconButton';
 import { Chip } from '@mui/material';
+import IconButton from '@mui/material/IconButton';
+
+import { getStatusColor, formatStatusLabel } from 'src/utils/status-colors';
 
 import { Iconify } from 'src/components/iconify';
 
-import { getStatusColor, formatStatusLabel } from 'src/utils/status-colors';
 import { 
   formatInventoryDate, 
-  formatInventoryAmount, 
-  getInventoryStatusConfig 
+  formatInventoryAmount 
 } from '../utils';
 
 interface InventoryDateCellProps {

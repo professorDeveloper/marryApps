@@ -1,9 +1,10 @@
-import type { NavSectionProps, NavItemProps } from 'src/components/nav-section';
+import type { NavItemProps, NavSectionProps } from 'src/components/nav-section';
 
 import { memo } from 'react';
 
-import { RouterLink } from 'src/routes/components';
 import { usePathname } from 'src/routes/hooks';
+import { RouterLink } from 'src/routes/components';
+
 import { useDataTableActionsContext } from 'src/sections/common/data-table/context/DataTableActionsContext';
 
 // ---------------------------------------------------------------------------

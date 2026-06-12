@@ -7,11 +7,12 @@ import { Button, MenuItem, TextField } from '@mui/material';
 
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
+import { RouterLink } from 'src/routes/components';
+
+import { DataTable } from 'src/sections/common/data-table';
 
 import { Iconify } from '../../../../components/iconify';
 import { useIngredients } from '../hooks/use-ingredients';
-import { DataTable } from 'src/sections/common/data-table';
-import { RouterLink } from 'src/routes/components';
 import {
   IngredientNameCell,
   IngredientColorCell,

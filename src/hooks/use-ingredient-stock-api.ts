@@ -1,12 +1,12 @@
-import type { SWRConfiguration } from 'swr';
 import type { AxiosError } from 'axios';
+import type { SWRConfiguration } from 'swr';
 
-import { toast } from 'sonner';
 import useSWR from 'swr';
-import { mutate } from 'src/lib/swr';
+import { toast } from 'sonner';
 import { useMemo, useCallback } from 'react';
 
-import { fetcher, putter, deleter, endpoints } from 'src/lib/axios';
+import { mutate } from 'src/lib/swr';
+import { putter, fetcher, deleter, endpoints } from 'src/lib/axios';
 
 // ============================================================================
 // TYPES

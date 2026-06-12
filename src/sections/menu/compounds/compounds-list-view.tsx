@@ -11,22 +11,23 @@ import {
     Dialog,
     Button,
     TableRow,
+    MenuItem,
     TableHead,
     TableCell,
     TableBody,
+    TextField,
+    IconButton,
     DialogTitle,
-    ListItemText,
     DialogActions,
     DialogContent,
     TableContainer,
     CircularProgress,
-    IconButton,
-    MenuItem,
-    TextField,
 } from '@mui/material';
 
 import { paths } from 'src/routes/paths';
+import { RouterLink } from 'src/routes/components';
 
+import { useMetadata } from 'src/hooks/use-metadata';
 import { useGenericViewModal } from 'src/hooks/use-generic-view-modal';
 import {
     useDeleteCompound,
@@ -34,20 +35,19 @@ import {
     useGetCompoundsPage,
     useGetCompoundWithCalculations,
 } from 'src/hooks/use-compounds';
-import { useMetadata } from 'src/hooks/use-metadata';
-import { MetadataEntity } from 'src/types/metadata';
 
 import { DashboardContent } from 'src/layouts/dashboard';
 import { useGetIngredients } from 'src/actions/ingredients';
 import { useGetDepartments } from 'src/actions/departments';
 
 import { Iconify } from 'src/components/iconify';
+import { RenderCell } from 'src/components/RenderCell';
 import { GenericViewModal } from 'src/components/generic-view-view';
 import { formatDate, formatPrice } from 'src/components/generic-view-view/modal-formatters';
 
 import { DataTable } from 'src/sections/common/data-table';
-import { RouterLink } from 'src/routes/components';
-import { RenderCell } from 'src/components/RenderCell';
+
+import { MetadataEntity } from 'src/types/metadata';
 
 
 // ============================================================================

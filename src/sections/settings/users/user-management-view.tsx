@@ -1,24 +1,25 @@
 import type { IUser } from 'src/types/user';
 import type { RowAction, BatchAction, DataTableColumn } from 'src/sections/common/data-table/types/types';
 
-import { useMemo, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useMemo, useState, useEffect } from 'react';
 
 import Box from '@mui/material/Box';
+import { Chip } from '@mui/material';
 import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
-import { Chip } from '@mui/material';
 
 import { paths } from 'src/routes/paths';
+import { RouterLink } from 'src/routes/components';
 
 import { getStatusColor, formatStatusLabel } from 'src/utils/status-colors';
+
 import { Iconify } from 'src/components/iconify';
 
 import { DataTable } from 'src/sections/common/data-table/components/DataTable';
 
 import { useEmployeeApi } from '../../user/employee/hooks/useEmployeeApi';
 import { DEFAULT_DATATABLE_CONFIG, EMPLOYEE_DATATABLE_PERSIST_KEY } from '../../user/employee/constants';
-import { RouterLink } from 'src/routes/components';
 
 export function UserManagementView() {
   const { t } = useTranslation('menu');

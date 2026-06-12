@@ -1,9 +1,10 @@
 import { useTranslation } from 'react-i18next';
-import React, { useMemo, useState, useCallback, useEffect, startTransition } from 'react';
+import React, { useMemo, useState, useCallback, startTransition } from 'react';
 
-import { Box, Button } from '@mui/material';
+import { Box } from '@mui/material';
 
 import { useGetModifiers } from 'src/actions/modifiers';
+
 import {
     formatPrice,
     type ColumnDef,

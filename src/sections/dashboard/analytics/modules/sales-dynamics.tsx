@@ -1,6 +1,7 @@
 import type { NumFormat } from '../data/formatters';
-import { fmtCompact, fmtNum } from '../data/formatters';
-import type { AnalyticsPayload, SalesDayPoint } from '../data/types';
+import type { SalesDayPoint, AnalyticsPayload } from '../data/types';
+
+import { fmtNum, fmtCompact } from '../data/formatters';
 
 export type ChartStyle = 'bars' | 'area' | 'line_overlay' | 'paired';
 

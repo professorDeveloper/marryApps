@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import type { RowAction, SortState, BatchAction, SortDirection, DataTableColumn, StorageStrategy, DataTableDefaultConfig, SearchMode, SearchOutput } from '../types/types';
+import type { RowAction, SortState, SearchMode, BatchAction, SearchOutput, SortDirection, DataTableColumn, StorageStrategy, DataTableDefaultConfig } from '../types/types';
 
 // ---------------------------------------------------------------------------
 // Grouped prop shapes (exported so consumers can type-check their objects)
@@ -37,8 +37,9 @@ import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
 import Tooltip from '@mui/material/Tooltip';
 import IconButton from '@mui/material/IconButton';
 
+import { usePaginationRows } from 'src/hooks/use-pagination-rows';
+
 import { Iconify } from 'src/components/iconify';
-import { useDataTableActionsContext } from '../context/DataTableActionsContext';
 
 import { DataTableBody } from './DataTableBody';
 import { DataTableHeader } from './DataTableHeader';
@@ -48,16 +49,15 @@ import { DataTablePagination } from './DataTablePagination';
 import { DataTableColumnMenu } from './DataTableColumnMenu';
 import { DataTableTotalsFooter } from './DataTableTotalsFooter';
 import { DataTableFilterPopover } from './DataTableFilterPopover';
+import { useDataTableActionsContext } from '../context/DataTableActionsContext';
 import { isSpecial, formatTotal, computeTotal, buildPersisted } from '../utils/helpers';
 import {
   clamp,
-  SURFACE_BG,
   mergeConfig,
   getCellValue,
   toComparable,
   buildGridTemplate,
 } from '../utils';
-import { usePaginationRows } from 'src/hooks/use-pagination-rows';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -418,11 +418,9 @@ export function DataTable<T>({
   }, []);
 
   // Cleanup filter popover on unmount to prevent DOM errors
-  useEffect(() => {
-    return () => {
+  useEffect(() => () => {
       closeFilter();
-    };
-  }, [closeFilter]);
+    }, [closeFilter]);
 
   const setTextFilter = useCallback((key: string, value: string) => {
     updateFilters({ ...filters, [key]: { type: 'text', value } });

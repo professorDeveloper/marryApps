@@ -1,5 +1,5 @@
-import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import dayjs from 'dayjs';
+import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 const STORAGE_KEY = 'global-time-filter';
 

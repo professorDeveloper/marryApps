@@ -1,4 +1,5 @@
 import type { SelectChangeEvent } from '@mui/material';
+import type { MainTableRow } from './types';
 import type { TransactionReportGroupItem } from 'src/types/transactions';
 
 import dayjs from 'dayjs';
@@ -29,8 +30,7 @@ import {
 import { useTransactionsAPI } from 'src/hooks/use-transactions-api';
 
 import { FALLBACK_REPORT, sectionActionsSx } from './constants';
-import { buildCsv, normalizeReport, toNumber, toNumberText, toApiDateTime } from './utils/report-utils';
-import type { MainTableRow } from './types';
+import { buildCsv, toNumber, toNumberText, toApiDateTime, normalizeReport } from './utils/report-utils';
 
 export function CashboxReportView() {
   const { t } = useTranslation('menu');

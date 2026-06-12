@@ -15,7 +15,7 @@ export type {
   DataTableProps,
 } from './types';
 export type {
-  DataTablePaginationProps,
   DataTableSearchProps,
+  DataTablePaginationProps,
   DataTablePeriodFilterProps,
 } from './components/DataTable';

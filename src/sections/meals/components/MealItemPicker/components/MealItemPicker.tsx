@@ -7,9 +7,9 @@ import type {
 } from '../types';
 
 import { useTranslation } from 'react-i18next';
-import React, { useRef, useMemo, useState, useEffect, useLayoutEffect, useCallback } from 'react';
+import React, { useRef, useMemo, useState, useEffect, useCallback } from 'react';
 
-import { Box, Stack, Button } from '@mui/material';
+import { Box, Stack } from '@mui/material';
 
 import { compositeKey } from '../types';
 import { AddedTable } from './AddedTable';
@@ -79,8 +79,6 @@ export const MealItemPicker = React.memo(function MealItemPicker({
     onTotalCostChange,
     onNavigateFocus,
 }: MealItemPickerProps) {
-    const renderStartedAtRef = useRef<number>(performance.now());
-    renderStartedAtRef.current = performance.now();
     const { t } = useTranslation('menu');
     // Only fetch meal items when this tab is visible to avoid unnecessary requests
     const { items, loading, refresh } = useMealItems(isVisible);
@@ -492,10 +490,6 @@ export const MealItemPicker = React.memo(function MealItemPicker({
         };
     }, [cacheKey, addedRowsMap]);
 
-    useLayoutEffect(() => {
-        const durationMs = performance.now() - renderStartedAtRef.current;
-        if (durationMs < 80) return;
-    });
 
     // ── Render ──────────────────────────────────────────────────────────
     return (

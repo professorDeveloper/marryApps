@@ -2,9 +2,9 @@
  * Modifier table cell renderers for the modifiers list view
  */
 
-import { Box, Chip, Typography } from '@mui/material';
-
 import type { IModifierItem } from 'src/types/modifiers';
+
+import { Box, Chip } from '@mui/material';
 
 interface CellRenderParams {
   row: IModifierItem;

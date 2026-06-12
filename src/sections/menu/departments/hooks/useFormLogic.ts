@@ -2,15 +2,17 @@
  * Custom hook for department form submission and deletion logic
  */
 
-import { mutate } from 'src/lib/swr';
+import type { DepartmentFormData } from '../types';
+
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { paths } from 'src/routes/paths';
-import { useRouter, useParams } from 'src/routes/hooks';
+import { useRouter } from 'src/routes/hooks';
 
 import { useTranslationsAPI } from 'src/hooks/use-translations-api';
 
+import { mutate } from 'src/lib/swr';
 import { endpoints } from 'src/lib/axios';
 import {
   useCreateDepartment,
@@ -18,7 +20,6 @@ import {
   useDeleteDepartment,
 } from 'src/actions/departments';
 
-import type { DepartmentFormData } from '../types';
 import { CACHE_SYNC_DELAY_MS, DELETE_SYNC_DELAY_MS } from 'src/sections/menu/compounds/utilities';
 
 interface UseFormLogicProps {

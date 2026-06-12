@@ -1,13 +1,14 @@
+import type { Tweaks } from '../tweaks/use-tweaks';
+import type { Kpi, Insight, AnalyticsPayload } from '../data/types';
+
 import { DeltaPill } from '../modules/delta-pill';
-import { SalesDynamics } from '../modules/sales-dynamics';
+import { TopDishes } from '../modules/top-dishes';
+import { fmtInt, fmtNum } from '../data/formatters';
 import { CategoryList } from '../modules/category-list';
 import { PaymentSplit } from '../modules/payment-split';
-import { TopDishes } from '../modules/top-dishes';
 import { InsightsList } from '../modules/insights-list';
+import { SalesDynamics } from '../modules/sales-dynamics';
 import { HourlyHeatmap } from '../modules/hourly-heatmap';
-import { fmtInt, fmtNum } from '../data/formatters';
-import type { AnalyticsPayload, Insight, Kpi } from '../data/types';
-import type { Tweaks } from '../tweaks/use-tweaks';
 
 interface Props {
   tweaks: Tweaks;

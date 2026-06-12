@@ -1,4 +1,4 @@
-import type { Ingredient, ShipmentItem, ShipmentBatchItemInput } from '../types';
+import type { Ingredient, ShipmentBatchItemInput } from '../types';
 
 import { useTranslation } from 'react-i18next';
 import React, { useRef, useMemo, useState, useEffect, useCallback, startTransition } from 'react';

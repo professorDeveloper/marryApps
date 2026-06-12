@@ -12,8 +12,8 @@ import {
   transfersFormPickerReducer,
   shipmentsFormPickerReducer,
   deductionFormPickerReducer,
-  outgoingInvoiceFormPickerReducer,
   separationActsFormPickerReducer,
+  outgoingInvoiceFormPickerReducer,
 } from './slices/pickerFormSlices';
 
 export const store = configureStore({

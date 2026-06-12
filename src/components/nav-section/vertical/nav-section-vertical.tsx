@@ -2,8 +2,7 @@ import type { NavGroupProps, NavSectionProps } from '../types';
 
 import { memo } from 'react';
 import { useBoolean } from 'minimal-shared/hooks';
-import { mergeClasses } from 'minimal-shared/utils';
-import { isActiveLink } from 'minimal-shared/utils';
+import { mergeClasses , isActiveLink } from 'minimal-shared/utils';
 
 import Collapse from '@mui/material/Collapse';
 import { useTheme } from '@mui/material/styles';

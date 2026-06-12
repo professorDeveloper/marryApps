@@ -30,7 +30,7 @@ export function SimpleCompactContent({
           textAlign: 'center',
           flexDirection: 'column',
           p: theme.spacing(3, 2, 10, 2),
-          maxWidth: 'var(--layout-simple-content-compact-width)',
+          maxWidth: '448px',
           [theme.breakpoints.up(layoutQuery)]: {
             justifyContent: 'center',
             p: theme.spacing(10, 0, 10, 0),

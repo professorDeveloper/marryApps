@@ -17,14 +17,14 @@ import { Box, Button, Typography, CircularProgress } from '@mui/material';
 import { paths } from 'src/routes/paths';
 
 import { useTransfersAPI } from 'src/hooks/use-transfers-api';
+
 import { useAppDispatch } from 'src/store';
+import { fetcher, endpoints } from 'src/lib/axios';
 import {
     PICKER_FORM_NAMES,
     transfersFormPickerActions,
     mapBatchItemsToPickerItems,
 } from 'src/store/slices/pickerFormSlices';
-
-import { fetcher, endpoints } from 'src/lib/axios';
 
 import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 
@@ -195,11 +195,11 @@ const TransfersFormView = React.memo(function TransfersFormView({
     useEffect(() => {
         if (isNew) {
             setPageLoading(false);
-            return;
+            return undefined;
         }
         if (!id) {
             setPageLoading(false);
-            return;
+            return undefined;
         }
 
         let cancelled = false;

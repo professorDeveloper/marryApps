@@ -1,10 +1,9 @@
 import type { GridColDef } from '@mui/x-data-grid';
+import type { Branch, Storage } from './types';
 import type { Transfer } from 'src/types/transfers';
 
 import { useTranslation } from 'react-i18next';
 import { useMemo, useState, useEffect, useCallback } from 'react';
-
-import Button from '@mui/material/Button';
 
 import { paths } from 'src/routes/paths';
 
@@ -17,7 +16,6 @@ import { GenericTableView } from 'src/components/generic-table-view';
 import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
 
 import { TransferDeleteDialog } from './components/TransferDeleteDialog';
-import type { Branch, Storage } from './types';
 
 interface BackendResponse<T> {
   status: string;

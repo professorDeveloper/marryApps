@@ -220,7 +220,7 @@ export function GenericTableView<T extends Record<string, any>>({
       return [rowNumberColumn, ...columns];
     }
     return columns;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [hideCheckboxes, columns, dataFiltered, idField, useControlledPagination, paginationModel, internalPaginationModel]);
 
   const handleDeleteRow = useCallback(

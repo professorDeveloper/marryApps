@@ -23,10 +23,10 @@ import { BaseOption } from './base-option';
 import { Scrollbar } from '../../scrollbar';
 import { SmallBlock, LargeBlock } from './styles';
 import { PresetsOptions } from './presets-options';
+import { NavColorOptions } from './nav-layout-option';
 import { FullScreenButton } from './fullscreen-button';
 import { FontSizeOptions, FontFamilyOptions } from './font-options';
 import { useSettingsContext } from '../context/use-settings-context';
-import { NavColorOptions } from './nav-layout-option';
 import { FloorPlanSettings } from '../../floor-plan-editor/floor-plan-settings';
 
 // ----------------------------------------------------------------------

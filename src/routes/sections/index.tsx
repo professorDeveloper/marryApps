@@ -3,8 +3,6 @@ import type { RouteObject } from 'react-router';
 import { lazy } from 'react';
 import { Navigate } from 'react-router';
 
-import { CONFIG } from 'src/global-config';
-
 import { authRoutes } from './auth';
 // import { dashboardRoutes } from './menu';
 import { dashboardRoutes } from './menu/index';

@@ -21,22 +21,23 @@ import { Logo } from 'src/components/logo';
 import { useSettingsContext } from 'src/components/settings';
 import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 
+import { DataTableActionsProvider } from 'src/sections/common/data-table/context/DataTableActionsContext';
+
 import { useAuthContext } from 'src/auth/hooks';
 
 import { NavMobile } from './nav-mobile';
 import { VerticalDivider } from './content';
 import { NavVertical } from './nav-vertical';
-import { SectionTabsBar } from './section-tabs-bar';
 import { NavHorizontal } from './nav-horizontal';
+import { SectionTabsBar } from './section-tabs-bar';
 import { Searchbar } from '../components/searchbar';
 import { getNavData } from '../nav-config-dashboard';
 import { MenuButton } from '../components/menu-button';
 import { SettingsButton } from '../components/settings-button';
 import { LanguagePopover } from '../components/language-popover';
+import { MainSection, HeaderSection, LayoutSection } from '../core';
 import { WorkspacesPopover } from '../components/workspaces-popover';
 import { NotificationsDrawer } from '../components/notifications-drawer';
-import { MainSection, HeaderSection, LayoutSection } from '../core';
-import { DataTableActionsProvider } from 'src/sections/common/data-table/context/DataTableActionsContext';
 
 // ----------------------------------------------------------------------
 

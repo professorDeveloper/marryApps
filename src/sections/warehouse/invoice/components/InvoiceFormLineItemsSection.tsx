@@ -7,12 +7,13 @@ import React, { useRef, useMemo, useEffect, useCallback } from 'react';
 import { Box, Button } from '@mui/material';
 
 import { useMetadata } from 'src/hooks/use-metadata';
-import { MetadataEntity } from 'src/types/metadata';
 
 import {
     formatPrice,
     ItemPickerSection,
 } from 'src/sections/warehouse/utils/components/item-picker';
+
+import { MetadataEntity } from 'src/types/metadata';
 
 import {
     useTransferredItems,

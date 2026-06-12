@@ -34,6 +34,7 @@ export interface IUserFormData {
     phone_number?: string;
     phoneNumber?: string;
     pincode?: string;
+    terminal?: string;
     brand_id?: string;
     branch_id?: string;
     cash_register_id?: string;

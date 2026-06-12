@@ -1,11 +1,11 @@
 import type { SWRConfiguration } from 'swr';
 import type {
     IIngredientReportsResponse,
+    IIngredientMovementsTotals,
+    IIngredientMovementsResponse,
     IIngredientReportsFilterParams,
     IIngredientReportDetailResponse,
     IIngredientMovementsFilterParams,
-    IIngredientMovementsResponse,
-    IIngredientMovementsTotals,
 } from 'src/types/ingredient-reports';
 
 import useSWR from 'swr';

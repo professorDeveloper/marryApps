@@ -2,13 +2,12 @@ import type { SWRConfiguration } from 'swr';
 import type { ITranslationItem } from 'src/types/departments.tsx';
 import type { IMealsItem, IMealAPIResponse } from 'src/types/meals';
 
-import { toast } from 'sonner';
 import useSWR from 'swr';
-import { mutate } from 'src/lib/swr';
+import { toast } from 'sonner';
 import { useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
-
+import { mutate } from 'src/lib/swr';
 import { useGetCategories } from 'src/actions/categories';
 import { useGetDepartments } from 'src/actions/departments';
 import { poster, putter, deleter, fetcher, endpoints } from 'src/lib/axios';

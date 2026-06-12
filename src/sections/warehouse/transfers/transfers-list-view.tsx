@@ -10,27 +10,27 @@ import Button from '@mui/material/Button';
 import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
 import IconButton from '@mui/material/IconButton';
-import { Dialog, DialogTitle, DialogActions, DialogContent, Chip } from '@mui/material';
+import { Chip, Dialog, DialogTitle, DialogActions, DialogContent } from '@mui/material';
 
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
-
-import { getStatusColor, formatStatusLabel } from 'src/utils/status-colors';
+import { RouterLink } from 'src/routes/components';
 
 import { useStorageAPI } from 'src/hooks/use-storage-api';
 import { useTransfersAPI } from 'src/hooks/use-transfers-api';
 import { useDeductionsAPI } from 'src/hooks/use-deductions-api';
+import { usePaginationRows } from 'src/hooks/use-pagination-rows';
 import { useGetWorkspacesBranches } from 'src/hooks/use-workspaces-branches';
+
+import { getStatusColor, formatStatusLabel } from 'src/utils/status-colors';
 
 import { fetcher, endpoints } from 'src/lib/axios';
 import { DashboardContent } from 'src/layouts/dashboard';
 
 import { Iconify } from 'src/components/iconify';
+import { RenderCell } from 'src/components/RenderCell';
 
 import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
-import { usePaginationRows } from 'src/hooks/use-pagination-rows';
-import { RouterLink } from 'src/routes/components';
-import { RenderCell } from 'src/components/RenderCell';
 
 interface Branch {
   id: string;
@@ -136,30 +136,30 @@ export function TransfersListView() {
     const fetchFilterOptions = async () => {
       try {
         // Update branches map from workspaces
-        const branchesMap = workspaces.reduce(
+        const newBranchesMap = workspaces.reduce(
           (acc, w) => ({ ...acc, [w.id]: w.name }),
           {} as Record<string, string>
         );
-        setBranchesMap(branchesMap);
-        setBranchOptions(Object.keys(branchesMap));
+        setBranchesMap(newBranchesMap);
+        setBranchOptions(Object.keys(newBranchesMap));
 
         // Fetch and update storages map
         const storages = await getStorages();
-        const storagesMap = storages.reduce(
+        const newStoragesMap = storages.reduce(
           (acc, s) => ({ ...acc, [s.id]: s.name }),
           {} as Record<string, string>
         );
-        setStoragesMap(storagesMap);
-        setStorageOptions(Object.keys(storagesMap));
+        setStoragesMap(newStoragesMap);
+        setStorageOptions(Object.keys(newStoragesMap));
 
         // Fetch and update deduction groups map
         const groups = await getDeductionGroups();
-        const groupsMap = groups.reduce(
+        const newGroupsMap = groups.reduce(
           (acc, g) => ({ ...acc, [g.id]: g.name }),
           {} as Record<string, string>
         );
-        setGroupsMap(groupsMap);
-        setGroupOptions(Object.keys(groupsMap));
+        setGroupsMap(newGroupsMap);
+        setGroupOptions(Object.keys(newGroupsMap));
       } catch (error) {
         console.error('Failed to fetch filter options:', error);
       }
@@ -686,39 +686,44 @@ export function TransfersListView() {
             onPeriodChange: (period: 'day' | 'week' | 'month' | 'year') => {
               setActivePeriod(period);
               const now = dayjs();
-              let startDate = '';
-              let endDate = '';
-              
+              let nextStartDate = '';
+              let nextEndDate = '';
+
               switch (period) {
                 case 'day':
-                  startDate = toUtcDayBoundary(now, false);
-                  endDate = toUtcDayBoundary(now, true);
+                  nextStartDate = toUtcDayBoundary(now, false);
+                  nextEndDate = toUtcDayBoundary(now, true);
                   break;
-                case 'week':
+                case 'week': {
                   const weekStart = now.subtract(7, 'day');
-                  startDate = toUtcDayBoundary(weekStart, false);
-                  endDate = toUtcDayBoundary(now, true);
+                  nextStartDate = toUtcDayBoundary(weekStart, false);
+                  nextEndDate = toUtcDayBoundary(now, true);
                   break;
-                case 'month':
+                }
+                case 'month': {
                   const monthStart = now.subtract(30, 'day');
-                  startDate = toUtcDayBoundary(monthStart, false);
-                  endDate = toUtcDayBoundary(now, true);
+                  nextStartDate = toUtcDayBoundary(monthStart, false);
+                  nextEndDate = toUtcDayBoundary(now, true);
                   break;
-                case 'year':
+                }
+                case 'year': {
                   const yearStart = now.subtract(365, 'day');
-                  startDate = toUtcDayBoundary(yearStart, false);
-                  endDate = toUtcDayBoundary(now, true);
+                  nextStartDate = toUtcDayBoundary(yearStart, false);
+                  nextEndDate = toUtcDayBoundary(now, true);
+                  break;
+                }
+                default:
                   break;
               }
-              
+
               setDraftFilters(prev => ({
                 ...prev,
-                date_from: startDate,
-                date_to: endDate
+                date_from: nextStartDate,
+                date_to: nextEndDate
               }));
               // Also sync the date picker states
-              setStartDate(toPickerDate(startDate)?.toDate() || null);
-              setEndDate(toPickerDate(endDate)?.toDate() || null);
+              setStartDate(toPickerDate(nextStartDate)?.toDate() || null);
+              setEndDate(toPickerDate(nextEndDate)?.toDate() || null);
             }
           }}
           defaultConfig={{

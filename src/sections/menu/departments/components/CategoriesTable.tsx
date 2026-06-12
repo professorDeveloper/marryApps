@@ -2,16 +2,16 @@
  * Categories table component for displaying categories within a department
  */
 
-import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useMemo, useState, useEffect } from 'react';
 
-import { Avatar, Box, Typography } from '@mui/material';
+import { Box, Avatar, Typography } from '@mui/material';
 
 import { fDate } from 'src/utils/format-time';
 import { getInitials } from 'src/utils/avatar';
 import { getFullImageUrl } from 'src/utils/image-url';
 
-import { useGetCategoriesByDepartment, useGetStorages } from 'src/actions/departments';
+import { useGetStorages, useGetCategoriesByDepartment } from 'src/actions/departments';
 
 interface CategoriesTableProps {
   departmentId: string;

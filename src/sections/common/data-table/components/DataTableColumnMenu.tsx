@@ -6,7 +6,6 @@ import Checkbox from '@mui/material/Checkbox';
 import MenuItem from '@mui/material/MenuItem';
 import Typography from '@mui/material/Typography';
 
-import { ACCENT, BORDER, SURFACE_BG } from '../utils';
 
 export type DataTableColumnMenuProps<T> = {
   anchorEl: HTMLElement | null;

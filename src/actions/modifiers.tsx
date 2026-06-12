@@ -7,9 +7,9 @@ import type {
 } from 'src/types/modifiers';
 
 import useSWR from 'swr';
-import { mutate } from 'src/lib/swr';
 import { useMemo, useCallback } from 'react';
 
+import { mutate } from 'src/lib/swr';
 import { poster, putter, deleter, fetcher, endpoints } from 'src/lib/axios';
 
 // ----------------------------------------------------------------------

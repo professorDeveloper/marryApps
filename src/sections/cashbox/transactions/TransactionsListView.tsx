@@ -1,11 +1,9 @@
 import type { ITransaction, TransactionFilters } from 'src/types/transactions';
 
 import dayjs from 'dayjs';
+import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { useState, useEffect, useCallback } from 'react';
-
-import { useTimeFilter } from 'src/hooks/use-time-filter';
-import { useNavigate } from 'react-router';
 
 import {
   Dialog,
@@ -16,11 +14,13 @@ import {
 } from '@mui/material';
 
 import { paths } from 'src/routes/paths';
+
+import { useTimeFilter } from 'src/hooks/use-time-filter';
 import { useTransactionsAPI } from 'src/hooks/use-transactions-api';
 
 import { DashboardContent } from 'src/layouts/dashboard';
 
-import { getInitialFilters, toUtcDayBoundary } from './utils/date-utils';
+import { toUtcDayBoundary, getInitialFilters } from './utils/date-utils';
 import { TransactionsDataTable } from './components/TransactionsDataTable';
 
 const INITIAL_FILTERS: TransactionFilters = getInitialFilters();

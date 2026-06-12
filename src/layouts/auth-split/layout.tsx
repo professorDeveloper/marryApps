@@ -17,12 +17,12 @@ import { Logo } from 'src/components/logo';
 import { NeuralGrid, DarkTechPattern } from 'src/components/animate/background-patterns';
 
 import { AuthSplitContent } from './content';
-import { SettingsButton } from '../components/settings-button';
 import { LayoutSection, HeaderSection } from '../core';
+import { SettingsButton } from '../components/settings-button';
 
 // ----------------------------------------------------------------------
 
-type LayoutBaseProps = Pick<LayoutSectionProps, 'sx' | 'children' | 'cssVars'>;
+type LayoutBaseProps = Pick<LayoutSectionProps, 'sx' | 'children'>;
 
 export type AuthSplitLayoutProps = LayoutBaseProps & {
   layoutQuery?: Breakpoint;
@@ -36,7 +36,6 @@ export type AuthSplitLayoutProps = LayoutBaseProps & {
 
 export function AuthSplitLayout({
   sx,
-  cssVars,
   children,
   slotProps,
   layoutQuery = 'md',
@@ -141,7 +140,6 @@ export function AuthSplitLayout({
       /** **************************************
        * @Styles
        *************************************** */
-      cssVars={cssVars}
       sx={sx}
     >
       {renderMain()}

@@ -19,22 +19,24 @@ import {
 
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
+import { RouterLink } from 'src/routes/components';
+
+import { useMetadata } from 'src/hooks/use-metadata';
+import { usePaginationRows } from 'src/hooks/use-pagination-rows';
 
 import { DashboardContent } from 'src/layouts/dashboard';
 import { useGetIngredients, useDeleteIngredient } from 'src/actions/ingredients';
-import { useMetadata } from 'src/hooks/use-metadata';
-import { usePaginationRows } from 'src/hooks/use-pagination-rows';
-import { MetadataEntity } from 'src/types/metadata';
 
 import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
+import { RenderCell } from 'src/components/RenderCell';
 import { GenericViewModal } from 'src/components/generic-view-view';
 
-import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
-import { RouterLink } from 'src/routes/components';
-import { RenderCell } from 'src/components/RenderCell';
 import { CELL_SX } from 'src/sections/common/data-table/utils/constants';
+import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
 import { getMeasurementLabel } from 'src/sections/warehouse/ingredients/utils';
+
+import { MetadataEntity } from 'src/types/metadata';
 
 export function IngredientListView() {
     const { t } = useTranslation('menu');

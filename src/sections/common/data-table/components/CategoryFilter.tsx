@@ -1,7 +1,7 @@
-import TextField from '@mui/material/TextField';
-import MenuItem from '@mui/material/MenuItem';
-
 import { useTranslation } from 'react-i18next';
+
+import MenuItem from '@mui/material/MenuItem';
+import TextField from '@mui/material/TextField';
 
 import { NoDataTooltip } from 'src/components/no-data-tooltip';
 
