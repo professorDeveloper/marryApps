@@ -177,8 +177,7 @@ export function TransactionsListView() {
         breadcrumbs={{
           heading: t('cashbox.sidebar.transactions'),
           links: [
-            { name: t('dashboard'), href: paths.dashboard.root },
-            { name: t('cashbox.sidebar.title'), href: paths.cashbox.root },
+            { name: t('nav.pos'), href: paths.cashbooks.transactions },
             { name: t('cashbox.sidebar.transactions') },
           ],
         }}

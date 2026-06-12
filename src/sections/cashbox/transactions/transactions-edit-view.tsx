@@ -406,8 +406,7 @@ export function TransactionsEditView({ isNew = false }: TransactionsEditViewProp
       showBreadcrumbs: false,
       showDeleteButton: false,
       breadcrumbs: [
-        { name: t('dashboard'), href: paths.dashboard.root },
-        { name: t('cashbox.sidebar.title'), href: paths.cashbox.root },
+        { name: t('nav.pos'), href: paths.cashbooks.transactions },
         { name: t('cashbox.sidebar.transactions'), href: paths.cashbox.transactions },
         { name: isNew ? t('common.create') : t('common.edit'), href: '' },
       ],

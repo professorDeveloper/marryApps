@@ -13,6 +13,108 @@ const ROOTS = {
   REPORTS: '/reports',
   CASHBOX: '/cashbox',
   STAFFING: '/staffing',
+  STORAGE: '/storage',
+  OPERATIONS: '/operations',
+  CASHBOOKS: '/cashbooks',
+  EMPLOYEE: '/employee',
+};
+
+// STORAGE
+const storage = {
+  root: ROOTS.STORAGE,
+  storages: {
+    root: `${ROOTS.STORAGE}/storages`,
+    new: `${ROOTS.STORAGE}/storages/new`,
+    details: (id: string) => `${ROOTS.STORAGE}/storages/${id}`,
+    edit: (id: string) => `${ROOTS.STORAGE}/storages/${id}/edit`,
+  },
+  departments: {
+    root: `${ROOTS.STORAGE}/departments`,
+    new: `${ROOTS.STORAGE}/departments/new`,
+    details: (id: string) => `${ROOTS.STORAGE}/departments/${id}`,
+    edit: (id: string) => `${ROOTS.STORAGE}/departments/${id}/edit`,
+  },
+  categories: {
+    root: `${ROOTS.STORAGE}/categories`,
+    new: `${ROOTS.STORAGE}/categories/new`,
+    details: (id: string) => `${ROOTS.STORAGE}/categories/${id}`,
+    edit: (id: string) => `${ROOTS.STORAGE}/categories/${id}/edit`,
+  },
+  ingredientGroups: {
+    root: `${ROOTS.STORAGE}/ingredient-groups`,
+    new: `${ROOTS.STORAGE}/ingredient-groups/new`,
+    details: (id: string) => `${ROOTS.STORAGE}/ingredient-groups/${id}`,
+    edit: (id: string) => `${ROOTS.STORAGE}/ingredient-groups/${id}/edit`,
+  },
+};
+
+// OPERATIONS
+const operations = {
+  root: ROOTS.OPERATIONS,
+  invoices: {
+    root: `${ROOTS.OPERATIONS}/invoices`,
+    new: `${ROOTS.OPERATIONS}/invoices/new`,
+    details: (id: string) => `${ROOTS.OPERATIONS}/invoices/${id}`,
+    edit: (id: string) => `${ROOTS.OPERATIONS}/invoices/${id}/edit`,
+  },
+  expenseInvoices: {
+    root: `${ROOTS.OPERATIONS}/expense-invoices`,
+    new: `${ROOTS.OPERATIONS}/expense-invoices/new`,
+    details: (id: string) => `${ROOTS.OPERATIONS}/expense-invoices/${id}`,
+    edit: (id: string) => `${ROOTS.OPERATIONS}/expense-invoices/${id}/edit`,
+  },
+  separationActs: {
+    root: `${ROOTS.OPERATIONS}/separation-acts`,
+    new: `${ROOTS.OPERATIONS}/separation-acts/new`,
+    details: (id: string) => `${ROOTS.OPERATIONS}/separation-acts/${id}`,
+    edit: (id: string) => `${ROOTS.OPERATIONS}/separation-acts/${id}/edit`,
+  },
+  deductions: {
+    root: `${ROOTS.OPERATIONS}/deductions`,
+    new: `${ROOTS.OPERATIONS}/deductions/new`,
+    details: (id: string) => `${ROOTS.OPERATIONS}/deductions/${id}`,
+    edit: (id: string) => `${ROOTS.OPERATIONS}/deductions/${id}/edit`,
+  },
+  deductionGroups: {
+    root: `${ROOTS.OPERATIONS}/deduction-groups`,
+    new: `${ROOTS.OPERATIONS}/deduction-groups/new`,
+    edit: (id: string) => `${ROOTS.OPERATIONS}/deduction-groups/${id}/edit`,
+  },
+  transfers: {
+    root: `${ROOTS.OPERATIONS}/transfers`,
+    new: `${ROOTS.OPERATIONS}/transfers/new`,
+    details: (id: string) => `${ROOTS.OPERATIONS}/transfers/${id}`,
+    edit: (id: string) => `${ROOTS.OPERATIONS}/transfers/${id}/edit`,
+  },
+  inventory: {
+    root: `${ROOTS.OPERATIONS}/inventory`,
+    new: `${ROOTS.OPERATIONS}/inventory/new`,
+    details: (id: string) => `${ROOTS.OPERATIONS}/inventory/${id}`,
+    edit: (id: string) => `${ROOTS.OPERATIONS}/inventory/${id}/edit`,
+  },
+};
+
+// CASHBOOKS
+const cashbooks = {
+  root: ROOTS.CASHBOOKS,
+  transactions: `${ROOTS.CASHBOOKS}/transactions`,
+  transactionsNew: `${ROOTS.CASHBOOKS}/transactions/new`,
+  transactionsEdit: (id: string) => `${ROOTS.CASHBOOKS}/transactions/${id}/edit`,
+  transactionGroups: `${ROOTS.CASHBOOKS}/transaction-groups`,
+  reports: `${ROOTS.CASHBOOKS}/reports`,
+};
+
+// EMPLOYEE
+const employee = {
+  root: ROOTS.EMPLOYEE,
+  users: `${ROOTS.EMPLOYEE}/users`,
+  usersNew: `${ROOTS.EMPLOYEE}/users/new`,
+  usersEdit: (id: string) => `${ROOTS.EMPLOYEE}/users/${id}/edit`,
+  usersRestaurantStaffNew: `${ROOTS.EMPLOYEE}/users/restaurant-staff/new`,
+  usersRestaurantStaffEdit: (id: string) => `${ROOTS.EMPLOYEE}/users/restaurant-staff/${id}/edit`,
+  shifts: `${ROOTS.EMPLOYEE}/shifts`,
+  kpi: `${ROOTS.EMPLOYEE}/kpi`,
+  salary: `${ROOTS.EMPLOYEE}/salary`,
 };
 
 // ----------------------------------------------------------------------
@@ -64,24 +166,9 @@ export const paths = {
       five: `${ROOTS.MENU}/group/five`,
       six: `${ROOTS.MENU}/group/six`,
     },
-    inventory: {
-      root: `${ROOTS.WAREHOUSE}/inventories`,
-      new: `${ROOTS.WAREHOUSE}/inventories/new`,
-      details: (id: string) => `${ROOTS.WAREHOUSE}/inventories/${id}`,
-      edit: (id: string) => `${ROOTS.WAREHOUSE}/inventories/${id}/edit`,
-    },
-    product: {
-      root: `${ROOTS.MENU}/departments`,
-      new: `${ROOTS.MENU}/departments/new`,
-      details: (id: string) => `${ROOTS.MENU}/departments/${id}`,
-      edit: (id: string) => `${ROOTS.MENU}/departments/${id}/edit`,
-    },
-    category: {
-      root: `${ROOTS.MENU}/category`,
-      new: `${ROOTS.MENU}/category/new`,
-      details: (id: string) => `${ROOTS.MENU}/category/${id}`,
-      edit: (id: string) => `${ROOTS.MENU}/category/${id}/edit`,
-    },
+    inventory: operations.inventory,
+    product: storage.departments,
+    category: storage.categories,
     user: {
       root: `${ROOTS.MENU}/user`,
       new: `${ROOTS.MENU}/user/new`,
@@ -97,12 +184,7 @@ export const paths = {
       details: (id: string) => `${ROOTS.MENU}/ingredients/${id}`,
       edit: (id: string) => `${ROOTS.MENU}/ingredients/${id}/edit`,
     },
-    ingredients_group: {
-      root: `${ROOTS.MENU}/ingredient-group`,
-      new: `${ROOTS.MENU}/ingredient-group/new`,
-      details: (id: string) => `${ROOTS.MENU}/ingredient-group/${id}`,
-      edit: (id: string) => `${ROOTS.MENU}/ingredient-group/${id}/edit`,
-    },
+    ingredients_group: storage.ingredientGroups,
     semifinished: {
       root: `${ROOTS.MENU}/semifinished`,
       new: `${ROOTS.MENU}/semifinished/new`,
@@ -147,12 +229,7 @@ export const paths = {
   // WAREHOUSE
   warehouse: {
     root: `/warehouse`,
-    storage: {
-      root: `${ROOTS.WAREHOUSE}/storage`,
-      new: `${ROOTS.WAREHOUSE}/storage/new`,
-      details: (id: string) => `${ROOTS.WAREHOUSE}/storage/${id}`,
-      edit: (id: string) => `${ROOTS.WAREHOUSE}/storage/${id}/edit`,
-    },
+    storage: storage.storages,
     new: `${ROOTS.WAREHOUSE}/storage/new`,
     details: (id: string) => `${ROOTS.WAREHOUSE}/inventory/${id}`,
     edit: (id: string) => `${ROOTS.WAREHOUSE}/inventory/${id}/edit`,
@@ -162,30 +239,15 @@ export const paths = {
       details: (id: string) => `${ROOTS.WAREHOUSE}/stocks/${id}`,
       edit: (id: string) => `${ROOTS.WAREHOUSE}/stocks/${id}/edit`,
     },
-    transfers: {
-      root: `${ROOTS.WAREHOUSE}/transfers`,
-      new: `${ROOTS.WAREHOUSE}/transfers/new`,
-      details: (id: string) => `${ROOTS.WAREHOUSE}/transfers/${id}`,
-      edit: (id: string) => `${ROOTS.WAREHOUSE}/transfers/${id}/edit`,
-    },
+    transfers: operations.transfers,
     shipments: {
       root: `${ROOTS.WAREHOUSE}/shipments`,
       new: `${ROOTS.WAREHOUSE}/shipments/new`,
       details: (id: string) => `${ROOTS.WAREHOUSE}/shipments/${id}`,
       edit: (id: string) => `${ROOTS.WAREHOUSE}/shipments/${id}/edit`,
     },
-    outgoingInvoices: {
-      root: `${ROOTS.WAREHOUSE}/expenses-invoices`,
-      new: `${ROOTS.WAREHOUSE}/expenses-invoices/new`,
-      details: (id: string) => `${ROOTS.WAREHOUSE}/expenses-invoices/${id}`,
-      edit: (id: string) => `${ROOTS.WAREHOUSE}/expenses-invoices/${id}/edit`,
-    },
-    separationActs: {
-      root: `${ROOTS.WAREHOUSE}/separations-acts`,
-      new: `${ROOTS.WAREHOUSE}/separations-acts/new`,
-      details: (id: string) => `${ROOTS.WAREHOUSE}/separations-acts/${id}`,
-      edit: (id: string) => `${ROOTS.WAREHOUSE}/separations-acts/${id}/edit`,
-    },
+    outgoingInvoices: operations.expenseInvoices,
+    separationActs: operations.separationActs,
     locations: {
       root: `${ROOTS.WAREHOUSE}/locations`,
       new: `${ROOTS.WAREHOUSE}/locations/new`,
@@ -209,48 +271,34 @@ export const paths = {
       details: (id: string) => `${ROOTS.WAREHOUSE}/invoices/${id}`,
       edit: (id: string) => `${ROOTS.WAREHOUSE}/invoices/${id}/edit`,
     },
-    invoiceDetails: {
-      root: `${ROOTS.WAREHOUSE}/invoice-details`,
-      new: `${ROOTS.WAREHOUSE}/invoice-details/new`,
-      details: (id: string) => `${ROOTS.WAREHOUSE}/invoice-details/${id}`,
-      edit: (id: string) => `${ROOTS.WAREHOUSE}/invoice-details/${id}/edit`,
-    },
-    deductions: {
-      root: `${ROOTS.WAREHOUSE}/deductions`,
-      new: `${ROOTS.WAREHOUSE}/deductions/new`,
-      details: (id: string) => `${ROOTS.WAREHOUSE}/deductions/${id}`,
-      edit: (id: string) => `${ROOTS.WAREHOUSE}/deductions/${id}/edit`,
-    },
-    deductionGroups: {
-      root: `${ROOTS.WAREHOUSE}/deduction-groups`,
-      new: `${ROOTS.WAREHOUSE}/deduction-groups/new`,
-      edit: (id: string) => `${ROOTS.WAREHOUSE}/deduction-groups/${id}/edit`,
-    },
+    invoiceDetails: operations.invoices,
+    deductions: operations.deductions,
+    deductionGroups: operations.deductionGroups,
     orders: {
       root: `${ROOTS.WAREHOUSE}/orders`,
       new: `${ROOTS.WAREHOUSE}/orders/new`,
     },
   },
 
-  // CASHBOX
+  // CASHBOX (legacy aliases, see CASHBOOKS)
   cashbox: {
     root: `/cashbox`,
-    cashiers: `${ROOTS.CASHBOX}/cashiers`,
-    transactionGroups: `${ROOTS.CASHBOX}/transaction-groups`,
-    transactions: `${ROOTS.CASHBOX}/transactions`,
-    transactionsNew: `${ROOTS.CASHBOX}/transactions/new`,
-    transactionsEdit: (id: string) => `${ROOTS.CASHBOX}/transactions/${id}/edit`,
-    report: `${ROOTS.CASHBOX}/report`,
+    cashiers: `${ROOTS.SETTING}/cashiers`,
+    transactionGroups: cashbooks.transactionGroups,
+    transactions: cashbooks.transactions,
+    transactionsNew: cashbooks.transactionsNew,
+    transactionsEdit: cashbooks.transactionsEdit,
+    report: cashbooks.reports,
   },
 
   // SETTINGS
   settings: {
     root: `${ROOTS.SETTING}`,
-    users: `${ROOTS.SETTING}/users`,
-    usersNew: `${ROOTS.SETTING}/users/new`,
-    usersEdit: (id: string) => `${ROOTS.SETTING}/users/${id}/edit`,
-    usersRestaurantStaffNew: `${ROOTS.SETTING}/users/restaurant-staff/new`,
-    usersRestaurantStaffEdit: (id: string) => `${ROOTS.SETTING}/users/restaurant-staff/${id}/edit`,
+    users: employee.users,
+    usersNew: employee.usersNew,
+    usersEdit: employee.usersEdit,
+    usersRestaurantStaffNew: employee.usersRestaurantStaffNew,
+    usersRestaurantStaffEdit: employee.usersRestaurantStaffEdit,
     devices: `${ROOTS.SETTING}/devices`,
     general: {
       root: `${ROOTS.SETTING}/devices`,
@@ -263,15 +311,28 @@ export const paths = {
     },
     halls: `${ROOTS.SETTING}/halls`,
     floorPlan: (id: string) => `${ROOTS.SETTING}/halls/${id}`,
+    cashiers: `${ROOTS.SETTING}/cashiers`,
   },
 
-  // STAFFING
+  // STAFFING (legacy aliases, see EMPLOYEE)
   staffing: {
-    employees: `${ROOTS.SETTING}/users`,
-    shifts: `${ROOTS.STAFFING}/shifts`,
-    kpi: `${ROOTS.STAFFING}/kpi`,
-    salary: `${ROOTS.STAFFING}/salary`,
+    employees: employee.users,
+    shifts: employee.shifts,
+    kpi: employee.kpi,
+    salary: employee.salary,
   },
+
+  // STORAGE
+  storage,
+
+  // OPERATIONS
+  operations,
+
+  // CASHBOOKS
+  cashbooks,
+
+  // EMPLOYEE
+  employee,
 
   dashboard: {
     root: `${ROOTS.DASHBOARD}`,

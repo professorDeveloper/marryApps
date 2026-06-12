@@ -152,7 +152,7 @@ export function WarehouseEditView({ isNew = false }: { isNew?: boolean }) {
     entityName: 'storage',
     showBreadcrumbs: false,
     breadcrumbs: [
-      { name: t('app'), href: paths.menu.root },
+      { name: t('overview.storages.title'), href: paths.storage.storages.root },
       { name: t('overview.warehouse.storage'), href: paths.warehouse.storage.root },
       { name: isNew ? t('warehouse.new') : t('warehouse.edit'), href: '' },
     ],

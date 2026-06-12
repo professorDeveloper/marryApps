@@ -131,7 +131,7 @@ export function DeductionGroupEditView({ isNew = false }: DeductionGroupEditView
                 : t('deductions.editGroup'),
             entityName: 'Deduction Group',
             breadcrumbs: [
-                { name: t('app'), href: paths.menu.root },
+                { name: t('overview.operations.title'), href: paths.operations.invoices.root },
                 { name: t('deductions.groups'), href: paths.warehouse.deductionGroups.root },
                 { name: isNew ? t('deductions.new') : String(group?.name || 'Group'), href: '' },
             ],

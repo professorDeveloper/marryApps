@@ -46,15 +46,15 @@ const SalaryReportView = lazy(() =>
 );
 
 export const settingRoutes: RouteObject[] = [
-  { path: 'settings/users', element: <EmployeeListView /> },
-  { path: 'settings/users/new', element: <EmployeeFormView isNew /> },
-  { path: 'settings/users/:id/edit', element: <EmployeeFormView /> },
+  { path: 'employee/users', element: <EmployeeListView /> },
+  { path: 'employee/users/new', element: <EmployeeFormView isNew /> },
+  { path: 'employee/users/:id/edit', element: <EmployeeFormView /> },
   { path: 'settings/devices', element: <ConnectedDeviceListView /> },
   { path: 'settings/restaurant-info', element: <RestaurantInfoListView /> },
   { path: 'settings/floor-plan', element: <FloorPlanPage /> },
   { path: 'settings/halls', element: <HallsPage /> },
   { path: 'settings/halls/:id', element: <FloorPlanPage /> },
-  { path: 'staffing/shifts', element: <ShiftsListView /> },
-  { path: 'staffing/kpi', element: <KpiListView /> },
-  { path: 'staffing/salary', element: <SalaryReportView /> },
+  { path: 'employee/shifts', element: <ShiftsListView /> },
+  { path: 'employee/kpi', element: <KpiListView /> },
+  { path: 'employee/salary', element: <SalaryReportView /> },
 ];

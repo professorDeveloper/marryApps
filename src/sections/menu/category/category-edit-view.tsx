@@ -277,7 +277,7 @@ export function CategoryEditView({ categoryId, isNew = false }: CategoryEditView
         entityName: 'category',
         showBreadcrumbs: false,
         breadcrumbs: [
-            { name: t('app'), href: paths.menu.root },
+            { name: t('overview.storages.title'), href: paths.storage.storages.root },
             { name: t('categories.title'), href: paths.menu.category.root },
             { name: isNew ? t('categories.new') : t('categories.edit'), href: '' },
         ],

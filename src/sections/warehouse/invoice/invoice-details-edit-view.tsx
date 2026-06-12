@@ -172,8 +172,7 @@ export function InvoiceDetailsEditView({ isNew = false }: { isNew?: boolean }) {
         entityName: t('warehouse.invoiceDetails.title').toLowerCase(),
         showBreadcrumbs: false,
         breadcrumbs: [
-            { name: t('menu'), href: paths.menu.root },
-            { name: t('warehouse.title'), href: paths.warehouse.root },
+            { name: t('overview.operations.title'), href: paths.operations.invoices.root },
             { name: t('warehouse.invoiceDetails.entries'), href: paths.warehouse.invoiceDetails.root },
         ],
         sections: [BASIC],

@@ -289,8 +289,7 @@ const OutgoingInvoiceFormView = React.memo(function OutgoingInvoiceFormView() {
 
     const breadcrumbs = useMemo(
         () => [
-            { name: t('dashboard'), href: paths.dashboard.root },
-            { name: t('overview.warehouse.title'), href: paths.warehouse.root },
+            { name: t('overview.operations.title'), href: paths.operations.invoices.root },
             {
                 name: t('overview.warehouse.expensesInvoices'),
                 href: paths.warehouse.outgoingInvoices.root,

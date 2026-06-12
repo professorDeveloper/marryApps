@@ -411,7 +411,7 @@ const SeparationActsFormView = React.memo(function SeparationActsFormView({
 
     const breadcrumbs = useMemo(
         () => [
-            { name: t('app'), href: paths.menu.root },
+            { name: t('overview.operations.title'), href: paths.operations.invoices.root },
             {
                 name: t('overview.warehouse.separationActs'),
                 href: paths.warehouse.separationActs.root,

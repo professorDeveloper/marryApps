@@ -22,14 +22,14 @@ const TransactionsEditView = lazy(() =>
 );
 
 export const cashboxRoutes: RouteObject[] = [
-  { path: 'cashbox/cashiers', element: <CashiersPage /> },
-  { path: 'cashbox/cashiers/new', element: <CashierEditView isNew /> },
-  { path: 'cashbox/cashiers/:id/edit', element: <CashierEditView /> },
-  { path: 'cashbox/transaction-groups', element: <TransactionGroupsPage /> },
-  { path: 'cashbox/transaction-groups/new', element: <CashRegisterEditView isNew /> },
-  { path: 'cashbox/transaction-groups/:id/edit', element: <CashRegisterEditView /> },
-  { path: 'cashbox/transactions', element: <TransactionsPage /> },
-  { path: 'cashbox/transactions/new', element: <TransactionsEditView isNew /> },
-  { path: 'cashbox/transactions/:id/edit', element: <TransactionsEditView /> },
-  { path: 'cashbox/report', element: <CashboxReportPage /> },
+  { path: 'settings/cashiers', element: <CashiersPage /> },
+  { path: 'settings/cashiers/new', element: <CashierEditView isNew /> },
+  { path: 'settings/cashiers/:id/edit', element: <CashierEditView /> },
+  { path: 'cashbooks/transaction-groups', element: <TransactionGroupsPage /> },
+  { path: 'cashbooks/transaction-groups/new', element: <CashRegisterEditView isNew /> },
+  { path: 'cashbooks/transaction-groups/:id/edit', element: <CashRegisterEditView /> },
+  { path: 'cashbooks/transactions', element: <TransactionsPage /> },
+  { path: 'cashbooks/transactions/new', element: <TransactionsEditView isNew /> },
+  { path: 'cashbooks/transactions/:id/edit', element: <TransactionsEditView /> },
+  { path: 'cashbooks/reports', element: <CashboxReportPage /> },
 ];

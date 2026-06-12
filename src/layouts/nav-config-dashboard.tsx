@@ -37,17 +37,17 @@ export const getNavData = (t: TFunction): NavSectionProps['data'] => [
         icon: ICONS.dashboard,
       },
 
-      // ── Storage & Org ─────────────────────────────────────────────────
+      // ── Storages ──────────────────────────────────────────────────────
       {
         title: t('nav.storageOrg'),
-        path: paths.warehouse.storage.root,
+        path: paths.storage.storages.root,
         icon: ICONS.storage,
         deepMatch: true,
         children: [
-          { title: t('nav.storage'),              path: paths.warehouse.storage.root },
-          { title: t('nav.departments'),      path: paths.menu.product.root },
-          { title: t('nav.categories'),        path: paths.menu.category.root },
-          { title: t('nav.ingredientGroups'), path: paths.menu.ingredients_group.root },
+          { title: t('nav.storage'),              path: paths.storage.storages.root },
+          { title: t('nav.departments'),      path: paths.storage.departments.root },
+          { title: t('nav.categories'),        path: paths.storage.categories.root },
+          { title: t('nav.ingredientGroups'), path: paths.storage.ingredientGroups.root },
         ],
       },
 
@@ -65,20 +65,20 @@ export const getNavData = (t: TFunction): NavSectionProps['data'] => [
         ],
       },
 
-      // ── Finance ───────────────────────────────────────────────────────
+      // ── Operations ────────────────────────────────────────────────────
       {
         title: t('nav.finance'),
-        path: paths.warehouse.invoiceDetails.root,
+        path: paths.operations.invoices.root,
         icon: ICONS.finance,
         deepMatch: true,
         children: [
-          { title: t('nav.invoices'),             path: paths.warehouse.invoiceDetails.root },
-          { title: t('nav.expensesInvoices'), path: paths.warehouse.outgoingInvoices.root },
-          { title: t('nav.separationActs'), path: paths.warehouse.separationActs.root },
-          { title: t('nav.deductions'),         path: paths.warehouse.deductions.root },
-          { title: t('nav.deductionGroups'), path: paths.warehouse.deductionGroups.root },
-          { title: t('nav.transfers'),           path: paths.warehouse.transfers.root },
-          { title: t('nav.inventory'),           path: paths.menu.inventory.root },
+          { title: t('nav.invoices'),             path: paths.operations.invoices.root },
+          { title: t('nav.expensesInvoices'), path: paths.operations.expenseInvoices.root },
+          { title: t('nav.separationActs'), path: paths.operations.separationActs.root },
+          { title: t('nav.deductions'),         path: paths.operations.deductions.root },
+          { title: t('nav.deductionGroups'), path: paths.operations.deductionGroups.root },
+          { title: t('nav.transfers'),           path: paths.operations.transfers.root },
+          { title: t('nav.inventory'),           path: paths.operations.inventory.root },
         ],
       },
 
@@ -95,35 +95,35 @@ export const getNavData = (t: TFunction): NavSectionProps['data'] => [
         ],
       },
 
-      // ── POS ───────────────────────────────────────────────────────────
+      // ── Cashbooks ─────────────────────────────────────────────────────
       {
         title: t('nav.pos'),
-        path: paths.warehouse.orders.root,
+        path: paths.cashbooks.transactions,
         icon: ICONS.pos,
         deepMatch: true,
         children: [
           { title: t('nav.orderManagement'), path: paths.warehouse.orders.root },
-          { title: t('nav.transactions'),        path: paths.cashbox.transactions },
-          { title: t('nav.transactionGroups'), path: paths.cashbox.transactionGroups },
-          { title: t('nav.cashboxReport'),     path: paths.cashbox.report },
+          { title: t('nav.transactions'),        path: paths.cashbooks.transactions },
+          { title: t('nav.transactionGroups'), path: paths.cashbooks.transactionGroups },
+          { title: t('nav.cashboxReport'),     path: paths.cashbooks.reports },
         ],
       },
 
-      // ── Staffing ──────────────────────────────────────────────────────
+      // ── Employee ──────────────────────────────────────────────────────
       {
         title: t('nav.staffing'),
-        path: paths.staffing.employees,
+        path: paths.employee.users,
         icon: ICONS.staffing,
         deepMatch: true,
         children: [
-          { title: t('nav.employees'), path: paths.staffing.employees },
-          { title: t('nav.shifts'),       path: paths.staffing.shifts },
-          { title: t('nav.kpi'),             path: paths.staffing.kpi },
-          { title: t('nav.salary'),       path: paths.staffing.salary },
+          { title: t('nav.employees'), path: paths.employee.users },
+          { title: t('nav.shifts'),       path: paths.employee.shifts },
+          { title: t('nav.kpi'),             path: paths.employee.kpi },
+          { title: t('nav.salary'),       path: paths.employee.salary },
         ],
       },
 
-      // ── System Settings ───────────────────────────────────────────────
+      // ── Settings ──────────────────────────────────────────────────────
       {
         title: t('nav.systemSettings'),
         path: paths.settings.notifications.root,
@@ -133,7 +133,7 @@ export const getNavData = (t: TFunction): NavSectionProps['data'] => [
           { title: t('nav.restaurantInfo'), path: paths.settings.notifications.root },
           { title: t('nav.devices'),                path: paths.settings.general.root },
           { title: t('nav.halls'),                    path: paths.settings.halls },
-          { title: t('nav.cashiers'),              path: paths.cashbox.cashiers },
+          { title: t('nav.cashiers'),              path: paths.settings.cashiers },
         ],
       },
     ],

@@ -22,7 +22,7 @@
   "deleteConfirm": "Fayllar o'chirilsinmi?",
   "deleteMessage": "Tanlangan fayllar tizimdan butunlay o'chiriladi va ushbu amalni bekor qilish yoki fayllarni tiklash mumkin emas.",
   "semifinished": "Yarim tayyorlangan",
-  "dashboard": "Bosh paneli",
+  "dashboard": "Tahlil",
   "settings": "Sozlamalar",
   "settingsDrawer": {
     "title": "Sozlamalar",
@@ -52,7 +52,11 @@
   "register": "Ro'yxatga olish",
   "welcome": "Xush kelibsiz",
   "loading": "Yuklanmoqda...",
-  "error": "Xato",
+  "error": {
+    "title": "Nimadir xato ketdi",
+    "description": "Kutilmagan xatolik yuz berdi. Qaytadan urinib ko'ring yoki bosh sahifaga qayting.",
+    "goHome": "Bosh sahifaga"
+  },
   "success": "Muvaffaqiyat",
   "noData": "Ma'lumot yo'q",
   "noDataAvailable": "Ma'lumot mavjud emas",
@@ -169,7 +173,9 @@
     "cancel": "Bekor qilish",
     "nameUz": "Nomi (uzbekcha)",
     "nameRu": "Nomi (ruscha)",
-    "nameEn": "Nomi (inglizcha)"
+    "nameEn": "Nomi (inglizcha)",
+    "noData": "Bo'limlar topilmadi",
+    "noDataSubtitle": "Qidiruv yoki filtrlarni o'zgartirib ko'ring"
   },
   "categories": {
     "title": "Kategoriyalar",
@@ -373,7 +379,19 @@
     "minPrice": "Min. narx",
     "maxPrice": "Maks. narx",
     "filterIngredients": "Ingredientlar",
-    "filterSemiFinished": "Yarim tayyor mahsulotlar"
+    "filterSemiFinished": "Yarim tayyor mahsulotlar",
+    "stopList": {
+      "status": "Holat",
+      "available": "Mavjud",
+      "stopped": "To'xtatilgan",
+      "stop": "To'xtatish",
+      "resume": "Davom etish",
+      "reason": "Sabab",
+      "durationMinutes": "Davomiyligi (daqiqa)",
+      "durationHelp": "Cheksiz to'xtatish uchun bo'sh qoldiring",
+      "dialogTitle": "Mahsulotni to'xtatish",
+      "confirmStop": "To'xtatish"
+    }
   },
   "modifiers": {
     "title": "Modifikatorlar",
@@ -406,6 +424,12 @@
   },
   "overview": {
     "subheader": "Umumiy",
+    "storages": {
+      "title": "Omborlar"
+    },
+    "operations": {
+      "title": "Operatsiyalar"
+    },
     "menu": {
       "title": "Menyu",
       "storage": "Ombor",
@@ -552,7 +576,9 @@
     "deleteMessage": "Bu amalni bekor qilish yoki xodimni tiklash mumkin emas.",
     "cancel": "Bekor qilish",
     "deleteSuccess": "Muvaffaqiyatli o'chirildi",
-    "deleteFailed": "O'chirishda xato"
+    "deleteFailed": "O'chirishda xato",
+    "noEmployees": "Xodimlar topilmadi",
+    "noEmployeesSubtitle": "Qidiruv yoki filtrlarni o'zgartirib ko'ring"
   },
   "employe": {
     "title": "Xodimlar",
@@ -602,7 +628,13 @@
     "amount": "Summa",
     "storage": "Ombor",
     "department": "Bo'lim",
-    "paymentType": "To'lov turi"
+    "paymentType": "To'lov turi",
+    "export": "Eksport",
+    "confirmDelete": "O'chirishni tasdiqlang",
+    "deleteMessage": "Bu elementni o'chirishni xohlaysizmi? Bu amalni bekor qilib bo'lmaydi.",
+    "noDataSubtitle": "Qidiruv yoki filtrlarni o'zgartirib ko'ring",
+    "deleteConfirmation": "Bu elementni o'chirishni xohlaysizmi? Bu amalni bekor qilib bo'lmaydi.",
+    "search": "Qidiruv"
   },
   "warehouse": {
     "title": "Ombor",
@@ -760,7 +792,13 @@
       "info": "Ma'lumot",
       "phoneNumber": "Telefon raqami",
       "nameRequired": "Yetkazib beruvchi nomi majburiy"
-    }
+    },
+    "kg": "kg",
+    "l": "l",
+    "g": "g",
+    "ml": "ml",
+    "piece": "dona",
+    "storage": "Ombor"
   },
   "ingredients": {
     "title": "Maxsulotlar",
@@ -1188,7 +1226,8 @@
     "avgMarkupPct": "O'rtacha ustama %",
     "totalCount": "Jami soni",
     "apply": "Qo'llash",
-    "reset": "Qayta tiklash"
+    "reset": "Qayta tiklash",
+    "searchMeals": "Taom qidirish"
   },
   "bills": {
     "title": "Hisob-Kitoblar",
@@ -1340,7 +1379,9 @@
       "list": "Tranzaksiya guruhlari ro'yxati",
       "details": "Tranzaksiya guruhi tafsilotlari",
       "edit": "Tranzaksiya guruhini tahrirlash"
-    }
+    },
+    "customerPaid": "Mijoz to'lagan",
+    "changeAmount": "Qaytim"
   },
   "shipments": {
     "create": "Yetkazib berish yaratish",
@@ -1606,7 +1647,8 @@
     "updateSuccess": "Qurilma muvaffaqiyatli yangilandi",
     "deleteSuccess": "Qurilma muvaffaqiyatli o'chirildi",
     "saveFailed": "Qurilmani saqlab bo'lmadi",
-    "deleteFailed": "Qurilmani o'chirib bo'lmadi"
+    "deleteFailed": "Qurilmani o'chirib bo'lmadi",
+    "connectionType": "Ulanish turi"
   },
   "nav": {
     "staffing": "Xodim",
@@ -1635,7 +1677,7 @@
     "deductionGroups": "Chiqim guruhlari",
     "transfers": "Ko'chirish aktlari",
     "inventory": "Inventarizatsiya",
-    "pos": "Kassa",
+    "pos": "Kassa kitoblari",
     "orderManagement": "Buyurtmalarni boshqarish",
     "transactions": "Tranzaksiyalar",
     "transactionGroups": "Tranzaksiya guruhlari",
@@ -1649,5 +1691,7 @@
     "devices": "Qurilmalar",
     "halls": "Zallar",
     "cashiers": "Kassalar"
-  }
+  },
+  "viewDetails": "Tafsilotlar",
+  "tryAdjustingFilters": "Filtrlarni o'zgartirib ko'ring"
 }

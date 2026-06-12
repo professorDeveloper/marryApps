@@ -1,12 +1,13 @@
 import type { IMealsItem } from 'src/types/meals';
 import type { DataTableColumn } from 'src/sections/common/data-table/types/types';
+import type { StopMealDialogRef } from 'src/sections/meals/components/StopMealDialog';
 
 import { useTranslation } from 'react-i18next';
-import { useMemo, useState, useEffect, useCallback } from 'react';
+import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
 
 import { alpha, useTheme } from '@mui/material/styles';
 import {
-    Box, Table, Paper, Button, Dialog, TableRow,
+    Box, Chip, Table, Paper, Button, Dialog, TableRow,
     TableBody,
     TableCell,
     TableHead,
@@ -24,6 +25,7 @@ import { RouterLink } from 'src/routes/components';
 import { useMetadata } from 'src/hooks/use-metadata';
 import { usePaginationRows } from 'src/hooks/use-pagination-rows';
 import { useGenericViewModal } from 'src/hooks/use-generic-view-modal';
+import { useGetStopList, useCreateStopListItem, useDeleteStopListItem } from 'src/hooks/use-stop-list';
 import { useDeleteMeal, useDeleteMeals, useGetMealsPage, useGetMealWithCalculations } from 'src/hooks/use-meals';
 
 import { preload } from 'src/lib/swr';
@@ -41,6 +43,8 @@ import { CategoryFilter } from 'src/sections/common/data-table/components/Catego
 import { DepartmentFilter } from 'src/sections/common/data-table/components/DepartmentFilter';
 
 import { MetadataEntity } from 'src/types/metadata';
+
+import { StopMealDialog } from './components/StopMealDialog';
 
 
 // Shared pill styles — stable references so a new sx isn't created per cell
@@ -258,6 +262,11 @@ export function Meals() {
     const { deleteMeal } = useDeleteMeal();
     const { deleteMeals } = useDeleteMeals();
 
+    // Stop-list hooks
+    const { stoppedGoodsMap, mutate: mutateStopList } = useGetStopList({ limit: 1000 });
+    const { createStopListItem } = useCreateStopListItem();
+    const { deleteStopListItem } = useDeleteStopListItem();
+
     useEffect(() => {
         const timeout = setTimeout(() => {
             setDebouncedSearchQuery(searchQuery);
@@ -287,6 +296,9 @@ export function Meals() {
     // State
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [mealToDelete, setMealToDelete] = useState<string | null>(null);
+
+    // Stop-list dialog ref - keeps dialog input state isolated so it doesn't re-render the table
+    const stopDialogRef = useRef<StopMealDialogRef>(null);
 
     // Create translation maps for categories and departments from master lists,
     // so filter options do not collapse to only the currently filtered meals.
@@ -337,6 +349,15 @@ export function Meals() {
     const categoryOptions = useMemo(() => Array.from(categoryMap.entries()).map(([id, name]) => ({ id, name })), [categoryMap]);
 
     const departmentOptions = useMemo(() => Array.from(departmentMap.entries()).map(([id, name]) => ({ id, name })), [departmentMap]);
+
+    const handleResumeMeal = useCallback(async (stopListItemId: string) => {
+        try {
+            await deleteStopListItem(stopListItemId);
+            mutateStopList();
+        } catch (error) {
+            console.error('Failed to resume meal:', error);
+        }
+    }, [deleteStopListItem, mutateStopList]);
 
     // View modal hook'i
     const { isOpen, selectedData, openModal, closeModal } = useGenericViewModal<IMealsItem>();
@@ -454,40 +475,75 @@ export function Meals() {
                 renderCell: ({ value }) => Number(value) > 0 ? `${value} ${t('mealsProducts.min')}` : '–',
             },
             {
+                key: 'stop_status',
+                label: <span style={{ display: 'block', textAlign: 'center', width: '100%' }}>{t('mealsProducts.stopList.status')}</span>,
+                width: '1fr',
+                sortable: false,
+                align: 'center',
+                getValue: (row) => stoppedGoodsMap.has(row.id),
+                renderCell: ({ value }) => (
+                    <Chip
+                        label={value ? t('mealsProducts.stopList.stopped') : t('mealsProducts.stopList.available')}
+                        size="small"
+                        color={value ? 'error' : 'success'}
+                        variant="outlined"
+                    />
+                ),
+            },
+            {
                 key: 'actions',
                 label: t('actions'),
                 width: '1fr',
                 sortable: false,
                 align: 'center',
                 getValue: (row) => row,
-                renderCell: ({ row }: { row: IMealsItem }) => (
-                    <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
-                        <IconButton
-                            size="small"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                window.location.href = paths.menu.meals.edit(row.id);
-                            }}
-                            sx={{ color: 'text.secondary' }}
-                        >
-                            <Iconify icon="solar:pen-bold" width={18} />
-                        </IconButton>
-                        <IconButton
-                            size="small"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                setMealToDelete(row.id);
-                                setDeleteDialogOpen(true);
-                            }}
-                            sx={{ color: 'error.main' }}
-                        >
-                            <Iconify icon="solar:trash-bin-trash-bold" width={18} />
-                        </IconButton>
-                    </Box>
-                ),
+                renderCell: ({ row }: { row: IMealsItem }) => {
+                    const stopEntry = stoppedGoodsMap.get(row.id);
+                    const isStopped = !!stopEntry;
+                    return (
+                        <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
+                            <IconButton
+                                size="small"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    window.location.href = paths.menu.meals.edit(row.id);
+                                }}
+                                sx={{ color: 'text.secondary' }}
+                            >
+                                <Iconify icon="solar:pen-bold" width={18} />
+                            </IconButton>
+                            <IconButton
+                                size="small"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (isStopped && stopEntry) {
+                                        handleResumeMeal(stopEntry.id);
+                                    } else {
+                                        stopDialogRef.current?.open(row);
+                                    }
+                                }}
+                                sx={{ color: isStopped ? 'success.main' : 'warning.main' }}
+                                title={isStopped ? t('mealsProducts.stopList.resume') : t('mealsProducts.stopList.stop')}
+                            >
+                                <Iconify icon={isStopped ? 'solar:play-circle-bold' : 'solar:forbidden-circle-bold'} width={18} />
+                            </IconButton>
+                            <IconButton
+                                size="small"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setMealToDelete(row.id);
+                                    setDeleteDialogOpen(true);
+                                }}
+                                sx={{ color: 'error.main' }}
+                            >
+                                <Iconify icon="solar:trash-bin-trash-bold" width={18} />
+                            </IconButton>
+                        </Box>
+                    );
+                },
             },
         ],
-        [theme.vars.palette.error.main, t, i18n.language, openModal, categoryMap, departmentMap]
+        [theme.vars.palette.error.main, t, i18n.language, openModal, categoryMap, departmentMap, stoppedGoodsMap, handleResumeMeal]
     );
 
     const handlePaginationPageChange = (page: number) => {
@@ -519,6 +575,21 @@ export function Meals() {
         // the content fills in when the (already in-flight) fetch resolves.
         openModal(row);
     }, [openModal]);
+
+    const handleConfirmStop = useCallback(async (meal: IMealsItem, reason: string, durationMinutes: string) => {
+        try {
+            const duration = durationMinutes.trim();
+            await createStopListItem({
+                type: 'goods',
+                good_id: meal.id,
+                reason: reason.trim() || undefined,
+                duration_minutes: duration ? Number(duration) : undefined,
+            });
+            mutateStopList();
+        } catch (error) {
+            console.error('Failed to stop meal:', error);
+        }
+    }, [createStopListItem, mutateStopList]);
 
     const handleConfirmDelete = useCallback(async () => {
         if (mealToDelete) {
@@ -625,7 +696,7 @@ export function Meals() {
                         </>
                     }
                     defaultConfig={{
-                        order: ['name', 'category_id', 'price', 'cost_price', 'markup', 'markup_pct', 'cook_time', 'actions'],
+                        order: ['name', 'category_id', 'price', 'cost_price', 'markup', 'markup_pct', 'cook_time', 'stop_status', 'actions'],
                         visibility: {
                             name: true,
                             category_id: true,
@@ -634,6 +705,7 @@ export function Meals() {
                             markup: true,
                             markup_pct: true,
                             cook_time: true,
+                            stop_status: true,
                             actions: true,
                         },
                         widths: {
@@ -644,6 +716,7 @@ export function Meals() {
                             markup: '1fr',
                             markup_pct: '1fr',
                             cook_time: '1fr',
+                            stop_status: '1fr',
                             actions: '1fr',
                         },
                     }}
@@ -738,6 +811,9 @@ export function Meals() {
                     </Button>
                 </DialogActions>
             </Dialog>
+
+            {/* Stop Meal Dialog */}
+            <StopMealDialog ref={stopDialogRef} onConfirm={handleConfirmStop} />
         </>
     );
 }

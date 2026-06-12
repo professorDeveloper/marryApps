@@ -14,7 +14,7 @@
   "category": "Category",
   "meals": "Meals",
   "semifinished": "Semifinished",
-  "dashboard": "Dashboard",
+  "dashboard": "Analytics",
   "settings": "Settings",
   "settingsDrawer": {
     "title": "Settings",
@@ -44,7 +44,11 @@
   "register": "Register",
   "welcome": "Welcome",
   "loading": "Loading...",
-  "error": "Error",
+  "error": {
+    "title": "Something went wrong",
+    "description": "An unexpected error has occurred. Please try again or go back to the homepage.",
+    "goHome": "Go to homepage"
+  },
   "success": "Success",
   "noData": "No data",
   "noDataAvailable": "No data available",
@@ -165,7 +169,9 @@
     "deleteConfirm": "Are you sure you want to delete this department?",
     "deleteMessage": "This action cannot be undone and cannot be reversed.",
     "cancel": "Cancel",
-    "confirm": "Confirm"
+    "confirm": "Confirm",
+    "noData": "No departments found",
+    "noDataSubtitle": "Try adjusting your search or filters"
   },
   "categories": {
     "title": "Categories",
@@ -373,7 +379,19 @@
     "minPrice": "Min price",
     "maxPrice": "Max price",
     "filterIngredients": "Ingredients",
-    "filterSemiFinished": "Semi-finished"
+    "filterSemiFinished": "Semi-finished",
+    "stopList": {
+      "status": "Status",
+      "available": "Available",
+      "stopped": "Stopped",
+      "stop": "Stop",
+      "resume": "Resume",
+      "reason": "Reason",
+      "durationMinutes": "Duration (minutes)",
+      "durationHelp": "Leave empty to keep stopped indefinitely",
+      "dialogTitle": "Stop this item",
+      "confirmStop": "Stop"
+    }
   },
   "modifiers": {
     "title": "Modifiers",
@@ -406,6 +424,12 @@
   },
   "overview": {
     "subheader": "Overview",
+    "storages": {
+      "title": "Storages"
+    },
+    "operations": {
+      "title": "Operations"
+    },
     "menu": {
       "title": "Menu",
       "storage": "Storage",
@@ -550,7 +574,9 @@
     "deleteMessage": "This action cannot be undone and cannot be reversed.",
     "cancel": "Cancel",
     "deleteSuccess": "Deleted successfully",
-    "deleteFailed": "Failed to delete"
+    "deleteFailed": "Failed to delete",
+    "noEmployees": "No employees found",
+    "noEmployeesSubtitle": "Try adjusting your search or filters"
   },
   "employe": {
     "title": "Employees",
@@ -716,7 +742,13 @@
       "info": "Information",
       "phoneNumber": "Phone number",
       "nameRequired": "Supplier name is required"
-    }
+    },
+    "kg": "kg",
+    "l": "l",
+    "g": "g",
+    "ml": "ml",
+    "piece": "piece",
+    "storage": "Storage"
   },
   "common": {
     "all": "All",
@@ -757,7 +789,13 @@
     "unit": "Unit",
     "storage": "Storage",
     "department": "Department",
-    "paymentType": "Payment Type"
+    "paymentType": "Payment Type",
+    "export": "Export",
+    "confirmDelete": "Confirm Delete",
+    "deleteMessage": "Are you sure you want to delete this item? This action cannot be undone.",
+    "noDataSubtitle": "Try adjusting your search or filters",
+    "deleteConfirmation": "Are you sure you want to delete this item? This action cannot be undone.",
+    "search": "Search"
   },
   "ingredients": {
     "title": "Ingredients",
@@ -1339,7 +1377,8 @@
     "avgMarkupPct": "Avg markup %",
     "totalCount": "Total count",
     "apply": "Apply",
-    "reset": "Reset"
+    "reset": "Reset",
+    "searchMeals": "Search meals"
   },
   "bills": {
     "title": "Bills",
@@ -1485,7 +1524,9 @@
       "list": "Transaction Groups List",
       "details": "Transaction Group Details",
       "edit": "Edit Transaction Group"
-    }
+    },
+    "customerPaid": "Customer paid",
+    "changeAmount": "Change"
   },
   "nav": {
     "staffing": "Employee",
@@ -1514,7 +1555,7 @@
     "deductionGroups": "Deduction Groups",
     "transfers": "Transfers",
     "inventory": "Inventory",
-    "pos": "CashBox",
+    "pos": "Cashbooks",
     "orderManagement": "Order Management",
     "transactions": "Transactions",
     "transactionGroups": "Transaction Groups",
@@ -1640,6 +1681,9 @@
     "updateSuccess": "Device updated successfully",
     "deleteSuccess": "Device deleted successfully",
     "saveFailed": "Failed to save device",
-    "deleteFailed": "Failed to delete device"
-  }
+    "deleteFailed": "Failed to delete device",
+    "connectionType": "Connection type"
+  },
+  "viewDetails": "View details",
+  "tryAdjustingFilters": "Try adjusting your filters"
 }

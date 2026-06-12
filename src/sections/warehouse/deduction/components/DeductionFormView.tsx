@@ -325,7 +325,7 @@ const DeductionFormView = React.memo(function DeductionFormView({
 
     const breadcrumbs = useMemo(
         () => [
-            { name: t('app'), href: paths.menu.root },
+            { name: t('overview.operations.title'), href: paths.operations.invoices.root },
             {
                 name: t('deductions.title'),
                 href: paths.warehouse.deductions.root,

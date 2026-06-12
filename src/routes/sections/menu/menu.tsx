@@ -86,12 +86,12 @@ const ModifierEditView = lazy(() =>
 
 export const menuRoutes: RouteObject[] = [
   // Products/Departments
-  { path: 'menu/departments', element: <ProductListView /> },
-  { path: 'menu/departments/new', element: <ProductEditView isNew /> },
-  { path: 'menu/departments/:id/edit', element: <ProductEditView /> },
-  { path: 'menu/category', element: <CategoryListView /> },
-  { path: 'menu/category/new', element: <CategoryEditViewWrapper isNew /> },
-  { path: 'menu/category/:id/edit', element: <CategoryEditViewWrapper /> },
+  { path: 'storage/departments', element: <ProductListView /> },
+  { path: 'storage/departments/new', element: <ProductEditView isNew /> },
+  { path: 'storage/departments/:id/edit', element: <ProductEditView /> },
+  { path: 'storage/categories', element: <CategoryListView /> },
+  { path: 'storage/categories/new', element: <CategoryEditViewWrapper isNew /> },
+  { path: 'storage/categories/:id/edit', element: <CategoryEditViewWrapper /> },
   
   // Semifinished
   { path: 'menu/semifinished', element: <HalfMeals /> },
@@ -109,13 +109,13 @@ export const menuRoutes: RouteObject[] = [
   { path: 'menu/modifiers/:id/edit', element: <ModifierEditView /> },
 
   // Ingredients
-  { path: 'menu/ingredient-group', element: <IngredientGroupListView /> },
+  { path: 'storage/ingredient-groups', element: <IngredientGroupListView /> },
   {
-    path: 'menu/ingredient-group/new',
+    path: 'storage/ingredient-groups/new',
     element: <IngredientGroupEditViewWrapper isNew />,
   },
   {
-    path: 'menu/ingredient-group/:id/edit',
+    path: 'storage/ingredient-groups/:id/edit',
     element: <IngredientGroupEditViewWrapper />,
   },
   { path: 'menu/ingredients', element: <IngredientListView /> },

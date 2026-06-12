@@ -81,8 +81,7 @@ export function CashRegisterEditView({ isNew = false }: CashRegisterEditViewProp
             <CustomBreadcrumbs
                 heading={isNew ? t('cashbox.newTransactionGroup') : t('cashbox.editTransactionGroup')}
                 links={[
-                    { name: t('dashboard'), href: paths.dashboard.root },
-                    { name: t('cashbox.title'), href: paths.cashbox.root },
+                    { name: t('nav.pos'), href: paths.cashbooks.transactions },
                     { name: t('cashbox.transactionGroups'), href: paths.cashbox.transactionGroups },
                     { name: isNew ? t('cashbox.newTransactionGroup') : t('cashbox.editTransactionGroup') },
                 ]}

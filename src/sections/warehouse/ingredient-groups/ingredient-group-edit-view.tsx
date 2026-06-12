@@ -170,7 +170,7 @@ export function IngredientGroupEditView({ isNew = false }: IngredientGroupEditVi
       entityName: 'ingredientGroup',
       showBreadcrumbs: false,
       breadcrumbs: [
-        { name: t('app'), href: paths.menu.root },
+        { name: t('overview.storages.title'), href: paths.storage.storages.root },
         { name: t('ingredientGroups.title'), href: paths.menu.ingredients_group.root },
         { name: isNew ? t('ingredientGroups.new') : t('ingredientGroups.edit'), href: '' },
       ],

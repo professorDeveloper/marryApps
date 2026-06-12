@@ -281,6 +281,13 @@ export const endpoints = {
     attachModifier: (goodId: string) => `/api/v1/goods/${goodId}/modifiers`,
     detachModifier: (goodId: string, modifierId: string) => `/api/v1/goods/${goodId}/modifiers/${modifierId}`,
   },
+  stopList: {
+    list: '/api/v1/stop-list',
+    create: '/api/v1/stop-list',
+    details: (id: string) => `/api/v1/stop-list/${id}`,
+    update: (id: string) => `/api/v1/stop-list/${id}`,
+    delete: (id: string) => `/api/v1/stop-list/${id}`,
+  },
   media: {
     uploadImage: '/api/v1/media/image',
     getImage: (objectName: string) => `/api/v1/media/image/${objectName}`,

@@ -24,5 +24,6 @@
     "rowsPerPage": "Rows per page",
     "startDate": "Start date",
     "endDate": "End date"
-  }
+  },
+  "all": "All"
 }

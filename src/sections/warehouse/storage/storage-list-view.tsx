@@ -105,7 +105,7 @@ export function WarehouseStorageListView() {
       toast.success(t('success'));
     } catch (error) {
       console.error('Failed to delete storage:', error);
-      toast.error(t('error'));
+      toast.error(t('common.error'));
     } finally {
       setDeleteDialogOpen(false);
       setStorageToDelete(null);

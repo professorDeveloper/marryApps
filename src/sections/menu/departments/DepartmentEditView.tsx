@@ -55,7 +55,7 @@ export function DepartmentEditView({ isNew = false }: DepartmentEditViewProps) {
     entityName: 'department',
     showBreadcrumbs: false,
     breadcrumbs: [
-      { name: t('app'), href: paths.menu.root },
+      { name: t('overview.storages.title'), href: paths.storage.storages.root },
       { name: t('departments.title'), href: paths.menu.product.root },
       { name: isNew ? t('departments.new') : t('departments.edit'), href: '' },
     ],

@@ -83,9 +83,8 @@ export function CashierEditView({ isNew = false }: CashierEditViewProps) {
             <CustomBreadcrumbs
                 heading={isNew ? t('cashbox.cashiers.new') : t('cashbox.cashiers.edit')}
                 links={[
-                    { name: t('dashboard'), href: paths.dashboard.root },
-                    { name: t('cashbox.sidebar.title'), href: paths.cashbox.root },
-                    { name: t('cashbox.cashiers.title'), href: paths.cashbox.cashiers },
+                    { name: t('nav.systemSettings'), href: paths.settings.notifications.root },
+                    { name: t('cashbox.cashiers.title'), href: paths.settings.cashiers },
                     { name: isNew ? t('cashbox.cashiers.new') : t('cashbox.cashiers.edit') },
                 ]}
                 sx={{ mb: { xs: 3, md: 5 } }}
