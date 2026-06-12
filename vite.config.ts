@@ -77,13 +77,25 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (!id.includes('node_modules')) return undefined;
-          if (id.includes('@mui/x-data-grid'))    return 'vendor-datagrid';
+          if (id.includes('@mui/x-data-grid') || id.includes('@mui/x-virtualizer')) return 'vendor-datagrid';
           if (id.includes('@mui/x-date-pickers')) return 'vendor-datepickers';
-          if (id.includes('@mui/material') || id.includes('@emotion')) return 'vendor-mui';
-          if (id.includes('/react-dom/') || id.includes('/react/')) return 'vendor-react';
+          // catch-all for @mui internals (system, utils, styled-engine, private-theming,
+          // x-internals) — without this they get merged into whichever chunk references
+          // them first (vendor-datagrid), dragging it into every page's startup graph
+          if (id.includes('@mui/') || id.includes('@emotion')) return 'vendor-mui';
+          if (
+            id.includes('/react-dom/') ||
+            id.includes('/react/') ||
+            id.includes('/scheduler/') ||
+            id.includes('use-sync-external-store') ||
+            id.includes('/prop-types/') ||
+            id.includes('@babel/runtime') ||
+            id.includes('/clsx/')
+          )
+            return 'vendor-react';
           if (id.includes('react-router'))        return 'vendor-router';
           if (id.includes('i18next') || id.includes('react-i18next')) return 'vendor-i18n';
-          if (id.includes('@reduxjs/toolkit') || id.includes('react-redux')) return 'vendor-redux';
+          if (id.includes('@reduxjs/toolkit') || id.includes('react-redux') || id.includes('/reselect/')) return 'vendor-redux';
           return undefined;
         },
       },

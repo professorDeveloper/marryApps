@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import type { RowAction, SortState, BatchAction, SortDirection, DataTableColumn, StorageStrategy, DataTableDefaultConfig, SearchMode, SearchOutput } from '../types/types';
+import type { RowAction, SortState, SearchMode, BatchAction, SearchOutput, SortDirection, DataTableColumn, StorageStrategy, DataTableDefaultConfig } from '../types/types';
 
 // ---------------------------------------------------------------------------
 // Grouped prop shapes (exported so consumers can type-check their objects)
@@ -22,6 +22,8 @@ export type DataTableSearchProps = {
   options?: { id: string; label: string }[];
   onSearch?: (data: SearchOutput) => void;
   placeholder?: string;
+  /** Simple mode: fire search automatically this many ms after typing stops. */
+  debounceMs?: number;
 };
 
 export type DataTablePeriodFilterProps = {
@@ -38,8 +40,11 @@ import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
 import Tooltip from '@mui/material/Tooltip';
 import IconButton from '@mui/material/IconButton';
 
+import { usePaginationRows } from 'src/hooks/use-pagination-rows';
+
+import { useTranslate } from 'src/locales/use-locales';
+
 import { Iconify } from 'src/components/iconify';
-import { useDataTableActionsContext } from '../context/DataTableActionsContext';
 
 import { DataTableBody } from './DataTableBody';
 import { DataTableHeader } from './DataTableHeader';
@@ -49,16 +54,15 @@ import { DataTablePagination } from './DataTablePagination';
 import { DataTableColumnMenu } from './DataTableColumnMenu';
 import { DataTableTotalsFooter } from './DataTableTotalsFooter';
 import { DataTableFilterPopover } from './DataTableFilterPopover';
+import { useDataTableActionsContext } from '../context/DataTableActionsContext';
 import { isSpecial, formatTotal, computeTotal, buildPersisted } from '../utils/helpers';
 import {
   clamp,
-  SURFACE_BG,
   mergeConfig,
   getCellValue,
   toComparable,
   buildGridTemplate,
 } from '../utils';
-import { usePaginationRows } from 'src/hooks/use-pagination-rows';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -154,6 +158,7 @@ export function DataTable<T>({
     options: searchOptions,
     onSearch,
     placeholder: searchPlaceholder,
+    debounceMs: searchDebounceMs,
   } = search ?? {};
 
   const showPeriodPicker = Boolean(periodFilter && (periodFilter.startDate !== undefined || periodFilter.onStartDateChange));
@@ -389,17 +394,22 @@ export function DataTable<T>({
 
   // ---- Settings slot in tabs bar -----------------------------------------
   const { setSettingsSlot, clearSettingsSlot } = useDataTableActionsContext();
+  const { t } = useTranslate('common');
 
   useEffect(() => {
     setSettingsSlot(
       <>
-        <Tooltip title="Column settings">
-          <IconButton size="small" onClick={(e) => setColumnMenuAnchor(e.currentTarget)}>
+        <Tooltip title={t('dataTable.columnSettings')}>
+          <IconButton
+            size="small"
+            aria-label={t('dataTable.columnSettings')}
+            onClick={(e) => setColumnMenuAnchor(e.currentTarget)}
+          >
             <Iconify icon="solar:settings-bold-duotone" width={18} />
           </IconButton>
         </Tooltip>
-        <Tooltip title="Reset to default">
-          <IconButton size="small" onClick={reset}>
+        <Tooltip title={t('dataTable.resetToDefault')}>
+          <IconButton size="small" aria-label={t('dataTable.resetToDefault')} onClick={reset}>
             <Iconify icon="solar:restart-bold" width={18} />
           </IconButton>
         </Tooltip>
@@ -407,7 +417,7 @@ export function DataTable<T>({
     );
     return () => clearSettingsSlot();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reset]);
+  }, [reset, t]);
 
   // ---- Filters -----------------------------------------------------------
   const [filterAnchor, setFilterAnchor] = useState<HTMLElement | null>(null);
@@ -424,11 +434,9 @@ export function DataTable<T>({
   }, []);
 
   // Cleanup filter popover on unmount to prevent DOM errors
-  useEffect(() => {
-    return () => {
+  useEffect(() => () => {
       closeFilter();
-    };
-  }, [closeFilter]);
+    }, [closeFilter]);
 
   const setTextFilter = useCallback((key: string, value: string) => {
     updateFilters({ ...filters, [key]: { type: 'text', value } });
@@ -572,6 +580,7 @@ export function DataTable<T>({
           searchOptions={searchOptions}
           onSearch={onSearch}
           searchPlaceholder={searchPlaceholder}
+          searchDebounceMs={searchDebounceMs}
           showPeriodPicker={showPeriodPicker}
           periodPickerProps={periodPickerProps}
           showPeriodButtons={showPeriodButtons}

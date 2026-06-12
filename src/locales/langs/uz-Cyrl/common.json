@@ -13,6 +13,16 @@
   },
   "dataTable": {
     "sort": "Саралаш",
-    "filter": "Филтер"
+    "filter": "Филтер",
+    "columnSettings": "Устун созламалари",
+    "resetToDefault": "Стандартга қайтариш",
+    "search": "Қидириш",
+    "rowActions": "Қатор амаллари",
+    "menu": "Меню",
+    "previousPage": "Олдинги саҳифа",
+    "nextPage": "Кейинги саҳифа",
+    "rowsPerPage": "Саҳифадаги қаторлар",
+    "startDate": "Бошланиш санаси",
+    "endDate": "Тугаш санаси"
   }
 }

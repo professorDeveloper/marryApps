@@ -36,6 +36,16 @@ const BILL_STATUS_CHIP_COLOR: Record<string, 'info' | 'warning' | 'success'> = {
 
 const DATE_TIME_CELL_SX = { lineHeight: 1.2, fontSize: '0.85em' };
 
+const SERVICE_CELL_SX = {
+    ...CELL_SX,
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    lineHeight: 1.2,
+    fontSize: '0.85em',
+} as const;
+
+const SERVICE_PERCENT_SX = { color: 'text.secondary' };
+
 const renderDateTimeCell = ({ value }: { value: unknown }) => {
     const dateObj = dayjs(value as string);
     if (!dateObj.isValid()) return '';
@@ -192,6 +202,14 @@ export function BillsListView() {
         [t]
     );
 
+    const paymentTypeLabels = useMemo<Record<string, string>>(
+        () => ({
+            cash: t('bills.cash'),
+            card: t('bills.card'),
+        }),
+        [t]
+    );
+
     // DataTable columns
     const columns = useMemo(
         () => [
@@ -328,13 +346,9 @@ export function BillsListView() {
                 width: '1.2fr',
                 align: 'left' as const,
                 getValue: (row: any) => row?.payment_type || '',
-                renderCell: ({ value }: { value: unknown }) => {
-                    const val = String(value ?? '');
-                    let displayValue = '-';
-                    if (val === 'cash') displayValue = t('bills.cash');
-                    else if (val === 'card') displayValue = t('bills.card');
-                    return <Box sx={CELL_SX}>{displayValue}</Box>;
-                },
+                renderCell: ({ value }: { value: unknown }) => (
+                    <Box sx={CELL_SX}>{paymentTypeLabels[String(value ?? '')] || '-'}</Box>
+                ),
             },
             {
                 key: 'service_amount',
@@ -348,8 +362,8 @@ export function BillsListView() {
                     const percent = Number(row?.service_percent || 0);
                     const amount = Number(row?.service_amount || 0);
                     return (
-                        <Box sx={{ ...CELL_SX, flexDirection: 'column', alignItems: 'flex-start', lineHeight: 1.2, fontSize: '0.85em' }}>
-                            <Box sx={{ color: 'text.secondary' }}>{percent > 0 ? `${percent.toFixed(2)}%` : '-'}</Box>
+                        <Box sx={SERVICE_CELL_SX}>
+                            <Box sx={SERVICE_PERCENT_SX}>{percent > 0 ? `${percent.toFixed(2)}%` : '-'}</Box>
                             <Box>{fmtNum(amount)}</Box>
                         </Box>
                     );
@@ -384,7 +398,7 @@ export function BillsListView() {
                 total: { aggregation: 'sum' as const },
             },
         ],
-        [t, i18n.language, halls, statusLabels]
+        [t, i18n.language, halls, statusLabels, paymentTypeLabels]
     );
 
     // Filter handlers adapted for invoice pattern

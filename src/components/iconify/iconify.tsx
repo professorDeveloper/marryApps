@@ -1,16 +1,25 @@
 import type { IconProps } from '@iconify/react';
 import type { IconifyName } from './register-icons';
 
-import { useId } from 'react';
 import { Icon } from '@iconify/react';
 import { mergeClasses } from 'minimal-shared/utils';
+import { useId, useSyncExternalStore } from 'react';
 
 import { styled } from '@mui/material/styles';
 
 import { iconifyClasses } from './classes';
-import { allIconNames, registerIcons } from './register-icons';
+import {
+  isKnownIcon,
+  isIconsRegistered,
+  registerIconsAsync,
+  subscribeIconsRegistered,
+} from './register-icons';
 
 // ----------------------------------------------------------------------
+
+// Kick off the icon registry download as soon as this module is evaluated so
+// the async chunk loads in parallel with app bootstrap, off the critical path.
+registerIconsAsync();
 
 export type IconifyProps = React.ComponentProps<typeof IconRoot> &
   Omit<IconProps, 'icon'> & {
@@ -19,8 +28,35 @@ export type IconifyProps = React.ComponentProps<typeof IconRoot> &
 
 export function Iconify({ className, icon, width = 20, height, sx, ...other }: IconifyProps) {
   const uniqueId = useId();
+  const ready = useSyncExternalStore(
+    subscribeIconsRegistered,
+    isIconsRegistered,
+    isIconsRegistered
+  );
 
-  if (!allIconNames.includes(icon)) {
+  const sizingSx = [
+    {
+      width,
+      flexShrink: 0,
+      height: height ?? width,
+      display: 'inline-flex',
+    },
+    ...(Array.isArray(sx) ? sx : [sx]),
+  ];
+
+  if (!ready) {
+    // Rendering an unregistered <Icon> would make @iconify/react fetch it from
+    // api.iconify.design; show a same-sized placeholder until the registry lands.
+    return (
+      <PlaceholderRoot
+        id={uniqueId}
+        className={mergeClasses([iconifyClasses.root, className])}
+        sx={sizingSx}
+      />
+    );
+  }
+
+  if (import.meta.env.DEV && !isKnownIcon(icon)) {
     console.warn(
       [
         `Icon "${icon}" is currently loaded online, which may cause flickering effects.`,
@@ -30,23 +66,13 @@ export function Iconify({ className, icon, width = 20, height, sx, ...other }: I
     );
   }
 
-  registerIcons();
-
   return (
     <IconRoot
       ssr
       id={uniqueId}
       icon={icon}
       className={mergeClasses([iconifyClasses.root, className])}
-      sx={[
-        {
-          width,
-          flexShrink: 0,
-          height: height ?? width,
-          display: 'inline-flex',
-        },
-        ...(Array.isArray(sx) ? sx : [sx]),
-      ]}
+      sx={sizingSx}
       {...other}
     />
   );
@@ -55,3 +81,5 @@ export function Iconify({ className, icon, width = 20, height, sx, ...other }: I
 // ----------------------------------------------------------------------
 
 const IconRoot = styled(Icon)``;
+
+const PlaceholderRoot = styled('span')``;

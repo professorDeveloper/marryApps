@@ -13,6 +13,16 @@
   },
   "dataTable": {
     "sort": "Sort",
-    "filter": "Filter"
+    "filter": "Filter",
+    "columnSettings": "Column settings",
+    "resetToDefault": "Reset to default",
+    "search": "Search",
+    "rowActions": "Row actions",
+    "menu": "Menu",
+    "previousPage": "Previous page",
+    "nextPage": "Next page",
+    "rowsPerPage": "Rows per page",
+    "startDate": "Start date",
+    "endDate": "End date"
   }
 }

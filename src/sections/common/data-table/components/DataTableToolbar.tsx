@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import type { BatchAction, SearchMode, SearchOutput } from '../types/types';
+import type { SearchMode, BatchAction, SearchOutput } from '../types/types';
 
 import dayjs from 'dayjs';
 import { useCallback } from 'react';
@@ -7,8 +7,9 @@ import { useCallback } from 'react';
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
-import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
+
+import { useTranslate } from 'src/locales/use-locales';
 
 import { ToolbarSearch } from './ToolbarSearch';
 
@@ -23,6 +24,7 @@ export type DataTableToolbarProps<T> = {
   searchOptions?: { id: string; label: string }[];
   onSearch?: (data: SearchOutput) => void;
   searchPlaceholder?: string;
+  searchDebounceMs?: number;
 
   showPeriodPicker?: boolean;
   periodPickerProps?: {
@@ -55,6 +57,7 @@ export function DataTableToolbar<T>({
   searchOptions,
   onSearch,
   searchPlaceholder,
+  searchDebounceMs,
   showPeriodPicker = false,
   periodPickerProps,
   showPeriodButtons = false,
@@ -66,6 +69,8 @@ export function DataTableToolbar<T>({
   toolbarActions,
   filterRow,
 }: DataTableToolbarProps<T>) {
+  const { t } = useTranslate('common');
+
   const handleSearch = useCallback(
     (data: SearchOutput) => {
       if (onSearch) {
@@ -92,6 +97,7 @@ export function DataTableToolbar<T>({
               onSearch={handleSearch}
               value={searchValue}
               placeholder={searchPlaceholder}
+              debounceMs={searchDebounceMs}
             />
           )}
 
@@ -121,6 +127,7 @@ export function DataTableToolbar<T>({
                   <Box
                     component="input"
                     type="date"
+                    aria-label={t('dataTable.startDate')}
                     value={
                       periodPickerProps?.startDate
                         ? dayjs(periodPickerProps.startDate).format('YYYY-MM-DD')
@@ -153,6 +160,7 @@ export function DataTableToolbar<T>({
                   <Box
                     component="input"
                     type="date"
+                    aria-label={t('dataTable.endDate')}
                     value={
                       periodPickerProps?.endDate
                         ? dayjs(periodPickerProps.endDate).format('YYYY-MM-DD')

@@ -1,4 +1,10 @@
-export const fmtNum = (n: number) => Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+// Cached formatter — creating an Intl.NumberFormat per call is expensive inside
+// cell renderers. ru-RU groups thousands with U+00A0, matching the previous
+// regex-based output byte-for-byte; U+202F is normalized for older ICU variants.
+const numberFormatter = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 });
+
+export const fmtNum = (n: number) =>
+    numberFormatter.format(Math.round(n)).replace(/\u202f/g, "\u00a0");
 
 export const fmtDuration = (totalSeconds: number): string => {
     const s = Math.max(0, Math.round(totalSeconds || 0));

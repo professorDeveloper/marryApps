@@ -6,6 +6,8 @@ import MenuItem from '@mui/material/MenuItem';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 
+import { useTranslate } from 'src/locales/use-locales';
+
 import { Iconify } from 'src/components/iconify';
 
 
@@ -26,6 +28,7 @@ export function DataTablePagination({
   onPageChange,
   onRowsPerPageChange,
 }: DataTablePaginationProps) {
+  const { t } = useTranslate('common');
   const totalPages = Math.max(1, Math.ceil(totalCount / rowsPerPage));
 
   const pages: (number | 'ellipsis')[] = [];
@@ -68,10 +71,11 @@ export function DataTablePagination({
             whiteSpace: 'nowrap',
           }}
         >
-          Rows per page:
+          {t('dataTable.rowsPerPage')}:
         </Typography>
         <Select
           size="small"
+          inputProps={{ 'aria-label': t('dataTable.rowsPerPage') }}
           value={rowsPerPage}
           onChange={(e) => {
             const next = Number(e.target.value);
@@ -116,6 +120,7 @@ export function DataTablePagination({
       <Stack direction="row" alignItems="center" gap={0.5}>
         <IconButton
           size="small"
+          aria-label={t('dataTable.previousPage')}
           disabled={page === 0}
           onClick={() => onPageChange(page - 1)}
           sx={{
@@ -171,6 +176,7 @@ export function DataTablePagination({
 
         <IconButton
           size="small"
+          aria-label={t('dataTable.nextPage')}
           disabled={page >= totalPages - 1}
           onClick={() => onPageChange(page + 1)}
           sx={{

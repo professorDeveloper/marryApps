@@ -1,22 +1,6 @@
 import type { InitOptions } from 'i18next';
-import type { Theme, Components } from '@mui/material/styles';
 
 import resourcesToBackend from 'i18next-resources-to-backend';
-
-// MUI Core Locales
-import {
-  ruRU as ruRUCore,
-} from '@mui/material/locale';
-// MUI Date Pickers Locales
-import {
-  enUS as enUSDate,
-  ruRU as ruRUDate,
-} from '@mui/x-date-pickers/locales';
-// MUI Data Grid Locales
-import {
-  enUS as enUSDataGrid,
-  ruRU as ruRUDataGrid,
-} from '@mui/x-data-grid/locales';
 
 // ----------------------------------------------------------------------
 
@@ -48,7 +32,6 @@ export type LangOption = {
   countryCode: string;
   adapterLocale?: string;
   numberFormat: { code: string; currency: string };
-  systemValue?: { components: Components<Theme> };
 };
 
 export const allLangs: LangOption[] = [
@@ -58,9 +41,6 @@ export const allLangs: LangOption[] = [
     countryCode: 'GB',
     adapterLocale: 'en',
     numberFormat: { code: 'en-US', currency: 'USD' },
-    systemValue: {
-      components: { ...enUSDate.components, ...enUSDataGrid.components },
-    },
   },
   {
     value: 'uz-Latn',
@@ -82,9 +62,6 @@ export const allLangs: LangOption[] = [
     countryCode: 'RU',
     adapterLocale: 'ru',
     numberFormat: { code: 'ru-RU', currency: 'RUB' },
-    systemValue: {
-      components: { ...ruRUCore.components, ...ruRUDate.components, ...ruRUDataGrid.components },
-    },
   },
 ];
 
@@ -111,7 +88,7 @@ function reportMissingKey(lngs: readonly string[] | string, ns: string, key: str
     url: typeof window !== 'undefined' ? window.location.href : '',
   };
 
-  // eslint-disable-next-line no-console
+   
   console.warn('[i18n missing]', payload);
 
   try {

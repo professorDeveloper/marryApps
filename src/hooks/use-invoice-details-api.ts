@@ -496,3 +496,67 @@ export function useInvoiceDetailsAPI(): UseInvoiceDetailsAPIReturn {
         getInvoicesPage,
     };
 }
+
+// ============================================================================
+// STANDALONE HELPERS — usable outside the hook (e.g. as SWR fetchers)
+// ============================================================================
+
+const DETAILS_PAGE_SIZE = 500;
+// Hard stop so a wrong `total` from the backend can never loop forever
+const DETAILS_MAX_PAGES = 8;
+
+function extractDetailsPage(payload: unknown): { items: any[]; total?: number } {
+    if (Array.isArray(payload)) return { items: payload };
+    if (!payload || typeof payload !== 'object') return { items: [] };
+
+    const obj = payload as Record<string, unknown>;
+
+    if (Array.isArray(obj.data)) {
+        return { items: obj.data, total: typeof obj.total === 'number' ? obj.total : undefined };
+    }
+
+    if (obj.data && typeof obj.data === 'object') {
+        const nested = obj.data as Record<string, unknown>;
+        if (Array.isArray(nested.data)) {
+            return {
+                items: nested.data,
+                total:
+                    typeof nested.total === 'number'
+                        ? nested.total
+                        : typeof obj.total === 'number'
+                            ? obj.total
+                            : undefined,
+            };
+        }
+    }
+
+    return { items: [] };
+}
+
+/**
+ * Fetches every detail row of a single invoice in pages, replacing the old
+ * one-shot `limit=2000` request: small invoices transfer only what they have,
+ * and large payloads are parsed in bounded slices instead of one main-thread spike.
+ */
+export async function fetchInvoiceDetailsByInvoiceId(invoiceId: string): Promise<any[]> {
+    const all: any[] = [];
+
+    for (let page = 0; page < DETAILS_MAX_PAGES; page += 1) {
+        const response = await fetcher<unknown>([
+            `/api/v1/invoice-details/invoice/${invoiceId}`,
+            { params: { limit: DETAILS_PAGE_SIZE, offset: all.length } },
+        ]);
+
+        const { items, total } = extractDetailsPage(response);
+        all.push(...items);
+
+        if (items.length < DETAILS_PAGE_SIZE) break;
+        if (typeof total === 'number' && all.length >= total) break;
+    }
+
+    return all;
+}
+
+/** SWR key for one invoice's details; null disables fetching. */
+export const invoiceDetailsByInvoiceKey = (invoiceId: string | null | undefined) =>
+    invoiceId ? (['invoice-details/by-invoice', invoiceId] as const) : null;

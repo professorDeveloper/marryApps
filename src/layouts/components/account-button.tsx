@@ -1,6 +1,7 @@
 import type { IconButtonProps } from '@mui/material/IconButton';
 
 import { m } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 
 import Box from '@mui/material/Box';
 import Avatar from '@mui/material/Avatar';
@@ -16,6 +17,8 @@ export type AccountButtonProps = IconButtonProps & {
 };
 
 export function AccountButton({ photoURL, displayName, sx, ...other }: AccountButtonProps) {
+  const { t } = useTranslation('layout');
+
   const renderDefaultAvatar = () => (
     <Box
       sx={{
@@ -60,7 +63,7 @@ export function AccountButton({ photoURL, displayName, sx, ...other }: AccountBu
       whileTap={varTap(0.96)}
       whileHover={varHover(1.04)}
       transition={transitionTap()}
-      aria-label="Akkaunt tugmasi"
+      aria-label={t('a11y.account')}
       sx={[{ p: 0 }, ...(Array.isArray(sx) ? sx : [sx])]}
       {...other}
     >

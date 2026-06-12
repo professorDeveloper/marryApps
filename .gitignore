@@ -17,6 +17,17 @@ gemini/
 test/
 api-docs/
 *lighthouse*
+
+# compiled artifacts of vite.config.ts (Vite would resolve the stale .js over the .ts)
+vite.config.js
+vite.config.d.ts
+
+# performance analysis artifacts (DevTools traces, HARs, React profiler exports)
+*.har
+Trace-*.json.gz
+profiling-data*.json
+lh-*.html
+lh-*.json
 # testing
 # coverage
 

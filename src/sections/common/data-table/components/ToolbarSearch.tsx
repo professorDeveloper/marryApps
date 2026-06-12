@@ -1,15 +1,16 @@
-import { useState, useCallback, useMemo, useRef, useEffect, useLayoutEffect } from 'react';
+import type { SearchOutput, ToolbarSearchProps } from '../types/types';
+
+import { useDebounce } from 'minimal-shared/hooks';
+import { useRef, useMemo, useState, useEffect, useCallback, useLayoutEffect } from 'react';
 
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
-import TextField from '@mui/material/TextField';
 import Tooltip from '@mui/material/Tooltip';
+import TextField from '@mui/material/TextField';
 import Autocomplete from '@mui/material/Autocomplete';
 import InputAdornment from '@mui/material/InputAdornment';
 
 import { Iconify } from 'src/components/iconify';
-
-import type { ToolbarSearchProps, SearchOutput } from '../types/types';
 
 interface Chip_Item {
   type: 'option' | 'custom';
@@ -24,6 +25,7 @@ export function ToolbarSearch({
   onSearch,
   value = '',
   placeholder,
+  debounceMs,
 }: ToolbarSearchProps) {
   const [simpleInputVal, setSimpleInputVal] = useState(value);
   const [chips, setChips] = useState<Chip_Item[]>([]);
@@ -36,6 +38,7 @@ export function ToolbarSearch({
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const lastParentValueRef = useRef<string>(value);
+  const lastEmittedQueryRef = useRef<string>(value);
 
   const focusInputSoon = useCallback((delay: number) => {
     if (focusTimeoutRef.current) clearTimeout(focusTimeoutRef.current);
@@ -78,11 +81,67 @@ export function ToolbarSearch({
     if (mode === 'simple') {
       // Only sync if the parent value has changed externally (not from user typing)
       if (value !== lastParentValueRef.current) {
-        setSimpleInputVal(value);
         lastParentValueRef.current = value;
+        // A value equal to our last emitted query is just the parent echoing our
+        // own (possibly debounced) emit — syncing it would clobber newer keystrokes.
+        if (value !== lastEmittedQueryRef.current) {
+          setSimpleInputVal(value);
+          lastEmittedQueryRef.current = value;
+        }
       }
     }
   }, [value, mode]);
+
+  // --- simple mode -------------------------------------------------------
+
+  const emitSimpleSearch = useCallback(
+    (query: string) => {
+      if (lastEmittedQueryRef.current === query) return;
+      lastEmittedQueryRef.current = query;
+      onSearch({ query });
+    },
+    [onSearch],
+  );
+
+  // Live debounced search, opt-in via debounceMs (simple mode only).
+  const debouncedSimpleVal = useDebounce(simpleInputVal, debounceMs ?? 0);
+
+  useEffect(() => {
+    if (mode !== 'simple' || debounceMs === undefined) return;
+    emitSimpleSearch(debouncedSimpleVal);
+  }, [debouncedSimpleVal, mode, debounceMs, emitSimpleSearch]);
+
+  const handleSimpleChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const newValue = event.target.value;
+      setSimpleInputVal(newValue);
+
+      // Auto-trigger search when clearing the input
+      if (newValue === '' && simpleInputVal !== '') {
+        if (debounceMs === undefined) {
+          onSearch({ query: '' });
+        } else {
+          emitSimpleSearch('');
+        }
+      }
+    },
+    [onSearch, simpleInputVal, debounceMs, emitSimpleSearch],
+  );
+
+  const handleSimpleKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLInputElement>) => {
+      if (event.key === 'Enter') {
+        if (debounceMs === undefined) {
+          // Legacy behavior: every Enter re-triggers the search unconditionally
+          onSearch({ query: simpleInputVal });
+        } else {
+          lastEmittedQueryRef.current = simpleInputVal;
+          onSearch({ query: simpleInputVal });
+        }
+      }
+    },
+    [simpleInputVal, onSearch, debounceMs],
+  );
 
   useLayoutEffect(() => {
     if (mode !== 'simple' && containerRef.current) {
@@ -98,73 +157,8 @@ export function ToolbarSearch({
 
       return () => resizeObserver.disconnect();
     }
+    return undefined;
   }, [mode]);
-
-  if (mode === 'simple') {
-
-    const handleSimpleChange = useCallback(
-      (event: React.ChangeEvent<HTMLInputElement>) => {
-        const newValue = event.target.value;
-        setSimpleInputVal(newValue);
-
-        // Auto-trigger search when clearing the input
-        if (newValue === '' && simpleInputVal !== '') {
-          onSearch({ query: '' });
-        }
-      },
-      [onSearch, simpleInputVal],
-    );
-
-    const handleSimpleKeyDown = useCallback(
-      (event: React.KeyboardEvent<HTMLInputElement>) => {
-        if (event.key === 'Enter') {
-          onSearch({ query: simpleInputVal });
-        }
-      },
-      [simpleInputVal, onSearch],
-    );
-
-    return (
-      <TextField
-        size="small"
-        placeholder={placeholder ?? 'Search cases...'}
-        value={simpleInputVal}
-        onChange={handleSimpleChange}
-        onKeyDown={handleSimpleKeyDown}
-        slotProps={{
-          input: {
-            startAdornment: (
-              <InputAdornment position="start">
-                <Iconify
-                  icon="eva:search-fill"
-                  width={18}
-                  sx={{ color: 'var(--text-3)' }}
-                />
-              </InputAdornment>
-            ),
-            endAdornment: null,
-          },
-        }}
-        sx={{
-          minWidth: 200,
-          maxWidth: 320,
-          '& .MuiInputBase-root': {
-            height: 36,
-            fontSize: 13.5,
-            backgroundColor: 'var(--bg2)',
-            borderRadius: '6px',
-            fontFamily: 'var(--font-sans)',
-          },
-          '& .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--border)' },
-          '& .MuiInputBase-root:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--border2)' },
-          '& .MuiInputBase-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
-            borderColor: 'var(--border2)',
-            boxShadow: 'none',
-          },
-        }}
-      />
-    );
-  }
 
   const filteredOptions = useMemo(
     () => options.filter((o) => o.label.toLowerCase().includes(inputVal.toLowerCase())),
@@ -257,6 +251,51 @@ export function ToolbarSearch({
     ],
   );
 
+  if (mode === 'simple') {
+    return (
+      <TextField
+        size="small"
+        placeholder={placeholder ?? 'Search cases...'}
+        value={simpleInputVal}
+        onChange={handleSimpleChange}
+        onKeyDown={handleSimpleKeyDown}
+        slotProps={{
+          // placeholder alone is not an accessible name for screen readers
+          htmlInput: { 'aria-label': placeholder ?? 'Search cases...' },
+          input: {
+            startAdornment: (
+              <InputAdornment position="start">
+                <Iconify
+                  icon="eva:search-fill"
+                  width={18}
+                  sx={{ color: 'var(--text-3)' }}
+                />
+              </InputAdornment>
+            ),
+            endAdornment: null,
+          },
+        }}
+        sx={{
+          minWidth: 200,
+          maxWidth: 320,
+          '& .MuiInputBase-root': {
+            height: 36,
+            fontSize: 13.5,
+            backgroundColor: 'var(--bg2)',
+            borderRadius: '6px',
+            fontFamily: 'var(--font-sans)',
+          },
+          '& .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--border)' },
+          '& .MuiInputBase-root:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--border2)' },
+          '& .MuiInputBase-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
+            borderColor: 'var(--border2)',
+            boxShadow: 'none',
+          },
+        }}
+      />
+    );
+  }
+
   return (
     <Tooltip title="No match found" open={showNoMatchTooltip} placement="top">
       <Box
@@ -311,9 +350,9 @@ export function ToolbarSearch({
         onHighlightChange={(_, option) => {
           setHighlightedOption(option || null);
         }}
-        onChange={(_, value) => {
-          if (value && typeof value !== 'string') {
-            handleOptionSelect(value);
+        onChange={(_, selected) => {
+          if (selected && typeof selected !== 'string') {
+            handleOptionSelect(selected);
           } else {
             setInputVal('');
             setHighlightedOption(null);
@@ -326,6 +365,7 @@ export function ToolbarSearch({
             inputRef={inputRef}
             size="small"
             placeholder={chips.length === 0 ? (placeholder ?? 'Search...') : ''}
+            inputProps={{ ...params.inputProps, 'aria-label': placeholder ?? 'Search...' }}
             variant="standard"
             sx={{
               '& .MuiInput-underline:before': { borderBottom: 'none' },

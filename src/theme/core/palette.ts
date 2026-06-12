@@ -99,7 +99,7 @@ export const grey = createPaletteChannel(themeConfig.palette.grey);
 export const text = {
   // Slate Dawn text ladder
   light: createPaletteChannel({ primary: '#20232B', secondary: '#5E5F68', disabled: '#8A8A93' }),
-  dark: createPaletteChannel({ primary: '#ECE9E2', secondary: '#A6A399', disabled: '#6E6B62' }),
+  dark: createPaletteChannel({ primary: '#ECE9E2', secondary: '#A6A399', disabled: '#9A968C' }),
 };
 
 export const background = {

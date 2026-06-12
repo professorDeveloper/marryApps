@@ -52,7 +52,7 @@
 
   --text:         #ECE9E2;
   --text-2:       #A6A399;
-  --text-3:       #6E6B62;
+  --text-3:       #9A968C; /* was #6E6B62 — 2.7:1 contrast on dark surfaces, failed WCAG AA */
   --text-4:       #45433C;
 
   --border:       #262A33;

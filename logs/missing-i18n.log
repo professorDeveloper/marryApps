@@ -1,0 +1,11 @@
+{"languages":["en"],"namespace":"menu","key":"error.title","fallback":"error.title","timestamp":"2026-06-11T22:02:00.845Z","url":"http://localhost:8081/reports/bills"}
+{"languages":["en"],"namespace":"menu","key":"error.goHome","fallback":"error.goHome","timestamp":"2026-06-11T22:02:00.851Z","url":"http://localhost:8081/reports/bills"}
+{"languages":["en"],"namespace":"menu","key":"error.description","fallback":"error.description","timestamp":"2026-06-11T22:02:00.848Z","url":"http://localhost:8081/reports/bills"}
+{"languages":["en"],"namespace":"menu","key":"departments.noData","fallback":"departments.noData","timestamp":"2026-06-12T09:24:16.785Z","url":"http://localhost:8081/menu/departments"}
+{"languages":["en"],"namespace":"menu","key":"departments.noDataSubtitle","fallback":"departments.noDataSubtitle","timestamp":"2026-06-12T09:24:16.787Z","url":"http://localhost:8081/menu/departments"}
+{"languages":["en"],"namespace":"menu","key":"departments.noData","fallback":"departments.noData","timestamp":"2026-06-12T09:24:24.961Z","url":"http://localhost:8081/menu/departments"}
+{"languages":["en"],"namespace":"menu","key":"departments.noDataSubtitle","fallback":"departments.noDataSubtitle","timestamp":"2026-06-12T09:24:24.963Z","url":"http://localhost:8081/menu/departments"}
+{"languages":["en"],"namespace":"menu","key":"departments.noData","fallback":"departments.noData","timestamp":"2026-06-12T09:24:39.909Z","url":"http://localhost:8081/menu/departments"}
+{"languages":["en"],"namespace":"menu","key":"departments.noDataSubtitle","fallback":"departments.noDataSubtitle","timestamp":"2026-06-12T09:24:39.911Z","url":"http://localhost:8081/menu/departments"}
+{"languages":["en"],"namespace":"menu","key":"departments.noData","fallback":"departments.noData","timestamp":"2026-06-12T09:24:43.566Z","url":"http://localhost:8081/menu/departments"}
+{"languages":["en"],"namespace":"menu","key":"departments.noDataSubtitle","fallback":"departments.noDataSubtitle","timestamp":"2026-06-12T09:24:43.568Z","url":"http://localhost:8081/menu/departments"}

@@ -12,7 +12,7 @@ import KeyboardDoubleArrowDownIcon from '@mui/icons-material/KeyboardDoubleArrow
 
 import { useTranslate } from 'src/locales/use-locales';
 
-import { ACCENT, BORDER, nextSort, SURFACE_BG } from '../utils';
+import { ACCENT, nextSort } from '../utils';
 
 export type DataTableHeaderProps<T> = {
   gridTemplateColumns: string;
@@ -174,6 +174,7 @@ export function DataTableHeader<T>({
                 <Tooltip title={t('dataTable.sort')}>
                   <IconButton
                     size="small"
+                    aria-label={t('dataTable.sort')}
                     onClick={() => {
                       const nextDir = sort.key !== colSortKey ? 'asc' : nextSort(sort.dir);
                       onSortChange({ key: nextDir ? colSortKey : null, dir: nextDir });
@@ -204,6 +205,7 @@ export function DataTableHeader<T>({
                 <Tooltip title={t('dataTable.filter')}>
                   <IconButton
                     size="small"
+                    aria-label={t('dataTable.filter')}
                     onClick={(e) => onOpenFilter(col.key, e.currentTarget)}
                     sx={{
                       width: 24,
@@ -239,10 +241,10 @@ export function DataTableHeader<T>({
         );
       })}
 
+      {/* Spacer aligning the header with the row-actions column; a Tooltip here
+          would clone aria-label onto a plain div (aria-prohibited-attr) */}
       <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-        <Tooltip title="Row actions">
-          <Box sx={{ width: 28, height: 28 }} />
-        </Tooltip>
+        <Box sx={{ width: 28, height: 28 }} />
       </Box>
     </Box>
   );

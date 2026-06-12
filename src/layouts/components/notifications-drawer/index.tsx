@@ -2,6 +2,7 @@ import type { IconButtonProps } from '@mui/material/IconButton';
 import type { NotificationItemProps } from './notification-item';
 
 import { m } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import { useState, useCallback } from 'react';
 import { useBoolean } from 'minimal-shared/hooks';
 
@@ -37,6 +38,7 @@ export type NotificationsDrawerProps = IconButtonProps & {
 };
 
 export function NotificationsDrawer({ data = [], sx, ...other }: NotificationsDrawerProps) {
+  const { t } = useTranslation('layout');
   const { value: open, onFalse: onClose, onTrue: onOpen } = useBoolean();
 
   const [currentTab, setCurrentTab] = useState('all');
@@ -130,7 +132,9 @@ export function NotificationsDrawer({ data = [], sx, ...other }: NotificationsDr
         whileTap={varTap(0.96)}
         whileHover={varHover(1.04)}
         transition={transitionTap()}
-        aria-label="Bildirishnomalar tugmasi"
+        // include the visible badge count so the accessible name contains the
+        // on-screen text (label-content-name-mismatch)
+        aria-label={`${t('a11y.notifications')}: ${totalUnRead}`}
         onClick={onOpen}
         sx={sx}
         {...other}

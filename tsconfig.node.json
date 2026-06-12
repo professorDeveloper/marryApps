@@ -3,7 +3,11 @@
     "composite": true,
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "allowSyntheticDefaultImports": true
+    "allowSyntheticDefaultImports": true,
+    // composite forbids noEmit (TS6310); emit to a throwaway dir so `tsc -b`
+    // never drops vite.config.js next to vite.config.ts (Vite resolves .js first)
+    "outDir": "./node_modules/.tmp/tsconfig.node",
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo"
   },
   "include": ["vite.config.ts"]
 }

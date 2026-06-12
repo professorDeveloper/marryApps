@@ -1,7 +1,7 @@
 import type { InvoiceListFilters } from 'src/hooks/use-invoice-details-api';
-
 import type { SearchOutput } from 'src/sections/common/data-table/types/types';
 
+import useSWR from 'swr';
 import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
 import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
@@ -9,28 +9,33 @@ import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
 import { DataGrid } from '@mui/x-data-grid';
 import {
   Box,
+  Chip,
   Dialog,
   Button,
-  Chip,
-  IconButton,
   MenuItem,
   TextField,
+  IconButton,
   DialogTitle,
   DialogContent,
   DialogActions,
 } from '@mui/material';
 
 import { paths } from 'src/routes/paths';
+import { RouterLink } from 'src/routes/components';
 
-import { getStatusColor, formatStatusLabel } from 'src/utils/status-colors';
+import { useMetadata } from 'src/hooks/use-metadata';
 import { useInvoiceAPI } from 'src/hooks/use-invoice-api';
 import { useStorageAPI } from 'src/hooks/use-storage-api';
 import { useSupplierAPI } from 'src/hooks/use-supplier-api';
-import { useInvoiceDetailsAPI } from 'src/hooks/use-invoice-details-api';
-import { useMetadata } from 'src/hooks/use-metadata';
-import { MetadataEntity } from 'src/types/metadata';
+import {
+  useInvoiceDetailsAPI,
+  invoiceDetailsByInvoiceKey,
+  fetchInvoiceDetailsByInvoiceId,
+} from 'src/hooks/use-invoice-details-api';
 
-import { fetcher } from 'src/lib/axios';
+import { getStatusColor, formatStatusLabel } from 'src/utils/status-colors';
+
+import { mutate } from 'src/lib/swr';
 import { DashboardContent } from 'src/layouts/dashboard';
 
 import { Iconify } from 'src/components/iconify';
@@ -38,7 +43,8 @@ import { GenericViewModal } from 'src/components/generic-view-view';
 
 import { DataTable } from 'src/sections/common/data-table';
 import { CELL_SX } from 'src/sections/common/data-table/utils/constants';
-import { RouterLink } from 'src/routes/components';
+
+import { MetadataEntity } from 'src/types/metadata';
 
 
 interface InvoiceDetailWithFullInfo {
@@ -136,11 +142,14 @@ export function InvoiceDetailsStandaloneListView() {
   const { getSuppliers } = useSupplierAPI();
   const { getStorages } = useStorageAPI();
   const { data: metadata } = useMetadata([MetadataEntity.INGREDIENTS]);
-  const ingredients = metadata[MetadataEntity.INGREDIENTS] ?? [];
+  // stable reference — a bare `?? []` would invalidate downstream memos every render
+  const ingredients = useMemo(
+    () => metadata[MetadataEntity.INGREDIENTS] ?? [],
+    [metadata]
+  );
   const [rawInvoices, setRawInvoices] = useState<any[]>([]);
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [storages, setStorages] = useState<any[]>([]);
-  const [selectedInvoiceDetails, setSelectedInvoiceDetails] = useState<InvoiceDetailWithFullInfo[]>([]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedDeleteId, setSelectedDeleteId] = useState<string | null>(null);
   const [selectedDeleteType, setSelectedDeleteType] = useState<'invoice' | 'detail' | null>(null);
@@ -295,11 +304,10 @@ export function InvoiceDetailsStandaloneListView() {
                 setFilters((prev) => ({ ...prev }));
                 if (selectedInvoice?.id === selectedDeleteId) {
                     setSelectedInvoice(null);
-                    setSelectedInvoiceDetails([]);
                 }
             } else if (selectedDeleteType === 'detail') {
                 await deleteInvoiceDetails([selectedDeleteId]);
-                setSelectedInvoiceDetails((prev) => prev.filter((row) => row.id !== selectedDeleteId));
+                mutate(invoiceDetailsByInvoiceKey(selectedInvoice?.id));
             }
             setDeleteDialogOpen(false);
             setSelectedDeleteId(null);
@@ -313,40 +321,37 @@ export function InvoiceDetailsStandaloneListView() {
         setSelectedDeleteType(null);
     };
 
-    const handleViewClick = useCallback(async (invoice: InvoiceWithDetails) => {
+    const handleViewClick = useCallback((invoice: InvoiceWithDetails) => {
         setSelectedInvoice(invoice);
-        setSelectedInvoiceDetails([]);
-        try {
-            const response = await fetcher<any>([`/api/v1/invoice-details/invoice/${invoice.id}`, { params: { limit: 2000, offset: 0 } }]);
-            const details = Array.isArray(response?.data)
-                ? response.data
-                : Array.isArray(response?.data?.data)
-                    ? response.data.data
-                    : Array.isArray(response)
-                        ? response
-                        : [];
-
-            const enrichedDetails = details.map((detail: any) => {
-                const ingredient = ingredients.find((ing: any) => ing.id === detail.ingredient_id);
-                return {
-                    ...detail,
-                    quantity: Number(detail.quantity),
-                    invoice_supplier_name: invoice?.supplier_name || 'Unknown',
-                    invoice_date: invoice?.date || '',
-                    ingredient_name: ingredient?.name || detail.ingredient_id,
-                };
-            });
-
-            setSelectedInvoiceDetails(enrichedDetails);
-        } catch {
-            setSelectedInvoiceDetails([]);
-        }
-    }, [ingredients]);
+    }, []);
 
     const handleModalClose = () => {
         setSelectedInvoice(null);
-        setSelectedInvoiceDetails([]);
     };
+
+    // Details for the opened invoice — SWR dedupes repeat opens and caches per invoice;
+    // the fetcher pulls pages of 500 instead of one limit=2000 request.
+    const { data: rawSelectedDetails } = useSWR(
+        invoiceDetailsByInvoiceKey(selectedInvoice?.id),
+        ([, invoiceId]: readonly [string, string]) => fetchInvoiceDetailsByInvoiceId(invoiceId),
+        { revalidateOnFocus: false, revalidateOnReconnect: false }
+    );
+
+    const ingredientNameById = useMemo(
+        () => new Map(ingredients.map((ing: any) => [ing.id, ing.name])),
+        [ingredients]
+    );
+
+    const selectedInvoiceDetails = useMemo<InvoiceDetailWithFullInfo[]>(() => {
+        if (!selectedInvoice || !rawSelectedDetails) return [];
+        return rawSelectedDetails.map((detail: any) => ({
+            ...detail,
+            quantity: Number(detail.quantity),
+            invoice_supplier_name: selectedInvoice?.supplier_name || 'Unknown',
+            invoice_date: selectedInvoice?.date || '',
+            ingredient_name: ingredientNameById.get(detail.ingredient_id) || detail.ingredient_id,
+        }));
+    }, [rawSelectedDetails, selectedInvoice, ingredientNameById]);
 
     const columns = useMemo(
         () => [

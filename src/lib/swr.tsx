@@ -1,7 +1,7 @@
-import type { Cache, ScopedMutator, SWRConfiguration } from 'swr';
 import type { State, BareFetcher } from 'swr/_internal';
+import type { Cache, ScopedMutator, SWRConfiguration } from 'swr';
 
-import { SWRConfig, useSWRConfig, mutate as defaultMutate } from 'swr';
+import { SWRConfig, useSWRConfig, preload as swrPreload, mutate as defaultMutate } from 'swr';
 
 // ----------------------------------------------------------------------
 // Bounded SWR cache.
@@ -62,23 +62,14 @@ let scopedMutate: ScopedMutator | null = null;
 export const mutate: ScopedMutator = (...args: [any, any?, any?]) =>
   (scopedMutate ?? defaultMutate)(...args);
 
-const preloadInFlight = new Map<string, Promise<unknown>>();
-
 export function preload<Data = unknown>(key: string, fetcher: BareFetcher<Data>): Promise<Data> {
-  const inFlight = preloadInFlight.get(key);
-  if (inFlight) return inFlight as Promise<Data>;
-
-  const request = Promise.resolve(fetcher(key))
-    .then((data) => {
-      void mutate(key, data, { revalidate: false });
-      return data;
-    })
-    .finally(() => {
-      preloadInFlight.delete(key);
-    });
-
-  preloadInFlight.set(key, request);
-  return request;
+  // Delegate to SWR's native preload: it registers the in-flight promise in
+  // SWR's internal registry, so a hook mounting mid-flight consumes that same
+  // request instead of firing a duplicate (the registry is independent of the
+  // cache provider, so this is safe with our LRU provider). The previous
+  // hand-rolled version only mutated the cache on completion, which meant a
+  // hook mounting before completion double-fetched.
+  return swrPreload(key, fetcher) as Promise<Data>;
 }
 
 function SWRMutateBridge() {

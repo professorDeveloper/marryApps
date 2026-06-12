@@ -2,36 +2,37 @@
  * Department list/view component with table and delete confirmation
  */
 
-import type { DataTableColumn, DataTableDefaultConfig } from 'src/sections/common/data-table/types/types';
 import type { IDepartmentItem } from 'src/types/departments.tsx';
+import type { DataTableColumn, DataTableDefaultConfig } from 'src/sections/common/data-table/types/types';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 
-import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, IconButton } from '@mui/material';
+import { Box, Button, Dialog, IconButton, DialogTitle, DialogActions, DialogContent } from '@mui/material';
 
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
+import { RouterLink } from 'src/routes/components';
 
-import { useDeleteDepartment, useGetDepartments, useGetStorages } from 'src/actions/departments';
+import { usePaginationRows } from 'src/hooks/use-pagination-rows';
+
+import { DashboardContent } from 'src/layouts/dashboard';
+import { useGetStorages, useGetDepartments, useDeleteDepartment } from 'src/actions/departments';
 
 import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
 import { GenericViewModal } from 'src/components/generic-view-view';
 
-import { DashboardContent } from 'src/layouts/dashboard';
 import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
-import { usePaginationRows } from 'src/hooks/use-pagination-rows';
-import { StorageFilter } from 'src/sections/common/data-table/components/StorageFilter';
 import { DEPARTMENTS_TABLE_PERSIST_KEY } from 'src/sections/menu/compounds/utilities';
+import { StorageFilter } from 'src/sections/common/data-table/components/StorageFilter';
 
-import { TABLE_COLUMN_ORDER, TABLE_COLUMN_VISIBILITY, TABLE_COLUMN_WIDTHS } from './constants';
 import { CategoriesTable } from './components/CategoriesTable';
-import { RouterLink } from 'src/routes/components';
+import { TABLE_COLUMN_ORDER, TABLE_COLUMN_WIDTHS, TABLE_COLUMN_VISIBILITY } from './constants';
 import {
   RenderCellColor,
-  RenderCellDepartmentName,
   RenderCellStorageId,
+  RenderCellDepartmentName,
 } from './components/DepartmentTableCells';
 
 export function DepartmentListView() {
@@ -44,7 +45,6 @@ export function DepartmentListView() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [departmentToDelete, setDepartmentToDelete] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [storageId, setStorageId] = useState('');
   const [sortState, setSortState] = useState<{ key: string | null; dir: 'asc' | 'desc' | null }>({ key: null, dir: null });
   const { rowsPerPage } = usePaginationRows();
@@ -54,18 +54,10 @@ export function DepartmentListView() {
   });
   const { storages } = useGetStorages();
 
-  // Debounce quick filter input before hitting search API
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      setDebouncedSearchQuery(searchQuery);
-    }, 400);
-
-    return () => clearTimeout(timeout);
-  }, [searchQuery]);
-
   // Get departments from API (supports server-side search, storage filter, and sort)
+  // searchQuery is already debounced — the toolbar emits it 400ms after typing stops
   const { departments, departmentsTotal } = useGetDepartments(
-    debouncedSearchQuery,
+    searchQuery,
     {
       limit: paginationModel.pageSize,
       offset: paginationModel.page * paginationModel.pageSize,
@@ -77,7 +69,7 @@ export function DepartmentListView() {
 
   useEffect(() => {
     setPaginationModel((prev) => ({ ...prev, page: 0 }));
-  }, [debouncedSearchQuery]);
+  }, [searchQuery]);
 
   useEffect(() => {
     setPaginationModel((prev) => ({ ...prev, pageSize: rowsPerPage }));
@@ -236,7 +228,7 @@ export function DepartmentListView() {
             setSortState({ key: null, dir: null });
             setPaginationModel({ page: 0, pageSize: 20 });
           }}
-          search={{ value: searchQuery, onChange: setSearchQuery }}
+          search={{ value: searchQuery, onChange: setSearchQuery, debounceMs: 400 }}
           onSortChange={(sort) => {
             setSortState({ key: sort.key, dir: sort.dir });
             setPaginationModel((prev) => ({ ...prev, page: 0 }));

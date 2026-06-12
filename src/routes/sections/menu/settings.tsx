@@ -2,8 +2,11 @@ import type { RouteObject } from 'react-router';
 
 import { lazy } from 'react';
 
-import { EmployeeFormView } from 'src/sections/user/employee';
-
+const EmployeeFormView = lazy(() =>
+  import('src/sections/user/employee').then((m) => ({
+    default: m.EmployeeFormView,
+  }))
+);
 
 const FloorPlanPage = lazy(() => import('src/pages/dashboard/floor-plan'));
 const HallsPage = lazy(() => import('src/pages/dashboard/halls'));

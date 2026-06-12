@@ -123,5 +123,11 @@ export interface ToolbarSearchProps {
   onSearch: (data: SearchOutput) => void;
   value?: string;
   placeholder?: string;
+  /**
+   * Simple mode only: when set, onSearch fires automatically this many ms after
+   * the user stops typing (Enter still fires immediately, clearing stays instant).
+   * When omitted, search fires on Enter only (legacy behavior).
+   */
+  debounceMs?: number;
 }
 

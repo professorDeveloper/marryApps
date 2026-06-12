@@ -2,6 +2,7 @@ import type { BadgeProps } from '@mui/material/Badge';
 import type { IconButtonProps } from '@mui/material/IconButton';
 
 import { m } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import { usePopover } from 'minimal-shared/hooks';
 
 import Badge from '@mui/material/Badge';
@@ -36,6 +37,7 @@ export type ContactsPopoverProps = IconButtonProps & {
 };
 
 export function ContactsPopover({ data = [], sx, ...other }: ContactsPopoverProps) {
+  const { t } = useTranslation('layout');
   const { open, anchorEl, onClose, onOpen } = usePopover();
 
   const renderMenuList = () => (
@@ -75,7 +77,7 @@ export function ContactsPopover({ data = [], sx, ...other }: ContactsPopoverProp
         whileTap={varTap(0.96)}
         whileHover={varHover(1.04)}
         transition={transitionTap()}
-        aria-label="Kontaktlar tugmasi"
+        aria-label={t('a11y.contacts')}
         onClick={onOpen}
         sx={[
           (theme) => ({ ...(open && { bgcolor: theme.vars.palette.action.selected }) }),

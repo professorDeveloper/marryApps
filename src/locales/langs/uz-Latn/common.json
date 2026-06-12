@@ -13,6 +13,16 @@
   },
   "dataTable": {
     "sort": "Saralash",
-    "filter": "Filter"
+    "filter": "Filter",
+    "columnSettings": "Ustun sozlamalari",
+    "resetToDefault": "Standartga qaytarish",
+    "search": "Qidirish",
+    "rowActions": "Qator amallari",
+    "menu": "Menyu",
+    "previousPage": "Oldingi sahifa",
+    "nextPage": "Keyingi sahifa",
+    "rowsPerPage": "Sahifadagi qatorlar",
+    "startDate": "Boshlanish sanasi",
+    "endDate": "Tugash sanasi"
   }
 }

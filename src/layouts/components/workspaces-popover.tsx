@@ -7,20 +7,21 @@ import { useState, useEffect, useCallback } from 'react';
 
 import Box from '@mui/material/Box';
 import Avatar from '@mui/material/Avatar';
+import Button from '@mui/material/Button';
 import MenuList from '@mui/material/MenuList';
 import MenuItem from '@mui/material/MenuItem';
 import Typography from '@mui/material/Typography';
 import ButtonBase from '@mui/material/ButtonBase';
-import Button from '@mui/material/Button';
 
 import { useTranslate } from 'src/locales/use-locales';
+import { useCreateBranch } from 'src/actions/branches';
 
 import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
 import { CustomPopover } from 'src/components/custom-popover';
 import { useBranchContext } from 'src/components/contexts/branch-context';
+
 import { BranchFormDialog } from './BranchFormDialog';
-import { useCreateBranch } from 'src/actions/branches';
 
 // ----------------------------------------------------------------------
 
@@ -45,6 +46,7 @@ export function WorkspacesPopover({ data = [], sx, ...other }: WorkspacesPopover
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { t } = useTranslate('menu');
+  const { t: tLayout } = useTranslate('layout');
   const { createBranch } = useCreateBranch();
 
   // Data change'da workspace'ni sync qilish
@@ -128,6 +130,14 @@ export function WorkspacesPopover({ data = [], sx, ...other }: WorkspacesPopover
     <ButtonBase
       disableRipple
       onClick={onOpen}
+      // The visible workspace name is hidden on xs and absent while branches
+      // load; without this the button has no accessible name. Including the
+      // name keeps the accessible name a superset of the visible text.
+      aria-label={
+        workspace?.name
+          ? `${tLayout('a11y.selectBranch')}: ${workspace.name}`
+          : tLayout('a11y.selectBranch')
+      }
       sx={[
         {
           py: 0.5,

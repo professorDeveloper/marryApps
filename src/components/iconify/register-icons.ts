@@ -2,40 +2,60 @@ import type { IconifyJSON } from '@iconify/react';
 
 import { addCollection } from '@iconify/react';
 
-import allIcons from './icon-sets';
+// ----------------------------------------------------------------------
+
+// Type-only query — erased at compile time, so the ~240KB icon map stays out
+// of the startup bundle and loads via registerIconsAsync() instead.
+export type IconifyName = keyof typeof import('./icon-sets').default;
 
 // ----------------------------------------------------------------------
 
-export const iconSets = Object.entries(allIcons).reduce((acc, [key, value]) => {
-  const [prefix, iconName] = key.split(':');
-  const existingPrefix = acc.find((item) => item.prefix === prefix);
+let status: 'idle' | 'loading' | 'ready' = 'idle';
+let registeredNames: Set<string> | null = null;
+const listeners = new Set<() => void>();
 
-  if (existingPrefix) {
-    existingPrefix.icons[iconName] = value;
-  } else {
-    acc.push({
-      prefix,
-      icons: {
-        [iconName]: value,
-      },
-    });
-  }
+export function isIconsRegistered(): boolean {
+  return status === 'ready';
+}
 
-  return acc;
-}, [] as IconifyJSON[]);
+export function subscribeIconsRegistered(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
 
-export const allIconNames = Object.keys(allIcons) as IconifyName[];
+/**
+ * True once registration completed and the name is in the offline registry.
+ * Returns true while the registry is still loading to avoid false warnings.
+ */
+export function isKnownIcon(name: string): boolean {
+  return registeredNames ? registeredNames.has(name) : true;
+}
 
-export type IconifyName = keyof typeof allIcons;
+export async function registerIconsAsync(): Promise<void> {
+  if (status !== 'idle') return;
+  status = 'loading';
 
-// ----------------------------------------------------------------------
+  const { default: allIcons } = await import('./icon-sets');
 
-let areIconsRegistered = false;
+  const iconSets = Object.entries(allIcons).reduce((acc, [key, value]) => {
+    const [prefix, iconName] = key.split(':');
+    const existingPrefix = acc.find((item) => item.prefix === prefix);
 
-export function registerIcons() {
-  if (areIconsRegistered) {
-    return;
-  }
+    if (existingPrefix) {
+      existingPrefix.icons[iconName] = value;
+    } else {
+      acc.push({
+        prefix,
+        icons: {
+          [iconName]: value,
+        },
+      });
+    }
+
+    return acc;
+  }, [] as IconifyJSON[]);
 
   iconSets.forEach((iconSet) => {
     const iconSetConfig = {
@@ -47,5 +67,7 @@ export function registerIcons() {
     addCollection(iconSetConfig);
   });
 
-  areIconsRegistered = true;
+  registeredNames = new Set(Object.keys(allIcons));
+  status = 'ready';
+  listeners.forEach((listener) => listener());
 }

@@ -5,7 +5,6 @@ import type { Theme, CSSObject, Components } from '@mui/material/styles';
 import i18next from 'i18next';
 import { varAlpha } from 'minimal-shared/utils';
 
-import { gridClasses } from '@mui/x-data-grid';
 import { listClasses } from '@mui/material/List';
 import { paperClasses } from '@mui/material/Paper';
 import { iconButtonClasses } from '@mui/material/IconButton';
@@ -15,6 +14,20 @@ import { linearProgressClasses } from '@mui/material/LinearProgress';
 import { circularProgressClasses } from '@mui/material/CircularProgress';
 
 // ----------------------------------------------------------------------
+
+// Literal copies of the gridClasses entries used below. A value import of
+// `gridClasses` from '@mui/x-data-grid' would pull the entire vendor-datagrid
+// chunk into the startup graph of every page, since this theme file is global.
+const gridClasses = {
+  actionsCell: 'MuiDataGrid-actionsCell',
+  selectedRowCount: 'MuiDataGrid-selectedRowCount',
+  'columnHeader--sorted': 'MuiDataGrid-columnHeader--sorted',
+  sortIcon: 'MuiDataGrid-sortIcon',
+  'cell--editing': 'MuiDataGrid-cell--editing',
+  'cell--withLeftBorder': 'MuiDataGrid-cell--withLeftBorder',
+  'cell--withRightBorder': 'MuiDataGrid-cell--withRightBorder',
+  paper: 'MuiDataGrid-paper',
+} as const;
 
 export type IconProps = Omit<SvgIconProps & GridBaseIconProps, 'color'>;
 

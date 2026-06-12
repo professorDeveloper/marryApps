@@ -3,7 +3,7 @@ import { useParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 
-import { Box, Dialog, Typography, DialogContent, CircularProgress } from '@mui/material';
+import { Box, Dialog, DialogContent, CircularProgress } from '@mui/material';
 
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks/use-router';
@@ -11,14 +11,14 @@ import { useRouter } from 'src/routes/hooks/use-router';
 import { useInvoiceAPI } from 'src/hooks/use-invoice-api';
 import { useStorageAPI } from 'src/hooks/use-storage-api';
 import { useSupplierAPI } from 'src/hooks/use-supplier-api';
+import { fetchInvoiceDetailsByInvoiceId } from 'src/hooks/use-invoice-details-api';
+
 import { useAppDispatch } from 'src/store';
 import {
     PICKER_FORM_NAMES,
     invoiceFormPickerActions,
     mapBatchItemsToPickerItems,
 } from 'src/store/slices/pickerFormSlices';
-
-import { fetcher } from 'src/lib/axios';
 
 import { IngredientEditView } from 'src/sections/warehouse/ingredients-edit-view';
 
@@ -129,10 +129,8 @@ const InvoiceFormView = React.memo(function InvoiceFormView() {
                 const d = invoice.date;
                 setInvoiceDate(typeof d === 'string' && d ? d : new Date().toISOString());
 
-                const response = await fetcher<any>([`/api/v1/invoice-details/invoice/${invoiceId}`, { params: { limit: 2000, offset: 0 } }]);
+                const details = invoiceId ? await fetchInvoiceDetailsByInvoiceId(invoiceId) : [];
                 if (cancelled) return;
-                const raw = Array.isArray(response) ? response : response?.data;
-                const details = Array.isArray(raw) ? raw : raw ? [raw] : [];
                 lineItemsApiRef.current?.restoreFromPersisted(details.filter(Boolean));
                 dispatch(
                     invoiceFormPickerActions.setFormState({

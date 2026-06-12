@@ -2,30 +2,29 @@ import type { Breakpoint } from '@mui/material/styles';
 import type { NavSectionProps } from 'src/components/nav-section';
 
 import { memo } from 'react';
-import { mergeClasses } from 'minimal-shared/utils';
+import { useTranslation } from 'react-i18next';
 import { useBoolean } from 'minimal-shared/hooks';
+import { mergeClasses } from 'minimal-shared/utils';
 
 import Box from '@mui/material/Box';
 import Avatar from '@mui/material/Avatar';
+import Drawer from '@mui/material/Drawer';
+import { styled } from '@mui/material/styles';
 import ButtonBase from '@mui/material/ButtonBase';
 import Typography from '@mui/material/Typography';
-import { styled } from '@mui/material/styles';
 import IconButton from '@mui/material/IconButton';
 import FirstPageIcon from '@mui/icons-material/FirstPage';
 
-import Drawer from '@mui/material/Drawer';
-
-import { Iconify } from 'src/components/iconify';
-
-import { useAuthContext } from 'src/auth/hooks';
-import { SignOutButton } from '../components/sign-out-button';
-
 import { Logo } from 'src/components/logo';
+import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
 import { NavSectionMini, NavSectionVertical } from 'src/components/nav-section';
 
+import { useAuthContext } from 'src/auth/hooks';
+
 import { layoutClasses } from '../core';
 import { AnimatedToggleButton } from './togllebtn';
+import { SignOutButton } from '../components/sign-out-button';
 // ----------------------------------------------------------------------
 
 export type NavVerticalProps = React.ComponentProps<'div'> &
@@ -84,6 +83,7 @@ export const NavVertical = memo(function NavVertical({
   layoutQuery = 'md',
   ...other
 }: NavVerticalProps) {
+  const { t } = useTranslation('layout');
   const { user } = useAuthContext();
   const { value: drawerOpen, onTrue: openDrawer, onFalse: closeDrawer } = useBoolean();
 
@@ -107,7 +107,7 @@ export const NavVertical = memo(function NavVertical({
       {/* Close button for full mode */}
       {!isNavMini && (
         <IconButton
-          aria-label="Navigatsiyani yoping"
+          aria-label={t('a11y.closeNavigation')}
           onClick={onToggleNav}
           sx={{
             position: 'absolute',
@@ -233,7 +233,7 @@ export const NavVertical = memo(function NavVertical({
             borderTop: '1px solid var(--border)',
           }}
         >
-          <IconButton aria-label="Profilni oching" onClick={openDrawer} sx={{ p: 0.5 }}>
+          <IconButton aria-label={t('a11y.openProfile')} onClick={openDrawer} sx={{ p: 0.5 }}>
             <UserAvatar src={avatarSrc} name={profileName} />
           </IconButton>
         </Box>
@@ -257,7 +257,7 @@ export const NavVertical = memo(function NavVertical({
         }}
       >
         <IconButton
-          aria-label="Menyuni yoping"
+          aria-label={t('a11y.closeMenu')}
           onClick={closeDrawer}
           sx={{ position: 'absolute', top: 12, left: 12, zIndex: 9 }}
         >

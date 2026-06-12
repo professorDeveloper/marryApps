@@ -1,6 +1,9 @@
-import useSWR, { SWRConfiguration } from 'swr';
+import type { SWRConfiguration } from 'swr';
+import type { MetadataEntity, MetadataInclude, MetadataResponse } from 'src/types/metadata';
+
+import useSWR from 'swr';
+
 import { fetcher } from 'src/lib/axios';
-import { MetadataEntity, MetadataInclude, MetadataResponse } from 'src/types/metadata';
 
 const SWR_OPTIONS: SWRConfiguration = {
   revalidateIfStale: true,
@@ -16,14 +19,22 @@ const serializeInclude = (item: MetadataInclude): { entity: MetadataEntity; toke
   return { entity: item.entity, token: `${item.entity}${fields}` };
 };
 
-export function useMetadata(entities: MetadataInclude[]) {
+/**
+ * Builds the SWR key/url for a metadata request. Exported so preload code can
+ * produce the exact same key as the hook (a mismatched key makes a preload useless).
+ */
+export const buildMetadataUrl = (entities: MetadataInclude[]): string | null => {
+  if (entities.length === 0) return null;
   // Sort by entity name for stable cache key regardless of call-site ordering.
   const tokens = entities
     .map(serializeInclude)
     .sort((a, b) => a.entity.localeCompare(b.entity))
     .map((e) => e.token);
-  const includeString = tokens.join(',');
-  const url = entities.length > 0 ? `/api/v1/metadata?include=${includeString}` : null;
+  return `/api/v1/metadata?include=${tokens.join(',')}`;
+};
+
+export function useMetadata(entities: MetadataInclude[]) {
+  const url = buildMetadataUrl(entities);
 
   const { data, isLoading, error, mutate } = useSWR<MetadataResponse>(url, fetcher, SWR_OPTIONS);
 
