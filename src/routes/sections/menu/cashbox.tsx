@@ -20,6 +20,16 @@ const TransactionsEditView = lazy(() =>
     default: m.TransactionsEditView,
   }))
 );
+const OrdersManagementView = lazy(() =>
+  import('src/sections/warehouse/orders').then((m) => ({
+    default: m.OrdersManagementView,
+  }))
+);
+const OrdersCreateView = lazy(() =>
+  import('src/sections/warehouse/orders').then((m) => ({
+    default: m.OrdersCreateView,
+  }))
+);
 
 export const cashboxRoutes: RouteObject[] = [
   { path: 'settings/cashiers', element: <CashiersPage /> },
@@ -32,4 +42,6 @@ export const cashboxRoutes: RouteObject[] = [
   { path: 'cashbooks/transactions/new', element: <TransactionsEditView isNew /> },
   { path: 'cashbooks/transactions/:id/edit', element: <TransactionsEditView /> },
   { path: 'cashbooks/reports', element: <CashboxReportPage /> },
+  { path: 'cashbooks/orders', element: <OrdersManagementView /> },
+  { path: 'cashbooks/orders/new', element: <OrdersCreateView /> },
 ];

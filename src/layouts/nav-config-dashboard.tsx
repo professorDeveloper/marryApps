@@ -98,11 +98,11 @@ export const getNavData = (t: TFunction): NavSectionProps['data'] => [
       // ── Cashbooks ─────────────────────────────────────────────────────
       {
         title: t('nav.pos'),
-        path: paths.cashbooks.transactions,
+      path: paths.cashbooks.transactions,
         icon: ICONS.pos,
         deepMatch: true,
         children: [
-          { title: t('nav.orderManagement'), path: paths.warehouse.orders.root },
+          { title: t('nav.orderManagement'), path: paths.cashbooks.orders.root },
           { title: t('nav.transactions'),        path: paths.cashbooks.transactions },
           { title: t('nav.transactionGroups'), path: paths.cashbooks.transactionGroups },
           { title: t('nav.cashboxReport'),     path: paths.cashbooks.reports },

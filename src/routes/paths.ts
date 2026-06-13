@@ -102,6 +102,10 @@ const cashbooks = {
   transactionsEdit: (id: string) => `${ROOTS.CASHBOOKS}/transactions/${id}/edit`,
   transactionGroups: `${ROOTS.CASHBOOKS}/transaction-groups`,
   reports: `${ROOTS.CASHBOOKS}/reports`,
+  orders: {
+    root: `${ROOTS.CASHBOOKS}/orders`,
+    new: `${ROOTS.CASHBOOKS}/orders/new`,
+  },
 };
 
 // EMPLOYEE
@@ -274,10 +278,6 @@ export const paths = {
     invoiceDetails: operations.invoices,
     deductions: operations.deductions,
     deductionGroups: operations.deductionGroups,
-    orders: {
-      root: `${ROOTS.WAREHOUSE}/orders`,
-      new: `${ROOTS.WAREHOUSE}/orders/new`,
-    },
   },
 
   // CASHBOX (legacy aliases, see CASHBOOKS)

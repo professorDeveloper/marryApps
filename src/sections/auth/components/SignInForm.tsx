@@ -75,7 +75,7 @@ export function SignInForm() {
       setErrorMessage(null);
       await signInWithPassword({ brand_id: data.brand_id, username: data.username, password: data.password });
       await checkUserSession?.();
-      router.push(paths.menu.sign);
+      router.push(paths.dashboard.root);
     } catch (error) {
       console.error(error);
       const { key, fallback } = getErrorMessageKey(error);

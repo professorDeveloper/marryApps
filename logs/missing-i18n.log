@@ -53,3 +53,4 @@
 {"languages":["en"],"namespace":"menu","key":"departments.noData","fallback":"departments.noData","timestamp":"2026-06-12T13:58:57.054Z","url":"http://localhost:8081/storage/departments"}
 {"languages":["en"],"namespace":"menu","key":"departments.noDataSubtitle","fallback":"departments.noDataSubtitle","timestamp":"2026-06-12T13:58:57.063Z","url":"http://localhost:8081/storage/departments"}
 {"languages":["en"],"namespace":"common","key":"all","fallback":"all","timestamp":"2026-06-12T13:58:58.597Z","url":"http://localhost:8081/storage/categories"}
+{"languages":["en"],"namespace":"menu","key":"cashbox.cashierDeleted","fallback":"cashbox.cashierDeleted","timestamp":"2026-06-13T15:39:16.458Z","url":"http://localhost:8081/cashbooks/transactions"}

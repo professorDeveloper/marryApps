@@ -1,9 +1,11 @@
 import type { RouteObject } from 'react-router';
 
-import { Outlet } from 'react-router';
+import { Outlet, Navigate } from 'react-router';
 import { lazy, Suspense } from 'react';
 
 import LinearProgress from '@mui/material/LinearProgress';
+
+import { paths } from 'src/routes/paths';
 
 import { CONFIG } from 'src/global-config';
 import { DashboardLayout } from 'src/layouts/dashboard';
@@ -90,6 +92,16 @@ export const dashboardRoutes: RouteObject[] = [
       ...cashboxRoutes,
       { path: 'profile', element: <ProfilePage /> },
       ...settingRoutes,
+
+      // Section root redirects: visiting a sidebar section's bare path
+      // (e.g. /warehouse) redirects to its first tab instead of 404-ing.
+      { path: 'storage', element: <Navigate to={paths.storage.storages.root} replace /> },
+      { path: 'menu', element: <Navigate to={paths.menu.meals.root} replace /> },
+      { path: 'operations', element: <Navigate to={paths.operations.invoices.root} replace /> },
+      { path: 'cashbooks', element: <Navigate to={paths.cashbooks.orders.root} replace /> },
+      { path: 'employee', element: <Navigate to={paths.employee.users} replace /> },
+      { path: 'settings', element: <Navigate to={paths.settings.notifications.root} replace /> },
+      { path: 'warehouse', element: <Navigate to={paths.warehouse.storage.root} replace /> },
     ],
   },
 ];

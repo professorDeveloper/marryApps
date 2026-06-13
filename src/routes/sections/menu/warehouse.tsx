@@ -154,18 +154,6 @@ const DeductionGroupEditView = lazy(() =>
   }))
 );
 
-// Orders
-const OrdersManagementView = lazy(() =>
-  import('src/sections/warehouse/orders-management-view').then((m) => ({
-    default: m.OrdersManagementView,
-  }))
-);
-const OrdersCreateView = lazy(() =>
-  import('src/sections/warehouse/orders-create-view').then((m) => ({
-    default: m.OrdersCreateView,
-  }))
-);
-
 export const warehouseRoutes: RouteObject[] = [
   // Storages
   { path: 'storage/storages', element: <WarehouseStorageListView /> },
@@ -208,6 +196,4 @@ export const warehouseRoutes: RouteObject[] = [
   { path: 'operations/deduction-groups', element: <DeductionGroupsListView /> },
   { path: 'operations/deduction-groups/new', element: <DeductionGroupEditView isNew /> },
   { path: 'operations/deduction-groups/:id/edit', element: <DeductionGroupEditView /> },
-  { path: 'warehouse/orders', element: <OrdersManagementView /> },
-  { path: 'warehouse/orders/new', element: <OrdersCreateView /> },
 ];
