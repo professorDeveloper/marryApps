@@ -86,9 +86,9 @@ export function DataTableToolbar<T>({
 
   return (
     <Stack direction="column" gap={hasFilterRow ? 1 : 0}>
-      {/* Row 1: all toolbar controls on a single line */}
-      <Stack direction="row" alignItems="center" gap={1}>
-        <Stack direction="row" alignItems="center" gap={1} sx={{ flex: 1 }}>
+      {/* Row 1: all toolbar controls, wraps onto multiple lines on narrow screens */}
+      <Stack direction="row" alignItems="center" flexWrap="wrap" gap={1}>
+        <Stack direction="row" alignItems="center" flexWrap="wrap" gap={1} sx={{ flex: 1 }}>
           {(onSearchChange || onSearch) && (
             <ToolbarSearch
               mode={searchMode}
@@ -228,7 +228,7 @@ export function DataTableToolbar<T>({
         </Stack>
 
         {/* Right side: batch actions when selected, otherwise header actions */}
-        <Stack direction="row" alignItems="center" gap={0.5}>
+        <Stack direction="row" alignItems="center" flexWrap="wrap" gap={0.5}>
           {showCheckboxes && selectedRows.length > 0 ? (
             <>
               <Typography

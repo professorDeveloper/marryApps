@@ -186,7 +186,7 @@ export function IngredientEditViewV2({ isNew = false, onSuccess }: Props) {
     // ── Render ───────────────────────────────────────────────────────────
 
     return (
-        <Box sx={{ p: 3 }}>
+        <Box sx={{ p: { xs: 2, md: 3 } }}>
             <Box sx={{ maxWidth: 1400, mx: 'auto' }}>
                 <CustomBreadcrumbs
                     heading={isNew ? t('ingredients.new') : t('ingredients.edit')}

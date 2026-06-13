@@ -245,7 +245,7 @@ export function InventoryEditView({ isNew = false }: InventoryEditViewProps) {
     };
 
     return (
-        <Box sx={{ p: 3 }}>
+        <Box sx={{ p: { xs: 2, md: 3 } }}>
             <Box sx={{ maxWidth: 1400, mx: 'auto' }}>
                 {/* BREADCRUMBS AND TITLE */}
                 <CustomBreadcrumbs

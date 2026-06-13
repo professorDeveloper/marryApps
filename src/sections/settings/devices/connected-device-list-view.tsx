@@ -296,7 +296,7 @@ export function ConnectedDeviceListView() {
         open={detailDrawerOpen}
         onClose={handleCloseDetailDrawer}
       >
-        <Box sx={{ width: 400, p: 3 }}>
+        <Box sx={{ width: { xs: '100vw', sm: 400 }, p: 3 }}>
           {selectedDevice && (
             <>
               <Typography variant="h6" gutterBottom>

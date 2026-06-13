@@ -46,6 +46,7 @@ import { Iconify } from 'src/components/iconify';
 import { GenericViewModal } from 'src/components/generic-view-view';
 
 import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
+import { FILTER_SELECT_SX } from 'src/sections/common/data-table';
 
 const getTodayUtcBoundary = (endOfDay = false): string => {
   const now = dayjs();
@@ -93,11 +94,7 @@ const toPickerDate = (value?: string): dayjs.Dayjs | null =>
   value ? dayjs(value) : null;
 
 const filterSelectSx = {
-  minWidth: 140,
-  '& .MuiInputBase-root': { height: 36, fontSize: 13.5, backgroundColor: 'var(--bg2)', borderRadius: '6px', fontFamily: 'var(--font-sans)' },
-  '& .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--border)' },
-  '& .MuiInputBase-root:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--border2)' },
-  '& .MuiInputBase-root.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--brand)', boxShadow: '0 0 0 2px var(--accent-soft)' },
+  ...FILTER_SELECT_SX,
   '& .MuiInputLabel-root.Mui-focused': { color: 'var(--brand)' },
 };
 

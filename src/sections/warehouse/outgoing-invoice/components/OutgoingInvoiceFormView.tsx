@@ -13,6 +13,7 @@ import React, { useRef, useMemo, useState, useEffect, useCallback } from 'react'
 import DeleteIcon from '@mui/icons-material/Delete';
 import {
     Box,
+    Stack,
     Paper,
     Table,
     Button,
@@ -310,7 +311,7 @@ const OutgoingInvoiceFormView = React.memo(function OutgoingInvoiceFormView() {
 
     // ── Render ────────────────────────────────────────────────────────────
     return (
-        <Box sx={{ px: 2, m: 0, alignItems: 'center' }}>
+        <Box sx={{ px: { xs: 1.5, md: 2 }, m: 0, alignItems: 'center' }}>
             <CustomBreadcrumbs heading={heading} links={breadcrumbs} sx={{ my: 2 }} />
 
             <Box sx={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -478,8 +479,8 @@ const BatchResponseView = React.memo(function BatchResponseView({
                 <Typography variant="h6" sx={{ mb: 1 }}>
                     {t('outgoingInvoices.items')}
                 </Typography>
-                <TableContainer>
-                    <Table size="small">
+                <TableContainer sx={{ overflowX: 'auto' }}>
+                    <Table size="small" sx={{ minWidth: 900 }}>
                         <TableHead>
                             <TableRow>
                                 <TableCell>#</TableCell>
@@ -537,7 +538,12 @@ const BatchResponseView = React.memo(function BatchResponseView({
                 </TableContainer>
             </Paper>
 
-            <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end', mb: 2 }}>
+            <Stack
+                direction={{ xs: 'column', sm: 'row' }}
+                spacing={1}
+                justifyContent="flex-end"
+                sx={{ mb: 2 }}
+            >
                 <Button
                     variant="contained"
                     color="success"
@@ -574,7 +580,7 @@ const BatchResponseView = React.memo(function BatchResponseView({
                         t('common.delete')
                     )}
                 </Button>
-            </Box>
+            </Stack>
         </Box>
     );
 });

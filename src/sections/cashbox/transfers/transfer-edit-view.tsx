@@ -391,14 +391,15 @@ export function TransactionsEditView({ isNew = false }: TransactionsEditViewProp
   );
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ p: { xs: 2, md: 3 } }}>
       <Box sx={{ maxWidth: 1400, mx: 'auto' }}>
         <CustomBreadcrumbs heading={config.title} links={config.breadcrumbs} sx={{ mb: 3 }} />
 
         <Tabs
           value={activeTab}
           onChange={(_, next) => setActiveTab(next)}
-          variant="fullWidth"
+          variant="scrollable"
+          scrollButtons="auto"
           sx={{ mb: 0, width: '100%' }}
         >
           <Tab label={t('common.edit')} id="transactions-tab-0" />

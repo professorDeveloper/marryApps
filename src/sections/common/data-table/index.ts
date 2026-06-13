@@ -1,4 +1,5 @@
 export { DataTable } from './components/DataTable';
+export { FILTER_SELECT_SX } from './utils/constants';
 export { localStorageStrategy } from './utils/storage';
 export { DataTableRow } from './components/DataTableRow';
 

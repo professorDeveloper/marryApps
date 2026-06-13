@@ -34,6 +34,7 @@ export type DataTablePeriodFilterProps = {
 
 import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
 
+import Box from '@mui/material/Box';
 import Tooltip from '@mui/material/Tooltip';
 import IconButton from '@mui/material/IconButton';
 
@@ -57,6 +58,7 @@ import {
   getCellValue,
   toComparable,
   buildGridTemplate,
+  computeMinTableWidth,
 } from '../utils';
 
 // ---------------------------------------------------------------------------
@@ -241,6 +243,11 @@ export function DataTable<T>({
 
   const gridTemplateColumns = useMemo(
     () => buildGridTemplate(visibleColumns, widths, { showCheckboxes, showRowNumbers }),
+    [visibleColumns, widths, showCheckboxes, showRowNumbers]
+  );
+
+  const minTableWidth = useMemo(
+    () => computeMinTableWidth(visibleColumns, widths, { showCheckboxes, showRowNumbers }),
     [visibleColumns, widths, showCheckboxes, showRowNumbers]
   );
 
@@ -586,68 +593,73 @@ export function DataTable<T>({
 
       {/* Main Table Card */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-        <DataTableHeader<T>
-          gridTemplateColumns={gridTemplateColumns}
-          showCheckboxes={showCheckboxes}
-          showRowNumbers={showRowNumbers}
-          allVisibleSelected={allVisibleSelected}
-          someVisibleSelected={someVisibleSelected}
-          toggleAllVisible={toggleAllVisible}
-          visibleColumns={visibleColumns}
-          sort={sort}
-          onSortChange={handleSortChange}
-          filters={filters ?? {}}
-          onOpenFilter={openFilter}
-          onReorder={reorder}
-          onResizeStart={onResizeStart}
-          onResizeMove={onResizeMove}
-          onResizeEnd={onResizeEnd}
-          headerDragKey={headerDragKey}
-        />
-
-        <DataTableFilterPopover<T>
-          anchorEl={filterAnchor}
-          filterKey={filterKey}
-          columns={columns}
-          filters={filters ?? {}}
-          data={data}
-          onClose={closeFilter}
-          onSetTextFilter={setTextFilter}
-          onSetMultiFilter={setMultiFilter}
-          onClearFilter={clearFilter}
-        />
-
-        <DataTableBody<T>
-          data={sortedData}
-          columns={columns}
-          colOrder={order}
-          visibility={visibility}
-          widths={widths}
-          showRowNumbers={showRowNumbers}
-          showCheckboxes={showCheckboxes}
-          selectedIds={selectedIds}
-          onToggleSelected={toggleSelected}
-          rowActions={rowActions}
-          editing={editing}
-          startEdit={startEdit}
-          commitEdit={commitEdit}
-          cancelEdit={cancelEdit}
-          getRowId={getRowId}
-          scrollRef={scrollRef}
-          emptyTitle={emptyTitle}
-          emptySubtitle={emptySubtitle}
-          onRowClick={onRowClick}
-        />
-
-        {showTotals && (
-          <DataTableTotalsFooter<T>
+        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflowX: 'auto' }}>
+          <DataTableHeader<T>
             gridTemplateColumns={gridTemplateColumns}
+            minTableWidth={minTableWidth}
             showCheckboxes={showCheckboxes}
             showRowNumbers={showRowNumbers}
+            allVisibleSelected={allVisibleSelected}
+            someVisibleSelected={someVisibleSelected}
+            toggleAllVisible={toggleAllVisible}
             visibleColumns={visibleColumns}
-            totals={totals}
+            sort={sort}
+            onSortChange={handleSortChange}
+            filters={filters ?? {}}
+            onOpenFilter={openFilter}
+            onReorder={reorder}
+            onResizeStart={onResizeStart}
+            onResizeMove={onResizeMove}
+            onResizeEnd={onResizeEnd}
+            headerDragKey={headerDragKey}
           />
-        )}
+
+          <DataTableFilterPopover<T>
+            anchorEl={filterAnchor}
+            filterKey={filterKey}
+            columns={columns}
+            filters={filters ?? {}}
+            data={data}
+            onClose={closeFilter}
+            onSetTextFilter={setTextFilter}
+            onSetMultiFilter={setMultiFilter}
+            onClearFilter={clearFilter}
+          />
+
+          <DataTableBody<T>
+            data={sortedData}
+            columns={columns}
+            colOrder={order}
+            visibility={visibility}
+            widths={widths}
+            minTableWidth={minTableWidth}
+            showRowNumbers={showRowNumbers}
+            showCheckboxes={showCheckboxes}
+            selectedIds={selectedIds}
+            onToggleSelected={toggleSelected}
+            rowActions={rowActions}
+            editing={editing}
+            startEdit={startEdit}
+            commitEdit={commitEdit}
+            cancelEdit={cancelEdit}
+            getRowId={getRowId}
+            scrollRef={scrollRef}
+            emptyTitle={emptyTitle}
+            emptySubtitle={emptySubtitle}
+            onRowClick={onRowClick}
+          />
+
+          {showTotals && (
+            <DataTableTotalsFooter<T>
+              gridTemplateColumns={gridTemplateColumns}
+              minTableWidth={minTableWidth}
+              showCheckboxes={showCheckboxes}
+              showRowNumbers={showRowNumbers}
+              visibleColumns={visibleColumns}
+              totals={totals}
+            />
+          )}
+        </Box>
 
         {/* Pagination (attached to main card) */}
         {serverPagination && onPageChange && (

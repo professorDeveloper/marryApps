@@ -46,15 +46,15 @@ export function DataTablePagination({
       sx={{
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'space-between',
+        justifyContent: { xs: 'center', sm: 'space-between' },
         px: 2,
         py: 1,
-   
+
         backgroundColor: 'var(--bg2)',
         borderTop: '1px solid var(--border)',
         borderBottomLeftRadius: '8px',
         borderBottomRightRadius: '8px',
-        gap: 2,
+        gap: { xs: 1, sm: 2 },
         flexWrap: 'wrap',
       }}
     >

@@ -248,7 +248,7 @@ function ConfigurableListInner<R extends Record<string, any>>(
         <ToolbarContainer>
           <ToolbarLeftPanel>
             <CustomToolbarQuickFilter
-              sx={{ width: 280, maxWidth: { md: 280 } }}
+              sx={{ width: { xs: '100%', sm: 280 }, maxWidth: { md: 280 } }}
               slotProps={{ textField: { size: 'small' } }}
             />
           </ToolbarLeftPanel>

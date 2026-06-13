@@ -36,7 +36,7 @@ const EditFormSection: FC<EditFormSectionProps> = memo(({ section }) => {
     )), [section.fields]);
 
     return (
-        <Card sx={{ p: 3, mb: 3 }}>
+        <Card sx={{ p: { xs: 2, md: 3 }, mb: 3 }}>
             <Stack spacing={2}>
                 <Typography variant="h6">{section.title}</Typography>
                 <Box

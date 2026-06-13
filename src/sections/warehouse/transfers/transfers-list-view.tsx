@@ -31,6 +31,7 @@ import { Iconify } from 'src/components/iconify';
 import { RenderCell } from 'src/components/RenderCell';
 
 import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
+import { FILTER_SELECT_SX } from 'src/sections/common/data-table';
 
 interface Branch {
   id: string;
@@ -75,15 +76,7 @@ const toUtcDayBoundary = (value: dayjs.Dayjs, endOfDay = false): string => {
   return boundary.toISOString().replace('.000Z', 'Z');
 };
 
-const filterSelectSx = {
-  minWidth: 140,
-  '& .MuiInputBase-root': { height: 36, fontSize: 13.5, backgroundColor: 'var(--bg2)', borderRadius: '6px', fontFamily: 'var(--font-sans)' },
-  '& .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--border)' },
-  '& .MuiInputBase-root:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--border2)' },
-  '& .MuiInputBase-root.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--brand)', boxShadow: '0 0 0 2px var(--accent-soft)' },
-  '& .MuiInputLabel-root': { display: 'none' },
-  '& .MuiOutlinedInput-notchedOutline legend': { display: 'none' },
-};
+const filterSelectSx = FILTER_SELECT_SX;
 
 export function TransfersListView() {
   const { t } = useTranslation('menu');

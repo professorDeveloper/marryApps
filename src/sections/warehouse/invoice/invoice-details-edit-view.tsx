@@ -188,7 +188,7 @@ export function InvoiceDetailsEditView({ isNew = false }: { isNew?: boolean }) {
     }
 
     return (
-        <Box sx={{ pl: 4, pt: 3 }}>
+        <Box sx={{ pl: { xs: 2, md: 4 }, pr: { xs: 2, md: 0 }, pt: { xs: 2, md: 3 } }}>
             <Box sx={{ maxWidth: 1400, mx: 'auto' }}>
                 {/* BREADCRUMBS AND TITLE */}
                 

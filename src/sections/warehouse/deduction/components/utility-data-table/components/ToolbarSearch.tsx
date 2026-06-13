@@ -237,8 +237,8 @@ export function ToolbarSearch({
           },
         }}
         sx={{
-          minWidth: 200,
-          maxWidth: 320,
+          minWidth: { xs: '100%', sm: 200 },
+          maxWidth: { xs: '100%', sm: 320 },
           '& .MuiInputBase-root': {
             height: 36,
             fontSize: 13.5,

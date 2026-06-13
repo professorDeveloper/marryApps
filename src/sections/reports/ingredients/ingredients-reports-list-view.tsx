@@ -502,6 +502,7 @@ export function IngredientReportsListView() {
                 </FormControl>
 
                 {/* Movements table */}
+                <Box sx={{ overflowX: 'auto' }}>
                 <Table size="small">
                     <TableHead>
                         <TableRow>
@@ -568,6 +569,7 @@ export function IngredientReportsListView() {
                         )}
                     </TableBody>
                 </Table>
+                </Box>
 
                 {/* Totals */}
                 {movementsTotals && (
@@ -575,7 +577,7 @@ export function IngredientReportsListView() {
                         sx={{
                             mt: 2,
                             display: 'grid',
-                            gridTemplateColumns: 'repeat(8, 1fr)',
+                            gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(4, 1fr)', md: 'repeat(8, 1fr)' },
                             borderRadius: 1,
                             border: `1px solid ${theme.palette.divider}`,
                             overflow: 'hidden',

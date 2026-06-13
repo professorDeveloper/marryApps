@@ -16,6 +16,7 @@ import { ACCENT, nextSort } from '../utils';
 
 export type DataTableHeaderProps<T> = {
   gridTemplateColumns: string;
+  minTableWidth: number;
   showCheckboxes: boolean;
   showRowNumbers: boolean;
   allVisibleSelected: boolean;
@@ -35,6 +36,7 @@ export type DataTableHeaderProps<T> = {
 
 export function DataTableHeader<T>({
   gridTemplateColumns,
+  minTableWidth,
   showCheckboxes,
   showRowNumbers,
   allVisibleSelected,
@@ -52,16 +54,22 @@ export function DataTableHeader<T>({
   headerDragKey,
 }: DataTableHeaderProps<T>) {
   const { t } = useTranslate('common');
+  const checkboxWidth = showCheckboxes ? 44 : 0;
+  const rowNumberWidth = showRowNumbers ? 56 : 0;
+  const firstColLeft = checkboxWidth + rowNumberWidth;
+
   return (
     <Box
       sx={{
         display: 'grid',
         gridTemplateColumns,
+        width: `max(100%, ${minTableWidth}px)`,
+        flexShrink: 0,
         alignItems: 'center',
         py: 1.5,
         maxHeight: 52,
         px: 1,
-        backgroundColor: 'transparent',
+        backgroundColor: 'var(--bg)',
         borderBottom: '1px solid var(--border)',
         borderTopLeftRadius: '8px',
         borderTopRightRadius: '8px',
@@ -71,7 +79,7 @@ export function DataTableHeader<T>({
       }}
     >
       {showCheckboxes && (
-        <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+        <Box sx={{ display: 'flex', justifyContent: 'center', position: 'sticky', left: 0, zIndex: 1, backgroundColor: 'var(--bg)' }}>
           <Checkbox
             checked={allVisibleSelected}
             indeterminate={someVisibleSelected}
@@ -86,7 +94,7 @@ export function DataTableHeader<T>({
       )}
 
       {showRowNumbers && (
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'sticky', left: checkboxWidth, zIndex: 1, backgroundColor: 'var(--bg)' }}>
           <Typography
             sx={{
               // fontFamily: 'var(--font-sans)',
@@ -108,6 +116,7 @@ export function DataTableHeader<T>({
         const canFilter = col.filterable === true || Boolean(col.filter);
         const canReorder = col.reorderable !== false;
         const filterOn = Boolean(filters[col.key]);
+        const isFirstCol = col.key === visibleColumns[0]?.key;
 
         return (
           <Box
@@ -137,6 +146,7 @@ export function DataTableHeader<T>({
               cursor: canReorder ? 'grab' : 'default',
               userSelect: 'none',
               justifyContent: col.headerActionsAlign === 'end' ? 'space-between' : 'flex-start',
+              ...(isFirstCol && { position: 'sticky', left: firstColLeft, zIndex: 1, backgroundColor: 'var(--bg)' }),
             }}
           >
             <Tooltip title={col.label} placement="top" enterDelay={500}>

@@ -438,7 +438,7 @@ const SeparationActsFormView = React.memo(function SeparationActsFormView({
 
     // ── Render ────────────────────────────────────────────────────────────
     return (
-        <Box sx={{ px: 4, m: 0, alignItems: 'center' }}>
+        <Box sx={{ px: { xs: 2, md: 4 }, m: 0, alignItems: 'center' }}>
 
             <Box sx={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 2 }}>
                 {pageLoading && (
@@ -529,8 +529,8 @@ const SeparationActsFormView = React.memo(function SeparationActsFormView({
                                 {t('separationActs.items')} ({batchResponse.data.items.length})
                             </Typography>
                             {batchResponse.data.items.length > 0 ? (
-                                <TableContainer>
-                                    <Table size="small">
+                                <TableContainer sx={{ overflowX: 'auto' }}>
+                                    <Table size="small" sx={{ minWidth: 600 }}>
                                         <TableHead>
                                             <TableRow>
                                                 <TableCell>{t('warehouse.ingredient')}</TableCell>
@@ -581,7 +581,11 @@ const SeparationActsFormView = React.memo(function SeparationActsFormView({
                         </Box>
 
                         {/* Action Buttons */}
-                        <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+                        <Stack
+                            direction={{ xs: 'column', sm: 'row' }}
+                            spacing={1}
+                            justifyContent="flex-end"
+                        >
                             <Button variant="contained" onClick={handleCancel}>
                                 {t('common.back')}
                             </Button>
@@ -632,7 +636,7 @@ const SeparationActsFormView = React.memo(function SeparationActsFormView({
                                     )}
                                 </Button>
                             )}
-                        </Box>
+                        </Stack>
                     </Stack>
                 )}
 
@@ -654,7 +658,12 @@ const SeparationActsFormView = React.memo(function SeparationActsFormView({
             </Box>
 
             {/* Delete Item Dialog */}
-            <Dialog open={!!deleteItemDialog} onClose={() => setDeleteItemDialog(null)}>
+            <Dialog
+                open={!!deleteItemDialog}
+                onClose={() => setDeleteItemDialog(null)}
+                fullWidth
+                maxWidth="sm"
+            >
                 <DialogTitle>{t('common.delete')}</DialogTitle>
                 <DialogContent>
                     <Typography>
@@ -666,11 +675,15 @@ const SeparationActsFormView = React.memo(function SeparationActsFormView({
                         </Typography>
                     )}
                 </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setDeleteItemDialog(null)}>
+                <DialogActions sx={{ flexDirection: { xs: 'column', sm: 'row' }, gap: 1 }}>
+                    <Button
+                        sx={{ width: { xs: '100%', sm: 'auto' } }}
+                        onClick={() => setDeleteItemDialog(null)}
+                    >
                         {t('common.cancel')}
                     </Button>
                     <Button
+                        sx={{ width: { xs: '100%', sm: 'auto' } }}
                         variant="contained"
                         color="error"
                         onClick={() => {

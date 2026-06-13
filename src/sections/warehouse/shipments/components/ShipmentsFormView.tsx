@@ -511,7 +511,11 @@ const ShipmentsFormView = React.memo(function ShipmentsFormView({
                         </Box>
 
                         {/* Action Buttons */}
-                        <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+                        <Stack
+                            direction={{ xs: 'column', sm: 'row' }}
+                            spacing={1}
+                            justifyContent="flex-end"
+                        >
                             <Button variant="contained" onClick={handleCancel}>
                                 {t('common.back')}
                             </Button>
@@ -562,7 +566,7 @@ const ShipmentsFormView = React.memo(function ShipmentsFormView({
                                     )}
                                 </Button>
                             )}
-                        </Box>
+                        </Stack>
                     </Stack>
                 )}
 
@@ -584,7 +588,12 @@ const ShipmentsFormView = React.memo(function ShipmentsFormView({
             </Box>
 
             {/* Delete Item Dialog */}
-            <Dialog open={!!deleteItemDialog} onClose={() => setDeleteItemDialog(null)}>
+            <Dialog
+                open={!!deleteItemDialog}
+                onClose={() => setDeleteItemDialog(null)}
+                fullWidth
+                maxWidth="sm"
+            >
                 <DialogTitle>{t('common.delete')}</DialogTitle>
                 <DialogContent>
                     <Typography>
@@ -596,11 +605,17 @@ const ShipmentsFormView = React.memo(function ShipmentsFormView({
                         </Typography>
                     )}
                 </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setDeleteItemDialog(null)}>
+                <DialogActions sx={{ flexDirection: { xs: 'column', sm: 'row' }, gap: 1 }}>
+                    <Button
+                        fullWidth
+                        sx={{ width: { xs: '100%', sm: 'auto' } }}
+                        onClick={() => setDeleteItemDialog(null)}
+                    >
                         {t('common.cancel')}
                     </Button>
                     <Button
+                        fullWidth
+                        sx={{ width: { xs: '100%', sm: 'auto' } }}
                         variant="contained"
                         color="error"
                         onClick={() => {

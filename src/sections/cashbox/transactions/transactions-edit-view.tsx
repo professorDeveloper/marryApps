@@ -417,7 +417,7 @@ export function TransactionsEditView({ isNew = false }: TransactionsEditViewProp
   );
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ p: { xs: 2, md: 3 } }}>
       <Box sx={{ maxWidth: 1200, mx: 'auto' }}>
         <CustomBreadcrumbs heading={config.title} links={config.breadcrumbs} sx={{ mb: 3 }} />
 

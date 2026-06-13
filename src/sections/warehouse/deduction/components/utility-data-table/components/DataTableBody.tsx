@@ -16,6 +16,7 @@ export type DataTableBodyProps<T> = {
   colOrder: string[];
   visibility: Record<string, boolean>;
   widths: Record<string, number | string>;
+  minTableWidth: number;
   showRowNumbers: boolean;
   showCheckboxes: boolean;
   selectedIds: Set<string>;
@@ -38,6 +39,7 @@ export function DataTableBody<T>({
   colOrder,
   visibility,
   widths,
+  minTableWidth,
   showRowNumbers,
   showCheckboxes,
   selectedIds,
@@ -66,7 +68,10 @@ export function DataTableBody<T>({
       sx={{
         position: 'relative',
         flex: 1,
-        overflow: 'auto',
+        flexShrink: 0,
+        width: `max(100%, ${minTableWidth}px)`,
+        overflowY: 'auto',
+        overflowX: 'visible',
         backgroundColor: 'var(--bg)',
       }}
     >
@@ -128,6 +133,7 @@ export function DataTableBody<T>({
                   colOrder={colOrder}
                   visibility={visibility}
                   widths={widths}
+                  minTableWidth={minTableWidth}
                   showRowNumbers={showRowNumbers}
                   showCheckboxes={showCheckboxes}
                   selected={selected}

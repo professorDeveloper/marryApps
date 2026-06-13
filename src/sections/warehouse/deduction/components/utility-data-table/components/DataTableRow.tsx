@@ -24,6 +24,7 @@ export type DataTableRowProps<T> = {
   colOrder: string[];
   visibility: Record<string, boolean>;
   widths: Record<string, number | string>;
+  minTableWidth: number;
   showRowNumbers: boolean;
   showCheckboxes: boolean;
   selected: boolean;
@@ -44,6 +45,7 @@ export const DataTableRow = memo(function DataTableRow<T>({
   colOrder,
   visibility,
   widths,
+  minTableWidth,
   showRowNumbers,
   showCheckboxes,
   selected,
@@ -69,12 +71,18 @@ export const DataTableRow = memo(function DataTableRow<T>({
     [visibleCols, widths, showCheckboxes, showRowNumbers, rowActions]
   );
 
+  const checkboxWidth = showCheckboxes ? 44 : 0;
+  const rowNumberWidth = showRowNumbers ? 56 : 0;
+  const firstColLeft = checkboxWidth + rowNumberWidth;
+  const lastColKey = visibleCols.length > 0 ? visibleCols[visibleCols.length - 1].key : null;
+
   return (
     <Box
       onClick={() => onRowClick?.(row)}
       sx={{
         display: 'grid',
         gridTemplateColumns,
+        width: `max(100%, ${minTableWidth}px)`,
         alignItems: 'center',
         // px: 1,
         height: 44,
@@ -86,10 +94,11 @@ export const DataTableRow = memo(function DataTableRow<T>({
           backgroundColor: 'var(--bg2)',
         },
         '&:hover .utilityDtMore': { opacity: 1 },
+        '&:hover .dtStickyCell': { backgroundColor: 'var(--bg2)' },
       }}
     >
       {showCheckboxes && (
-        <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+        <Box className="dtStickyCell" sx={{ display: 'flex', justifyContent: 'center', position: 'sticky', left: 0, zIndex: 1, backgroundColor: 'var(--bg)' }}>
           <Checkbox
             checked={selected}
             onChange={onToggleSelected}
@@ -105,12 +114,21 @@ export const DataTableRow = memo(function DataTableRow<T>({
 
       {showRowNumbers && (
         <Typography
+          className="dtStickyCell"
           sx={{
             fontFamily: 'var(--font-sans)',
             fontSize: 12,
             color: 'text.secondary',
             textAlign: 'center',
             userSelect: 'none',
+            position: 'sticky',
+            left: checkboxWidth,
+            zIndex: 1,
+            backgroundColor: 'var(--bg)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: '100%',
           }}
         >
           {index + 1}
@@ -120,10 +138,13 @@ export const DataTableRow = memo(function DataTableRow<T>({
       {visibleCols.map((col) => {
         const value = getCellValue(col, row);
         const isEditing = editing?.rowId === rowId && editing.key === col.key;
+        const isFirstCol = col.key === visibleCols[0]?.key;
+        const isLastCol = col.key === lastColKey;
 
         return (
           <Box
             key={col.key}
+            className={isFirstCol || isLastCol ? 'dtStickyCell' : undefined}
             sx={{
               px: 1,
               minWidth: 0,
@@ -131,6 +152,18 @@ export const DataTableRow = memo(function DataTableRow<T>({
               justifyContent:
                 col.align === 'right' ? 'flex-end' : col.align === 'center' ? 'center' : 'flex-start',
               backgroundColor: 'transparent',
+              ...(isFirstCol && {
+                position: 'sticky',
+                left: firstColLeft,
+                zIndex: 1,
+                backgroundColor: 'var(--bg)',
+              }),
+              ...(isLastCol && {
+                position: 'sticky',
+                right: 0,
+                zIndex: 1,
+                backgroundColor: 'var(--bg)',
+              }),
             }}
             onDoubleClick={() => {
               if (col.editable) startEdit(rowId, col.key);

@@ -45,7 +45,7 @@ import { RenderCell } from 'src/components/RenderCell';
 import { GenericViewModal } from 'src/components/generic-view-view';
 import { formatDate, formatPrice } from 'src/components/generic-view-view/modal-formatters';
 
-import { DataTable } from 'src/sections/common/data-table';
+import { DataTable, FILTER_SELECT_SX } from 'src/sections/common/data-table';
 
 import { MetadataEntity } from 'src/types/metadata';
 
@@ -429,11 +429,7 @@ function renderCompoundSpecifications(item: ICompound, t: any) {
 // ============================================================================
 
 const filterSelectSx = {
-    minWidth: 140,
-    '& .MuiInputBase-root': { height: 36, fontSize: 13.5, backgroundColor: 'var(--bg2)', borderRadius: '6px', fontFamily: 'var(--font-sans)' },
-    '& .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--border)' },
-    '& .MuiInputBase-root:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--border2)' },
-    '& .MuiInputBase-root.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--brand)', boxShadow: '0 0 0 2px var(--accent-soft)' },
+    ...FILTER_SELECT_SX,
     '& .MuiInputLabel-root.Mui-focused': { color: 'var(--brand)' },
 };
 
@@ -746,7 +742,7 @@ export function HalfMeals() {
                                 select size="small" label={t('semifinishedProducts.measurement')}
                                 value={measurementFilter}
                                 onChange={(e) => setMeasurementFilter(e.target.value)}
-                                sx={{ ...filterSelectSx, minWidth: 200 }}
+                                sx={{ ...filterSelectSx, minWidth: { xs: '100%', sm: 200 } }}
                             >
                                 <MenuItem value="">{t('common.all')}</MenuItem>
                                 {['kg', 'l', 'piece'].map((v) => (

@@ -92,8 +92,8 @@ export function CashierEditView({ isNew = false }: CashierEditViewProps) {
 
             <Card
                 sx={{
-                    p: 3,
-                    maxWidth: 600,
+                    p: { xs: 2, md: 3 },
+                    maxWidth: { xs: '100%', sm: 600 },
                 }}
             >
                 <form onSubmit={onFormSubmit}>
@@ -108,7 +108,7 @@ export function CashierEditView({ isNew = false }: CashierEditViewProps) {
                             fullWidth
                         />
 
-                        <Stack direction="row" spacing={2} justifyContent="flex-end">
+                        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="flex-end">
                             <Button
                                 variant="outlined"
                                 onClick={() => navigate(-1)}

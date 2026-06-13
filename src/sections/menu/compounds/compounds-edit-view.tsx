@@ -223,7 +223,7 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
     }, [mealItemsApiRef.current]);
 
     return (
-        <Box sx={{ px: 4, m: 0, mt:2 }}>
+        <Box sx={{ px: { xs: 2, md: 4 }, m: 0, mt:2 }}>
             <Box
                 sx={{
                     position: 'relative',
@@ -279,7 +279,12 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
                 />
 
                 {/* Action buttons - outside accordion */}
-                <Stack direction="row" spacing={1} justifyContent="flex-end" sx={{ mt: -7 }}>
+                <Stack
+                    direction={{ xs: 'column', sm: 'row' }}
+                    spacing={1}
+                    justifyContent="flex-end"
+                    sx={{ mt: { xs: 0, sm: -7 } }}
+                >
                     <Button
                         variant="outlined"
                         color="inherit"

@@ -438,7 +438,8 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
                         <Tabs
                             value={activeTab}
                             onChange={handleTabChange}
-                            variant="fullWidth"
+                            variant="scrollable"
+                            scrollButtons="auto"
                             sx={{ borderBottom: 1, borderColor: 'divider'}}
                         >
                             <Tab
@@ -487,7 +488,12 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
                 {/* </GeneralInformation> */}
 
                 {/* Action buttons - outside accordion */}
-                <Stack direction="row" spacing={1} justifyContent="flex-end" mt={-8.9}>
+                <Stack
+                    direction={{ xs: 'column', sm: 'row' }}
+                    spacing={1}
+                    justifyContent="flex-end"
+                    sx={{ mt: { xs: 0, sm: -8.9 } }}
+                >
                     <Button
                         variant="outlined"
                         color="inherit"
