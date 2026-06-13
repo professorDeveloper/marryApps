@@ -253,7 +253,7 @@ const InvoiceFormView = React.memo(function InvoiceFormView() {
     ]);
 
     const handleInvoiceCancel = useCallback(() => {
-        router.push(paths.warehouse.invoices.root);
+        router.push(paths.warehouse.invoiceDetails.root);
     }, [router]);
 
     const saveLabel = isNew ? t('save') : t('warehouse.invoiceDetails.submitBatch');
