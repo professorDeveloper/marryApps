@@ -41,8 +41,8 @@ import { DashboardContent } from 'src/layouts/dashboard';
 import { Iconify } from 'src/components/iconify';
 import { GenericViewModal } from 'src/components/generic-view-view';
 
-import { DataTable, FILTER_SELECT_SX } from 'src/sections/common/data-table';
 import { CELL_SX } from 'src/sections/common/data-table/utils/constants';
+import { DataTable, FILTER_SELECT_SX } from 'src/sections/common/data-table';
 
 import { MetadataEntity } from 'src/types/metadata';
 

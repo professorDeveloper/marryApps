@@ -13,8 +13,8 @@ import { RouterLink } from 'src/routes/components';
 
 import { Iconify } from 'src/components/iconify';
 
-import { CELL_SX, FILTER_SELECT_SX } from 'src/sections/common/data-table/utils/constants';
 import { DataTable } from 'src/sections/common/data-table/components/DataTable';
+import { CELL_SX, FILTER_SELECT_SX } from 'src/sections/common/data-table/utils/constants';
 
 interface TransactionsDataTableProps {
   data: ITransaction[];

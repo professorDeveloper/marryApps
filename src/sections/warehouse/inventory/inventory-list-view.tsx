@@ -75,8 +75,8 @@ import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
 import { GenericViewModal } from 'src/components/generic-view-view';
 
-import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
 import { FILTER_SELECT_SX } from 'src/sections/common/data-table';
+import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
 
 const filterSelectSx = {
     ...FILTER_SELECT_SX,

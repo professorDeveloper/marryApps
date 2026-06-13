@@ -45,8 +45,8 @@ import { DashboardContent } from 'src/layouts/dashboard';
 import { Iconify } from 'src/components/iconify';
 import { GenericViewModal } from 'src/components/generic-view-view';
 
-import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
 import { FILTER_SELECT_SX } from 'src/sections/common/data-table';
+import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
 
 const getTodayUtcBoundary = (endOfDay = false): string => {
   const now = dayjs();

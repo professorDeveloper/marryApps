@@ -30,8 +30,8 @@ import { DashboardContent } from 'src/layouts/dashboard';
 import { Iconify } from 'src/components/iconify';
 import { RenderCell } from 'src/components/RenderCell';
 
-import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
 import { FILTER_SELECT_SX } from 'src/sections/common/data-table';
+import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
 
 interface Branch {
   id: string;
