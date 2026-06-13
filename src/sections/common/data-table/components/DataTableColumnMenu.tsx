@@ -1,5 +1,6 @@
 import type { DataTableColumn } from '../types/types';
 
+import Box from '@mui/material/Box';
 import Menu from '@mui/material/Menu';
 import Divider from '@mui/material/Divider';
 import Checkbox from '@mui/material/Checkbox';
@@ -77,7 +78,18 @@ export function DataTableColumnMenu<T>({
                 '&.Mui-checked': { color: 'var(--brand)' },
               }}
             />
-            {c.label}
+            <Box
+              sx={{
+                '& span': {
+                  display: 'inline !important',
+                  width: 'auto !important',
+                  textAlign: 'left !important',
+                  paddingLeft: '0 !important',
+                },
+              }}
+            >
+              {c.label}
+            </Box>
           </MenuItem>
         );
       })}
