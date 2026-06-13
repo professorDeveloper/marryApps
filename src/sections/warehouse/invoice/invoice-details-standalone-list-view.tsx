@@ -42,7 +42,7 @@ import { Iconify } from 'src/components/iconify';
 import { GenericViewModal } from 'src/components/generic-view-view';
 
 import { CELL_SX } from 'src/sections/common/data-table/utils/constants';
-import { DataTable, FILTER_SELECT_SX } from 'src/sections/common/data-table';
+import { DataTable } from 'src/sections/common/data-table';
 
 import { MetadataEntity } from 'src/types/metadata';
 
@@ -116,7 +116,20 @@ const toUtcDayBoundary = (value: dayjs.Dayjs, endOfDay = false): string => {
 const toPickerDate = (value?: string): dayjs.Dayjs | null => (value ? dayjs(value) : null);
 
 const filterSelectSx = {
-    ...FILTER_SELECT_SX,
+    minWidth: 150,
+    '& .MuiInputBase-root': {
+        height: 36,
+        fontSize: 13.5,
+        backgroundColor: 'var(--bg2)',
+        borderRadius: '6px',
+        fontFamily: 'var(--font-sans)',
+    },
+    '& .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--border)' },
+    '& .MuiInputBase-root:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--border2)' },
+    '& .MuiInputBase-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
+        borderColor: 'var(--brand)',
+        boxShadow: '0 0 0 2px var(--accent-soft)',
+    },
     '& .MuiInputLabel-root.Mui-focused': { color: 'var(--brand)' },
 };
 

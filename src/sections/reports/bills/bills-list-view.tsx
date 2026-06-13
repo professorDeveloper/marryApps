@@ -21,7 +21,7 @@ import { useGetBills, useGetBillDetails } from 'src/actions/bills';
 import { GenericViewModal } from 'src/components/generic-view-view/GenericViewModal';
 
 import { DataTable } from 'src/sections/common/data-table';
-import { CELL_SX, FILTER_SELECT_SX } from 'src/sections/common/data-table/utils/constants';
+import { CELL_SX } from 'src/sections/common/data-table/utils/constants';
 
 import { MetadataEntity } from 'src/types/metadata';
 
@@ -45,6 +45,15 @@ const SERVICE_CELL_SX = {
 } as const;
 
 const SERVICE_PERCENT_SX = { color: 'text.secondary' };
+
+const filterSelectSx = {
+    minWidth: { xs: '100%', sm: 140 },
+    '& .MuiInputBase-root': { height: 36, fontSize: 13.5, backgroundColor: 'var(--bg2)', borderRadius: '6px', fontFamily: 'var(--font-sans)' },
+    '& .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--border)' },
+    '& .MuiInputBase-root:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--border2)' },
+    '& .MuiInputBase-root.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--brand)', boxShadow: '0 0 0 2px var(--accent-soft)' },
+    '& .MuiInputLabel-root.Mui-focused': { color: 'var(--brand)' },
+};
 
 const renderDateTimeCell = ({ value }: { value: unknown }) => {
     const dateObj = dayjs(value as string);
@@ -481,9 +490,9 @@ export function BillsListView() {
                                 select size="small" label={t('bills.status') || 'Status'}
                                 value={draftFilters.bill_status?.[0] || ''}
                                 onChange={(e) => handleStatusChange(e.target.value)}
-                                sx={{ ...FILTER_SELECT_SX, minWidth: { xs: '100%', sm: 140 } }}
+                                sx={filterSelectSx}
                             >
-                                <MenuItem value="">All</MenuItem>
+                                <MenuItem value="">{t('common.all')}</MenuItem>
                                 {['opened', 'closed', 'paid'].map((s) => (
                                     <MenuItem key={s} value={s} sx={{ textTransform: 'capitalize' }}>{s}</MenuItem>
                                 ))}
@@ -492,9 +501,9 @@ export function BillsListView() {
                                 select size="small" label={t('bills.paymentType') || 'Payment Type'}
                                 value={draftFilters.payment_type?.[0] || ''}
                                 onChange={(e) => handlePaymentTypeChange(e.target.value)}
-                                sx={{ ...FILTER_SELECT_SX, minWidth: { xs: '100%', sm: 140 } }}
+                                sx={filterSelectSx}
                             >
-                                <MenuItem value="">All</MenuItem>
+                                <MenuItem value="">{t('common.all')}</MenuItem>
                                 <MenuItem value="cash">{t('bills.cash')}</MenuItem>
                                 <MenuItem value="card">{t('bills.card')}</MenuItem>
                             </TextField>
@@ -502,9 +511,9 @@ export function BillsListView() {
                                 select size="small" label={t('bills.waiter') || 'Waiter'}
                                 value={draftFilters.waiter_id || ''}
                                 onChange={(e) => handleWaiterChange(e.target.value)}
-                                sx={{ ...FILTER_SELECT_SX, minWidth: { xs: '100%', sm: 160 } }}
+                                sx={{ ...filterSelectSx, minWidth: { xs: '100%', sm: 160 } }}
                             >
-                                <MenuItem value="">All</MenuItem>
+                                <MenuItem value="">{t('common.all')}</MenuItem>
                                 {activeUsers.map((u) => (
                                     <MenuItem key={u.id} value={u.id}>{u.name}</MenuItem>
                                 ))}
@@ -513,9 +522,9 @@ export function BillsListView() {
                                 select size="small" label={t('bills.hall') || 'Hall'}
                                 value={draftFilters.hall_id?.[0] || ''}
                                 onChange={(e) => handleHallChange(e.target.value)}
-                                sx={{ ...FILTER_SELECT_SX, minWidth: { xs: '100%', sm: 140 } }}
+                                sx={filterSelectSx}
                             >
-                                <MenuItem value="">All</MenuItem>
+                                <MenuItem value="">{t('common.all')}</MenuItem>
                                 {activeHalls.map((h) => (
                                     <MenuItem key={h.id} value={h.id}>{h.name}</MenuItem>
                                 ))}
@@ -524,9 +533,9 @@ export function BillsListView() {
                                 select size="small" label={t('bills.table') || 'Table'}
                                 value={draftFilters.table_id || ''}
                                 onChange={(e) => handleTableChange(e.target.value)}
-                                sx={{ ...FILTER_SELECT_SX, minWidth: { xs: '100%', sm: 120 } }}
+                                sx={{ ...filterSelectSx, minWidth: { xs: '100%', sm: 120 } }}
                             >
-                                <MenuItem value="">All</MenuItem>
+                                <MenuItem value="">{t('common.all')}</MenuItem>
                                 {activeCafetables.map((tbl) => (
                                     <MenuItem key={tbl.id} value={tbl.id}>{tbl.name}</MenuItem>
                                 ))}
