@@ -241,7 +241,7 @@ export function OrdersManagementView() {
             variant="contained"
             startIcon={<Iconify icon="mingcute:add-line" />}
             component={RouterLink}
-            href={paths.warehouse.orders.new}
+            href={paths.cashbooks.orders.new}
             size="small"
           >
             {t('common.add')}

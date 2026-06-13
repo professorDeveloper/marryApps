@@ -1,7 +1,7 @@
 import type { RouteObject } from 'react-router';
 
-import { Outlet, Navigate } from 'react-router';
 import { lazy, Suspense } from 'react';
+import { Outlet, Navigate } from 'react-router';
 
 import LinearProgress from '@mui/material/LinearProgress';
 

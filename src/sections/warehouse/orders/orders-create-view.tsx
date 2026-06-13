@@ -153,7 +153,7 @@ export function OrdersCreateView() {
     try {
       const created = await createOrder(payload);
       if (created) {
-        router.push(paths.warehouse.orders.root);
+        router.push(paths.cashbooks.orders.root);
       }
     } finally {
       setSubmitting(false);
@@ -175,7 +175,7 @@ export function OrdersCreateView() {
         links={[
           { name: t('app'), href: paths.menu.root },
           { name: t('overview.warehouse.title'), href: paths.warehouse.root },
-          { name: t('overview.warehouse.orders'), href: paths.warehouse.orders.root },
+          { name: t('overview.warehouse.orders'), href: paths.cashbooks.orders.root },
           { name: t('order.create') },
         ]}
         action={(
@@ -183,7 +183,7 @@ export function OrdersCreateView() {
             variant="outlined"
             color="inherit"
             startIcon={<Iconify icon="solar:reply-bold" />}
-            onClick={() => router.push(paths.warehouse.orders.root)}
+            onClick={() => router.push(paths.cashbooks.orders.root)}
           >
             {t('common.back')}
           </Button>
@@ -384,7 +384,7 @@ export function OrdersCreateView() {
         <Divider sx={{ my: 3 }} />
 
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} justifyContent="flex-end">
-          <Button variant="outlined" color="inherit" onClick={() => router.push(paths.warehouse.orders.root)}>
+          <Button variant="outlined" color="inherit" onClick={() => router.push(paths.cashbooks.orders.root)}>
             {t('common.cancel')}
           </Button>
           <Button variant="contained" onClick={handleCreateOrder} disabled={submitting}>
