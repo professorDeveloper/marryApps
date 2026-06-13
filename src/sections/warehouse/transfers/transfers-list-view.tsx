@@ -435,7 +435,7 @@ export function TransfersListView() {
       },
       {
         key: 'from_branch_id',
-        label: t('warehouse.branch'),
+        label: t('warehouse.fromBranch'),
         sortable: true,
         width: '1.2fr',
         align: 'left' as const,
@@ -451,7 +451,7 @@ export function TransfersListView() {
       },
       {
         key: 'to_branch_id',
-        label: t('warehouse.branch'),
+        label: t('warehouse.toBranch'),
         sortable: true,
         width: '1.2fr',
         align: 'left' as const,
@@ -467,7 +467,7 @@ export function TransfersListView() {
       },
       {
         key: 'from_storage_id',
-        label: t('deductions.storage'),
+        label: t('warehouse.fromStorage'),
         sortable: true,
         width: '1.2fr',
         align: 'left' as const,
@@ -483,7 +483,7 @@ export function TransfersListView() {
       },
       {
         key: 'to_storage_id',
-        label: t('warehouse.storage'),
+        label: t('warehouse.toStorage'),
         sortable: true,
         width: '1.2fr',
         align: 'left' as const,
@@ -766,62 +766,62 @@ export function TransfersListView() {
   })}
           filterRow={
             <>
-              <TextField select size="small" label=""
+              <TextField select size="small" label="" slotProps={{ select: { displayEmpty: true } }}
                 value={draftFilters.from_branch_id}
                 onChange={(e) => setDraftFilters((prev) => ({ ...prev, from_branch_id: e.target.value }))}
                 sx={filterSelectSx}
               >
-                <MenuItem value="">{t('warehouse.branch')}: {t('common.all')}</MenuItem>
+                <MenuItem value="">{t('warehouse.fromBranch')}</MenuItem>
                 {Object.entries(branchesMap).map(([id, name]) => (
                   <MenuItem key={id} value={id}>{name}</MenuItem>
                 ))}
               </TextField>
-              <TextField select size="small" label=""
+              <TextField select size="small" label="" slotProps={{ select: { displayEmpty: true } }}
                 value={draftFilters.to_branch_id}
                 onChange={(e) => setDraftFilters((prev) => ({ ...prev, to_branch_id: e.target.value }))}
                 sx={filterSelectSx}
               >
-                <MenuItem value="">{t('warehouse.branch')}: {t('common.all')}</MenuItem>
+                <MenuItem value="">{t('warehouse.toBranch')}</MenuItem>
                 {Object.entries(branchesMap).map(([id, name]) => (
                   <MenuItem key={id} value={id}>{name}</MenuItem>
                 ))}
               </TextField>
-              <TextField select size="small" label=""
+              <TextField select size="small" label="" slotProps={{ select: { displayEmpty: true } }}
                 value={draftFilters.from_storage_id}
                 onChange={(e) => setDraftFilters((prev) => ({ ...prev, from_storage_id: e.target.value }))}
                 sx={filterSelectSx}
               >
-                <MenuItem value="">{t('deductions.storage')}: {t('common.all')}</MenuItem>
+                <MenuItem value="">{t('warehouse.fromStorage')}</MenuItem>
                 {Object.entries(storagesMap).map(([id, name]) => (
                   <MenuItem key={id} value={id}>{name}</MenuItem>
                 ))}
               </TextField>
-              <TextField select size="small" label=""
+              <TextField select size="small" label="" slotProps={{ select: { displayEmpty: true } }}
                 value={draftFilters.to_storage_id}
                 onChange={(e) => setDraftFilters((prev) => ({ ...prev, to_storage_id: e.target.value }))}
                 sx={filterSelectSx}
               >
-                <MenuItem value="">{t('warehouse.storage')}: {t('common.all')}</MenuItem>
+                <MenuItem value="">{t('warehouse.toStorage')}</MenuItem>
                 {Object.entries(storagesMap).map(([id, name]) => (
                   <MenuItem key={id} value={id}>{name}</MenuItem>
                 ))}
               </TextField>
-              <TextField select size="small" label=""
+              <TextField select size="small" label="" slotProps={{ select: { displayEmpty: true } }}
                 value={draftFilters.act_group_id}
                 onChange={(e) => setDraftFilters((prev) => ({ ...prev, act_group_id: e.target.value }))}
                 sx={filterSelectSx}
               >
-                <MenuItem value="">{t('deductions.group')}: {t('common.all')}</MenuItem>
+                <MenuItem value="">{t('deductions.group')}</MenuItem>
                 {Object.entries(groupsMap).map(([id, name]) => (
                   <MenuItem key={id} value={id}>{name}</MenuItem>
                 ))}
               </TextField>
-              <TextField select size="small" label=""
+              <TextField select size="small" label="" slotProps={{ select: { displayEmpty: true } }}
                 value={draftFilters.status}
                 onChange={(e) => setDraftFilters((prev) => ({ ...prev, status: e.target.value }))}
                 sx={filterSelectSx}
               >
-                <MenuItem value="">{t('invoices.status')}: {t('common.all')}</MenuItem>
+                <MenuItem value="">{t('invoices.status')}</MenuItem>
                 {['active', 'draft', 'deleted'].map((v) => (
                   <MenuItem key={v} value={v}>{v}</MenuItem>
                 ))}
