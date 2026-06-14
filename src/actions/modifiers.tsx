@@ -10,6 +10,7 @@ import useSWR from 'swr';
 import { useMemo, useCallback } from 'react';
 
 import { mutate } from 'src/lib/swr';
+import { prependToListCache } from 'src/lib/list-cache';
 import { poster, putter, deleter, fetcher, endpoints } from 'src/lib/axios';
 
 // ----------------------------------------------------------------------
@@ -317,9 +318,14 @@ export function useCreateModifierWithCalculations() {
           payload
         );
 
-        await mutate(endpoints.modifier.list);
+        const created = response?.data ?? response;
 
-        return response?.data ?? response;
+        // Prepend the created modifier to cached lists instead of refetching
+        if (created?.id) {
+          await prependToListCache(endpoints.modifier.list, created);
+        }
+
+        return created;
       } catch (error) {
         console.error('Failed to create modifier with calculations:', error);
         throw error;

@@ -1,4 +1,5 @@
 import type { Ingredient } from '../types';
+import type { IIngredientItem } from 'src/types/ingredients';
 
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
@@ -50,9 +51,27 @@ export const useIngredients = () => {
         }
     }, [getIngredients, t]);
 
+    // Prepend a newly created ingredient into local state without refetching
+    const addIngredient = useCallback((item: IIngredientItem) => {
+        setIngredients((prev) => {
+            if (prev.some((ing) => ing.id === item.id)) return prev;
+            return [
+                {
+                    id: item.id,
+                    name: item.name,
+                    measurement: item.measurement,
+                    price_per_unit: item.price_per_unit ?? '',
+                    group_id: item.group_id,
+                },
+                ...prev,
+            ];
+        });
+    }, []);
+
     return {
         ingredients,
         loading,
         refreshIngredients,
+        addIngredient,
     };
 };

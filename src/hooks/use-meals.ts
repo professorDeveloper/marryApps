@@ -8,6 +8,7 @@ import { useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { mutate } from 'src/lib/swr';
+import { prependToListCache } from 'src/lib/list-cache';
 import { useGetCategories } from 'src/actions/categories';
 import { useGetDepartments } from 'src/actions/departments';
 import { poster, putter, deleter, fetcher, endpoints } from 'src/lib/axios';
@@ -869,8 +870,10 @@ export function useCreateMealWithCalculations() {
                     throw new Error('Invalid response format');
                 }
 
-                // Revalidate meals list
-                await mutate(endpoints.meals.list);
+                // Prepend the created meal to cached lists instead of refetching
+                if (data?.good?.id) {
+                    await prependToListCache(endpoints.meals.list, data.good);
+                }
 
                 toast.success('Meal with calculations created successfully');
                 return data;

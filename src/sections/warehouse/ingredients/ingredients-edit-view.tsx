@@ -1,4 +1,4 @@
-import type { IIngredientFormData } from 'src/types/ingredients';
+import type { IIngredientItem, IIngredientFormData } from 'src/types/ingredients';
 import type { SectionConfig, EditViewConfig } from 'src/components/generic-edit-v2';
 
 import { useMemo, useCallback } from 'react';
@@ -30,7 +30,7 @@ const COLOR_CODES = [
 
 export interface IngredientEditViewProps {
     isNew?: boolean;
-    onSuccess?: () => void | Promise<void>;
+    onSuccess?: (created?: IIngredientItem) => void | Promise<void>;
     onCancel?: () => void;
 }
 
@@ -76,15 +76,17 @@ export function IngredientEditView({ isNew = false, onSuccess, onCancel }: Ingre
                     picture_url: formData.picture_url || undefined,
                 };
 
+                let created: IIngredientItem | undefined;
                 if (isNew) {
-                    await createIngredient(ingredientData);
+                    const response = await createIngredient(ingredientData);
+                    created = Array.isArray(response.data) ? response.data[0] : response.data;
                 } else if (id) {
                     await updateIngredient(id, ingredientData);
                 }
 
                 await new Promise((resolve) => setTimeout(resolve, 500));
                 if (onSuccess) {
-                    await onSuccess();
+                    await onSuccess(created);
                 } else {
                     router.push(paths.menu.ingredients.root);
                 }

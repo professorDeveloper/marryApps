@@ -12,8 +12,11 @@ import { useMemo, useCallback } from 'react';
 
 import { mutate } from 'src/lib/swr';
 import { poster, putter, fetcher, deleter, endpoints } from 'src/lib/axios';
+import { prependToListCache, prependToMetadataCache } from 'src/lib/list-cache';
 
 import { toast } from 'src/components/snackbar';
+
+import { MetadataEntity } from 'src/types/metadata';
 
 const swrOptions: SWRConfiguration = {
     revalidateIfStale: true,
@@ -197,8 +200,12 @@ export function useCreateIngredient() {
                     payload
                 );
 
-                // Revalidate ingredients list
-                await mutate(endpoints.ingredient.list);
+                // Prepend the created ingredient to cached lists instead of refetching
+                const created = Array.isArray(response.data) ? response.data[0] : response.data;
+                if (created) {
+                    await prependToListCache(endpoints.ingredient.list, created);
+                    await prependToMetadataCache(MetadataEntity.INGREDIENTS, created);
+                }
 
                 toast.success('Ingredient created successfully');
                 return response;

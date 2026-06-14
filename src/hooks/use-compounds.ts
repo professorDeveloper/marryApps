@@ -7,6 +7,7 @@ import { useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { mutate } from 'src/lib/swr';
+import { prependToListCache } from 'src/lib/list-cache';
 import { useGetIngredientGroups } from 'src/actions/ingredient-group';
 import { poster, putter, deleter, fetcher, endpoints } from 'src/lib/axios';
 
@@ -777,8 +778,10 @@ export function useCreateCompoundWithCalculations() {
                     throw new Error('Invalid response format');
                 }
 
-                // Revalidate compounds list
-                await mutate(endpoints.compound.list);
+                // Prepend the created compound to cached lists instead of refetching
+                if (data?.compound?.id) {
+                    await prependToListCache(endpoints.compound.list, data.compound);
+                }
 
                 toast.success('Compound with calculations created successfully');
                 return data;

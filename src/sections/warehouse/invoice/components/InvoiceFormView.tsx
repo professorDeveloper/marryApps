@@ -315,10 +315,7 @@ const InvoiceFormView = React.memo(function InvoiceFormView() {
                 <DialogContent>
                     <IngredientEditView
                         isNew
-                        onSuccess={() => {
-                            void lineItemsApiRef.current?.refreshIngredients();
-                            setIsIngredientDialogOpen(false);
-                        }}
+                        onSuccess={() => setIsIngredientDialogOpen(false)}
                         onCancel={() => setIsIngredientDialogOpen(false)}
                     />
                 </DialogContent>

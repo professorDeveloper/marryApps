@@ -40,6 +40,7 @@ import {
     separationActsFormPickerActions,
 } from 'src/store/slices/pickerFormSlices';
 
+import { IngredientEditView } from 'src/sections/warehouse/ingredients-edit-view';
 import { useIngredients } from 'src/sections/warehouse/invoice/hooks/useIngredients';
 
 import { SeparationActsMetaFields } from './SeparationActsMetaFields';
@@ -90,13 +91,20 @@ const SeparationActsFormView = React.memo(function SeparationActsFormView({
         deleteSeparationActItem,
     } = useSeparationActsAPI();
 
-    const { ingredients, loading: ingredientsLoading, refreshIngredients } = useIngredients();
+    const {
+        ingredients,
+        loading: ingredientsLoading,
+        refreshIngredients,
+        addIngredient,
+    } = useIngredients();
 
     // ── State ─────────────────────────────────────────────────────────────
     const [pageLoading, setPageLoading] = useState(!isNew);
     const [submitting, setSubmitting] = useState(false);
     const [isInfoOpen, setIsInfoOpen] = useState(true);
     const [tableHeight, setTableHeight] = useState(730);
+    const [isIngredientDialogOpen, setIsIngredientDialogOpen] = useState(false);
+    const openIngredientDialog = useCallback(() => setIsIngredientDialogOpen(true), []);
 
     const [storages, setStorages] = useState<SelectOption[]>([]);
     const [groups, setGroups] = useState<SelectOption[]>([]);
@@ -487,6 +495,7 @@ const SeparationActsFormView = React.memo(function SeparationActsFormView({
                             ingredients={ingredients}
                             ingredientsLoading={ingredientsLoading}
                             onRefreshIngredients={refreshIngredients}
+                            onOpenIngredientDialog={openIngredientDialog}
                             onHasItemsChange={handleHasItemsChange}
                             onCancel={handleCancel}
                             onSave={handleSubmit}
@@ -695,6 +704,19 @@ const SeparationActsFormView = React.memo(function SeparationActsFormView({
                         {t('common.delete')}
                     </Button>
                 </DialogActions>
+            </Dialog>
+
+            <Dialog open={isIngredientDialogOpen} fullWidth maxWidth="lg">
+                <DialogContent>
+                    <IngredientEditView
+                        isNew
+                        onSuccess={(created) => {
+                            if (created) addIngredient(created);
+                            setIsIngredientDialogOpen(false);
+                        }}
+                        onCancel={() => setIsIngredientDialogOpen(false)}
+                    />
+                </DialogContent>
             </Dialog>
         </Box>
     );

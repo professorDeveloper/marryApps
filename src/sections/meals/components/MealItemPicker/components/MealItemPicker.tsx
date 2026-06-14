@@ -119,9 +119,8 @@ export const MealItemPicker = React.memo(function MealItemPicker({
     const openIngredientDialog = useCallback(() => setIsIngredientDialogOpen(true), []);
     const closeIngredientDialog = useCallback(() => setIsIngredientDialogOpen(false), []);
     const handleIngredientCreated = useCallback(() => {
-        void refresh();
         setIsIngredientDialogOpen(false);
-    }, [refresh]);
+    }, []);
 
     // Reconcile pending calcs once items load
     useEffect(() => {

@@ -9,6 +9,7 @@ import useSWR from 'swr';
 import { useMemo, useCallback } from 'react';
 
 import { mutate } from 'src/lib/swr';
+import { prependToListCache } from 'src/lib/list-cache';
 import { poster, putter, fetcher, deleter, endpoints } from 'src/lib/axios';
 
 import { toast } from 'src/components/snackbar';
@@ -143,7 +144,11 @@ export function useCreateIngredientGroup() {
         formData
       );
 
-      await mutate(endpoints.ingredientGroups.list);
+      // Prepend the created ingredient group to cached lists instead of refetching
+      const created = Array.isArray(response.data) ? response.data[0] : response.data;
+      if (created) {
+        await prependToListCache(endpoints.ingredientGroups.list, created);
+      }
 
       toast.success('Ingredient group created successfully');
       return response;

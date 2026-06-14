@@ -7,6 +7,7 @@ import { useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { mutate } from 'src/lib/swr';
+import { prependToListCache } from 'src/lib/list-cache';
 import { poster, putter, deleter, fetcher, endpoints } from 'src/lib/axios';
 import { useGetStorages, useGetDepartments } from 'src/actions/departments';
 
@@ -342,8 +343,11 @@ export function useCreateCategory() {
                     formData
                 );
 
-                // Revalidate categories list
-                await mutate(endpoints.category.list);
+                // Prepend the created category to cached lists instead of refetching
+                const created = (response as any)?.data ?? response;
+                if (created?.id) {
+                    await prependToListCache(endpoints.category.list, created);
+                }
 
                 return response;
             } catch (error) {

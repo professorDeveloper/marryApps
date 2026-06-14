@@ -15,6 +15,7 @@ import { useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { mutate } from 'src/lib/swr';
+import { prependToListCache } from 'src/lib/list-cache';
 import { poster, putter, deleter, fetcher, endpoints } from 'src/lib/axios';
 
 // ----------------------------------------------------------------------
@@ -354,8 +355,8 @@ export function useCreateDepartment() {
           departmentPayload
         );
 
-        // Revalidate departments list
-        await mutate(endpoints.department.list);
+        // Prepend the created department to cached lists instead of refetching
+        await prependToListCache(endpoints.department.list, response.data);
 
         return response.data;
       } catch (error) {
@@ -784,7 +785,8 @@ export function useCreateStorage() {
           endpoints.storage.create,
           storagePayload
         );
-        await mutate(endpoints.storage.list);
+        // Prepend the created storage to cached lists instead of refetching
+        await prependToListCache(endpoints.storage.list, response.data);
         return response.data;
       } catch (error) {
         console.error('Failed to create storage:', error);

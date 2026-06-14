@@ -32,6 +32,7 @@ interface TransfersLineItemsProps {
     ingredients: Ingredient[];
     ingredientsLoading: boolean;
     onRefreshIngredients: () => Promise<void>;
+    onOpenIngredientDialog?: () => void;
     onHasItemsChange: (hasItems: boolean) => void;
     onCancel: () => void;
     onSave: () => void | Promise<void>;
@@ -51,6 +52,7 @@ export const TransfersLineItems = React.memo(function TransfersLineItems({
     ingredients,
     ingredientsLoading,
     onRefreshIngredients,
+    onOpenIngredientDialog,
     onHasItemsChange,
     onCancel,
     onSave,
@@ -294,6 +296,7 @@ export const TransfersLineItems = React.memo(function TransfersLineItems({
                 onMoveRight={handleMoveRight}
                 onRemoveRow={handleRemoveRow}
                 onRemoveMany={handleRemoveMany}
+                onAddNewItem={onOpenIngredientDialog}
                 summaryEntries={summaryEntries}
                 totalLabel={t('calculation.total')}
                 totalValue={`${formatPrice(totals.totalAmount)} UZS`}

@@ -10,7 +10,7 @@ import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from 'react-router';
 import React, { useRef, useMemo, useState, useEffect, useCallback } from 'react';
 
-import { Box, Button, Typography, CircularProgress } from '@mui/material';
+import { Box, Button, Dialog, Typography, DialogContent, CircularProgress } from '@mui/material';
 
 import { paths } from 'src/routes/paths';
 
@@ -26,6 +26,7 @@ import {
 
 import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 
+import { IngredientEditView } from 'src/sections/warehouse/ingredients-edit-view';
 import { useIngredients } from 'src/sections/warehouse/invoice/hooks/useIngredients';
 
 import { DeductionMetaFields } from './DeductionMetaFields';
@@ -79,13 +80,20 @@ const DeductionFormView = React.memo(function DeductionFormView({
         getDeductionGroups,
     } = useDeductionsAPI();
 
-    const { ingredients, loading: ingredientsLoading, refreshIngredients } = useIngredients();
+    const {
+        ingredients,
+        loading: ingredientsLoading,
+        refreshIngredients,
+        addIngredient,
+    } = useIngredients();
 
     // ── State ─────────────────────────────────────────────────────────────
     const [pageLoading, setPageLoading] = useState(!isNew);
     const [submitting, setSubmitting] = useState(false);
     const [isInfoOpen, setIsInfoOpen] = useState(true);
     const [tableHeight, setTableHeight] = useState(730);
+    const [isIngredientDialogOpen, setIsIngredientDialogOpen] = useState(false);
+    const openIngredientDialog = useCallback(() => setIsIngredientDialogOpen(true), []);
 
     const [storages, setStorages] = useState<SelectOption[]>([]);
     const [groups, setGroups] = useState<SelectOption[]>([]);
@@ -391,6 +399,7 @@ const DeductionFormView = React.memo(function DeductionFormView({
                     ingredients={ingredients}
                     ingredientsLoading={ingredientsLoading}
                     onRefreshIngredients={refreshIngredients}
+                    onOpenIngredientDialog={openIngredientDialog}
                     onHasItemsChange={handleHasItemsChange}
                     onCancel={handleCancel}
                     onSave={handleSubmit}
@@ -417,6 +426,19 @@ const DeductionFormView = React.memo(function DeductionFormView({
                     </Box>
                 )}
             </Box>
+
+            <Dialog open={isIngredientDialogOpen} fullWidth maxWidth="lg">
+                <DialogContent>
+                    <IngredientEditView
+                        isNew
+                        onSuccess={(created) => {
+                            if (created) addIngredient(created);
+                            setIsIngredientDialogOpen(false);
+                        }}
+                        onCancel={() => setIsIngredientDialogOpen(false)}
+                    />
+                </DialogContent>
+            </Dialog>
         </Box>
     );
 });

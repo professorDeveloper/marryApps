@@ -17,12 +17,14 @@ import {
     Paper,
     Table,
     Button,
+    Dialog,
     TableRow,
     TableHead,
     TableBody,
     TableCell,
     IconButton,
     Typography,
+    DialogContent,
     TableContainer,
     CircularProgress,
 } from '@mui/material';
@@ -42,6 +44,7 @@ import {
 
 import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 
+import { IngredientEditView } from 'src/sections/warehouse/ingredients-edit-view';
 import { useIngredients } from 'src/sections/warehouse/invoice/hooks/useIngredients';
 
 import { OutgoingInvoiceMetaFields } from './OutgoingInvoiceMetaFields';
@@ -74,12 +77,19 @@ const OutgoingInvoiceFormView = React.memo(function OutgoingInvoiceFormView() {
         deleteOutgoingInvoiceItem,
     } = useOutgoingInvoicesAPI();
 
-    const { ingredients, loading: ingredientsLoading, refreshIngredients } = useIngredients();
+    const {
+        ingredients,
+        loading: ingredientsLoading,
+        refreshIngredients,
+        addIngredient,
+    } = useIngredients();
 
     // ── State ─────────────────────────────────────────────────────────────
     const [pageLoading, setPageLoading] = useState(!isNew);
     const [submitting, setSubmitting] = useState(false);
     const [isInfoOpen, setIsInfoOpen] = useState(true);
+    const [isIngredientDialogOpen, setIsIngredientDialogOpen] = useState(false);
+    const openIngredientDialog = useCallback(() => setIsIngredientDialogOpen(true), []);
     const [actionLoading, setActionLoading] = useState<'confirm' | 'cancel' | 'delete' | null>(null);
     const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
 
@@ -355,6 +365,7 @@ const OutgoingInvoiceFormView = React.memo(function OutgoingInvoiceFormView() {
                         ingredients={ingredients}
                         ingredientsLoading={ingredientsLoading}
                         onRefreshIngredients={refreshIngredients}
+                        onOpenIngredientDialog={openIngredientDialog}
                         onHasItemsChange={handleHasItemsChange}
                         onCancel={handleCancel}
                         onSave={handleSubmit}
@@ -438,6 +449,19 @@ const OutgoingInvoiceFormView = React.memo(function OutgoingInvoiceFormView() {
                     </Box>
                 )}
             </Box>
+
+            <Dialog open={isIngredientDialogOpen} fullWidth maxWidth="lg">
+                <DialogContent>
+                    <IngredientEditView
+                        isNew
+                        onSuccess={(created) => {
+                            if (created) addIngredient(created);
+                            setIsIngredientDialogOpen(false);
+                        }}
+                        onCancel={() => setIsIngredientDialogOpen(false)}
+                    />
+                </DialogContent>
+            </Dialog>
         </Box>
     );
 });

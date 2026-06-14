@@ -32,6 +32,7 @@ interface SeparationActsLineItemsProps {
     ingredients: Ingredient[];
     ingredientsLoading: boolean;
     onRefreshIngredients: () => Promise<void>;
+    onOpenIngredientDialog?: () => void;
     onHasItemsChange: (hasItems: boolean) => void;
     onCancel: () => void;
     onSave: () => void | Promise<void>;
@@ -51,6 +52,7 @@ export const SeparationActsLineItems = React.memo(function SeparationActsLineIte
     ingredients,
     ingredientsLoading,
     onRefreshIngredients,
+    onOpenIngredientDialog,
     onHasItemsChange,
     onCancel,
     onSave,
@@ -295,6 +297,7 @@ export const SeparationActsLineItems = React.memo(function SeparationActsLineIte
                 onMoveRight={handleMoveRight}
                 onRemoveRow={handleRemoveRow}
                 onRemoveMany={handleRemoveMany}
+                onAddNewItem={onOpenIngredientDialog}
                 summaryEntries={summaryEntries}
                 totalLabel={t('calculation.total')}
                 totalValue={`${formatPrice(totals.totalAmount)} UZS`}
