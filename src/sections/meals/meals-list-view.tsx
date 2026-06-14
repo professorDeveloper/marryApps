@@ -296,6 +296,7 @@ export function Meals() {
     // State
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [mealToDelete, setMealToDelete] = useState<string | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     // Stop-list dialog ref - keeps dialog input state isolated so it doesn't re-render the table
     const stopDialogRef = useRef<StopMealDialogRef>(null);
@@ -593,17 +594,19 @@ export function Meals() {
 
     const handleConfirmDelete = useCallback(async () => {
         if (mealToDelete) {
+            setIsDeleting(true);
             try {
+                // useDeleteMeal already revalidates the meals list internally
                 await deleteMeal(mealToDelete);
-                // SWR will automatically revalidate
-                mutate();
-                setDeleteDialogOpen(false);
-                setMealToDelete(null);
             } catch (error) {
                 console.error('Failed to delete meal:', error);
+            } finally {
+                setIsDeleting(false);
+                setDeleteDialogOpen(false);
+                setMealToDelete(null);
             }
         }
-    }, [mealToDelete, deleteMeal, mutate]);
+    }, [mealToDelete, deleteMeal]);
 
     const handleDeleteRows = useCallback(
         async (ids: string[]) => {
@@ -806,6 +809,8 @@ export function Meals() {
                         onClick={handleConfirmDelete}
                         color="error"
                         variant="contained"
+                        disabled={isDeleting}
+                        startIcon={isDeleting ? <CircularProgress size={16} color="inherit" /> : undefined}
                     >
                         {t('mealsProducts.delete')}
                     </Button>

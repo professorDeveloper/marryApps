@@ -39,7 +39,7 @@ export function NotFoundView() {
           <PageNotFoundIllustration sx={{ my: { xs: 5, sm: 10 } }} />
         </m.div>
 
-        <Button component={RouterLink} href="/" size="large" variant="contained">
+        <Button component={RouterLink} href="/dashboard" size="large" variant="contained">
           {t('notFound.goHome')}
         </Button>
       </Container>

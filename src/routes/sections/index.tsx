@@ -14,7 +14,7 @@ const Page404 = lazy(() => import('src/pages/error/404'));
 export const routesSection: RouteObject[] = [
   {
     path: '/',
-    element: <Navigate to="/menu/departments" replace />,
+    element: <Navigate to="/dashboard" replace />,
   },
 
   // Auth

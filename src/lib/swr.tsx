@@ -10,9 +10,10 @@ import { SWRConfig, useSWRConfig, preload as swrPreload, mutate as defaultMutate
 // SWR's default cache is an unbounded Map, so every distinct list/search/
 // filter key permanently retains its full response (often 1000-item pages —
 // see the limit interceptor in src/lib/axios.ts). This provider caps the
-// cache LRU-style: reads and writes refresh recency, inserts beyond the cap
-// evict the least-recently-used key. Evicting a still-mounted key is safe —
-// SWR transparently refetches it on the next interaction.
+// cache LRU-style: writes refresh recency, inserts beyond the cap evict the
+// least-recently-written key. Evicting a still-mounted key is safe — SWR
+// transparently refetches it on the next interaction. Reads deliberately do
+// NOT refresh recency (see `get`).
 // ----------------------------------------------------------------------
 
 const MAX_CACHE_ENTRIES = 150;
@@ -27,11 +28,12 @@ function createLruCache(): Cache {
 
   return {
     keys: () => map.keys(),
-    get: (key: string) => {
-      const value = map.get(key);
-      if (value !== undefined) touch(key, value);
-      return value;
-    },
+    // Reads must not mutate `map`: `internalMutate`'s function-filter path
+    // iterates `cache.keys()` while calling `cache.get()` on each key, and
+    // re-inserting the current key into a live Map iterator causes it to be
+    // visited again indefinitely (infinite loop). Recency is tracked on
+    // writes only (see `set`).
+    get: (key: string) => map.get(key),
     set: (key: string, value: State) => {
       if (!map.has(key) && map.size >= MAX_CACHE_ENTRIES) {
         for (const candidate of map.keys()) {

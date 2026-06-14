@@ -41,7 +41,7 @@ export const CONFIG: ConfigValue = {
   auth: {
     method: 'jwt',
     skip: false,
-    redirectPath: '/menu/departments',
+    redirectPath: '/dashboard',
   },
   /**
    * Firebase

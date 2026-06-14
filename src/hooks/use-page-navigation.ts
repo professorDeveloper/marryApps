@@ -97,7 +97,7 @@ export function usePageNavigation() {
       const title = tMenu('overview.warehouse.suppliers', 'Suppliers');
       return isNew ? `New ${title.toLowerCase()}` : title;
     }
-    if (pathname.includes('/warehouse/orders')) {
+    if (pathname.includes('/cashbooks/orders')) {
       const title = tMenu('overview.warehouse.orders', 'Order Management');
       return isNew ? `New ${title.toLowerCase()}` : title;
     }
