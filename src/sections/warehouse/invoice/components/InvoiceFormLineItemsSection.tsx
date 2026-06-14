@@ -19,7 +19,7 @@ import {
     useTransferredItems,
 } from '..';
 
-const INGREDIENT_FIELDS = ['id', 'name', 'group_id', 'measurement', 'price_per_unit'];
+const INGREDIENT_FIELDS = ['id', 'name', 'group_id', 'measurement', 'price_per_unit', 'is_deleted'];
 
 export type { InvoiceLineItemsApi };
 
@@ -47,8 +47,14 @@ export const InvoiceFormLineItemsSection = React.memo(function InvoiceFormLineIt
             group_id?: string;
             measurement?: string;
             price_per_unit?: string;
+            is_deleted?: boolean;
         }>,
         [metadata.ingredients]
+    );
+
+    const availableIngredients = useMemo(
+        () => ingredients.filter((ing) => !ing.is_deleted),
+        [ingredients]
     );
     const refreshIngredients = useCallback(async () => {
         await refetchMetadata();
@@ -96,15 +102,15 @@ export const InvoiceFormLineItemsSection = React.memo(function InvoiceFormLineIt
         }
     }, [hasItems, onHasItemsChange]);
 
-    // Build pickerItems from ingredients
+    // Build pickerItems from ingredients (excluding deleted ones from the available list)
     const pickerItems: PickerItem[] = useMemo(
-        () => ingredients.map((ing) => ({
+        () => availableIngredients.map((ing) => ({
             id: ing.id,
             name: ing.name,
             measurement: ing.measurement,
             group_id: ing.group_id,
         })),
-        [ingredients]
+        [availableIngredients]
     );
 
     const ingredientsById = useMemo(() => {
