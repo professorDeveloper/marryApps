@@ -51,11 +51,12 @@ export function InventoryListView() {
         if (deleteId) {
             try {
                 // Delete will be handled by the DataTable component
-                setDeleteDialogOpen(false);
-                setDeleteId(null);
             } catch (error) {
                 console.error('Failed to delete:', error);
                 toast.error(t('error.deleteFailed'));
+            } finally {
+                setDeleteDialogOpen(false);
+                setDeleteId(null);
             }
         }
     }, [deleteId, t]);

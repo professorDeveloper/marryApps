@@ -473,6 +473,7 @@ export function HalfMeals() {
 
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [compoundToDelete, setCompoundToDelete] = useState<string | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     // View modal
     const { isOpen, selectedData, openModal, closeModal } = useGenericViewModal<ICompound>();
@@ -651,17 +652,19 @@ export function HalfMeals() {
     // Handle delete confirmation
     const handleConfirmDelete = useCallback(async () => {
         if (compoundToDelete) {
+            setIsDeleting(true);
             try {
+                // useDeleteCompound already revalidates the compounds list internally
                 await deleteCompound(compoundToDelete);
-                // SWR will automatically revalidate
-                mutate();
-                setDeleteDialogOpen(false);
-                setCompoundToDelete(null);
             } catch (error) {
                 console.error('Error deleting compound:', error);
+            } finally {
+                setIsDeleting(false);
+                setDeleteDialogOpen(false);
+                setCompoundToDelete(null);
             }
         }
-    }, [compoundToDelete, deleteCompound, mutate]);
+    }, [compoundToDelete, deleteCompound]);
 
     // Handle delete single
     const handleDelete = useCallback(
@@ -846,6 +849,8 @@ export function HalfMeals() {
                         variant="contained"
                         color="error"
                         onClick={handleConfirmDelete}
+                        disabled={isDeleting}
+                        startIcon={isDeleting ? <CircularProgress size={16} color="inherit" /> : undefined}
                         autoFocus
                     >
                         {t('semifinishedProducts.delete')}

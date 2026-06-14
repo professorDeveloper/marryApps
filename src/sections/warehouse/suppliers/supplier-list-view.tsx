@@ -9,6 +9,7 @@ import {
     DialogTitle,
     DialogActions,
     DialogContent,
+    CircularProgress,
 } from '@mui/material';
 
 import { paths } from 'src/routes/paths';
@@ -30,6 +31,7 @@ export function InvoicesListView() {
     const [loading, setLoading] = useState(true);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [supplierToDelete, setSupplierToDelete] = useState<string | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
 
@@ -77,13 +79,16 @@ export function InvoicesListView() {
 
     const handleConfirmDelete = async () => {
         if (supplierToDelete) {
+            setIsDeleting(true);
             try {
                 await deleteSuppliers([supplierToDelete]);
-                setDeleteDialogOpen(false);
-                setSupplierToDelete(null);
                 await loadSuppliers({ silent: true });
             } catch (error) {
                 console.error('Failed to delete supplier:', error);
+            } finally {
+                setIsDeleting(false);
+                setDeleteDialogOpen(false);
+                setSupplierToDelete(null);
             }
         }
     };
@@ -238,6 +243,8 @@ export function InvoicesListView() {
                         variant="contained"
                         color="error"
                         onClick={handleConfirmDelete}
+                        disabled={isDeleting}
+                        startIcon={isDeleting ? <CircularProgress size={16} color="inherit" /> : undefined}
                         autoFocus
                     >
                         {t('warehouse.suppliers.delete')}
