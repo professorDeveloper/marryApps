@@ -4,14 +4,17 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useVirtualizer } from '@tanstack/react-virtual';
 
+import Add from '@mui/icons-material/Add';
 import SearchIcon from '@mui/icons-material/Search';
 import {
     Box,
     Paper,
     Stack,
     Button,
+    Tooltip,
     Checkbox,
     TextField,
+    IconButton,
     Typography,
     InputAdornment,
     CircularProgress,
@@ -35,6 +38,7 @@ interface AvailableTableProps {
     onSelectAll: () => void;
     onAddItem: (item: MealItem) => void;
     onAddSelected: () => void;
+    onAddNewItem?: () => void;
     allChecked: boolean;
     indeterminate: boolean;
     ingredientLabel: string;
@@ -55,6 +59,7 @@ export const AvailableTable = React.memo(function AvailableTable({
     onSelectAll,
     onAddItem,
     onAddSelected,
+    onAddNewItem,
     allChecked,
     indeterminate,
     ingredientLabel,
@@ -104,9 +109,23 @@ export const AvailableTable = React.memo(function AvailableTable({
                 alignItems={{ xs: 'stretch' }}
                 sx={{ mb: 2, flexShrink: 1 }}
             >
-                <Typography variant="h6" sx={{ fontFamily: '"Inter", sans-serif' }}>
-                    {t('mealsProducts.availableItems', 'Available Items')}
-                </Typography>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="h6" sx={{ fontFamily: '"Inter", sans-serif' }}>
+                        {t('mealsProducts.availableItems', 'Available Items')}
+                    </Typography>
+                    {onAddNewItem && (
+                        <Tooltip title={t('ingredients.add')}>
+                            <IconButton
+                                size="small"
+                                onClick={onAddNewItem}
+                                disabled={loading}
+                                color="primary"
+                            >
+                                <Add />
+                            </IconButton>
+                        </Tooltip>
+                    )}
+                </Box>
                 {/* <Stack direction="row" spacing={1} alignItems="center" justifyContent="flex-end"> */}
                 <TypeFilterToggle
                     value={filter}

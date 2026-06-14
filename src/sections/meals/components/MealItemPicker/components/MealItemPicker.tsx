@@ -9,7 +9,9 @@ import type {
 import { useTranslation } from 'react-i18next';
 import React, { useRef, useMemo, useState, useEffect, useCallback } from 'react';
 
-import { Box, Stack } from '@mui/material';
+import { Box, Stack, Dialog, DialogContent } from '@mui/material';
+
+import { IngredientEditView } from 'src/sections/warehouse/ingredients-edit-view';
 
 import { compositeKey } from '../types';
 import { AddedTable } from './AddedTable';
@@ -112,6 +114,14 @@ export const MealItemPicker = React.memo(function MealItemPicker({
 
     const [availableSelected, setAvailableSelected] = useState<Set<string>>(() => new Set());
     const [addedSelected, setAddedSelected] = useState<Set<string>>(() => new Set());
+
+    const [isIngredientDialogOpen, setIsIngredientDialogOpen] = useState(false);
+    const openIngredientDialog = useCallback(() => setIsIngredientDialogOpen(true), []);
+    const closeIngredientDialog = useCallback(() => setIsIngredientDialogOpen(false), []);
+    const handleIngredientCreated = useCallback(() => {
+        void refresh();
+        setIsIngredientDialogOpen(false);
+    }, [refresh]);
 
     // Reconcile pending calcs once items load
     useEffect(() => {
@@ -517,6 +527,7 @@ export const MealItemPicker = React.memo(function MealItemPicker({
                     onSelectAll={handleAvailableSelectAll}
                     onAddItem={handleAdd}
                     onAddSelected={handleAddSelected}
+                    onAddNewItem={openIngredientDialog}
                     allChecked={availableAllChecked}
                     indeterminate={availableIndeterminate}
                     ingredientLabel={ingredientLabel}
@@ -554,6 +565,12 @@ export const MealItemPicker = React.memo(function MealItemPicker({
                     onNavigateFocus={onNavigateFocus ?? handleNavigateFocus}
                 />
             </Box>
+
+            <Dialog open={isIngredientDialogOpen} fullWidth maxWidth="lg">
+                <DialogContent>
+                    <IngredientEditView isNew onSuccess={handleIngredientCreated} onCancel={closeIngredientDialog} />
+                </DialogContent>
+            </Dialog>
         </Stack>
     );
 });

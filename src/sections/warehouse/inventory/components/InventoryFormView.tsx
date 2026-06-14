@@ -299,6 +299,7 @@ const InventoryFormView = React.memo(function InventoryFormView() {
                             void itemsApiRef.current?.refreshIngredients();
                             setIsIngredientDialogOpen(false);
                         }}
+                        onCancel={() => setIsIngredientDialogOpen(false)}
                     />
                 </DialogContent>
             </Dialog>

@@ -317,7 +317,9 @@ const InvoiceFormView = React.memo(function InvoiceFormView() {
                         isNew
                         onSuccess={() => {
                             void lineItemsApiRef.current?.refreshIngredients();
+                            setIsIngredientDialogOpen(false);
                         }}
+                        onCancel={() => setIsIngredientDialogOpen(false)}
                     />
                 </DialogContent>
             </Dialog>

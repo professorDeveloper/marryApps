@@ -31,9 +31,10 @@ const COLOR_CODES = [
 export interface IngredientEditViewProps {
     isNew?: boolean;
     onSuccess?: () => void | Promise<void>;
+    onCancel?: () => void;
 }
 
-export function IngredientEditView({ isNew = false, onSuccess }: IngredientEditViewProps) {
+export function IngredientEditView({ isNew = false, onSuccess, onCancel }: IngredientEditViewProps) {
     const router = useRouter();
     const params = useParams();
     const id = params.id as string | undefined;
@@ -112,8 +113,12 @@ export function IngredientEditView({ isNew = false, onSuccess }: IngredientEditV
     );
 
     const handleCancel = useCallback(() => {
-        router.back();
-    }, [router]);
+        if (onCancel) {
+            onCancel();
+        } else {
+            router.back();
+        }
+    }, [router, onCancel]);
 
     const config: EditViewConfig = useMemo(
         () => ({
