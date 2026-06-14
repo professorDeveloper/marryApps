@@ -28,7 +28,7 @@ export type DataTableRowProps<T> = {
   showRowNumbers: boolean;
   showCheckboxes: boolean;
   selected: boolean;
-  onToggleSelected: () => void;
+  onToggleSelected: (rowId: string) => void;
   rowActions: Array<RowAction<T>>;
   editing: { rowId: string; key: string } | null;
   startEdit: (rowId: string, key: string) => void;
@@ -103,7 +103,7 @@ export const DataTableRow = memo(function DataTableRow<T>({
         <Box className="dtStickyCell" sx={{ display: 'flex', justifyContent: 'center', position: 'sticky', left: 0, zIndex: 1, backgroundColor: 'var(--bg)' }}>
           <Checkbox
             checked={selected}
-            onChange={onToggleSelected}
+            onChange={() => onToggleSelected(rowId)}
             onClick={(e) => e.stopPropagation()}
             size="small"
             sx={{

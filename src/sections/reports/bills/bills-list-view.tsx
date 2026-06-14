@@ -79,6 +79,47 @@ const getTodayUtcBoundary = (): string => {
     return toUtcDayBoundary(today);
 };
 
+// Stable references for DataTable props: redefining these inline on every render
+// gives DataTable a new `getRowId`/`defaultConfig` identity each time, which cascades
+// into `commitEdit`, `toggleAllVisible`, `reset`, etc. and defeats DataTableRow's memo.
+const getBillRowId = (row: any): string => String(row?.id);
+
+const BILLS_TABLE_DEFAULT_CONFIG = {
+    order: ['bill_no', 'bill_status', 'opened_at', 'closed_at', 'waiter_name', 'hall_id', 'table_number', 'guest_count', 'payment_type', 'food_cost', 'food_total', 'discount_amount', 'service_amount', 'grand_total'],
+    visibility: {
+        bill_no: true,
+        bill_status: true,
+        opened_at: true,
+        closed_at: true,
+        waiter_name: true,
+        hall_id: true,
+        table_number: true,
+        guest_count: true,
+        food_cost: true,
+        food_total: true,
+        grand_total: true,
+        payment_type: true,
+        service_amount: true,
+        discount_amount: true,
+    },
+    widths: {
+        bill_no: '0.4fr',
+        bill_status: '0.9fr',
+        opened_at: '0.8fr',
+        closed_at: '0.8fr',
+        waiter_name: '1.2fr',
+        hall_id: '1fr',
+        table_number: '0.6fr',
+        guest_count: '0.8fr',
+        food_cost: '1.4fr',
+        food_total: '1fr',
+        grand_total: '0.8fr',
+        payment_type: '1.2fr',
+        service_amount: '1fr',
+        discount_amount: '0.8fr',
+    },
+};
+
 const initialFilters: BillsListFilters = {
     start: getTodayUtcBoundary(),
     end: getTodayUtcBoundary(),
@@ -407,7 +448,7 @@ export function BillsListView() {
                 total: { aggregation: 'sum' as const },
             },
         ],
-        [t, i18n.language, halls, statusLabels, paymentTypeLabels]
+        [t, i18n.language, statusLabels, paymentTypeLabels]
     );
 
     // Filter handlers adapted for invoice pattern
@@ -482,7 +523,7 @@ export function BillsListView() {
                 <DataTable<any>
                     persistKey="reports-bills-list"
                     data={bills || []}
-                    getRowId={(row: any) => String(row?.id)}
+                    getRowId={getBillRowId}
                     columns={columns}
                     toolbarActions={
                         <>
@@ -559,41 +600,7 @@ export function BillsListView() {
                         activePeriod: activeRange,
                         onPeriodChange: applyRange,
                     }}
-                    defaultConfig={{
-                        order: ['bill_no', 'bill_status', 'opened_at', 'closed_at', 'waiter_name', 'hall_id', 'table_number', 'guest_count', 'payment_type', 'food_cost', 'food_total',  'discount_amount', 'service_amount','grand_total'],
-                        visibility: {
-                            bill_no: true,
-                            bill_status: true,
-                            opened_at: true,
-                            closed_at: true,
-                            waiter_name: true,
-                            hall_id: true,
-                            table_number: true,
-                            guest_count: true,
-                            food_cost: true,
-                            food_total: true,
-                            grand_total: true,
-                            payment_type: true,
-                            service_amount: true,
-                            discount_amount: true,
-                        },
-                        widths: {
-                            bill_no: '0.4fr',
-                            bill_status: '0.9fr',
-                            opened_at: '0.8fr',
-                            closed_at: '0.8fr',
-                            waiter_name: '1.2fr',
-                            hall_id: '1fr',
-                            table_number: '0.6fr',
-                            guest_count: '0.8fr',
-                            food_cost: '1.4fr',
-                            food_total: '1fr',
-                            grand_total: '0.8fr',
-                            payment_type: '1.2fr',
-                            service_amount: '1fr',
-                            discount_amount: '0.8fr',
-                        },
-                    }}
+                    defaultConfig={BILLS_TABLE_DEFAULT_CONFIG}
                     onReset={handleResetFilters}
                     onRowClick={handleViewClick}
                 />

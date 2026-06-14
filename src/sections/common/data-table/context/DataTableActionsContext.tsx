@@ -13,6 +13,7 @@ const DataTableActionsContext = createContext<DataTableActionsContextValue>({
   setSettingsSlot: () => {},
   clearSettingsSlot: () => {},
 });
+DataTableActionsContext.displayName = 'DataTableActionsContext';
 
 export function DataTableActionsProvider({ children }: { children: ReactNode }) {
   const [settingsSlot, setSlot] = useState<ReactNode>(null);

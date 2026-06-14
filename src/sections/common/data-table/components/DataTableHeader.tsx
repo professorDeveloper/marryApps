@@ -1,5 +1,7 @@
-import type { MutableRefObject } from 'react';
+import type { ReactNode, MutableRefObject } from 'react';
 import type { SortDirection, DataTableColumn } from '../types/types';
+
+import { memo } from 'react';
 
 import Box from '@mui/material/Box';
 import Tooltip from '@mui/material/Tooltip';
@@ -34,7 +36,7 @@ export type DataTableHeaderProps<T> = {
   headerDragKey: MutableRefObject<string | null>;
 };
 
-export function DataTableHeader<T>({
+export const DataTableHeader = memo(function DataTableHeader<T>({
   gridTemplateColumns,
   minTableWidth,
   showCheckboxes,
@@ -258,4 +260,4 @@ export function DataTableHeader<T>({
       </Box>
     </Box>
   );
-}
+}) as <T>(props: DataTableHeaderProps<T>) => ReactNode;

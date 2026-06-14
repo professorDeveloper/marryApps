@@ -64,6 +64,12 @@ export function DataTableBody<T>({
     getScrollElement: () => scrollRef.current,
     estimateSize: () => 44,
     overscan: 8,
+    // Approximate the real scroll container height (table card is `min(88vh, 880px)`
+    // minus toolbar/header chrome) so the first render already computes the correct
+    // visible range. Without this, react-virtual starts from {0,0}, then forces a
+    // synchronous flushSync re-render once it measures the real size on mount,
+    // mounting all visible rows in one large blocking commit.
+    initialRect: { width: 0, height: 600 },
   });
 
   return (
@@ -141,7 +147,7 @@ export function DataTableBody<T>({
                   showRowNumbers={showRowNumbers}
                   showCheckboxes={showCheckboxes}
                   selected={selected}
-                  onToggleSelected={() => onToggleSelected(rowId)}
+                  onToggleSelected={onToggleSelected}
                   rowActions={rowActions}
                   editing={editing}
                   startEdit={startEdit}

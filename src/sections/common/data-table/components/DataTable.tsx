@@ -115,6 +115,10 @@ export type DataTableProps<T> = {
 // DataTable
 // ---------------------------------------------------------------------------
 
+// Stable reference for the `batchActions`/`rowActions` defaults: a fresh `[]`
+// per render would change identity every time, breaking memo() on DataTableRow.
+const EMPTY_ARRAY: never[] = [];
+
 export function DataTable<T>({
   persistKey,
   data,
@@ -126,8 +130,8 @@ export function DataTable<T>({
   filterRow,
   periodFilter,
   showRowNumbers = true,
-  batchActions = [],
-  rowActions = [],
+  batchActions = EMPTY_ARRAY,
+  rowActions = EMPTY_ARRAY,
   getRowId,
   onCellEdit,
   search,
@@ -401,7 +405,7 @@ export function DataTable<T>({
 
   // ---- Settings slot in tabs bar -----------------------------------------
   const { setSettingsSlot, clearSettingsSlot } = useDataTableActionsContext();
-  const { t } = useTranslate('common');
+  const { t, i18n } = useTranslate('common');
 
   useEffect(() => {
     setSettingsSlot(
@@ -423,8 +427,12 @@ export function DataTable<T>({
       </>
     );
     return () => clearSettingsSlot();
+  // `t` is deliberately excluded: react-i18next hands back a new `t` reference on
+  // every render, which would re-run this effect (and churn the shared settings-slot
+  // context the whole dashboard layout consumes) on every render of DataTable.
+  // `i18n.language` is a stable primitive that only changes when the language does.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reset, t]);
+  }, [reset, i18n.language]);
 
   // ---- Filters -----------------------------------------------------------
   const [filterAnchor, setFilterAnchor] = useState<HTMLElement | null>(null);
@@ -560,14 +568,21 @@ export function DataTable<T>({
     setEditing({ rowId, key });
   }, []);
   const cancelEdit = useCallback(() => setEditing(null), []);
+
+  // `sortedData` gets a new array identity whenever the user (re)sorts or data
+  // refetches. Reading it via a ref keeps `commitEdit`'s identity stable across
+  // those changes, so it doesn't break memo() on every visible DataTableRow.
+  const sortedDataRef = useRef(sortedData);
+  sortedDataRef.current = sortedData;
+
   const commitEdit = useCallback(
     async (rowId: string, key: string, value: unknown) => {
       setEditing(null);
-      const row = sortedData.find((r) => getRowId(r) === rowId);
+      const row = sortedDataRef.current.find((r) => getRowId(r) === rowId);
       if (!row) return;
       await onCellEdit?.({ row, key, value });
     },
-    [sortedData, getRowId, onCellEdit]
+    [getRowId, onCellEdit]
   );
 
   // ---- Refs --------------------------------------------------------------
