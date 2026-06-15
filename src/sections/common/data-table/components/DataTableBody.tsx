@@ -1,6 +1,7 @@
-import type { RefObject } from 'react';
+import type { ReactNode, RefObject } from 'react';
 import type { RowAction, DataTableColumn } from '../types/types';
 
+import { memo } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 
 import Box from '@mui/material/Box';
@@ -35,7 +36,7 @@ export type DataTableBodyProps<T> = {
   pageOffset?: number;
 };
 
-export function DataTableBody<T>({
+export const DataTableBody = memo(function DataTableBody<T>({
   data,
   columns,
   colOrder,
@@ -163,4 +164,4 @@ export function DataTableBody<T>({
       )}
     </Box>
   );
-}
+}) as <T>(props: DataTableBodyProps<T>) => ReactNode;

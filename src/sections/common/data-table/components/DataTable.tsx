@@ -55,7 +55,7 @@ import { DataTablePagination } from './DataTablePagination';
 import { DataTableColumnMenu } from './DataTableColumnMenu';
 import { DataTableTotalsFooter } from './DataTableTotalsFooter';
 import { DataTableFilterPopover } from './DataTableFilterPopover';
-import { useDataTableActionsContext } from '../context/DataTableActionsContext';
+import { useDataTableSettingsActions } from '../context/DataTableActionsContext';
 import { isSpecial, formatTotal, computeTotal, buildPersisted } from '../utils/helpers';
 import {
   clamp,
@@ -404,7 +404,7 @@ export function DataTable<T>({
   }, [storageStrategy, persistKey, columns, defaultConfig, getDefaultWidths, handleSortChange, onReset]);
 
   // ---- Settings slot in tabs bar -----------------------------------------
-  const { setSettingsSlot, clearSettingsSlot } = useDataTableActionsContext();
+  const { setSettingsSlot, clearSettingsSlot } = useDataTableSettingsActions();
   const { t, i18n } = useTranslate('common');
 
   useEffect(() => {

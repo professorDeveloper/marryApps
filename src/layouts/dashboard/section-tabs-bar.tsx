@@ -5,7 +5,7 @@ import { memo } from 'react';
 import { usePathname } from 'src/routes/hooks';
 import { RouterLink } from 'src/routes/components';
 
-import { useDataTableActionsContext } from 'src/sections/common/data-table/context/DataTableActionsContext';
+import { useDataTableSettingsSlot } from 'src/sections/common/data-table/context/DataTableActionsContext';
 
 // ---------------------------------------------------------------------------
 
@@ -24,7 +24,7 @@ function pathMatchesSection(pathname: string, sectionPath: string, children?: { 
 
 export const SectionTabsBar = memo(function SectionTabsBar({ data, checkPermissions }: SectionTabsBarProps) {
   const pathname = usePathname();
-  const { settingsSlot } = useDataTableActionsContext();
+  const settingsSlot = useDataTableSettingsSlot();
 
   const allTopItems = data.flatMap((group) => group.items);
   const activeItem = allTopItems.find((item) =>
