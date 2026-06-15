@@ -37,8 +37,8 @@ interface AddedRowProps {
 
 const INPUT_STYLE: React.CSSProperties = {
     width: '100%',
-    padding: '6px 8px',
-    fontSize: '0.8125rem',
+    padding: '8px 10px',
+    fontSize: '0.99rem',
     border: '1px solid var(--border)',
     borderRadius: 8,
     outline: 'none',

@@ -245,7 +245,7 @@ export function Meals() {
     useEffect(() => {
         setPaginationModel((prev) => ({ ...prev, pageSize: globalRowsPerPage }));
     }, [globalRowsPerPage]);
-    const [sortState, setSortState] = useState<{ key: string | null; dir: 'asc' | 'desc' | null }>({ key: null, dir: null });
+    const [sortState, setSortState] = useState<{ key: string | null; dir: 'asc' | 'desc' | null }>({ key: 'name', dir: 'asc' });
     const { data: metadata } = useMetadata([MetadataEntity.CATEGORIES, MetadataEntity.DEPARTMENTS]);
     const { departments } = useGetDepartments();
     const { storages } = useGetStorages();
@@ -370,7 +370,7 @@ export function Meals() {
                 key: 'name',
                 label: <span style={{ display: 'block', textAlign: 'left', width: '20%' }}>{t('mealsProducts.name')}</span>,
                 width: '2fr',
-                sortable: false,
+                sortable: true,
                 getValue: (row) => {
                     // Get translation based on current language
                     const currentLang = i18n.language || 'uz';
@@ -646,6 +646,7 @@ export function Meals() {
                             setPaginationModel((prev) => ({ ...prev, page: 0 }));
                         },
                     }}
+                    defaultSort={{ key: 'name', dir: 'asc' }}
                     onSortChange={(sort) => {
                         setSortState({ key: sort.key, dir: sort.dir });
                         setPaginationModel((prev) => ({ ...prev, page: 0 }));
@@ -725,7 +726,7 @@ export function Meals() {
                     }}
                     onReset={() => {
                         setDraftFilters(initialFilters);
-                        setSortState({ key: null, dir: null });
+                        setSortState({ key: 'name', dir: 'asc' });
                     }}
                     onRowClick={handleRowClick}
                     onRowHover={handleRowHover}

@@ -96,6 +96,8 @@ export type DataTableProps<T> = {
   filters?: Record<string, { type: 'text' | 'multi'; value: string | string[] }>;
   onFiltersChange?: (filters: Record<string, { type: 'text' | 'multi'; value: string | string[] }>) => void;
   onSortChange?: (sort: SortState) => void;
+  /** Initial sort applied on first render (not persisted). */
+  defaultSort?: SortState;
 
   // Row behaviour
   showRowNumbers?: boolean;
@@ -139,6 +141,7 @@ export function DataTable<T>({
   filters: controlledFilters,
   onFiltersChange,
   onSortChange,
+  defaultSort,
   storageStrategy = localStorageStrategy,
   emptyTitle = 'No results',
   emptySubtitle = 'Try adjusting filters or columns.',
@@ -265,10 +268,9 @@ export function DataTable<T>({
   );
 
   // ---- Sort & Filter -----------------------------------------------------
-  const [sort, setSort] = useState<{ key: string | null; dir: SortDirection }>({
-    key: null,
-    dir: null,
-  });
+  const [sort, setSort] = useState<{ key: string | null; dir: SortDirection }>(
+    defaultSort ?? { key: null, dir: null }
+  );
 
   const handleSortChange = useCallback(
     (newSort: { key: string | null; dir: SortDirection }) => {

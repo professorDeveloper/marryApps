@@ -7,8 +7,8 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 
 const INPUT_STYLE: React.CSSProperties = {
     width: '100%',
-    padding: '4px 6px',
-    fontSize: '0.8125rem',
+    padding: '7px 9px',
+    fontSize: '0.9375rem',
     border: '1px solid var(--border)',
     borderRadius: 6,
     outline: 'none',
