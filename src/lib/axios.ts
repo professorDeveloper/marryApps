@@ -170,6 +170,21 @@ export const putter = async <T = unknown>(
   }
 };
 
+// PATCH request helper
+export const patcher = async <T = unknown>(
+  url: string,
+  data: unknown,
+  config?: AxiosRequestConfig
+): Promise<T> => {
+  try {
+    const res = await axiosInstance.patch<T>(url, data, config);
+    return res.data;
+  } catch (error) {
+    console.error('Patcher failed:', error);
+    throw error;
+  }
+};
+
 // DELETE request helper
 export const deleter = async <T = unknown>(
   url: string,

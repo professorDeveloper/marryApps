@@ -6,7 +6,7 @@ import { useMemo, useCallback } from 'react';
 import { uuidv4 } from 'minimal-shared/utils';
 
 import { mutate } from 'src/lib/swr';
-import { poster, putter, fetcher, deleter, endpoints } from 'src/lib/axios';
+import { poster, patcher, fetcher, deleter, endpoints } from 'src/lib/axios';
 
 const swrOptions: SWRConfiguration = {
     revalidateIfStale: true,
@@ -261,7 +261,7 @@ export function useCreateUser() {
 export function useUpdateUser() {
     const callback = useCallback(
         async (userId: string, formData: IUserFormData) => {
-            const response = await putter<IUser>(endpoints.users.update(userId), formData);
+            const response = await patcher<IUser>(endpoints.users.update(userId), formData);
             // Revalidate list and details
             mutate(endpoints.users.list);
             mutate(endpoints.users.details(userId));
