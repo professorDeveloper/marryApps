@@ -71,6 +71,8 @@ export const AvailableTable = React.memo(function AvailableTable({
     renderStartedAtRef.current = performance.now();
     const { t } = useTranslation('menu');
     const scrollRef = React.useRef<HTMLDivElement>(null);
+    const [highlightedIndex, setHighlightedIndex] = React.useState(0);
+    const [isSearchFocused, setIsSearchFocused] = React.useState(false);
 
     const virtualizer = useVirtualizer({
         count: rows.length,
@@ -78,6 +80,50 @@ export const AvailableTable = React.memo(function AvailableTable({
         estimateSize: () => AVAILABLE_ROW_ESTIMATE_PX,
         overscan: 6,
     });
+
+    // Keep the keyboard highlight within bounds whenever the visible rows change.
+    React.useEffect(() => {
+        setHighlightedIndex((prev) => {
+            if (rows.length === 0) return -1;
+            if (prev < 0) return 0;
+            return Math.min(prev, rows.length - 1);
+        });
+    }, [rows]);
+
+    // Keep the keyboard-highlighted row scrolled into view.
+    React.useEffect(() => {
+        if (highlightedIndex >= 0) {
+            virtualizer.scrollToIndex(highlightedIndex, { align: 'auto' });
+        }
+    }, [highlightedIndex, virtualizer]);
+
+    const handleRowActivate = React.useCallback(
+        (item: MealItem) => {
+            onAddItem(item);
+            onSearchChange('');
+            setHighlightedIndex(0);
+        },
+        [onAddItem, onSearchChange]
+    );
+
+    const handleSearchKeyDown = React.useCallback(
+        (e: React.KeyboardEvent<HTMLInputElement>) => {
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (rows.length === 0) return;
+                setHighlightedIndex((prev) => Math.min(prev < 0 ? 0 : prev + 1, rows.length - 1));
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (rows.length === 0) return;
+                setHighlightedIndex((prev) => Math.max((prev < 0 ? 0 : prev) - 1, 0));
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                const item = rows[highlightedIndex];
+                if (item) handleRowActivate(item);
+            }
+        },
+        [rows, highlightedIndex, handleRowActivate]
+    );
 
     const calculatedHeight = metaFieldsOpen !== undefined 
         ? (metaFieldsOpen ? 'calc(100vh - 320px)' : 'calc(100vh - 200px)')
@@ -150,6 +196,9 @@ export const AvailableTable = React.memo(function AvailableTable({
                     placeholder={t('search', 'Search')}
                     value={search}
                     onChange={(e) => onSearchChange(e.target.value)}
+                    onKeyDown={handleSearchKeyDown}
+                    onFocus={() => setIsSearchFocused(true)}
+                    onBlur={() => setIsSearchFocused(false)}
                     sx={{
                         '& .MuiOutlinedInput-root': {
                             bgcolor: 'var(--color-surface-1)',
@@ -207,8 +256,9 @@ export const AvailableTable = React.memo(function AvailableTable({
                                     <AvailableRow
                                         item={item}
                                         isSelected={selectedKeys.has(key)}
+                                        isHighlighted={isSearchFocused && vi.index === highlightedIndex}
                                         onSelect={onSelectChange}
-                                        onAdd={onAddItem}
+                                        onAdd={handleRowActivate}
                                         ingredientLabel={ingredientLabel}
                                         compoundLabel={compoundLabel}
                                     />

@@ -10,6 +10,7 @@ import { compositeKey } from '../types';
 interface AvailableRowProps {
     item: MealItem;
     isSelected: boolean;
+    isHighlighted?: boolean;
     onSelect: (key: string, checked: boolean) => void;
     onAdd: (item: MealItem) => void;
     ingredientLabel: string;
@@ -53,6 +54,7 @@ const getChipSx = (type: 'ingredient' | 'compound') => ({
 export const AvailableRow = React.memo(function AvailableRow({
     item,
     isSelected,
+    isHighlighted,
     onSelect,
     onAdd,
     ingredientLabel,
@@ -75,7 +77,10 @@ export const AvailableRow = React.memo(function AvailableRow({
     const stopClick = React.useCallback((e: React.MouseEvent) => e.stopPropagation(), []);
 
     return (
-        <div onClick={handleClick} className="meal-picker-available-row">
+        <div
+            onClick={handleClick}
+            className={`meal-picker-available-row${isHighlighted ? ' is-highlighted' : ''}`}
+        >
             <div style={CB_CELL_STYLE}>
                 <Checkbox
                     size="small"

@@ -123,6 +123,8 @@ export const AvailableItemsPanel = React.memo<AvailableItemsPanelProps>(({
     const handleRowActivate = useCallback(
         (itemId: string) => {
             onMoveRight([itemId]);
+            setSearchTerm('');
+            setHighlightedIndex(0);
         },
         [onMoveRight]
     );

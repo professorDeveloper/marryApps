@@ -911,6 +911,10 @@ p, li { line-height: 1.6; }
 .meal-picker-available-row:hover {
   background: var(--hover);
 }
+.meal-picker-available-row.is-highlighted {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
 
 .meal-picker-added-row {
   display: grid;
