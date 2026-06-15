@@ -42,6 +42,7 @@ export interface MealItemPickerProps {
     tableHeight?: string | number;
     cacheKey?: string;
     onTotalCostChange?: (cost: number) => void;
+    onValidityChange?: (isValid: boolean) => void;
     onNavigateFocus?: (direction: 'up' | 'down' | 'left' | 'right', currentRowIndex: number, currentColumnKey: string) => void;
 }
 
@@ -79,6 +80,7 @@ export const MealItemPicker = React.memo(function MealItemPicker({
     tableHeight = 700,
     cacheKey,
     onTotalCostChange,
+    onValidityChange,
     onNavigateFocus,
 }: MealItemPickerProps) {
     const { t } = useTranslation('menu');
@@ -213,6 +215,15 @@ export const MealItemPicker = React.memo(function MealItemPicker({
     useEffect(() => {
         onTotalCostChange?.(totalCost);
     }, [totalCost, onTotalCostChange]);
+
+    const hasInvalidRows = useMemo(
+        () => allAddedRows.some((r) => !(r.quantity > 0)),
+        [allAddedRows]
+    );
+
+    useEffect(() => {
+        onValidityChange?.(!hasInvalidRows);
+    }, [hasInvalidRows, onValidityChange]);
 
     // Reset available selection when the visible list changes (filter/search/items churn).
     // Selection is cleared inline inside mutation handlers, not via effects, to avoid a

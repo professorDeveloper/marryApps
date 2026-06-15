@@ -61,6 +61,9 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
     // --- Section refs ──────────────────────────────────────────────────────
     const mealItemsApiRef = useRef<MealItemPickerApi | null>(null);
 
+    // --- Validation state from the item picker ─────────────────────────────
+    const [itemsValid, setItemsValid] = useState(true);
+
     // --- Cache key for MealItemPicker ──────────────────────────────────────
     const mealItemPickerCacheKey = isNew ? 'compound_new' : `compound_${compoundId}`;
 
@@ -276,6 +279,7 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
                     isVisible={isMealItemsOpen}
                     tableHeight={tableHeight}
                     cacheKey={mealItemPickerCacheKey}
+                    onValidityChange={setItemsValid}
                 />
 
                 {/* Action buttons - outside accordion */}
@@ -296,7 +300,7 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
                     <Button
                         variant="contained"
                         onClick={handleFormSubmit}
-                        disabled={sectionsDisabled}
+                        disabled={sectionsDisabled || !itemsValid}
                     >
                         {saveLabel}
                     </Button>

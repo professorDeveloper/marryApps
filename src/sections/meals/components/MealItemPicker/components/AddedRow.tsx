@@ -57,6 +57,15 @@ const INPUT_NO_UNIT: React.CSSProperties = { ...INPUT_STYLE, paddingRight: 8 };
 const INPUT_WITH_UNIT_FOCUS: React.CSSProperties = { ...INPUT_WITH_UNIT, ...INPUT_FOCUS_STYLE };
 const INPUT_NO_UNIT_FOCUS: React.CSSProperties = { ...INPUT_NO_UNIT, ...INPUT_FOCUS_STYLE };
 
+const INPUT_ERROR_STYLE: React.CSSProperties = {
+    borderColor: '#d32f2f',
+    backgroundColor: 'rgba(211, 47, 47, 0.06)',
+};
+const INPUT_WITH_UNIT_ERROR: React.CSSProperties = { ...INPUT_WITH_UNIT, ...INPUT_ERROR_STYLE };
+const INPUT_NO_UNIT_ERROR: React.CSSProperties = { ...INPUT_NO_UNIT, ...INPUT_ERROR_STYLE };
+const INPUT_WITH_UNIT_FOCUS_ERROR: React.CSSProperties = { ...INPUT_WITH_UNIT_FOCUS, ...INPUT_ERROR_STYLE };
+const INPUT_NO_UNIT_FOCUS_ERROR: React.CSSProperties = { ...INPUT_NO_UNIT_FOCUS, ...INPUT_ERROR_STYLE };
+
 const CELL_CENTER_STYLE: React.CSSProperties = { display: 'flex', justifyContent: 'center' };
 const NAME_CELL_STYLE: React.CSSProperties = { minWidth: 0 };
 const NAME_STACK_STYLE: React.CSSProperties = { minWidth: 0 };
@@ -121,6 +130,7 @@ export const AddedRow = React.memo(function AddedRow({
     }, []);
 
     const displayValue = isFocused ? localValue : formatNumberWithSpaces(localValue);
+    const isInvalid = !(row.quantity > 0);
 
     const handleSelect = React.useCallback(
         (_: unknown, checked: boolean) => onSelect(key, checked),
@@ -244,8 +254,12 @@ export const AddedRow = React.memo(function AddedRow({
                         placeholder="0"
                         style={
                             row.measurement
-                                ? (isFocused ? INPUT_WITH_UNIT_FOCUS : INPUT_WITH_UNIT)
-                                : (isFocused ? INPUT_NO_UNIT_FOCUS : INPUT_NO_UNIT)
+                                ? (isFocused
+                                    ? (isInvalid ? INPUT_WITH_UNIT_FOCUS_ERROR : INPUT_WITH_UNIT_FOCUS)
+                                    : (isInvalid ? INPUT_WITH_UNIT_ERROR : INPUT_WITH_UNIT))
+                                : (isFocused
+                                    ? (isInvalid ? INPUT_NO_UNIT_FOCUS_ERROR : INPUT_NO_UNIT_FOCUS)
+                                    : (isInvalid ? INPUT_NO_UNIT_ERROR : INPUT_NO_UNIT))
                         }
                     />
                     {row.measurement ? <span style={UNIT_STYLE}>{measurementLabel}</span> : null}

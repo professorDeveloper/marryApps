@@ -57,6 +57,9 @@ export function ModifierEditView({ isNew = false }: ModifierEditViewProps) {
   const mealItemsApiRef = useRef<MealItemPickerApi | null>(null);
   const mealItemPickerCacheKey = isNew ? 'modifier_new' : `modifier_${id}`;
 
+  // ── Validation state from the item picker ────────────────────
+  const [itemsValid, setItemsValid] = useState(true);
+
   // ── Data ────────────────────────────────────────────────────
   const { modifier, modifierLoading } = useGetModifier(isNew ? '' : id || '');
   const { modifierWithCalculations } = useGetModifierWithCalculations(
@@ -263,6 +266,7 @@ export function ModifierEditView({ isNew = false }: ModifierEditViewProps) {
             tableHeight={tableHeight}
             cacheKey={mealItemPickerCacheKey}
             onNavigateFocus={handleNavigateFocus}
+            onValidityChange={setItemsValid}
           />
         </Box>
 
@@ -275,7 +279,7 @@ export function ModifierEditView({ isNew = false }: ModifierEditViewProps) {
           >
             {t('cancel')}
           </Button>
-          <Button variant="contained" onClick={onSave} disabled={sectionsDisabled}>
+          <Button variant="contained" onClick={onSave} disabled={sectionsDisabled || !itemsValid}>
             {saveLabel}
           </Button>
         </Stack>

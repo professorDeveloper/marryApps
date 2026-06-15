@@ -39,6 +39,8 @@ export interface ColumnDef {
     format?: (value: any) => string;
     /** Optional color function for conditional text coloring (e.g. success.main, error.main) */
     colorFn?: (item: PickerItem) => string | undefined;
+    /** When true, the cell is highlighted as invalid unless its value is a number greater than 0 */
+    requiredPositive?: boolean;
 }
 
 // ---------------------------------------------------------------------------

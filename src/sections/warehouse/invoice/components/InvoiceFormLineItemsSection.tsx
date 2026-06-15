@@ -155,6 +155,7 @@ export const InvoiceFormLineItemsSection = React.memo(function InvoiceFormLineIt
                 min: '0',
                 align: 'center',
                 suffix: (item) => (item.measurement ? t(`units.${item.measurement}`, { defaultValue: item.measurement }) : ''),
+                requiredPositive: true,
             },
             {
                 key: 'price_per_unit',
@@ -199,6 +200,12 @@ export const InvoiceFormLineItemsSection = React.memo(function InvoiceFormLineIt
 
     const totalValue = useMemo(
         () => transferredItems.reduce((acc, item) => acc + (Number(item.total) || 0), 0).toFixed(2),
+        [transferredItems]
+    );
+
+    // ── Validation ────────────────────────────────────────────────────────
+    const hasInvalidItems = useMemo(
+        () => transferredItems.some((item) => !(Number(item.quantity) > 0)),
         [transferredItems]
     );
 
@@ -347,7 +354,7 @@ export const InvoiceFormLineItemsSection = React.memo(function InvoiceFormLineIt
                 <Button
                     variant="contained"
                     onClick={() => void onInvoiceSave()}
-                    disabled={invoiceSaveDisabled}
+                    disabled={invoiceSaveDisabled || hasInvalidItems}
                 >
                     {saveLabel}
                 </Button>

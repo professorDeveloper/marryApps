@@ -83,6 +83,10 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
     const mealItemsApiRef = useRef<MealItemPickerApi | null>(null);
     const modifierPickerApiRef = useRef<MealModifiersApi | null>(null);
 
+    // ── Validation state from item pickers ────────────────────────────────
+    const [itemsValid, setItemsValid] = useState(true);
+    const [modifiersValid, setModifiersValid] = useState(true);
+
     // ── Track initial modifiers for comparison ────────────────────────────
     const [initialModifierEntries, setInitialModifierEntries] = useState<
         { modifier_id: string; quantity: number }[]
@@ -465,6 +469,7 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
                                     menuPrice={price}
                                     tableHeight={tableHeight}
                                     showProfitMargin
+                                    onValidityChange={setItemsValid}
                                 />
                             </Box>
                             <Box sx={{ height: '100%', display: activeTab === 1 ? 'block' : 'none' }}>
@@ -478,6 +483,7 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
                                     cancelDisabled
                                     saveDisabled
                                     saveLabel={saveLabel}
+                                    onValidityChange={setModifiersValid}
                                 />
                             </Box>
                             <Box sx={{ height: '100%', display: activeTab === 2 ? 'block' : 'none' }}>
@@ -505,7 +511,7 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
                     <Button
                         variant="contained"
                         onClick={handleSubmit}
-                        disabled={sectionsDisabled}
+                        disabled={sectionsDisabled || !itemsValid || !modifiersValid}
                     >
                         {saveLabel}
                     </Button>

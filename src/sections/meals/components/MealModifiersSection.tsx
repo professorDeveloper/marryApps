@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import React, { useMemo, useState, useCallback, startTransition } from 'react';
+import React, { useMemo, useState, useEffect, useCallback, startTransition } from 'react';
 
 import { Box } from '@mui/material';
 
@@ -45,6 +45,7 @@ interface MealModifiersSectionProps {
     cancelDisabled?: boolean;
     saveDisabled?: boolean;
     saveLabel?: string;
+    onValidityChange?: (isValid: boolean) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -61,6 +62,7 @@ export const MealModifiersSection = React.memo(function MealModifiersSection({
     cancelDisabled,
     saveDisabled,
     saveLabel,
+    onValidityChange,
 }: MealModifiersSectionProps) {
     const { t } = useTranslation('menu');
     const { modifiers, modifiersLoading, modifiersValidating } = useGetModifiers(undefined, {
@@ -129,6 +131,7 @@ export const MealModifiersSection = React.memo(function MealModifiersSection({
                 type: 'number',
                 step: '1',
                 min: '0',
+                requiredPositive: true,
             },
         ],
         [t]
@@ -148,6 +151,16 @@ export const MealModifiersSection = React.memo(function MealModifiersSection({
         ],
         [t, transferredItems.length]
     );
+
+    // ── Validation ────────────────────────────────────────────────────────
+    const hasInvalidItems = useMemo(
+        () => transferredItems.some((item) => !(Number(item.quantity) > 0)),
+        [transferredItems]
+    );
+
+    useEffect(() => {
+        onValidityChange?.(!hasInvalidItems);
+    }, [hasInvalidItems, onValidityChange]);
 
     const handleQuickAdd = useCallback(
         (id: string) => {

@@ -18,6 +18,11 @@ const INPUT_STYLE: React.CSSProperties = {
     fontFamily: 'inherit',
 };
 
+const INPUT_ERROR_STYLE: React.CSSProperties = {
+    borderColor: '#d32f2f',
+    backgroundColor: 'rgba(211, 47, 47, 0.06)',
+};
+
 function itemDisplayEqual(
     a: AddedItemRowProps['item'],
     b: AddedItemRowProps['item'],
@@ -230,6 +235,9 @@ const CellRenderer = memo(function CellRenderer({ col, item, onValueChange, onKe
         const suffix = col.suffix?.(item);
         const inputType = col.type === 'text' ? 'text' : 'text'; // Always use text to avoid browser limits
 
+        const numericValue = parseFloat(String(value ?? ''));
+        const isInvalid = !!col.requiredPositive && !(numericValue > 0);
+
         if (suffix) {
             return (
                 <div style={{ position: 'relative' }}>
@@ -242,7 +250,7 @@ const CellRenderer = memo(function CellRenderer({ col, item, onValueChange, onKe
                         onBlur={handleBlur}
                         inputMode="decimal"
                         placeholder="0"
-                        style={{ ...INPUT_STYLE, paddingRight: 40 }}
+                        style={isInvalid ? { ...INPUT_STYLE, paddingRight: 40, ...INPUT_ERROR_STYLE } : { ...INPUT_STYLE, paddingRight: 40 }}
                     />
                     <span
                         style={{
@@ -271,7 +279,7 @@ const CellRenderer = memo(function CellRenderer({ col, item, onValueChange, onKe
                 onBlur={handleBlur}
                 inputMode="decimal"
                 placeholder="0"
-                style={INPUT_STYLE}
+                style={isInvalid ? { ...INPUT_STYLE, ...INPUT_ERROR_STYLE } : INPUT_STYLE}
             />
         );
     }

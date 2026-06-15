@@ -138,6 +138,7 @@ export const DeductionLineItems = React.memo(function DeductionLineItems({
                 min: '0',
                 align: 'center' as const,
                 suffix: (item: PickerItem) => item.measurement ? t(`units.${item.measurement}`, { defaultValue: item.measurement }) : '',
+                requiredPositive: true,
             },
             {
                 key: 'price_per_unit',
@@ -184,6 +185,12 @@ export const DeductionLineItems = React.memo(function DeductionLineItems({
             },
         ],
         [t, transferredItems.length, totals.totalQty]
+    );
+
+    // ── Validation ────────────────────────────────────────────────────────
+    const hasInvalidItems = useMemo(
+        () => transferredItems.some((item) => !(Number(item.quantity) > 0)),
+        [transferredItems]
     );
 
     // ── Handlers ──────────────────────────────────────────────────────────
@@ -315,7 +322,7 @@ export const DeductionLineItems = React.memo(function DeductionLineItems({
                 <Button
                     variant="contained"
                     onClick={() => void onSave()}
-                    disabled={saveDisabled}
+                    disabled={saveDisabled || hasInvalidItems}
                 >
                     {saveLabel}
                 </Button>
