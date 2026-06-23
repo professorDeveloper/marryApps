@@ -1,6 +1,6 @@
 const formatter = new Intl.NumberFormat('ru-RU', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+    minimumFractionDigits: 3,
+    maximumFractionDigits: 3,
 });
 
 export function numberCell(value: number, marginRight: number = 50) {

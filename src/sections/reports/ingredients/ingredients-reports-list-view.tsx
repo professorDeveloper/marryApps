@@ -40,7 +40,7 @@ import { numberCell } from './utils/numberCell';
 const fmtNum = (value: unknown): string => {
     const n = Number(value);
     if (Number.isNaN(n)) return '—';
-    return n.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return n.toLocaleString('ru-RU', { minimumFractionDigits: 3, maximumFractionDigits: 3 });
 };
 
 // Helper functions
@@ -541,17 +541,17 @@ export function IngredientReportsListView() {
                                             {renderAdditionalData(mov)}
                                         </TableCell>
                                         <TableCell align="right" sx={{ color: theme.palette.text.secondary }}>
-                                            {stockBefore.toFixed(2)}
+                                            {stockBefore.toFixed(3)}
                                         </TableCell>
                                         <TableCell align="right">
                                             {hasIn && (
                                                 <Typography variant="body2" component="span" sx={{ color: theme.palette.success.main, display: 'block' }}>
-                                                    +{qtyIn.toFixed(2)}
+                                                    +{qtyIn.toFixed(3)}
                                                 </Typography>
                                             )}
                                             {hasOut && (
                                                 <Typography variant="body2" component="span" sx={{ color: theme.palette.error.main, display: 'block' }}>
-                                                    -{qtyOut.toFixed(2)}
+                                                    -{qtyOut.toFixed(3)}
                                                 </Typography>
                                             )}
                                             {!hasIn && !hasOut && (
@@ -561,7 +561,7 @@ export function IngredientReportsListView() {
                                             )}
                                         </TableCell>
                                         <TableCell align="right" sx={{ fontWeight: 600 }}>
-                                            {stockAfter.toFixed(2)}
+                                            {stockAfter.toFixed(3)}
                                         </TableCell>
                                     </TableRow>
                                 );
@@ -607,7 +607,7 @@ export function IngredientReportsListView() {
                                     {label}
                                 </Typography>
                                 <Typography variant="body1" sx={{ fontWeight: 700, color: color ?? theme.palette.text.primary, lineHeight: 1 }}>
-                                    {Number(value).toFixed(2)}
+                                    {Number(value).toFixed(3)}
                                 </Typography>
                             </Box>
                         ))}
