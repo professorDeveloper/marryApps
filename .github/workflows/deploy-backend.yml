@@ -62,7 +62,7 @@ jobs:
   deploy-dev:
     needs: build-and-push
     runs-on: ubuntu-latest
-    if: inputs.environment == 'dev'
+    if: ${{ github.event.inputs.environment == 'dev' }}
 
     steps:
       - name: Deploy on DEV server
@@ -82,7 +82,7 @@ jobs:
   deploy-prod:
     needs: build-and-push
     runs-on: ubuntu-latest
-    if: inputs.environment == 'prod'
+    if: ${{ github.event.inputs.environment == 'prod' }}
 
     steps:
       - name: Deploy on PROD server
