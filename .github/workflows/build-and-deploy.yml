@@ -1,21 +1,16 @@
 name: Frontend CI/CD
 
 on:
-  push:
-    branches:
-      - master
-      - main
-      - feature/frontend-cicd
-  pull_request:
-    branches:
-      - master
-      - main
   workflow_dispatch:
     inputs:
-      deploy:
-        description: Deploy to server after successful build
-        type: boolean
-        default: true
+      environment:
+        description: Target environment
+        type: choice
+        required: true
+        options:
+          - prod
+          - dev
+        default: dev
 
 jobs:
   build-check:
@@ -30,13 +25,7 @@ jobs:
 
   publish-and-deploy:
     needs: build-check
-    if: >
-      needs.build-check.result == 'success' &&
-      (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main') &&
-      (
-        github.event_name == 'push' ||
-        (github.event_name == 'workflow_dispatch' && inputs.deploy)
-      )
+    if: needs.build-check.result == 'success'
     runs-on: ubuntu-latest
 
     permissions:

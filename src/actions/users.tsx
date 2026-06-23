@@ -1,9 +1,8 @@
 import type { SWRConfiguration } from 'swr';
-import type { IUser, IUserFormData, IUserRegisterData } from 'src/types/user';
+import type { IUser, IUserFormData } from 'src/types/user';
 
 import useSWR from 'swr';
 import { useMemo, useCallback } from 'react';
-import { uuidv4 } from 'minimal-shared/utils';
 
 import { mutate } from 'src/lib/swr';
 import { poster, patcher, fetcher, deleter, endpoints } from 'src/lib/axios';
@@ -76,24 +75,6 @@ function extractUserPayload(input: any): any {
     return undefined;
 }
 
-function getBrandIdFromToken(): string {
-    const token =
-        sessionStorage.getItem('jwt_access_token')
-        || sessionStorage.getItem('accessToken')
-        || localStorage.getItem('accessToken');
-
-    if (!token) return '';
-
-    try {
-        const [, payload] = token.split('.');
-        if (!payload) return '';
-        const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
-        const decoded = JSON.parse(atob(normalized));
-        return decoded?.brand_id || decoded?.brandId || '';
-    } catch {
-        return '';
-    }
-}
 
 function buildUsersListUrl(params: GetUsersParams = {}) {
     const searchParams = new URLSearchParams();
@@ -207,45 +188,37 @@ export function useGetUser(userId: string) {
 }
 
 /**
- * Create user (via register API)
+ * Create staff user (via authenticated admin endpoint)
  */
 export function useCreateUser() {
     const callback = useCallback(
         async (formData: IUserFormData) => {
-            const tokenBrandId = getBrandIdFromToken();
-
-            // Transform form data to register API format
-            const registerData: IUserRegisterData = {
-                id: uuidv4(),
-                // Token ichidagi brand_id ustuvor (UUID id emas, haqiqiy tenant kodi bo'lishi uchun)
-                brand_id: tokenBrandId || formData.brand_id || localStorage.getItem('brand_id') || '',
-                // selectedBranchId ustuvor, bo'lmasa tokendan kelgan branch_id ishlatiladi
+            const staffData: Record<string, unknown> = {
+                full_name: formData.full_name || formData.fullName || '',
+                phone_number: formData.phone_number || formData.phoneNumber || '',
+                username: formData.username || '',
+                role: formData.role,
+                is_active: formData.is_active ?? true,
                 branch_id:
                     formData.branch_id
                     || localStorage.getItem('selectedBranchId')
                     || localStorage.getItem('branch_id')
                     || '',
-                full_name: formData.full_name || formData.fullName || '',
-                username: formData.username,
-                phone_number: formData.phone_number || formData.phoneNumber || '',
-                role: formData.role,
-                is_active: formData.is_active,
             };
 
             if (formData.password?.trim()) {
-                registerData.password = formData.password.trim();
+                staffData.password = formData.password.trim();
             }
 
             if (formData.pincode?.trim()) {
-                registerData.pincode = formData.pincode.trim();
+                staffData.pincode = formData.pincode.trim();
             }
 
-            if (formData.role === 'cashier' && formData.cash_register_id) {
-                registerData.cash_register_id = formData.cash_register_id;
+            if (formData.cash_register_id) {
+                staffData.cash_register_id = formData.cash_register_id;
             }
 
-            const response = await poster<IUser>(endpoints.users.register, registerData);
-            // Revalidate list
+            const response = await poster<IUser>(endpoints.users.create, staffData);
             mutate(endpoints.users.list);
             return response;
         },

@@ -3,7 +3,7 @@ import type { ITransaction, TransactionFilters } from 'src/types/transactions';
 import dayjs from 'dayjs';
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { useState, useEffect, useCallback } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 
 import {
   Dialog,
@@ -20,10 +20,8 @@ import { useTransactionsAPI } from 'src/hooks/use-transactions-api';
 
 import { DashboardContent } from 'src/layouts/dashboard';
 
-import { toUtcDayBoundary, getInitialFilters } from './utils/date-utils';
+import { toUtcDayBoundary } from './utils/date-utils';
 import { TransactionsDataTable } from './components/TransactionsDataTable';
-
-const INITIAL_FILTERS: TransactionFilters = getInitialFilters();
 
 export function TransactionsListView() {
   const { t } = useTranslation('menu');
@@ -39,7 +37,6 @@ export function TransactionsListView() {
 
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<ITransaction[]>([]);
-  const [filters, setFilters] = useState<TransactionFilters>(getInitialFilters);
   const [groupsMap, setGroupsMap] = useState<Record<string, string>>({});
   const [cashRegisterMap, setCashRegisterMap] = useState<Record<string, string>>({});
   const [branchesMap, setBranchesMap] = useState<Record<string, string>>({});
@@ -62,49 +59,28 @@ export function TransactionsListView() {
     return () => clearTimeout(timeout);
   }, [searchQuery]);
 
-  // Apply search changes
-  useEffect(() => {
-    setFilters((prev) => ({
-      ...prev,
-      search: debouncedSearchQuery,
-    }));
-  }, [debouncedSearchQuery]);
-
-  // Apply sort changes
-  useEffect(() => {
-    setFilters((prev) => ({
-      ...prev,
-      sort_by: sortState.key || '',
-      sort_order: sortState.dir || '',
-    }));
-  }, [sortState]);
-
-  // Apply column filter changes
-  useEffect(() => {
+  // Derive the active filters from search/sort/column/date state.
+  // Combining these into one memo (instead of separate effects that each
+  // call setFilters) avoids cascading re-renders that each re-trigger loadData.
+  const filters = useMemo<TransactionFilters>(() => {
     const getFilterValue = (value: unknown): string => {
       if (Array.isArray(value)) return value.join(',');
       if (typeof value === 'string') return value;
       return '';
     };
 
-    setFilters((prev) => ({
-      ...prev,
+    return {
+      search: debouncedSearchQuery,
+      sort_by: sortState.key || '',
+      sort_order: sortState.dir || '',
       type: getFilterValue(columnFilters.type?.value),
       pay_type: getFilterValue(columnFilters.pay_type?.value),
       cash_register_id: getFilterValue(columnFilters.cash_register_id?.value),
       group_transaction_id: getFilterValue(columnFilters.group_transaction_id?.value),
-    }));
-  }, [columnFilters]);
-
-  // Apply date range changes
-  useEffect(() => {
-    setFilters((prev) => ({
-      ...prev,
       date_from: startDate ? toUtcDayBoundary(startDate) : '',
       date_to: endDate ? toUtcDayBoundary(endDate, true) : '',
-    }));
-  }, [startDate, endDate]);
-
+    };
+  }, [debouncedSearchQuery, sortState, columnFilters, startDate, endDate]);
 
   const loadData = useCallback(
     async (nextFilters: TransactionFilters = {}) => {
@@ -162,11 +138,7 @@ export function TransactionsListView() {
     [getBranches, getCashRegisters, getStaffUsers, getTransactionGroups, getTransactions]
   );
 
-  useEffect(() => {
-    loadData(INITIAL_FILTERS);
-  }, [loadData]);
-
-  // Auto-apply filters when any filter changes
+  // Load data whenever the derived filters change (including on mount)
   useEffect(() => {
     loadData(filters);
   }, [filters, loadData]);
@@ -181,20 +153,15 @@ export function TransactionsListView() {
   }, [deleteId, deleteTransaction, filters, loadData]);
 
   const handleResetFilters = useCallback(() => {
-    setFilters(getInitialFilters());
     setSearchQuery('');
     setDebouncedSearchQuery('');
     setSortState({ key: null, dir: null });
     setColumnFilters({});
     resetTimeFilter();
-  }, []);
+  }, [resetTimeFilter]);
 
   const handleSortChange = useCallback((sort: { key: string | null; dir: 'asc' | 'desc' | null }) => {
     setSortState({ key: sort.key, dir: sort.dir });
-  }, []);
-
-  const handleFiltersChange = useCallback((newFilters: TransactionFilters) => {
-    setFilters(newFilters);
   }, []);
 
   const handleDeleteClick = useCallback((id: string) => {

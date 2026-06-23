@@ -90,10 +90,10 @@ export function TransactionsDataTable({
         renderCell: ({ value }) => {
           const amountValue = Number(value as number).toLocaleString();
           return (
-            <Box sx={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              py: 1.5, 
+            <Box sx={{
+              display: 'flex',
+              alignItems: 'center',
+              py: 1.5,
               px: 1,
               color: 'text.primary',
               fontSize: '0.875rem',
@@ -299,10 +299,10 @@ export function TransactionsDataTable({
         renderCell: ({ row }) => {
           const dateValue = row.date ? new Date(row.date).toLocaleDateString() : '-';
           return (
-            <Box sx={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              py: 1.5, 
+            <Box sx={{
+              display: 'flex',
+              alignItems: 'center',
+              py: 1.5,
               px: 1,
               color: 'text.primary',
               fontSize: '0.875rem',
@@ -347,18 +347,18 @@ export function TransactionsDataTable({
         filterable: false,
         align: 'center',
         renderCell: ({ row }) => (
-          <Box sx={{ 
-            display: 'flex', 
-            gap: 0.5, 
-            alignItems: 'center', 
-            py: 1.5, 
+          <Box sx={{
+            display: 'flex',
+            gap: 0.5,
+            alignItems: 'center',
+            py: 1.5,
             px: 1
           }}>
             <IconButton
               size="small"
               component={RouterLink}
               href={paths.cashbox.transactionsEdit(row.id)}
-              sx={{ 
+              sx={{
                 color: 'text.secondary',
                 '&:hover': {
                   backgroundColor: 'action.hover',
@@ -371,7 +371,7 @@ export function TransactionsDataTable({
             <IconButton
               size="small"
               onClick={() => onDeleteClick(row.id)}
-              sx={{ 
+              sx={{
                 color: 'error.main',
                 '&:hover': {
                   backgroundColor: 'error.lighter',
@@ -401,6 +401,7 @@ export function TransactionsDataTable({
   };
   const filterSelectSx = {
     ...FILTER_SELECT_SX,
+    '& .MuiInputLabel-root': { display: 'block' },
     '& .MuiInputLabel-root.Mui-focused': { color: 'var(--brand)' },
   };
 
@@ -444,7 +445,7 @@ export function TransactionsDataTable({
       onFiltersChange={onFiltersChange}
       onSortChange={onSortChange}
       pagination={pagination}
-      onReset={onReset || (() => {})}
+      onReset={onReset || (() => { })}
       toolbarActions={
         <>
           <TextField

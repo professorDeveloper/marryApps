@@ -51,6 +51,7 @@ const statusColorMap: Record<string, 'default' | 'info' | 'success' | 'warning' 
 
 const filterSelectSx = {
   ...FILTER_SELECT_SX,
+  '& .MuiInputLabel-root': { display: 'block' },
   '& .MuiInputLabel-root.Mui-focused': { color: 'var(--brand)' },
 };
 
@@ -203,7 +204,8 @@ export function OrdersManagementView() {
         }}
         toolbarActions={
           <TextField
-            select size="small" label={t('order.status')}
+            select size="small" 
+            label={t('order.status')}
             value={status}
             onChange={(e) => { setStatus(e.target.value); setPage(0); }}
             sx={filterSelectSx}
