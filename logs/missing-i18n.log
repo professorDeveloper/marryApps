@@ -219,3 +219,6 @@
 {"languages":["en"],"namespace":"menu","key":"mealsProducts.totalCost","fallback":"mealsProducts.totalCost","timestamp":"2026-06-23T09:24:49.696Z","url":"http://localhost:8081/menu/meals/new"}
 {"languages":["en"],"namespace":"menu","key":"warehouse.invoiceDetails.sortAsc","fallback":"warehouse.invoiceDetails.sortAsc","timestamp":"2026-06-23T09:24:49.712Z","url":"http://localhost:8081/menu/meals/new"}
 {"languages":["en"],"namespace":"menu","key":"mealsProducts.comingSoon","fallback":"mealsProducts.comingSoon","timestamp":"2026-06-23T09:24:49.729Z","url":"http://localhost:8081/menu/meals/new"}
+{"languages":["en"],"namespace":"menu","key":"warehouse.invoiceDetails.sortAsc","fallback":"warehouse.invoiceDetails.sortAsc","timestamp":"2026-07-10T04:11:49.687Z","url":"http://localhost:8081/operations/transfers/new"}
+{"languages":["en"],"namespace":"menu","key":"warehouse.invoiceDetails.sortAsc","fallback":"warehouse.invoiceDetails.sortAsc","timestamp":"2026-07-10T04:12:55.233Z","url":"http://localhost:8081/operations/transfers/new"}
+{"languages":["en"],"namespace":"menu","key":"warehouse.invoiceDetails.sortAsc","fallback":"warehouse.invoiceDetails.sortAsc","timestamp":"2026-07-10T04:34:43.241Z","url":"http://localhost:8081/operations/transfers/new"}

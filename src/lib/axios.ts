@@ -73,7 +73,10 @@ axiosInstance.interceptors.request.use((config) => {
     '/api/v1/deductions/group',
     '/api/v1/orders',
     '/api/v1/modifiers',
+    '/api/v1/cafe-tables',
   ]);
+  // Same as above, but for dynamic-segment endpoints matched by prefix (e.g. /cafe-tables/hall/:hallId).
+  const forcedListPrefixes = ['/api/v1/cafe-tables/hall/'];
 
   const method = (config.method || 'get').toLowerCase();
   const rawUrl = config.url || '';
@@ -81,8 +84,10 @@ axiosInstance.interceptors.request.use((config) => {
   const hasLimitInUrl = new URLSearchParams(queryString).has('limit');
   const paramsObj = (config.params || {}) as Record<string, unknown>;
   const hasLimitInParams = Object.prototype.hasOwnProperty.call(paramsObj, 'limit');
+  const isForcedList =
+    forcedListEndpoints.has(pathOnly) || forcedListPrefixes.some((prefix) => pathOnly.startsWith(prefix));
 
-  if (method === 'get' && forcedListEndpoints.has(pathOnly) && !hasLimitInUrl && !hasLimitInParams) {
+  if (method === 'get' && isForcedList && !hasLimitInUrl && !hasLimitInParams) {
     config.params = {
       ...paramsObj,
       limit: 1000,

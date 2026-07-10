@@ -88,10 +88,10 @@ export const FloorPlanSidebar = ({
     const { deleteTable } = useDeleteCafeTable();
 
     const [editTableId, setEditTableId] = useState<string | null>(null);
-    const [editFormData, setEditFormData] = useState<Partial<Table>>({});
+    const [editFormData, setEditFormData] = useState<Omit<Partial<Table>, 'price_per_hour'> & { price_per_hour?: number | '' }>({});
     const [createTableDialogOpen, setCreateTableDialogOpen] = useState(false);
     const [unitType, setUnitType] = useState<'m' | 'cm'>('m');
-    const [createTableFormData, setCreateTableFormData] = useState<{ number: number; capacity: number; pos_x: number; pos_y: number; width: number; height: number; rotation: number; table_type: 'simple' | 'time_based'; price_per_hour: number }>({ number: 0, capacity: 4, pos_x: 0, pos_y: 0, width: 0.8, height: 0.6, rotation: 0, table_type: 'simple', price_per_hour: 0 });
+    const [createTableFormData, setCreateTableFormData] = useState<{ number: number; capacity: number; pos_x: number; pos_y: number; width: number; height: number; rotation: number; table_type: 'simple' | 'time_based'; price_per_hour: number | '' }>({ number: 0, capacity: 4, pos_x: 0, pos_y: 0, width: 0.8, height: 0.6, rotation: 0, table_type: 'simple', price_per_hour: '' });
     const [creatingTable, setCreatingTable] = useState(false);
     const [updatingTable, setUpdatingTable] = useState(false);
     const [deletingTable, setDeletingTable] = useState(false);
@@ -148,7 +148,7 @@ export const FloorPlanSidebar = ({
             height: heightInMeters,
             rotation: table.rotation,
             table_type: table.table_type || 'simple',
-            price_per_hour: table.price_per_hour ?? 0,
+            price_per_hour: table.price_per_hour ?? '',
         });
         setUnitType('m');
     };
@@ -179,7 +179,7 @@ export const FloorPlanSidebar = ({
                 height: heightInPx,  // Send in pixels
                 rotation: editFormData.rotation,
                 table_type: editFormData.table_type,
-                price_per_hour: editFormData.table_type === 'time_based' ? editFormData.price_per_hour : undefined,
+                price_per_hour: editFormData.table_type === 'time_based' ? (editFormData.price_per_hour === '' || editFormData.price_per_hour === undefined ? 0 : editFormData.price_per_hour) : undefined,
             };
 
             await updateTable(editTableId, hallId, payload);
@@ -210,7 +210,7 @@ export const FloorPlanSidebar = ({
             height: 0.6,  // 0.6 meters
             rotation: 0,
             table_type: 'simple',
-            price_per_hour: 0,
+            price_per_hour: '',
         });
         setUnitType('m');
         setCreateTableDialogOpen(true);
@@ -253,7 +253,7 @@ export const FloorPlanSidebar = ({
                 height: tableHeightPx,  // Send in pixels
                 rotation: createTableFormData.rotation,
                 table_type: createTableFormData.table_type,
-                price_per_hour: createTableFormData.table_type === 'time_based' ? createTableFormData.price_per_hour : undefined,
+                price_per_hour: createTableFormData.table_type === 'time_based' ? (createTableFormData.price_per_hour === '' ? 0 : createTableFormData.price_per_hour) : undefined,
             });
             handleCreateTableDialogClose();
             // Don't call onTableCreate() - SWR will auto-refresh via mutate
@@ -683,9 +683,10 @@ export const FloorPlanSidebar = ({
                                 label="Price per hour"
                                 type="number"
                                 value={createTableFormData.price_per_hour}
-                                onChange={(e) => setCreateTableFormData((prev) => ({ ...prev, price_per_hour: parseFloat(e.target.value) || 0 }))}
+                                onChange={(e) => setCreateTableFormData((prev) => ({ ...prev, price_per_hour: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
                                 fullWidth
                                 size="small"
+                                placeholder="0"
                                 disabled={createTableFormData.table_type !== 'time_based'}
                                 inputProps={{ min: 0, step: 1000 }}
                             />
@@ -797,10 +798,11 @@ export const FloorPlanSidebar = ({
                             <TextField
                                 label="Price per hour"
                                 type="number"
-                                value={editFormData.price_per_hour ?? 0}
-                                onChange={(e) => handleInputChange('price_per_hour', parseFloat(e.target.value) || 0)}
+                                value={editFormData.price_per_hour ?? ''}
+                                onChange={(e) => handleInputChange('price_per_hour', e.target.value === '' ? '' : parseFloat(e.target.value))}
                                 fullWidth
                                 size="small"
+                                placeholder="0"
                                 disabled={editFormData.table_type !== 'time_based'}
                                 inputProps={{ min: 0, step: 1000 }}
                             />
