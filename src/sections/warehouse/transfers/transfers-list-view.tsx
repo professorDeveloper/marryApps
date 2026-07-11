@@ -1,9 +1,10 @@
 import type { GridPaginationModel } from '@mui/x-data-grid';
 import type { Transfer } from 'src/types/transfers';
+import type { BranchDetail } from 'src/sections/warehouse/transfers/types';
 
 import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
-import { useMemo, useState, useEffect, useCallback } from 'react';
+import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
 
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -16,11 +17,8 @@ import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
 import { RouterLink } from 'src/routes/components';
 
-import { useStorageAPI } from 'src/hooks/use-storage-api';
 import { useTransfersAPI } from 'src/hooks/use-transfers-api';
-import { useDeductionsAPI } from 'src/hooks/use-deductions-api';
 import { usePaginationRows } from 'src/hooks/use-pagination-rows';
-import { useGetWorkspacesBranches } from 'src/hooks/use-workspaces-branches';
 
 import { getStatusColor, formatStatusLabel } from 'src/utils/status-colors';
 
@@ -33,25 +31,12 @@ import { RenderCell } from 'src/components/RenderCell';
 import { FILTER_SELECT_SX } from 'src/sections/common/data-table';
 import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
 
-interface Branch {
-  id: string;
-  name: string;
-}
-
-interface Storage {
-  id: string;
-  name: string;
-}
-
 interface BackendResponse<T> {
   status: string;
   message: string;
   data: T;
   code: number;
 }
-
-type BranchDetailsResponse = BackendResponse<Branch> | Branch;
-type StoragesByBranchResponse = BackendResponse<Storage[]> | Storage[] | { data?: BackendResponse<Storage[]> | Storage[] };
 
 // Date utility functions
 const getTodayUtcBoundary = (endOfDay = false): string => {
@@ -79,12 +64,9 @@ const toUtcDayBoundary = (value: dayjs.Dayjs, endOfDay = false): string => {
 const filterSelectSx = FILTER_SELECT_SX;
 
 export function TransfersListView() {
-  const { t } = useTranslation('menu');
+  const { t, i18n } = useTranslation('menu');
   const router = useRouter();
   const { getTransfers, deleteTransfer, getTransferGroups } = useTransfersAPI();
-  const { getStorages } = useStorageAPI();
-  const { getDeductionGroups } = useDeductionsAPI();
-  const { workspaces } = useGetWorkspacesBranches();
 
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<Transfer[]>([]);
@@ -93,9 +75,6 @@ export function TransfersListView() {
   const [branchesMap, setBranchesMap] = useState<Record<string, string>>({});
   const [storagesMap, setStoragesMap] = useState<Record<string, string>>({});
   const [groupsMap, setGroupsMap] = useState<Record<string, string>>({});
-  const [branchOptions, setBranchOptions] = useState<string[]>([]);
-  const [storageOptions, setStorageOptions] = useState<string[]>([]);
-  const [groupOptions, setGroupOptions] = useState<string[]>([]);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [openConfirm, setOpenConfirm] = useState(false);
   const { rowsPerPage } = usePaginationRows();
@@ -124,42 +103,54 @@ export function TransfersListView() {
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
 
-  // Fetch filter options - build maps with ID as key and name as value for filter display
+  // Fetch reference data (branches + nested storages, groups) once — a single
+  // combined request instead of separate branches/storages/groups list calls.
+  const referenceDataFetchedRef = useRef(false);
   useEffect(() => {
-    const fetchFilterOptions = async () => {
-      try {
-        // Update branches map from workspaces
-        const newBranchesMap = workspaces.reduce(
-          (acc, w) => ({ ...acc, [w.id]: w.name }),
-          {} as Record<string, string>
-        );
-        setBranchesMap(newBranchesMap);
-        setBranchOptions(Object.keys(newBranchesMap));
+    if (referenceDataFetchedRef.current) return;
+    referenceDataFetchedRef.current = true;
 
-        // Fetch and update storages map
-        const storages = await getStorages();
-        const newStoragesMap = storages.reduce(
-          (acc, s) => ({ ...acc, [s.id]: s.name }),
-          {} as Record<string, string>
-        );
-        setStoragesMap(newStoragesMap);
-        setStorageOptions(Object.keys(newStoragesMap));
+    const langCode = i18n.language?.startsWith('ru')
+      ? 'ru'
+      : i18n.language?.startsWith('en')
+        ? 'en'
+        : 'uz';
 
-        // Fetch and update deduction groups map
-        const groups = await getDeductionGroups();
-        const newGroupsMap = groups.reduce(
-          (acc, g) => ({ ...acc, [g.id]: g.name }),
-          {} as Record<string, string>
+    Promise.all([
+      getTransferGroups(),
+      fetcher<BackendResponse<BranchDetail[]>>([
+        endpoints.branches.detail,
+        { params: { lang: langCode } },
+      ]).catch(() => ({ status: 'error', message: 'failed', data: [] as BranchDetail[], code: 500 })),
+    ])
+      .then(([groupsData, branchDetailData]) => {
+        setGroupsMap(
+          (groupsData || []).reduce(
+            (acc, item) => ({ ...acc, [item.id]: item.name || item.id }),
+            {} as Record<string, string>
+          )
         );
-        setGroupsMap(newGroupsMap);
-        setGroupOptions(Object.keys(newGroupsMap));
-      } catch (error) {
-        console.error('Failed to fetch filter options:', error);
-      }
-    };
 
-    fetchFilterOptions();
-  }, [workspaces, getStorages, getDeductionGroups]);
+        const branchDetails = Array.isArray(branchDetailData?.data) ? branchDetailData.data : [];
+
+        setBranchesMap(
+          branchDetails.reduce(
+            (acc, b) => ({ ...acc, [b.branch_id]: b.name || b.branch_id }),
+            {} as Record<string, string>
+          )
+        );
+
+        setStoragesMap(
+          branchDetails.reduce((acc, b) => {
+            (b.storages || []).forEach((s) => {
+              acc[s.id] = s.name || s.id;
+            });
+            return acc;
+          }, {} as Record<string, string>)
+        );
+      })
+      .catch((error) => console.error('Failed to fetch reference data:', error));
+  }, [getTransferGroups, i18n.language]);
 
   // Debounce search query
   useEffect(() => {
@@ -205,129 +196,26 @@ export function TransfersListView() {
   const loadData = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
     if (!silent) setLoading(true);
     try {
-      const [transfersData, groupsData, branchesData, storagesData] = await Promise.all([
-        getTransfers({
-          limit: paginationModel.pageSize,
-          offset: paginationModel.page * paginationModel.pageSize,
-          status: draftFilters.status || undefined,
-          date_from: draftFilters.date_from || undefined,
-          date_to: draftFilters.date_to || undefined,
-          from_storage_id: draftFilters.from_storage_id || undefined,
-          to_storage_id: draftFilters.to_storage_id || undefined,
-          act_group_id: draftFilters.act_group_id || undefined,
-          ingredient_id: draftFilters.ingredient_id || undefined,
-          expand: 'items',
-        }),
-        getTransferGroups(),
-        fetcher<BackendResponse<Branch[]>>(endpoints.branches.list).catch(() => ({
-          status: 'error',
-          message: 'failed',
-          data: [],
-          code: 500,
-        })),
-        fetcher<BackendResponse<Storage[]>>(endpoints.storage.list).catch(() => ({
-          status: 'error',
-          message: 'failed',
-          data: [],
-          code: 500,
-        })),
-      ]);
-
-      const baseBranchesMap = (branchesData.data || []).reduce(
-        (acc, item) => ({ ...acc, [item.id]: item.name || item.id }),
-        {} as Record<string, string>
-      );
-
-      const missingBranchIds = Array.from(
-        new Set(
-          transfersData.items.flatMap((transfer) => [transfer.from_branch_id, transfer.to_branch_id])
-        )
-      ).filter((branchId) => branchId && !baseBranchesMap[branchId]);
-
-      let resolvedBranchesMap: Record<string, string> = {};
-
-      if (missingBranchIds.length) {
-        const resolvedEntries = await Promise.all(
-          missingBranchIds.map(async (branchId) => {
-            try {
-              const response = await fetcher<BranchDetailsResponse>(endpoints.branches.details(branchId));
-              const branch = (response as BackendResponse<Branch>)?.data ?? (response as Branch);
-              return [branchId, branch?.name || branchId] as const;
-            } catch {
-              return [branchId, branchId] as const;
-            }
-          })
-        );
-
-        resolvedBranchesMap = resolvedEntries.reduce(
-          (acc, [branchId, branchName]) => ({ ...acc, [branchId]: branchName }),
-          {} as Record<string, string>
-        );
-      }
-
-      const branchIdsFromTransfers = Array.from(
-        new Set(
-          transfersData.items.flatMap((transfer) => [transfer.from_branch_id, transfer.to_branch_id])
-        )
-      ).filter(Boolean);
-
-      const parseStoragesResponse = (response: StoragesByBranchResponse): Storage[] => {
-        if (Array.isArray(response)) return response;
-        if (response && 'data' in response && Array.isArray(response.data)) return response.data;
-        if (
-          response &&
-          'data' in response &&
-          response.data &&
-          typeof response.data === 'object' &&
-          'data' in response.data &&
-          Array.isArray((response.data as BackendResponse<Storage[]>).data)
-        ) {
-          return (response.data as BackendResponse<Storage[]>).data;
-        }
-        return [];
-      };
-
-      let storagesFromBranches: Storage[] = [];
-      if (branchIdsFromTransfers.length) {
-        const storagesByBranchResponses = await Promise.all(
-          branchIdsFromTransfers.map((branchId) =>
-            fetcher<StoragesByBranchResponse>(endpoints.storage.byBranch(branchId)).catch(() => [])
-          )
-        );
-
-        storagesFromBranches = storagesByBranchResponses.flatMap((response) =>
-          parseStoragesResponse(response as StoragesByBranchResponse)
-        );
-      }
-
-      const baseStorages = Array.isArray(storagesData.data) ? storagesData.data : [];
-      const storagesMapMerged = [...baseStorages, ...storagesFromBranches].reduce(
-        (acc, item) => ({ ...acc, [item.id]: item.name || item.id }),
-        {} as Record<string, string>
-      );
+      const transfersData = await getTransfers({
+        limit: paginationModel.pageSize,
+        offset: paginationModel.page * paginationModel.pageSize,
+        status: draftFilters.status || undefined,
+        date_from: draftFilters.date_from || undefined,
+        date_to: draftFilters.date_to || undefined,
+        from_storage_id: draftFilters.from_storage_id || undefined,
+        to_storage_id: draftFilters.to_storage_id || undefined,
+        act_group_id: draftFilters.act_group_id || undefined,
+        ingredient_id: draftFilters.ingredient_id || undefined,
+        expand: 'items',
+      });
 
       setRows(transfersData.items);
       setRowCount(transfersData.pagination?.total || 0);
       setTotalAmount(transfersData.totalAmount || '0');
-      setGroupsMap(
-        (groupsData || []).reduce(
-          (acc, item) => ({ ...acc, [item.id]: item.name || item.id }),
-          {} as Record<string, string>
-        )
-      );
-      setBranchesMap(
-        {
-          ...baseBranchesMap,
-          ...resolvedBranchesMap,
-        }
-      );
-      setStoragesMap(
-        storagesMapMerged
-      );
     } finally {
       if (!silent) setLoading(false);
     }
-  }, [getTransferGroups, getTransfers, paginationModel.page, paginationModel.pageSize, draftFilters]);
+  }, [getTransfers, paginationModel.page, paginationModel.pageSize, draftFilters]);
 
   useEffect(() => {
     loadData();
@@ -613,7 +501,7 @@ export function TransfersListView() {
         ),
       },
     ],
-    [branchesMap, groupsMap, storagesMap, t, router, branchOptions, storageOptions, groupOptions]
+    [branchesMap, groupsMap, storagesMap, t, router]
   );
 
   return (

@@ -231,3 +231,4 @@
 {"languages":["en"],"namespace":"menu","key":"common.inactive","fallback":"common.inactive","timestamp":"2026-07-11T11:22:40.691Z","url":"http://localhost:8081/employee/users/207d4cd5-461f-4160-875b-3c7bb6bb905e/edit"}
 {"languages":["en"],"namespace":"menu","key":"users.updateEmployee","fallback":"users.updateEmployee","timestamp":"2026-07-11T11:22:40.692Z","url":"http://localhost:8081/employee/users/207d4cd5-461f-4160-875b-3c7bb6bb905e/edit"}
 {"languages":["en"],"namespace":"menu","key":"saving","fallback":"saving","timestamp":"2026-07-11T11:22:40.802Z","url":"http://localhost:8081/employee/users/207d4cd5-461f-4160-875b-3c7bb6bb905e/edit"}
+{"languages":["en"],"namespace":"menu","key":"common.notFound","fallback":"common.notFound","timestamp":"2026-07-11T17:13:13.748Z","url":"http://localhost:8081/operations/transfers"}
