@@ -201,6 +201,7 @@ const SeparationActsFormView = React.memo(function SeparationActsFormView({
         };
 
         load();
+        return undefined;
     }, [dispatch, formName, getSeparationActById, id, isNew, navigate, t]);
 
     useEffect(

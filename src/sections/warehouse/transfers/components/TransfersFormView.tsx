@@ -241,6 +241,7 @@ const TransfersFormView = React.memo(function TransfersFormView({
         };
 
         load();
+        return undefined;
     }, [dispatch, formName, getTransferById, id, isNew, navigate, t]);
 
     useEffect(

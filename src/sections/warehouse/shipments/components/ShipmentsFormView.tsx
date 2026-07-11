@@ -179,6 +179,7 @@ const ShipmentsFormView = React.memo(function ShipmentsFormView({
         };
 
         load();
+        return undefined;
     }, [dispatch, formName, getShipmentById, id, isNew, navigate, t]);
 
     useEffect(

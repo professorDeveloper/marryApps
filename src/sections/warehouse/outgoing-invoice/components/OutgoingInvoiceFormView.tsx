@@ -195,6 +195,7 @@ const OutgoingInvoiceFormView = React.memo(function OutgoingInvoiceFormView() {
         };
 
         load();
+        return undefined;
     }, [isNew, id, getOutgoingInvoiceById, mapResponseToState, navigate, t]);
 
     useEffect(

@@ -191,6 +191,7 @@ const DeductionFormView = React.memo(function DeductionFormView({
         };
 
         load();
+        return undefined;
     }, [dispatch, formName, getDeductionById, id, isNew, navigate, t]);
 
     useEffect(
