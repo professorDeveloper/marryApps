@@ -82,6 +82,7 @@ export interface OutgoingInvoiceFilters {
   storage_id?: string;
   group_id?: string;
   status?: string;
+  search?: string;
   limit?: number;
   offset?: number;
   sort_by?: string;

@@ -33,13 +33,15 @@ import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
 import { RouterLink } from 'src/routes/components';
 
-import { useStorageAPI } from 'src/hooks/use-storage-api';
-import { useDeductionsAPI } from 'src/hooks/use-deductions-api';
 import { useSeparationActsAPI } from 'src/hooks/use-separation-acts-api';
+import {
+  useStoragesList,
+  useDeductionGroups,
+  useIngredientsList,
+} from 'src/hooks/use-reference-data';
 
 import { getStatusColor, formatStatusLabel } from 'src/utils/status-colors';
 
-import { fetcher, endpoints } from 'src/lib/axios';
 import { DashboardContent } from 'src/layouts/dashboard';
 
 import { Iconify } from 'src/components/iconify';
@@ -76,18 +78,6 @@ const initialFilters: SeparationActFilters = {
   sort_order: undefined,
 };
 
-interface Ingredient {
-  id: string;
-  name: string;
-}
-
-interface BackendResponse<T> {
-  status: string;
-  message: string;
-  data: T;
-  code: number;
-}
-
 const toUtcDayBoundary = (value: dayjs.Dayjs, endOfDay = false): string => {
   const boundary = endOfDay ? value.endOf('day') : value.startOf('day');
   return boundary.toISOString().replace('.000Z', 'Z');
@@ -120,15 +110,14 @@ export function SeparationActsListView() {
   const noDataText = t('noDataAvailable');
 
   const { getSeparationActs, getSeparationActById, deleteSeparationAct } = useSeparationActsAPI();
-  const { getStorages } = useStorageAPI();
-  const { getDeductionGroups } = useDeductionsAPI();
+
+  // Shared reference data (SWR-deduped across views/mounts)
+  const { storagesMap } = useStoragesList();
+  const { groupsMap } = useDeductionGroups();
+  const { ingredientsMap } = useIngredientsList();
 
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<SeparationAct[]>([]);
-
-  const [storagesMap, setStoragesMap] = useState<Record<string, string>>({});
-  const [groupsMap, setGroupsMap] = useState<Record<string, string>>({});
-  const [ingredientsMap, setIngredientsMap] = useState<Record<string, string>>({});
 
   const [filters, setFilters] = useState<SeparationActFilters>(initialFilters);
   const [draftFilters, setDraftFilters] = useState<SeparationActFilters>(initialFilters);
@@ -155,10 +144,9 @@ export function SeparationActsListView() {
 
   // Update draftFilters with search
   useEffect(() => {
-    setDraftFilters((prev) => ({
-      ...prev,
-      search: debouncedSearchQuery,
-    }));
+    setDraftFilters((prev) =>
+      prev.search === debouncedSearchQuery ? prev : { ...prev, search: debouncedSearchQuery }
+    );
   }, [debouncedSearchQuery]);
 
   const openViewModal = useCallback(async (separationActId: string) => {
@@ -171,40 +159,6 @@ export function SeparationActsListView() {
       setViewLoading(false);
     }
   }, [getSeparationActById]);
-
-  const loadBaseData = useCallback(async () => {
-    const [storagesData, groupsData, ingredientsData] = await Promise.all([
-      getStorages(),
-      getDeductionGroups(),
-      fetcher<BackendResponse<Ingredient[]>>(endpoints.ingredient.list).catch(() => ({
-        status: 'error',
-        message: 'failed',
-        data: [],
-        code: 500,
-      })),
-    ]);
-
-    setStoragesMap(
-      (storagesData || []).reduce(
-        (acc, item) => ({ ...acc, [item.id]: item.name || item.id }),
-        {} as Record<string, string>
-      )
-    );
-
-    setGroupsMap(
-      (groupsData || []).reduce(
-        (acc, item) => ({ ...acc, [item.id]: item.name || item.id }),
-        {} as Record<string, string>
-      )
-    );
-
-    setIngredientsMap(
-      (ingredientsData.data || []).reduce(
-        (acc, item) => ({ ...acc, [item.id]: item.name || item.id }),
-        {} as Record<string, string>
-      )
-    );
-  }, [getStorages, getDeductionGroups]);
 
   const loadSeparationActs = useCallback(
     async ({ silent = false }: { silent?: boolean } = {}) => {
@@ -221,19 +175,19 @@ export function SeparationActsListView() {
   );
 
   useEffect(() => {
-    loadBaseData();
-  }, [loadBaseData]);
-
-  useEffect(() => {
     loadSeparationActs();
   }, [loadSeparationActs]);
 
   useEffect(() => {
-    setFilters((prev) => ({
-      ...prev,
-      ...draftFilters,
-      offset: 0,
-    }));
+    // Keep the previous object when nothing changed so `loadSeparationActs`
+    // isn't recreated (its effect would re-fetch the list for no reason).
+    setFilters((prev) => {
+      const next = { ...prev, ...draftFilters, offset: 0 };
+      const changed = (Object.keys(next) as Array<keyof SeparationActFilters>).some(
+        (key) => next[key] !== prev[key]
+      );
+      return changed ? next : prev;
+    });
   }, [draftFilters]);
 
   const handleResetFilters = useCallback(() => {

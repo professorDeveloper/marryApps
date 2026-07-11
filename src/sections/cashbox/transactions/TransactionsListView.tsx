@@ -17,6 +17,11 @@ import { paths } from 'src/routes/paths';
 
 import { useTimeFilter } from 'src/hooks/use-time-filter';
 import { useTransactionsAPI } from 'src/hooks/use-transactions-api';
+import {
+  useStaffUsersList,
+  useCashRegistersList,
+  useTransactionGroupsList,
+} from 'src/hooks/use-reference-data';
 
 import { DashboardContent } from 'src/layouts/dashboard';
 
@@ -26,21 +31,15 @@ import { TransactionsDataTable } from './components/TransactionsDataTable';
 export function TransactionsListView() {
   const { t } = useTranslation('menu');
   const navigate = useNavigate();
-  const {
-    getTransactions,
-    deleteTransaction,
-    getTransactionGroups,
-    getCashRegisters,
-    getBranches,
-    getStaffUsers,
-  } = useTransactionsAPI();
+  const { getTransactions, deleteTransaction } = useTransactionsAPI();
+
+  // Shared reference data (SWR-deduped across views/mounts)
+  const { transactionGroupsMap: groupsMap } = useTransactionGroupsList();
+  const { cashRegistersMap: cashRegisterMap } = useCashRegistersList();
+  const { staffUsersMap: usersMap } = useStaffUsersList();
 
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<ITransaction[]>([]);
-  const [groupsMap, setGroupsMap] = useState<Record<string, string>>({});
-  const [cashRegisterMap, setCashRegisterMap] = useState<Record<string, string>>({});
-  const [branchesMap, setBranchesMap] = useState<Record<string, string>>({});
-  const [usersMap, setUsersMap] = useState<Record<string, string>>({});
 
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [openConfirm, setOpenConfirm] = useState(false);
@@ -86,56 +85,13 @@ export function TransactionsListView() {
     async (nextFilters: TransactionFilters = {}) => {
       setLoading(true);
       try {
-        const [transactions, groups, cashRegisters, branches, users] = await Promise.all([
-          getTransactions(nextFilters),
-          getTransactionGroups(),
-          getCashRegisters(),
-          getBranches(),
-          getStaffUsers(),
-        ]);
-
+        const transactions = await getTransactions(nextFilters);
         setRows(transactions);
-        setGroupsMap(
-          groups.reduce(
-            (acc, item) => ({
-              ...acc,
-              [item.id]: item.name || item.id,
-            }),
-            {} as Record<string, string>
-          )
-        );
-        setCashRegisterMap(
-          cashRegisters.reduce(
-            (acc, item) => ({
-              ...acc,
-              [item.id]: item.name || item.id,
-            }),
-            {} as Record<string, string>
-          )
-        );
-        setBranchesMap(
-          branches.reduce(
-            (acc, item) => ({
-              ...acc,
-              [item.id]: item.name || item.id,
-            }),
-            {} as Record<string, string>
-          )
-        );
-        setUsersMap(
-          users.reduce(
-            (acc, item) => ({
-              ...acc,
-              [item.id]: item.full_name || item.username || item.id,
-            }),
-            {} as Record<string, string>
-          )
-        );
       } finally {
         setLoading(false);
       }
     },
-    [getBranches, getCashRegisters, getStaffUsers, getTransactionGroups, getTransactions]
+    [getTransactions]
   );
 
   // Load data whenever the derived filters change (including on mount)

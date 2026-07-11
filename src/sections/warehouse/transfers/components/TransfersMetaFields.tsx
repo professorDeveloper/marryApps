@@ -121,6 +121,7 @@ export const TransfersMetaFields = React.memo(function TransfersMetaFields({
                     value={fromBranchId}
                     onChange={(e) => onFromBranchChange(e.target.value)}
                     size="small"
+                    InputLabelProps={{ shrink: true }}
                     SelectProps={{ native: true }}
                     disabled={disabled || branches.length === 0}
                 >
@@ -138,6 +139,7 @@ export const TransfersMetaFields = React.memo(function TransfersMetaFields({
                     value={fromStorageId}
                     onChange={(e) => onFromStorageChange(e.target.value)}
                     size="small"
+                    InputLabelProps={{ shrink: true }}
                     SelectProps={{ native: true }}
                     disabled={disabled || !fromBranchId || fromStorages.length === 0}
                 >
@@ -155,6 +157,7 @@ export const TransfersMetaFields = React.memo(function TransfersMetaFields({
                     value={toBranchId}
                     onChange={(e) => onToBranchChange(e.target.value)}
                     size="small"
+                    InputLabelProps={{ shrink: true }}
                     SelectProps={{ native: true }}
                     disabled={disabled || branches.length === 0}
                 >
@@ -172,6 +175,7 @@ export const TransfersMetaFields = React.memo(function TransfersMetaFields({
                     value={toStorageId}
                     onChange={(e) => onToStorageChange(e.target.value)}
                     size="small"
+                    InputLabelProps={{ shrink: true }}
                     SelectProps={{ native: true }}
                     disabled={disabled || !toBranchId || toStorages.length === 0}
                 >
@@ -189,6 +193,7 @@ export const TransfersMetaFields = React.memo(function TransfersMetaFields({
                     value={groupId}
                     onChange={(e) => onGroupChange(e.target.value)}
                     size="small"
+                    InputLabelProps={{ shrink: true }}
                     SelectProps={{ native: true }}
                     disabled={disabled || groups.length === 0}
                 >
@@ -206,6 +211,7 @@ export const TransfersMetaFields = React.memo(function TransfersMetaFields({
                     value={status}
                     onChange={(e) => onStatusChange(e.target.value)}
                     size="small"
+                    InputLabelProps={{ shrink: true }}
                     SelectProps={{ native: true }}
                     disabled={disabled}
                 >

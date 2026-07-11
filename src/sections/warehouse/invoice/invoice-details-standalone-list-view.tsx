@@ -25,8 +25,7 @@ import { RouterLink } from 'src/routes/components';
 
 import { useMetadata } from 'src/hooks/use-metadata';
 import { useInvoiceAPI } from 'src/hooks/use-invoice-api';
-import { useStorageAPI } from 'src/hooks/use-storage-api';
-import { useSupplierAPI } from 'src/hooks/use-supplier-api';
+import { useStoragesList, useSuppliersList } from 'src/hooks/use-reference-data';
 import {
   useInvoiceDetailsAPI,
   invoiceDetailsByInvoiceKey,
@@ -133,23 +132,16 @@ const filterSelectSx = {
     '& .MuiInputLabel-root.Mui-focused': { color: 'var(--brand)' },
 };
 
-let staticDataCache: {
-  suppliers: any[];
-  storages: any[];
-} | null = null;
-
-let staticDataPromise: Promise<{
-  suppliers: any[];
-  storages: any[];
-}> | null = null;
-
 export function InvoiceDetailsStandaloneListView() {
   const { t } = useTranslation('menu');
   const noDataText = t('noDataAvailable');
   const { deleteInvoiceDetails, getInvoicesPage } = useInvoiceDetailsAPI();
   const { deleteInvoices } = useInvoiceAPI();
-  const { getSuppliers } = useSupplierAPI();
-  const { getStorages } = useStorageAPI();
+
+  // Shared reference data (SWR-deduped across views/mounts)
+  const { suppliers } = useSuppliersList();
+  const { storages } = useStoragesList();
+
   const { data: metadata } = useMetadata([MetadataEntity.INGREDIENTS]);
   // stable reference — a bare `?? []` would invalidate downstream memos every render
   const ingredients = useMemo(
@@ -157,8 +149,6 @@ export function InvoiceDetailsStandaloneListView() {
     [metadata]
   );
   const [rawInvoices, setRawInvoices] = useState<any[]>([]);
-  const [suppliers, setSuppliers] = useState<any[]>([]);
-  const [storages, setStorages] = useState<any[]>([]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedDeleteId, setSelectedDeleteId] = useState<string | null>(null);
   const [selectedDeleteType, setSelectedDeleteType] = useState<'invoice' | 'detail' | null>(null);
@@ -169,39 +159,6 @@ export function InvoiceDetailsStandaloneListView() {
   const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 20 });
   const [activePeriod, setActivePeriod] = useState<'day' | 'week' | 'month' | 'year' | undefined>('year');
   const lastInvoicesKeyRef = useRef('');
-
-  useEffect(() => {
-    const fetchStaticData = async () => {
-      try {
-        if (staticDataCache) {
-          setSuppliers(staticDataCache.suppliers);
-          setStorages(staticDataCache.storages);
-          return;
-        }
-
-        if (!staticDataPromise) {
-          staticDataPromise = Promise.all([
-            getSuppliers(),
-            getStorages(),
-          ]).then(([suppliersData, storagesData]) => ({
-            suppliers: suppliersData || [],
-            storages: storagesData || [],
-          }));
-        }
-
-        const resolved = await staticDataPromise;
-        staticDataCache = resolved;
-
-        setSuppliers(resolved.suppliers);
-        setStorages(resolved.storages);
-      } catch {
-        setSuppliers([]);
-        setStorages([]);
-      }
-    };
-
-    fetchStaticData();
-  }, [getSuppliers, getStorages]);
 
   useEffect(() => {
     const fetchInvoices = async () => {

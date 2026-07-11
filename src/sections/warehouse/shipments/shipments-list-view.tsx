@@ -29,13 +29,15 @@ import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
 import { RouterLink } from 'src/routes/components';
 
-import { useStorageAPI } from 'src/hooks/use-storage-api';
-import { useSupplierAPI } from 'src/hooks/use-supplier-api';
 import { useShipmentsAPI } from 'src/hooks/use-shipments-api';
+import {
+  useStoragesList,
+  useSuppliersList,
+  useIngredientsList,
+} from 'src/hooks/use-reference-data';
 
 import { getStatusColor, formatStatusLabel } from 'src/utils/status-colors';
 
-import { fetcher, endpoints } from 'src/lib/axios';
 import { DashboardContent } from 'src/layouts/dashboard';
 
 import { Iconify } from 'src/components/iconify';
@@ -72,18 +74,6 @@ const initialFilters: ShipmentFilters = {
   sort_order: undefined,
 };
 
-interface Ingredient {
-  id: string;
-  name: string;
-}
-
-interface BackendResponse<T> {
-  status: string;
-  message: string;
-  data: T;
-  code: number;
-}
-
 const toUtcDayBoundary = (value: dayjs.Dayjs, endOfDay = false): string => {
   const boundary = endOfDay ? value.endOf('day') : value.startOf('day');
   return boundary.toISOString().replace('.000Z', 'Z');
@@ -103,16 +93,15 @@ export function ShipmentsListView() {
   const noDataText = t('noDataAvailable');
 
   const { getShipments, getShipmentById, deleteShipment } = useShipmentsAPI();
-  const { getStorages } = useStorageAPI();
-  const { getSuppliers } = useSupplierAPI();
+
+  // Shared reference data (SWR-deduped across views/mounts)
+  const { storagesMap } = useStoragesList();
+  const { suppliersMap } = useSuppliersList();
+  const { ingredientsMap } = useIngredientsList();
 
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<Shipment[]>([]);
   const [total, setTotal] = useState(0);
-
-  const [storagesMap, setStoragesMap] = useState<Record<string, string>>({});
-  const [suppliersMap, setSuppliersMap] = useState<Record<string, string>>({});
-  const [ingredientsMap, setIngredientsMap] = useState<Record<string, string>>({});
 
   const [filters, setFilters] = useState<ShipmentFilters>(initialFilters);
   const [draftFilters, setDraftFilters] = useState<ShipmentFilters>(initialFilters);
@@ -138,10 +127,9 @@ export function ShipmentsListView() {
 
   // Update draftFilters with search
   useEffect(() => {
-    setDraftFilters((prev) => ({
-      ...prev,
-      search: debouncedSearchQuery,
-    }));
+    setDraftFilters((prev) =>
+      prev.search === debouncedSearchQuery ? prev : { ...prev, search: debouncedSearchQuery }
+    );
   }, [debouncedSearchQuery]);
 
   const openViewModal = useCallback(
@@ -157,40 +145,6 @@ export function ShipmentsListView() {
     },
     [getShipmentById]
   );
-
-  const loadBaseData = useCallback(async () => {
-    const [storagesData, suppliersData, ingredientsData] = await Promise.all([
-      getStorages(),
-      getSuppliers(),
-      fetcher<BackendResponse<Ingredient[]>>(endpoints.ingredient.list).catch(() => ({
-        status: 'error',
-        message: 'failed',
-        data: [],
-        code: 500,
-      })),
-    ]);
-
-    setStoragesMap(
-      (storagesData || []).reduce(
-        (acc, item) => ({ ...acc, [item.id]: item.name || item.id }),
-        {} as Record<string, string>
-      )
-    );
-
-    setSuppliersMap(
-      (suppliersData || []).reduce(
-        (acc, item) => ({ ...acc, [item.id]: item.name || item.id }),
-        {} as Record<string, string>
-      )
-    );
-
-    setIngredientsMap(
-      (ingredientsData.data || []).reduce(
-        (acc, item) => ({ ...acc, [item.id]: item.name || item.id }),
-        {} as Record<string, string>
-      )
-    );
-  }, [getStorages, getSuppliers]);
 
   const loadShipments = useCallback(
     async ({ silent = false }: { silent?: boolean } = {}) => {
@@ -208,19 +162,19 @@ export function ShipmentsListView() {
   );
 
   useEffect(() => {
-    loadBaseData();
-  }, [loadBaseData]);
-
-  useEffect(() => {
     loadShipments();
   }, [loadShipments]);
 
   useEffect(() => {
-    setFilters((prev) => ({
-      ...prev,
-      ...draftFilters,
-      offset: 0,
-    }));
+    // Keep the previous object when nothing changed so `loadShipments`
+    // isn't recreated (its effect would re-fetch the list for no reason).
+    setFilters((prev) => {
+      const next = { ...prev, ...draftFilters, offset: 0 };
+      const changed = (Object.keys(next) as Array<keyof ShipmentFilters>).some(
+        (key) => next[key] !== prev[key]
+      );
+      return changed ? next : prev;
+    });
   }, [draftFilters]);
 
   const handleResetFilters = useCallback(() => {

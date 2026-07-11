@@ -1,5 +1,4 @@
 import type { GridColDef } from '@mui/x-data-grid';
-import type { Branch, Storage } from './types';
 import type { Transfer } from 'src/types/transfers';
 
 import { useTranslation } from 'react-i18next';
@@ -8,8 +7,11 @@ import { useMemo, useState, useEffect, useCallback } from 'react';
 import { paths } from 'src/routes/paths';
 
 import { useTransfersAPI } from 'src/hooks/use-transfers-api';
-
-import { fetcher, endpoints } from 'src/lib/axios';
+import {
+  useBranchesList,
+  useStoragesList,
+  useDeductionGroups,
+} from 'src/hooks/use-reference-data';
 
 import { Iconify } from 'src/components/iconify';
 import { GenericTableView } from 'src/components/generic-table-view';
@@ -17,68 +19,29 @@ import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
 
 import { TransferDeleteDialog } from './components/TransferDeleteDialog';
 
-interface BackendResponse<T> {
-  status: string;
-  message: string;
-  data: T;
-  code: number;
-}
-
 export function TransactionsListView() {
   const { t } = useTranslation('menu');
-  const { getTransfers, getTransferGroups } = useTransfersAPI();
+  const { getTransfers } = useTransfersAPI();
+
+  // Shared reference data (SWR-deduped across views/mounts)
+  const { branchesMap } = useBranchesList();
+  const { storagesMap } = useStoragesList();
+  const { groupsMap } = useDeductionGroups();
 
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<Transfer[]>([]);
-  const [branchesMap, setBranchesMap] = useState<Record<string, string>>({});
-  const [storagesMap, setStoragesMap] = useState<Record<string, string>>({});
-  const [groupsMap, setGroupsMap] = useState<Record<string, string>>({});
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [openConfirm, setOpenConfirm] = useState(false);
 
   const loadData = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
     if (!silent) setLoading(true);
     try {
-      const [transfersData, groupsData, branchesData, storagesData] = await Promise.all([
-        getTransfers(),
-        getTransferGroups(),
-        fetcher<BackendResponse<Branch[]>>(endpoints.branches.list).catch(() => ({
-          status: 'error',
-          message: 'failed',
-          data: [],
-          code: 500,
-        })),
-        fetcher<BackendResponse<Storage[]>>(endpoints.storage.list).catch(() => ({
-          status: 'error',
-          message: 'failed',
-          data: [],
-          code: 500,
-        })),
-      ]);
-
+      const transfersData = await getTransfers();
       setRows(transfersData.items || []);
-      setGroupsMap(
-        (groupsData || []).reduce(
-          (acc, item) => ({ ...acc, [item.id]: item.name || item.id }),
-          {} as Record<string, string>
-        )
-      );
-      setBranchesMap(
-        (branchesData.data || []).reduce(
-          (acc, item) => ({ ...acc, [item.id]: item.name || item.id }),
-          {} as Record<string, string>
-        )
-      );
-      setStoragesMap(
-        (storagesData.data || []).reduce(
-          (acc, item) => ({ ...acc, [item.id]: item.name || '-' }),
-          {} as Record<string, string>
-        )
-      );
     } finally {
       if (!silent) setLoading(false);
     }
-  }, [getTransferGroups, getTransfers]);
+  }, [getTransfers]);
 
   useEffect(() => {
     loadData();

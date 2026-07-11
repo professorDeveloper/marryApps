@@ -29,8 +29,8 @@ import {
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
 
-import { useStorageAPI } from 'src/hooks/use-storage-api';
 import { useInventoryAPI } from 'src/hooks/use-inventory-api';
+import { useStoragesList } from 'src/hooks/use-reference-data';
 import { useGenericViewModal } from 'src/hooks/use-generic-view-modal';
 
 import { getStatusColor, formatStatusLabel } from 'src/utils/status-colors';
@@ -118,7 +118,9 @@ export function InventoryListView() {
     const theme = useTheme();
     const router = useRouter();
     const { getInventories, deleteInventory, getInventoryItems } = useInventoryAPI();
-    const { getStorages } = useStorageAPI();
+
+    // Shared reference data (SWR-deduped across views/mounts)
+    const { storages: storageOptions } = useStoragesList();
 
     const [inventories, setInventories] = useState<IInventory[]>([]);
     const [loading, setLoading] = useState(true);
@@ -142,7 +144,6 @@ export function InventoryListView() {
         setPaginationModel((prev) => ({ ...prev, pageSize: rowsPerPage }));
     }, [rowsPerPage]);
     const [activePeriod, setActivePeriod] = useState<'day' | 'week' | 'month' | 'year' | undefined>('year');
-    const [storageOptions, setStorageOptions] = useState<Array<{ id: string; name: string }>>([]);
     const [sort, setSort] = useState({ by: 'date', order: 'desc' as 'asc' | 'desc' });
     const [draftFilters, setDraftFilters] = useState({
         status: '',
@@ -160,13 +161,6 @@ export function InventoryListView() {
 
         return () => clearTimeout(timeout);
     }, [searchQuery]);
-
-    // Fetch storages on mount
-    useEffect(() => {
-        getStorages().then((storages) => {
-            setStorageOptions(storages);
-        });
-    }, [getStorages]);
 
     const loadInventories = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
         try {

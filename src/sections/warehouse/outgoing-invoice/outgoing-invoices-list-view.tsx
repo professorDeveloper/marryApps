@@ -33,13 +33,15 @@ import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
 import { RouterLink } from 'src/routes/components';
 
-import { useStorageAPI } from 'src/hooks/use-storage-api';
-import { useDeductionsAPI } from 'src/hooks/use-deductions-api';
 import { useOutgoingInvoicesAPI } from 'src/hooks/use-outgoing-invoices-api';
+import {
+  useStoragesList,
+  useDeductionGroups,
+  useIngredientsList,
+} from 'src/hooks/use-reference-data';
 
 import { getStatusColor, formatStatusLabel } from 'src/utils/status-colors';
 
-import { fetcher, endpoints } from 'src/lib/axios';
 import { DashboardContent } from 'src/layouts/dashboard';
 
 import { Iconify } from 'src/components/iconify';
@@ -71,18 +73,6 @@ const initialFilters: OutgoingInvoiceFilters = {
   sort_by: undefined,
   sort_order: undefined,
 };
-
-interface Ingredient {
-  id: string;
-  name: string;
-}
-
-interface BackendResponse<T> {
-  status: string;
-  message: string;
-  data: T;
-  code: number;
-}
 
 const toUtcDayBoundary = (value: dayjs.Dayjs, endOfDay = false): string => {
   const boundary = endOfDay ? value.endOf('day') : value.startOf('day');
@@ -116,16 +106,15 @@ export function OutgoingInvoicesListView() {
   const noDataText = t('noDataAvailable');
 
   const { getOutgoingInvoices, getOutgoingInvoiceById, deleteOutgoingInvoice } = useOutgoingInvoicesAPI();
-  const { getStorages } = useStorageAPI();
-  const { getDeductionGroups } = useDeductionsAPI();
+
+  // Shared reference data (SWR-deduped across views/mounts)
+  const { storagesMap } = useStoragesList();
+  const { groupsMap } = useDeductionGroups();
+  const { ingredientsMap } = useIngredientsList();
 
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<OutgoingInvoice[]>([]);
   const [total, setTotal] = useState(0);
-
-  const [storagesMap, setStoragesMap] = useState<Record<string, string>>({});
-  const [groupsMap, setGroupsMap] = useState<Record<string, string>>({});
-  const [ingredientsMap, setIngredientsMap] = useState<Record<string, string>>({});
 
   const [filters, setFilters] = useState<OutgoingInvoiceFilters>(initialFilters);
   const [draftFilters, setDraftFilters] = useState<OutgoingInvoiceFilters>(initialFilters);
@@ -151,10 +140,9 @@ export function OutgoingInvoicesListView() {
 
   // Update draftFilters with search
   useEffect(() => {
-    setDraftFilters((prev) => ({
-      ...prev,
-      search: debouncedSearchQuery,
-    }));
+    setDraftFilters((prev) =>
+      prev.search === debouncedSearchQuery ? prev : { ...prev, search: debouncedSearchQuery }
+    );
   }, [debouncedSearchQuery]);
 
   const openViewModal = useCallback(async (outgoingInvoiceId: string) => {
@@ -167,40 +155,6 @@ export function OutgoingInvoicesListView() {
       setViewLoading(false);
     }
   }, [getOutgoingInvoiceById]);
-
-  const loadBaseData = useCallback(async () => {
-    const [storagesData, groupsData, ingredientsData] = await Promise.all([
-      getStorages(),
-      getDeductionGroups(),
-      fetcher<BackendResponse<Ingredient[]>>(endpoints.ingredient.list).catch(() => ({
-        status: 'error',
-        message: 'failed',
-        data: [],
-        code: 500,
-      })),
-    ]);
-
-    setStoragesMap(
-      (storagesData || []).reduce(
-        (acc, item) => ({ ...acc, [item.id]: item.name || item.id }),
-        {} as Record<string, string>
-      )
-    );
-
-    setGroupsMap(
-      (groupsData || []).reduce(
-        (acc, item) => ({ ...acc, [item.id]: item.name || item.id }),
-        {} as Record<string, string>
-      )
-    );
-
-    setIngredientsMap(
-      (ingredientsData.data || []).reduce(
-        (acc, item) => ({ ...acc, [item.id]: item.name || item.id }),
-        {} as Record<string, string>
-      )
-    );
-  }, [getStorages, getDeductionGroups]);
 
   const loadOutgoingInvoices = useCallback(
     async ({ silent = false }: { silent?: boolean } = {}) => {
@@ -218,19 +172,19 @@ export function OutgoingInvoicesListView() {
   );
 
   useEffect(() => {
-    loadBaseData();
-  }, [loadBaseData]);
-
-  useEffect(() => {
     loadOutgoingInvoices();
   }, [loadOutgoingInvoices]);
 
   useEffect(() => {
-    setFilters((prev) => ({
-      ...prev,
-      ...draftFilters,
-      offset: 0,
-    }));
+    // Keep the previous object when nothing changed so `loadOutgoingInvoices`
+    // isn't recreated (its effect would re-fetch the list for no reason).
+    setFilters((prev) => {
+      const next = { ...prev, ...draftFilters, offset: 0 };
+      const changed = (Object.keys(next) as Array<keyof OutgoingInvoiceFilters>).some(
+        (key) => next[key] !== prev[key]
+      );
+      return changed ? next : prev;
+    });
   }, [draftFilters]);
 
   const handleResetFilters = useCallback(() => {

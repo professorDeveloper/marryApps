@@ -1,6 +1,5 @@
 import type {
     Deduction,
-    SelectOption,
     DeductionFormData,
 } from '../types';
 
@@ -15,9 +14,9 @@ import { Box, Button, Dialog, Typography, DialogContent, CircularProgress } from
 import { paths } from 'src/routes/paths';
 
 import { useDeductionsAPI } from 'src/hooks/use-deductions-api';
+import { useStoragesList, useDeductionGroups } from 'src/hooks/use-reference-data';
 
 import { useAppDispatch } from 'src/store';
-import { fetcher, endpoints } from 'src/lib/axios';
 import {
     PICKER_FORM_NAMES,
     deductionFormPickerActions,
@@ -43,12 +42,6 @@ const normalizeCreateStatus = (value: unknown): CreateDeductionStatus =>
         ? (value as CreateDeductionStatus)
         : 'active';
 
-interface BackendResponse<T> {
-    status: string;
-    message: string;
-    data: T;
-    code: number;
-}
 
 // ---------------------------------------------------------------------------
 // Props
@@ -77,8 +70,11 @@ const DeductionFormView = React.memo(function DeductionFormView({
         createDeduction,
         updateDeduction,
         updateDeductionItemsBatch,
-        getDeductionGroups,
     } = useDeductionsAPI();
+
+    // Shared reference data (SWR-deduped across views/mounts)
+    const { storages } = useStoragesList();
+    const { groups } = useDeductionGroups();
 
     const {
         ingredients,
@@ -95,9 +91,6 @@ const DeductionFormView = React.memo(function DeductionFormView({
     const [isIngredientDialogOpen, setIsIngredientDialogOpen] = useState(false);
     const openIngredientDialog = useCallback(() => setIsIngredientDialogOpen(true), []);
 
-    const [storages, setStorages] = useState<SelectOption[]>([]);
-    const [groups, setGroups] = useState<SelectOption[]>([]);
-
     const [deduction, setDeduction] = useState<Deduction | null>(null);
     const [createdDeductionId, setCreatedDeductionId] = useState<string | undefined>(undefined);
     const [hasLineItems, setHasLineItems] = useState(false);
@@ -111,7 +104,6 @@ const DeductionFormView = React.memo(function DeductionFormView({
     });
 
     const lineItemsApiRef = useRef<DeductionLineItemsApi | null>(null);
-    const listsFetchedRef = useRef(false);
     const loadedIdRef = useRef<string | null>(null);
 
     // ── Calculate table height based on viewport ───────────────────────────
@@ -140,26 +132,6 @@ const DeductionFormView = React.memo(function DeductionFormView({
         [t]
     );
 
-    // ── Load base data (storages, groups) ─────────────────────────────────
-    useEffect(() => {
-        if (listsFetchedRef.current) return;
-        listsFetchedRef.current = true;
-
-        Promise.all([
-            getDeductionGroups(),
-            fetcher<BackendResponse<SelectOption[]>>(endpoints.storage.list).catch(() => ({
-                data: [] as SelectOption[],
-            })),
-        ])
-            .then(([groupsData, storagesData]) => {
-                setGroups(Array.isArray(groupsData) ? groupsData : []);
-                setStorages(
-                    Array.isArray((storagesData as any)?.data) ? (storagesData as any).data : []
-                );
-            })
-            .catch(console.error);
-    }, [getDeductionGroups]);
-
     // ── Load existing deduction (edit mode) ───────────────────────────────
     useEffect(() => {
         if (isNew) {
@@ -176,12 +148,14 @@ const DeductionFormView = React.memo(function DeductionFormView({
         }
         loadedIdRef.current = id;
 
-        let cancelled = false;
         const load = async () => {
             setPageLoading(true);
             try {
                 const data = await getDeductionById(id);
-                if (cancelled) return;
+                // A newer id may have taken over loadedIdRef while this request was
+                // in flight (e.g. React StrictMode's dev-only double effect-invoke,
+                // or navigating to a different deduction before this one resolved).
+                if (loadedIdRef.current !== id) return;
                 if (!data) {
                     toast.error(t('error.notFound'));
                     navigate(paths.warehouse.deductions.root);
@@ -207,19 +181,16 @@ const DeductionFormView = React.memo(function DeductionFormView({
                 }
             } catch (e) {
                 console.error(e);
-                if (!cancelled) {
+                if (loadedIdRef.current === id) {
                     loadedIdRef.current = null;
                     toast.error(t('error.loadFailed'));
                 }
             } finally {
-                if (!cancelled) setPageLoading(false);
+                if (loadedIdRef.current === id) setPageLoading(false);
             }
         };
 
         load();
-        return () => {
-            cancelled = true;
-        };
     }, [dispatch, formName, getDeductionById, id, isNew, navigate, t]);
 
     useEffect(

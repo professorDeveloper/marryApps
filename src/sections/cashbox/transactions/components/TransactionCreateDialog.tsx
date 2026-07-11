@@ -3,7 +3,7 @@ import type { TransactionType } from 'src/types/transactions';
 
 import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
-import { useState, useEffect, useCallback } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 
 import {
   Box,
@@ -26,6 +26,11 @@ import {
 } from '@mui/material';
 
 import { useTransactionsAPI } from 'src/hooks/use-transactions-api';
+import {
+  useBranchesList,
+  useCashRegistersList,
+  useTransactionGroupsList,
+} from 'src/hooks/use-reference-data';
 
 import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
@@ -47,23 +52,35 @@ export function TransactionCreateDialog({ open, onClose, onSuccess }: Transactio
   const {
     createIncomeExpense,
     createTransfer,
-    getTransactionGroups,
-    getCashRegisters,
     getCashRegistersByBranch,
-    getBranches,
     getCurrentUser,
   } = useTransactionsAPI();
+
+  // Shared reference data (SWR-deduped across views/mounts)
+  const { transactionGroups } = useTransactionGroupsList();
+  const { cashRegisters } = useCashRegistersList();
+  const { branches } = useBranchesList();
 
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [transactionType, setTransactionType] = useState<TransactionType | null>(null);
 
-  const [groupOptions, setGroupOptions] = useState<{ value: string; label: string }[]>([]);
-  const [cashRegisterOptions, setCashRegisterOptions] = useState<{ value: string; label: string }[]>([]);
   const [toCashRegisterOptions, setToCashRegisterOptions] = useState<{ value: string; label: string }[]>([]);
-  const [branchOptions, setBranchOptions] = useState<{ value: string; label: string }[]>([]);
   const [myBranchId, setMyBranchId] = useState('');
+
+  const groupOptions = useMemo(
+    () => transactionGroups.map((item) => ({ value: item.id, label: item.name })),
+    [transactionGroups]
+  );
+  const cashRegisterOptions = useMemo(
+    () => cashRegisters.map((item) => ({ value: item.id, label: item.name })),
+    [cashRegisters]
+  );
+  const branchOptions = useMemo(
+    () => branches.map((item) => ({ value: item.id, label: item.name })),
+    [branches]
+  );
 
   const [formData, setFormData] = useState<Record<string, any>>({
     amount: '',
@@ -84,16 +101,7 @@ export function TransactionCreateDialog({ open, onClose, onSuccess }: Transactio
     setLoading(true);
     setLoadError(null);
     try {
-      const [groups, cashRegisters, branches, currentUser] = await Promise.all([
-        getTransactionGroups(),
-        getCashRegisters(),
-        getBranches(),
-        getCurrentUser(),
-      ]);
-
-      setGroupOptions(groups.map((item) => ({ value: item.id, label: item.name })));
-      setCashRegisterOptions(cashRegisters.map((item) => ({ value: item.id, label: item.name })));
-      setBranchOptions(branches.map((item) => ({ value: item.id, label: item.name })));
+      const currentUser = await getCurrentUser();
 
       if (currentUser?.branch_id) {
         setMyBranchId(currentUser.branch_id);
@@ -110,7 +118,7 @@ export function TransactionCreateDialog({ open, onClose, onSuccess }: Transactio
     } finally {
       setLoading(false);
     }
-  }, [getBranches, getCashRegisters, getCurrentUser, getTransactionGroups, t]);
+  }, [getCurrentUser, t]);
 
   useEffect(() => {
     if (open) {

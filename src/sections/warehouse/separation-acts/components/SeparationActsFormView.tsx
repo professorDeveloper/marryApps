@@ -1,5 +1,4 @@
 import type {
-    SelectOption,
     SeparationActFormData,
 } from '../types';
 
@@ -29,9 +28,8 @@ import {
 
 import { paths } from 'src/routes/paths';
 
-import { useStorageAPI } from 'src/hooks/use-storage-api';
-import { useDeductionsAPI } from 'src/hooks/use-deductions-api';
 import { useSeparationActsAPI } from 'src/hooks/use-separation-acts-api';
+import { useStoragesList, useDeductionGroups } from 'src/hooks/use-reference-data';
 
 import { useAppDispatch } from 'src/store';
 import {
@@ -79,8 +77,6 @@ const SeparationActsFormView = React.memo(function SeparationActsFormView({
     const formName = PICKER_FORM_NAMES.separationActsForm;
 
     // ── API hooks ─────────────────────────────────────────────────────────
-    const { getDeductionGroups } = useDeductionsAPI();
-    const { getStorages } = useStorageAPI();
     const {
         getSeparationActById,
         createSeparationActBatch,
@@ -106,8 +102,9 @@ const SeparationActsFormView = React.memo(function SeparationActsFormView({
     const [isIngredientDialogOpen, setIsIngredientDialogOpen] = useState(false);
     const openIngredientDialog = useCallback(() => setIsIngredientDialogOpen(true), []);
 
-    const [storages, setStorages] = useState<SelectOption[]>([]);
-    const [groups, setGroups] = useState<SelectOption[]>([]);
+    // Shared reference data (SWR-deduped across views/mounts)
+    const { storages } = useStoragesList();
+    const { groups } = useDeductionGroups();
 
     const [batchResponse, setBatchResponse] = useState<any>(null);
     const [hasLineItems, setHasLineItems] = useState(false);
@@ -125,7 +122,6 @@ const SeparationActsFormView = React.memo(function SeparationActsFormView({
     });
 
     const lineItemsApiRef = useRef<SeparationActsLineItemsApi | null>(null);
-    const listsFetchedRef = useRef(false);
     const loadedIdRef = useRef<string | null>(null);
 
     // ── Calculate table height based on viewport ───────────────────────────
@@ -145,19 +141,6 @@ const SeparationActsFormView = React.memo(function SeparationActsFormView({
     // ── Effective separation act ID ────────────────────────────────────────
     const effectiveActId = id || batchResponse?.data?.act?.id;
 
-    // ── Load base data (storages, groups, ingredients) ──────────────────────
-    useEffect(() => {
-        if (listsFetchedRef.current) return;
-        listsFetchedRef.current = true;
-
-        Promise.all([getDeductionGroups(), getStorages()])
-            .then(([groupsData, storagesData]) => {
-                setGroups(Array.isArray(groupsData) ? groupsData : []);
-                setStorages(Array.isArray(storagesData) ? storagesData : []);
-            })
-            .catch(console.error);
-    }, [getDeductionGroups, getStorages]);
-
     // ── Load existing separation act (edit mode) ──────────────────────────
     useEffect(() => {
         if (isNew) {
@@ -174,12 +157,14 @@ const SeparationActsFormView = React.memo(function SeparationActsFormView({
         }
         loadedIdRef.current = id;
 
-        let cancelled = false;
         const load = async () => {
             setPageLoading(true);
             try {
                 const data = await getSeparationActById(id);
-                if (cancelled) return;
+                // A newer id may have taken over loadedIdRef while this request was
+                // in flight (e.g. React StrictMode's dev-only double effect-invoke,
+                // or navigating to a different act before this one resolved).
+                if (loadedIdRef.current !== id) return;
                 if (!data) {
                     toast.error(t('error.notFound'));
                     navigate(paths.warehouse.separationActs.root);
@@ -206,19 +191,16 @@ const SeparationActsFormView = React.memo(function SeparationActsFormView({
                 }
             } catch (e) {
                 console.error(e);
-                if (!cancelled) {
+                if (loadedIdRef.current === id) {
                     loadedIdRef.current = null;
                     toast.error(t('error.loadFailed'));
                 }
             } finally {
-                if (!cancelled) setPageLoading(false);
+                if (loadedIdRef.current === id) setPageLoading(false);
             }
         };
 
         load();
-        return () => {
-            cancelled = true;
-        };
     }, [dispatch, formName, getSeparationActById, id, isNew, navigate, t]);
 
     useEffect(

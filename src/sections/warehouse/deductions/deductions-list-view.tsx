@@ -1,6 +1,5 @@
 import type {
     Deduction,
-    DeductionGroup,
     BackendPagination} from 'src/hooks/use-deductions-api';
 
 import dayjs from 'dayjs';
@@ -28,10 +27,14 @@ import { usePaginationRows } from 'src/hooks/use-pagination-rows';
 import {
     useDeductionsAPI
 } from 'src/hooks/use-deductions-api';
+import {
+    useStoragesList,
+    useDeductionGroups,
+    useIngredientsList,
+} from 'src/hooks/use-reference-data';
 
 import { getStatusColor, formatStatusLabel } from 'src/utils/status-colors';
 
-import { fetcher, endpoints } from 'src/lib/axios';
 import { DashboardContent } from 'src/layouts/dashboard';
 
 import { Iconify } from 'src/components/iconify';
@@ -43,23 +46,6 @@ import {
     DeductionsDetailsModal,
     type DeductionDetailsData,
 } from './deductions-details-modal';
-
-interface Storage {
-    id: string;
-    name: string;
-}
-
-interface Ingredient {
-    id: string;
-    name: string;
-}
-
-interface BackendResponse<T> {
-    status: string;
-    message: string;
-    data: T;
-}
-
 
 const filterSelectSx = {
     minWidth: 150,
@@ -79,27 +65,18 @@ const filterSelectSx = {
     '& .MuiInputLabel-root.Mui-focused': { color: 'var(--brand)' },
 };
 
-let staticLookupCache: {
-    groups: DeductionGroup[];
-    storages: Storage[];
-    ingredientsMap: Record<string, string>;
-} | null = null;
-
-let staticLookupPromise: Promise<{
-    groups: DeductionGroup[];
-    storages: Storage[];
-    ingredientsMap: Record<string, string>;
-}> | null = null;
-
 export function DeductionsListView() {
     const { t } = useTranslation('menu');
     const theme = useTheme();
     const router = useRouter();
-    const { getDeductions, getDeductionById, deleteDeduction, getDeductionGroups } = useDeductionsAPI();
-    const [deductions, setDeductions] = useState<Deduction[]>([]);
-    const [groups, setGroups] = useState<DeductionGroup[]>([]);
-    const [storages, setStorages] = useState<Storage[]>([]);
-    const [ingredientsMap, setIngredientsMap] = useState<Record<string, string>>({});
+    const { getDeductions, getDeductionById, deleteDeduction } = useDeductionsAPI();
+
+    // Shared reference data (SWR-deduped across views/mounts)
+    const { storages } = useStoragesList();
+    const { groups } = useDeductionGroups();
+    const { ingredientsMap } = useIngredientsList();
+
+    const [rawDeductions, setRawDeductions] = useState<Deduction[]>([]);
     const [loading, setLoading] = useState(true);
     const [rowCount, setRowCount] = useState(0);
     const { rowsPerPage } = usePaginationRows();
@@ -138,48 +115,10 @@ export function DeductionsListView() {
         [groups]
     );
 
-    // Fetch deductions and groups
+    // Fetch deductions with server-side filters
     const fetchData = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
         if (!silent) setLoading(true);
         try {
-            if (!staticLookupCache) {
-                if (!staticLookupPromise) {
-                    staticLookupPromise = Promise.all([
-                        getDeductionGroups(),
-                        fetcher<BackendResponse<Storage[]>>(endpoints.storage.list).catch(() => ({
-                            data: [],
-                        })),
-                        fetcher<BackendResponse<Ingredient[]>>(endpoints.ingredient.list).catch(() => ({
-                            data: [],
-                        })),
-                    ]).then(([groupsData, storagesData, ingredientsData]) => {
-                        const finalGroups = Array.isArray(groupsData) ? groupsData : [];
-                        const finalStorages = Array.isArray(storagesData?.data) ? storagesData.data : [];
-                        const finalIngredients = Array.isArray(ingredientsData?.data) ? ingredientsData.data : [];
-
-                        return {
-                            groups: finalGroups,
-                            storages: finalStorages,
-                            ingredientsMap: finalIngredients.reduce(
-                                (acc, ingredient) => ({ ...acc, [ingredient.id]: ingredient.name || ingredient.id }),
-                                {} as Record<string, string>
-                            ),
-                        };
-                    });
-                }
-
-                staticLookupCache = await staticLookupPromise;
-            }
-
-            const finalGroups = staticLookupCache?.groups || [];
-            const finalStorages = staticLookupCache?.storages || [];
-            const finalIngredientsMap = staticLookupCache?.ingredientsMap || {};
-
-            setGroups(finalGroups);
-            setStorages(finalStorages);
-            setIngredientsMap(finalIngredientsMap);
-
-            // Then load deductions with server-side filters
             const deductionsResponse = await getDeductions({
                 expand: 'act_group_id,storage_id',
                 limit: paginationModel.pageSize,
@@ -196,19 +135,7 @@ export function DeductionsListView() {
             const deductionsData = deductionsResponse.items || [];
             const pagination = deductionsResponse.pagination as BackendPagination | undefined;
 
-            // Enrich deductions with storage_name and group_name if not present
-            const enrichedDeductions = deductionsData.map(d => {
-                const storage = d._expand?.storage_id || finalStorages.find(s => s.id === d.storage_id);
-                const group = d._expand?.act_group_id || finalGroups.find(g => g.id === d.act_group_id);
-
-                return {
-                    ...d,
-                    storage_name: d.storage_name || storage?.name || d.storage_id,
-                    group_name: d.group_name || group?.name || d.act_group_id,
-                };
-            });
-
-            setDeductions(enrichedDeductions);
+            setRawDeductions(deductionsData);
             setRowCount(pagination?.total || 0);
         } catch (error) {
             console.error('Error fetching data:', error);
@@ -216,11 +143,27 @@ export function DeductionsListView() {
         } finally {
             if (!silent) setLoading(false);
         }
-    }, [getDeductions, getDeductionGroups, paginationModel.page, paginationModel.pageSize, searchQuery, startDate, endDate, sortState, filterValues]);
+    }, [getDeductions, paginationModel.page, paginationModel.pageSize, searchQuery, startDate, endDate, sortState, filterValues]);
 
     useEffect(() => {
         fetchData();
     }, [fetchData]);
+
+    // Enrich deductions with storage_name and group_name if not present
+    const deductions = useMemo(
+        () =>
+            rawDeductions.map((d) => {
+                const storage = d._expand?.storage_id || storages.find((s) => s.id === d.storage_id);
+                const group = d._expand?.act_group_id || groups.find((g) => g.id === d.act_group_id);
+
+                return {
+                    ...d,
+                    storage_name: d.storage_name || storage?.name || d.storage_id,
+                    group_name: d.group_name || group?.name || d.act_group_id,
+                };
+            }),
+        [rawDeductions, storages, groups]
+    );
 
     // Handle delete deduction
     const handleDeleteClick = (id: string) => {

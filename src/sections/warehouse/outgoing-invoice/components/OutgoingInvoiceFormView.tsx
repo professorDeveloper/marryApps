@@ -1,5 +1,4 @@
 import type {
-    SelectOption,
     OutgoingInvoiceFormData,
     OutgoingInvoiceBatchApiResponse,
 } from '../types';
@@ -31,9 +30,8 @@ import {
 
 import { paths } from 'src/routes/paths';
 
-import { useStorageAPI } from 'src/hooks/use-storage-api';
-import { useDeductionsAPI } from 'src/hooks/use-deductions-api';
 import { useOutgoingInvoicesAPI } from 'src/hooks/use-outgoing-invoices-api';
+import { useStoragesList, useDeductionGroups } from 'src/hooks/use-reference-data';
 
 import { useAppDispatch } from 'src/store';
 import {
@@ -66,8 +64,6 @@ const OutgoingInvoiceFormView = React.memo(function OutgoingInvoiceFormView() {
     const formName = PICKER_FORM_NAMES.outgoingInvoiceForm;
 
     // ── API hooks ─────────────────────────────────────────────────────────
-    const { getDeductionGroups } = useDeductionsAPI();
-    const { getStorages } = useStorageAPI();
     const {
         getOutgoingInvoiceById,
         createOutgoingInvoiceBatch,
@@ -93,8 +89,9 @@ const OutgoingInvoiceFormView = React.memo(function OutgoingInvoiceFormView() {
     const [actionLoading, setActionLoading] = useState<'confirm' | 'cancel' | 'delete' | null>(null);
     const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
 
-    const [storages, setStorages] = useState<SelectOption[]>([]);
-    const [groups, setGroups] = useState<SelectOption[]>([]);
+    // Shared reference data (SWR-deduped across views/mounts)
+    const { storages } = useStoragesList();
+    const { groups } = useDeductionGroups();
 
     const [formData, setFormData] = useState<OutgoingInvoiceFormData>({
         date: dayjs().format('YYYY-MM-DD'),
@@ -109,7 +106,6 @@ const OutgoingInvoiceFormView = React.memo(function OutgoingInvoiceFormView() {
     const [tableHeight, setTableHeight] = useState(730);
 
     const lineItemsApiRef = useRef<OutgoingInvoiceLineItemsApi | null>(null);
-    const listsFetchedRef = useRef(false);
     const loadedIdRef = useRef<string | null>(null);
 
     // ── Calculate table height based on viewport ───────────────────────────
@@ -134,18 +130,6 @@ const OutgoingInvoiceFormView = React.memo(function OutgoingInvoiceFormView() {
         });
         return map;
     }, [ingredients]);
-
-    // ── Load base data (storages, groups) ─────────────────────────────────
-    useEffect(() => {
-        if (listsFetchedRef.current) return;
-        listsFetchedRef.current = true;
-        Promise.all([getStorages(), getDeductionGroups()])
-            .then(([storagesData, groupsData]) => {
-                setStorages(storagesData);
-                setGroups(groupsData);
-            })
-            .catch(console.error);
-    }, [getStorages, getDeductionGroups]);
 
     // ── Map API response to state ─────────────────────────────────────────
     const mapResponseToState = useCallback((response: OutgoingInvoiceBatchApiResponse) => {
@@ -186,12 +170,14 @@ const OutgoingInvoiceFormView = React.memo(function OutgoingInvoiceFormView() {
         }
         loadedIdRef.current = id;
 
-        let cancelled = false;
         const load = async () => {
             setPageLoading(true);
             try {
                 const details = await getOutgoingInvoiceById(id);
-                if (cancelled) return;
+                // A newer id may have taken over loadedIdRef while this request was
+                // in flight (e.g. React StrictMode's dev-only double effect-invoke,
+                // or navigating to a different invoice before this one resolved).
+                if (loadedIdRef.current !== id) return;
                 if (!details) {
                     navigate(paths.warehouse.outgoingInvoices.root, { replace: true });
                     return;
@@ -199,19 +185,16 @@ const OutgoingInvoiceFormView = React.memo(function OutgoingInvoiceFormView() {
                 mapResponseToState(details);
             } catch (e) {
                 console.error(e);
-                if (!cancelled) {
+                if (loadedIdRef.current === id) {
                     loadedIdRef.current = null;
                     toast.error(t('error.loadFailed'));
                 }
             } finally {
-                if (!cancelled) setPageLoading(false);
+                if (loadedIdRef.current === id) setPageLoading(false);
             }
         };
 
         load();
-        return () => {
-            cancelled = true;
-        };
     }, [isNew, id, getOutgoingInvoiceById, mapResponseToState, navigate, t]);
 
     useEffect(

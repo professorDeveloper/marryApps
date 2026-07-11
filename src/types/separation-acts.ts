@@ -101,6 +101,7 @@ export interface SeparationActFilters {
   group_id?: string;
   ingredient_id?: string;
   status?: string;
+  search?: string;
   limit?: number;
   offset?: number;
   sort_by?: string;

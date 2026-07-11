@@ -9,8 +9,7 @@ import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks/use-router';
 
 import { useInvoiceAPI } from 'src/hooks/use-invoice-api';
-import { useStorageAPI } from 'src/hooks/use-storage-api';
-import { useSupplierAPI } from 'src/hooks/use-supplier-api';
+import { useStoragesList, useSuppliersList } from 'src/hooks/use-reference-data';
 import { fetchInvoiceDetailsByInvoiceId } from 'src/hooks/use-invoice-details-api';
 
 import { useAppDispatch } from 'src/store';
@@ -42,11 +41,10 @@ const InvoiceFormView = React.memo(function InvoiceFormView() {
     const router = useRouter();
     const dispatch = useAppDispatch();
     const formName = PICKER_FORM_NAMES.invoiceForm;
-    const { getSuppliers } = useSupplierAPI();
-    const { getStorages } = useStorageAPI();
+    // Shared reference data (SWR-deduped across views/mounts)
+    const { suppliers } = useSuppliersList();
+    const { storages } = useStoragesList();
 
-    const [suppliers, setSuppliers] = useState<any[]>([]);
-    const [storages, setStorages] = useState<any[]>([]);
     const [supplier, setSupplier] = useState('');
     const [storage, setStorage] = useState('');
     const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString());
@@ -63,7 +61,6 @@ const InvoiceFormView = React.memo(function InvoiceFormView() {
     const openIngredientDialog = useCallback(() => setIsIngredientDialogOpen(true), []);
 
     const lineItemsApiRef = useRef<InvoiceLineItemsApi | null>(null);
-    const listsFetchedRef = useRef(false);
 
     const handleHasItemsChange = useCallback((next: boolean) => {
         setHasLineItems(next);
@@ -86,17 +83,6 @@ const InvoiceFormView = React.memo(function InvoiceFormView() {
         window.addEventListener('resize', calculateHeight);
         return () => window.removeEventListener('resize', calculateHeight);
     }, [isInfoOpen]);
-
-    useEffect(() => {
-        if (listsFetchedRef.current) return;
-        listsFetchedRef.current = true;
-        Promise.all([getSuppliers(), getStorages()])
-            .then(([suppliersData, storagesData]) => {
-                setSuppliers(suppliersData);
-                setStorages(storagesData);
-            })
-            .catch(console.error);
-    }, [getSuppliers, getStorages]);
 
     useEffect(() => {
         if (!isNew) return;

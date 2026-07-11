@@ -2,7 +2,7 @@ import type { CardSection, GenericEditViewConfig } from 'src/components/generic-
 
 import { toast } from 'sonner';
 import { useParams } from 'react-router';
-import { useState, useEffect, useCallback } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 
 import { Box, CircularProgress } from '@mui/material';
 
@@ -10,8 +10,7 @@ import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
 
 import { useInvoiceAPI } from 'src/hooks/use-invoice-api';
-import { useStorageAPI } from 'src/hooks/use-storage-api';
-import { useSupplierAPI } from 'src/hooks/use-supplier-api';
+import { useStoragesList, useSuppliersList } from 'src/hooks/use-reference-data';
 
 import { useTranslate } from 'src/locales';
 
@@ -59,12 +58,21 @@ export function InvoiceInfoEditView({
     const router = useRouter();
     const { id: urlId } = useParams<{ id?: string }>();
     const { createInvoice, updateInvoice, deleteInvoice } = useInvoiceAPI();
-    const { getSuppliers } = useSupplierAPI();
-    const { getStorages } = useStorageAPI();
+
+    // Shared reference data (SWR-deduped across views/mounts)
+    const { suppliers: allSuppliers } = useSuppliersList();
+    const { storages: allStorages } = useStoragesList();
+    const suppliers = useMemo(
+        () => allSuppliers.filter((item) => item && item.id != null),
+        [allSuppliers]
+    );
+    const storages = useMemo(
+        () => allStorages.filter((item) => item && item.id != null),
+        [allStorages]
+    );
+
     const [invoiceData, setInvoiceData] = useState<Record<string, any> | null>(null);
     const [loading, setLoading] = useState(true);
-    const [suppliers, setSuppliers] = useState<any[]>([]);
-    const [storages, setStorages] = useState<any[]>([]);
     const [internalFormData, setInternalFormData] = useState<Record<string, any>>(persistedFormData || {
         supplier_id: '',
         storage_id: '',
@@ -83,38 +91,6 @@ export function InvoiceInfoEditView({
             // { value: 'cancelled', label: t('warehouse.invoices.statuses.cancelled') },
             // { value: 'deleted', label: t('common.deleted') },
         ];
-
-    // Load suppliers for dropdown
-    useEffect(() => {
-        const loadSuppliers = async () => {
-            try {
-                const data = await getSuppliers();
-                setSuppliers(
-                    Array.isArray(data) ? data.filter((item) => item && item.id != null) : []
-                );
-            } catch (error) {
-                console.error('Error loading suppliers:', error);
-            }
-        };
-
-        loadSuppliers();
-    }, [getSuppliers]);
-
-    // Load storages for dropdown
-    useEffect(() => {
-        const loadStorages = async () => {
-            try {
-                const data = await getStorages();
-                setStorages(
-                    Array.isArray(data) ? data.filter((item) => item && item.id != null) : []
-                );
-            } catch (error) {
-                console.error('Error loading storages:', error);
-            }
-        };
-
-        loadStorages();
-    }, [getStorages]);
 
     // Update internal form data when persisted data changes
     useEffect(() => {

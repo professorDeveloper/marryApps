@@ -87,6 +87,7 @@ export interface ShipmentFilters {
   storage_id?: string;
   supplier_id?: string;
   status?: string;
+  search?: string;
   limit?: number;
   offset?: number;
   sort_by?: string;

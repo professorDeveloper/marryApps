@@ -11,6 +11,11 @@ import Box from '@mui/material/Box';
 import { paths } from 'src/routes/paths';
 
 import { useTransactionsAPI } from 'src/hooks/use-transactions-api';
+import {
+  useBranchesList,
+  useCashRegistersList,
+  useTransactionGroupsList,
+} from 'src/hooks/use-reference-data';
 
 import { toast } from 'src/components/snackbar';
 import { GenericEditView } from 'src/components/generic-edit-view';
@@ -54,22 +59,38 @@ export function TransactionsEditView({ isNew = false }: TransactionsEditViewProp
     createIncomeExpense,
     createTransfer,
     updateTransaction,
-    getTransactionGroups,
-    getCashRegisters,
     getCashRegistersByBranch,
     getCurrentUser,
-    getBranches,
   } = useTransactionsAPI();
+
+  // Shared reference data (SWR-deduped across views/mounts)
+  const { transactionGroups } = useTransactionGroupsList();
+  const { cashRegisters } = useCashRegistersList();
+  const { branches } = useBranchesList();
 
   const [loading, setLoading] = useState(false);
   const [transactionType, setTransactionType] = useState<TransactionType>(getDefaultType(kind));
-  const [groupOptions, setGroupOptions] = useState<{ value: string; label: string }[]>([]);
-  const [cashRegisterOptions, setCashRegisterOptions] = useState<{ value: string; label: string }[]>([]);
   const [fromCashRegisterOptions, setFromCashRegisterOptions] = useState<{ value: string; label: string }[]>([]);
   const [toCashRegisterOptions, setToCashRegisterOptions] = useState<{ value: string; label: string }[]>([]);
-  const [branchOptions, setBranchOptions] = useState<{ value: string; label: string }[]>([]);
-  const [fromBranchOptions, setFromBranchOptions] = useState<{ value: string; label: string }[]>([]);
   const [myBranchId, setMyBranchId] = useState('');
+
+  const groupOptions = useMemo(
+    () => transactionGroups.map((item) => ({ value: item.id, label: item.name })),
+    [transactionGroups]
+  );
+  const cashRegisterOptions = useMemo(
+    () => cashRegisters.map((item) => ({ value: item.id, label: item.name })),
+    [cashRegisters]
+  );
+  const branchOptions = useMemo(
+    () => branches.map((item) => ({ value: item.id, label: item.name })),
+    [branches]
+  );
+  // New transactions are locked to the current user's branch
+  const fromBranchOptions = useMemo(
+    () => (isNew && myBranchId ? branchOptions.filter((item) => item.value === myBranchId) : branchOptions),
+    [branchOptions, isNew, myBranchId]
+  );
 
   const [formData, setFormData] = useState<Record<string, any>>({
     type: getDefaultType(kind),
@@ -87,39 +108,22 @@ export function TransactionsEditView({ isNew = false }: TransactionsEditViewProp
 
   const loadBaseData = useCallback(async () => {
     try {
-      const [groups, cashRegisters, branches, currentUser] = await Promise.all([
-        getTransactionGroups(),
-        getCashRegisters(),
-        getBranches(),
-        getCurrentUser(),
-      ]);
-
-      const nextBranchOptions = branches.map((item) => ({ value: item.id, label: item.name }));
-
-      setGroupOptions(groups.map((item) => ({ value: item.id, label: item.name })));
-      setCashRegisterOptions(cashRegisters.map((item) => ({ value: item.id, label: item.name })));
-      setBranchOptions(nextBranchOptions);
+      const currentUser = await getCurrentUser();
 
       if (currentUser?.branch_id) {
         setMyBranchId(currentUser.branch_id);
 
         if (isNew) {
-          const currentBranch = nextBranchOptions.find((item) => item.value === currentUser.branch_id);
-          setFromBranchOptions(currentBranch ? [currentBranch] : []);
           setFormData((prev) => ({
             ...prev,
             from_branch_id: prev.from_branch_id || currentUser.branch_id,
           }));
-        } else {
-          setFromBranchOptions(nextBranchOptions);
         }
-      } else {
-        setFromBranchOptions(nextBranchOptions);
       }
     } catch (error) {
       console.error('Error loading base data:', error);
     }
-  }, [getBranches, getCashRegisters, getCurrentUser, getTransactionGroups, isNew]);
+  }, [getCurrentUser, isNew]);
 
   useEffect(() => {
     const init = async () => {

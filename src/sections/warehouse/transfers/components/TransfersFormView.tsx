@@ -1,9 +1,6 @@
 import type {
-    Branch,
     Storage,
     Transfer,
-    SelectOption,
-    BranchDetail,
     TransferFormData,
 } from '../types';
 
@@ -18,9 +15,9 @@ import { Box, Button, Dialog, Typography, DialogContent, CircularProgress } from
 import { paths } from 'src/routes/paths';
 
 import { useTransfersAPI } from 'src/hooks/use-transfers-api';
+import { useBranchesDetail, useDeductionGroups } from 'src/hooks/use-reference-data';
 
 import { useAppDispatch } from 'src/store';
-import { fetcher, endpoints } from 'src/lib/axios';
 import {
     PICKER_FORM_NAMES,
     transfersFormPickerActions,
@@ -34,17 +31,6 @@ import { useIngredients } from 'src/sections/warehouse/invoice/hooks/useIngredie
 
 import { TransfersMetaFields } from './TransfersMetaFields';
 import { TransfersLineItems, type TransfersLineItemsApi } from './TransfersLineItems';
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-interface BackendResponse<T> {
-    status: string;
-    message: string;
-    data: T;
-    code: number;
-}
 
 // ---------------------------------------------------------------------------
 // Props
@@ -61,7 +47,7 @@ interface TransfersFormViewProps {
 const TransfersFormView = React.memo(function TransfersFormView({
     isNew = false,
 }: TransfersFormViewProps) {
-    const { t, i18n } = useTranslation('menu');
+    const { t } = useTranslation('menu');
     const navigate = useNavigate();
     const { id } = useParams<{ id: string }>();
     const dispatch = useAppDispatch();
@@ -72,8 +58,11 @@ const TransfersFormView = React.memo(function TransfersFormView({
         getTransferById,
         createTransferBatch,
         updateTransferItemsBatch,
-        getTransferGroups,
     } = useTransfersAPI();
+
+    // Shared reference data (SWR-deduped across views/mounts)
+    const { branches, branchStoragesMap } = useBranchesDetail();
+    const { groups } = useDeductionGroups();
 
     const {
         ingredients,
@@ -90,11 +79,8 @@ const TransfersFormView = React.memo(function TransfersFormView({
     const [isIngredientDialogOpen, setIsIngredientDialogOpen] = useState(false);
     const openIngredientDialog = useCallback(() => setIsIngredientDialogOpen(true), []);
 
-    const [branches, setBranches] = useState<Branch[]>([]);
-    const [branchStoragesMap, setBranchStoragesMap] = useState<Record<string, Storage[]>>({});
     const [fromStorages, setFromStorages] = useState<Storage[]>([]);
     const [toStorages, setToStorages] = useState<Storage[]>([]);
-    const [groups, setGroups] = useState<SelectOption[]>([]);
 
     const [transfer, setTransfer] = useState<Transfer | null>(null);
     const [hasLineItems, setHasLineItems] = useState(false);
@@ -116,7 +102,6 @@ const TransfersFormView = React.memo(function TransfersFormView({
     });
 
     const lineItemsApiRef = useRef<TransfersLineItemsApi | null>(null);
-    const listsFetchedRef = useRef(false);
     const loadedIdRef = useRef<string | null>(null);
 
     // ── Calculate table height based on viewport ───────────────────────────
@@ -135,42 +120,6 @@ const TransfersFormView = React.memo(function TransfersFormView({
 
     // ── Effective transfer ID ─────────────────────────────────────────────
     const effectiveTransferId = id || transfer?.id;
-
-    // ── Load base data (branches with nested storages, groups) ─────────────
-    useEffect(() => {
-        if (listsFetchedRef.current) return;
-        listsFetchedRef.current = true;
-
-        const langCode = i18n.language?.startsWith('ru')
-            ? 'ru'
-            : i18n.language?.startsWith('en')
-                ? 'en'
-                : 'uz';
-
-        Promise.all([
-            getTransferGroups(),
-            fetcher<BackendResponse<BranchDetail[]>>([
-                endpoints.branches.detail,
-                { params: { lang: langCode } },
-            ]).catch(() => ({ data: [] as BranchDetail[] })),
-        ])
-            .then(([groupsData, branchDetailData]) => {
-                setGroups(Array.isArray(groupsData) ? groupsData : []);
-
-                const branchDetails = Array.isArray((branchDetailData as any)?.data)
-                    ? ((branchDetailData as any).data as BranchDetail[])
-                    : [];
-
-                setBranches(branchDetails.map((b) => ({ id: b.branch_id, name: b.name })));
-
-                const storagesMap: Record<string, Storage[]> = {};
-                branchDetails.forEach((b) => {
-                    storagesMap[b.branch_id] = Array.isArray(b.storages) ? b.storages : [];
-                });
-                setBranchStoragesMap(storagesMap);
-            })
-            .catch(console.error);
-    }, [getTransferGroups, i18n.language]);
 
     // ── Default both branch pickers to the same branch once branches load ──
     // Keeps whichever side already has a valid selection; falls back to a
@@ -246,12 +195,14 @@ const TransfersFormView = React.memo(function TransfersFormView({
         }
         loadedIdRef.current = id;
 
-        let cancelled = false;
         const load = async () => {
             setPageLoading(true);
             try {
                 const data = await getTransferById(id);
-                if (cancelled) return;
+                // A newer id may have taken over loadedIdRef while this request was
+                // in flight (e.g. React StrictMode's dev-only double effect-invoke,
+                // or navigating to a different transfer before this one resolved).
+                if (loadedIdRef.current !== id) return;
                 if (!data) {
                     toast.error(t('error.notFound'));
                     navigate(paths.warehouse.transfers.root);
@@ -280,19 +231,16 @@ const TransfersFormView = React.memo(function TransfersFormView({
                 }
             } catch (e) {
                 console.error(e);
-                if (!cancelled) {
+                if (loadedIdRef.current === id) {
                     loadedIdRef.current = null;
                     toast.error(t('error.loadFailed'));
                 }
             } finally {
-                if (!cancelled) setPageLoading(false);
+                if (loadedIdRef.current === id) setPageLoading(false);
             }
         };
 
         load();
-        return () => {
-            cancelled = true;
-        };
     }, [dispatch, formName, getTransferById, id, isNew, navigate, t]);
 
     useEffect(
@@ -447,9 +395,8 @@ const TransfersFormView = React.memo(function TransfersFormView({
     // ── Render ────────────────────────────────────────────────────────────
     return (
         <Box sx={{ px: 2, m: 0, alignItems: 'center' }}>
-            <CustomBreadcrumbs heading={heading} links={breadcrumbs} sx={{ my: 2 }} />
 
-            <Box sx={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Box sx={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 2, mt:2 }}>
                 {pageLoading && (
                     <Box
                         sx={{

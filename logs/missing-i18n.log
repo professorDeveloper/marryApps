@@ -232,3 +232,6 @@
 {"languages":["en"],"namespace":"menu","key":"users.updateEmployee","fallback":"users.updateEmployee","timestamp":"2026-07-11T11:22:40.692Z","url":"http://localhost:8081/employee/users/207d4cd5-461f-4160-875b-3c7bb6bb905e/edit"}
 {"languages":["en"],"namespace":"menu","key":"saving","fallback":"saving","timestamp":"2026-07-11T11:22:40.802Z","url":"http://localhost:8081/employee/users/207d4cd5-461f-4160-875b-3c7bb6bb905e/edit"}
 {"languages":["en"],"namespace":"menu","key":"common.notFound","fallback":"common.notFound","timestamp":"2026-07-11T17:13:13.748Z","url":"http://localhost:8081/operations/transfers"}
+{"languages":["en"],"namespace":"menu","key":"common.notFound","fallback":"common.notFound","timestamp":"2026-07-11T21:20:52.320Z","url":"http://localhost:8082/operations/transfers"}
+{"languages":["en"],"namespace":"menu","key":"common.notFound","fallback":"common.notFound","timestamp":"2026-07-11T22:29:17.569Z","url":"http://localhost:8082/operations/transfers"}
+{"languages":["en"],"namespace":"menu","key":"error.notFound","fallback":"error.notFound","timestamp":"2026-07-11T22:38:56.343Z","url":"http://localhost:8082/operations/transfers/051dfde2-5bf9-48c1-b28e-3053d5b199c7/edit"}

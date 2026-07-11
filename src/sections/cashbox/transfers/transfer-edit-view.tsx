@@ -1,4 +1,3 @@
-import type { Branch, Storage } from './types';
 import type { Transfer, TransferFormData, TransferBatchItemInput } from 'src/types/transfers';
 
 import dayjs from 'dayjs';
@@ -11,20 +10,16 @@ import { Box, Tab, Tabs, Stack } from '@mui/material';
 import { paths } from 'src/routes/paths';
 
 import { useTransfersAPI } from 'src/hooks/use-transfers-api';
-
-import { fetcher, endpoints } from 'src/lib/axios';
+import {
+  useBranchesList,
+  useStoragesList,
+  useDeductionGroups,
+} from 'src/hooks/use-reference-data';
 
 import { toast } from 'src/components/snackbar';
 import { GenericEditView } from 'src/components/generic-edit-view';
 import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 import TransfersDetailsCalculation from 'src/components/transfers-details-calculation';
-
-interface BackendResponse<T> {
-  status: string;
-  message: string;
-  data: T;
-  code: number;
-}
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -59,17 +54,18 @@ export function TransactionsEditView({ isNew = false }: TransactionsEditViewProp
     getTransferById,
     createTransferBatch,
     updateTransferItemsBatch,
-    getTransferGroups,
   } = useTransfersAPI();
+
+  // Shared reference data (SWR-deduped across views/mounts)
+  const { branches } = useBranchesList();
+  const { storages } = useStoragesList();
+  const { groups } = useDeductionGroups();
 
   const [activeTab, setActiveTab] = useState(0);
   const [loading, setLoading] = useState(false);
   const [savingItems, setSavingItems] = useState(false);
 
   const [transfer, setTransfer] = useState<Transfer | null>(null);
-  const [branches, setBranches] = useState<Branch[]>([]);
-  const [storages, setStorages] = useState<Storage[]>([]);
-  const [groups, setGroups] = useState<{ id: string; name: string }[]>([]);
 
   const [formData, setFormData] = useState<TransferFormData>({
     act_group_id: '',
@@ -103,43 +99,6 @@ export function TransactionsEditView({ isNew = false }: TransactionsEditViewProp
   const handleFormDataChange = useCallback((data: Record<string, any>) => {
     setFormData(data as TransferFormData);
   }, []);
-
-  useEffect(() => {
-    const loadBaseData = async () => {
-      try {
-        setLoading(true);
-        const [groupsData, branchesData, storagesData] = await Promise.all([
-          getTransferGroups(),
-          fetcher<BackendResponse<Branch[]>>(endpoints.branches.list).catch(
-            () =>
-              ({
-                status: 'error',
-                message: 'failed',
-                data: [],
-                code: 500,
-              }) as BackendResponse<Branch[]>
-          ),
-          fetcher<BackendResponse<Storage[]>>(endpoints.storage.list).catch(
-            () =>
-              ({
-                status: 'error',
-                message: 'failed',
-                data: [],
-                code: 500,
-              }) as BackendResponse<Storage[]>
-          ),
-        ]);
-
-        setGroups(groupsData);
-        setBranches(Array.isArray(branchesData.data) ? branchesData.data : []);
-        setStorages(Array.isArray(storagesData.data) ? storagesData.data : []);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadBaseData();
-  }, [getTransferGroups]);
 
   useEffect(() => {
     if (isNew || !id) return;

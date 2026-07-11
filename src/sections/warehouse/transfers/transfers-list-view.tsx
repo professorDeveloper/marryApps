@@ -1,10 +1,9 @@
 import type { GridPaginationModel } from '@mui/x-data-grid';
 import type { Transfer } from 'src/types/transfers';
-import type { BranchDetail } from 'src/sections/warehouse/transfers/types';
 
 import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
-import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -19,10 +18,10 @@ import { RouterLink } from 'src/routes/components';
 
 import { useTransfersAPI } from 'src/hooks/use-transfers-api';
 import { usePaginationRows } from 'src/hooks/use-pagination-rows';
+import { useBranchesDetail, useDeductionGroups } from 'src/hooks/use-reference-data';
 
 import { getStatusColor, formatStatusLabel } from 'src/utils/status-colors';
 
-import { fetcher, endpoints } from 'src/lib/axios';
 import { DashboardContent } from 'src/layouts/dashboard';
 
 import { Iconify } from 'src/components/iconify';
@@ -30,13 +29,6 @@ import { RenderCell } from 'src/components/RenderCell';
 
 import { FILTER_SELECT_SX } from 'src/sections/common/data-table';
 import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
-
-interface BackendResponse<T> {
-  status: string;
-  message: string;
-  data: T;
-  code: number;
-}
 
 // Date utility functions
 const getTodayUtcBoundary = (endOfDay = false): string => {
@@ -64,17 +56,16 @@ const toUtcDayBoundary = (value: dayjs.Dayjs, endOfDay = false): string => {
 const filterSelectSx = FILTER_SELECT_SX;
 
 export function TransfersListView() {
-  const { t, i18n } = useTranslation('menu');
+  const { t } = useTranslation('menu');
   const router = useRouter();
-  const { getTransfers, deleteTransfer, getTransferGroups } = useTransfersAPI();
+  const { getTransfers, deleteTransfer } = useTransfersAPI();
+  const { branchesMap, storagesMap } = useBranchesDetail();
+  const { groupsMap } = useDeductionGroups();
 
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<Transfer[]>([]);
   const [rowCount, setRowCount] = useState(0);
   const [totalAmount, setTotalAmount] = useState('0');
-  const [branchesMap, setBranchesMap] = useState<Record<string, string>>({});
-  const [storagesMap, setStoragesMap] = useState<Record<string, string>>({});
-  const [groupsMap, setGroupsMap] = useState<Record<string, string>>({});
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [openConfirm, setOpenConfirm] = useState(false);
   const { rowsPerPage } = usePaginationRows();
@@ -102,55 +93,6 @@ export function TransfersListView() {
   const [activePeriod, setActivePeriod] = useState<'day' | 'week' | 'month' | 'year' | undefined>('day'); // Match the initial date range
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
-
-  // Fetch reference data (branches + nested storages, groups) once — a single
-  // combined request instead of separate branches/storages/groups list calls.
-  const referenceDataFetchedRef = useRef(false);
-  useEffect(() => {
-    if (referenceDataFetchedRef.current) return;
-    referenceDataFetchedRef.current = true;
-
-    const langCode = i18n.language?.startsWith('ru')
-      ? 'ru'
-      : i18n.language?.startsWith('en')
-        ? 'en'
-        : 'uz';
-
-    Promise.all([
-      getTransferGroups(),
-      fetcher<BackendResponse<BranchDetail[]>>([
-        endpoints.branches.detail,
-        { params: { lang: langCode } },
-      ]).catch(() => ({ status: 'error', message: 'failed', data: [] as BranchDetail[], code: 500 })),
-    ])
-      .then(([groupsData, branchDetailData]) => {
-        setGroupsMap(
-          (groupsData || []).reduce(
-            (acc, item) => ({ ...acc, [item.id]: item.name || item.id }),
-            {} as Record<string, string>
-          )
-        );
-
-        const branchDetails = Array.isArray(branchDetailData?.data) ? branchDetailData.data : [];
-
-        setBranchesMap(
-          branchDetails.reduce(
-            (acc, b) => ({ ...acc, [b.branch_id]: b.name || b.branch_id }),
-            {} as Record<string, string>
-          )
-        );
-
-        setStoragesMap(
-          branchDetails.reduce((acc, b) => {
-            (b.storages || []).forEach((s) => {
-              acc[s.id] = s.name || s.id;
-            });
-            return acc;
-          }, {} as Record<string, string>)
-        );
-      })
-      .catch((error) => console.error('Failed to fetch reference data:', error));
-  }, [getTransferGroups, i18n.language]);
 
   // Debounce search query
   useEffect(() => {
