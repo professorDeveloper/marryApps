@@ -339,6 +339,7 @@ export const endpoints = {
     create: '/api/v1/branches',
     update: (id: string) => `/api/v1/branches/${id}`,
     delete: (id: string) => `/api/v1/branches/${id}`,
+    detail: '/api/v1/branches-lang/detail',
   },
   halls: {
     list: '/api/v1/halls',

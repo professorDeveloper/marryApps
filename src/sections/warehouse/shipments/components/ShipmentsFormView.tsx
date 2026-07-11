@@ -110,6 +110,7 @@ const ShipmentsFormView = React.memo(function ShipmentsFormView({
 
     const lineItemsApiRef = useRef<ShipmentsLineItemsApi | null>(null);
     const listsFetchedRef = useRef(false);
+    const loadedIdRef = useRef<string | null>(null);
 
     // ── Calculate table height based on viewport ───────────────────────────
     useEffect(() => {
@@ -147,6 +148,11 @@ const ShipmentsFormView = React.memo(function ShipmentsFormView({
             setPageLoading(false);
             return undefined;
         }
+        if (loadedIdRef.current === id) {
+            setPageLoading(false);
+            return undefined;
+        }
+        loadedIdRef.current = id;
 
         let cancelled = false;
         const load = async () => {
@@ -178,7 +184,10 @@ const ShipmentsFormView = React.memo(function ShipmentsFormView({
                 }
             } catch (e) {
                 console.error(e);
-                if (!cancelled) toast.error(t('error.loadFailed'));
+                if (!cancelled) {
+                    loadedIdRef.current = null;
+                    toast.error(t('error.loadFailed'));
+                }
             } finally {
                 if (!cancelled) setPageLoading(false);
             }

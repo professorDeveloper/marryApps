@@ -126,6 +126,7 @@ const SeparationActsFormView = React.memo(function SeparationActsFormView({
 
     const lineItemsApiRef = useRef<SeparationActsLineItemsApi | null>(null);
     const listsFetchedRef = useRef(false);
+    const loadedIdRef = useRef<string | null>(null);
 
     // ── Calculate table height based on viewport ───────────────────────────
     useEffect(() => {
@@ -167,6 +168,11 @@ const SeparationActsFormView = React.memo(function SeparationActsFormView({
             setPageLoading(false);
             return undefined;
         }
+        if (loadedIdRef.current === id) {
+            setPageLoading(false);
+            return undefined;
+        }
+        loadedIdRef.current = id;
 
         let cancelled = false;
         const load = async () => {
@@ -200,7 +206,10 @@ const SeparationActsFormView = React.memo(function SeparationActsFormView({
                 }
             } catch (e) {
                 console.error(e);
-                if (!cancelled) toast.error(t('error.loadFailed'));
+                if (!cancelled) {
+                    loadedIdRef.current = null;
+                    toast.error(t('error.loadFailed'));
+                }
             } finally {
                 if (!cancelled) setPageLoading(false);
             }

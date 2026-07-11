@@ -110,6 +110,7 @@ const OutgoingInvoiceFormView = React.memo(function OutgoingInvoiceFormView() {
 
     const lineItemsApiRef = useRef<OutgoingInvoiceLineItemsApi | null>(null);
     const listsFetchedRef = useRef(false);
+    const loadedIdRef = useRef<string | null>(null);
 
     // ── Calculate table height based on viewport ───────────────────────────
     useEffect(() => {
@@ -175,16 +176,21 @@ const OutgoingInvoiceFormView = React.memo(function OutgoingInvoiceFormView() {
 
     // ── Load existing invoice (edit mode) ─────────────────────────────────
     useEffect(() => {
-        if (isNew) {
+        if (isNew || !id) {
             setPageLoading(false);
             return undefined;
         }
+        if (loadedIdRef.current === id) {
+            setPageLoading(false);
+            return undefined;
+        }
+        loadedIdRef.current = id;
 
         let cancelled = false;
         const load = async () => {
             setPageLoading(true);
             try {
-                const details = await getOutgoingInvoiceById(id!);
+                const details = await getOutgoingInvoiceById(id);
                 if (cancelled) return;
                 if (!details) {
                     navigate(paths.warehouse.outgoingInvoices.root, { replace: true });
@@ -193,7 +199,10 @@ const OutgoingInvoiceFormView = React.memo(function OutgoingInvoiceFormView() {
                 mapResponseToState(details);
             } catch (e) {
                 console.error(e);
-                if (!cancelled) toast.error(t('error.loadFailed'));
+                if (!cancelled) {
+                    loadedIdRef.current = null;
+                    toast.error(t('error.loadFailed'));
+                }
             } finally {
                 if (!cancelled) setPageLoading(false);
             }

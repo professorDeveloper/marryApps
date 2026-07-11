@@ -3,6 +3,7 @@ import type {
     Storage,
     Transfer,
     SelectOption,
+    BranchDetail,
     TransferFormData,
 } from '../types';
 
@@ -60,7 +61,7 @@ interface TransfersFormViewProps {
 const TransfersFormView = React.memo(function TransfersFormView({
     isNew = false,
 }: TransfersFormViewProps) {
-    const { t } = useTranslation('menu');
+    const { t, i18n } = useTranslation('menu');
     const navigate = useNavigate();
     const { id } = useParams<{ id: string }>();
     const dispatch = useAppDispatch();
@@ -90,7 +91,7 @@ const TransfersFormView = React.memo(function TransfersFormView({
     const openIngredientDialog = useCallback(() => setIsIngredientDialogOpen(true), []);
 
     const [branches, setBranches] = useState<Branch[]>([]);
-    const [storages, setStorages] = useState<Storage[]>([]);
+    const [branchStoragesMap, setBranchStoragesMap] = useState<Record<string, Storage[]>>({});
     const [fromStorages, setFromStorages] = useState<Storage[]>([]);
     const [toStorages, setToStorages] = useState<Storage[]>([]);
     const [groups, setGroups] = useState<SelectOption[]>([]);
@@ -116,6 +117,7 @@ const TransfersFormView = React.memo(function TransfersFormView({
 
     const lineItemsApiRef = useRef<TransfersLineItemsApi | null>(null);
     const listsFetchedRef = useRef(false);
+    const loadedIdRef = useRef<string | null>(null);
 
     // ── Calculate table height based on viewport ───────────────────────────
     useEffect(() => {
@@ -134,39 +136,68 @@ const TransfersFormView = React.memo(function TransfersFormView({
     // ── Effective transfer ID ─────────────────────────────────────────────
     const effectiveTransferId = id || transfer?.id;
 
-    // ── Load base data (branches, storages, groups) ────────────────────────
+    // ── Load base data (branches with nested storages, groups) ─────────────
     useEffect(() => {
         if (listsFetchedRef.current) return;
         listsFetchedRef.current = true;
 
+        const langCode = i18n.language?.startsWith('ru')
+            ? 'ru'
+            : i18n.language?.startsWith('en')
+                ? 'en'
+                : 'uz';
+
         Promise.all([
             getTransferGroups(),
-            fetcher<BackendResponse<Branch[]>>(endpoints.branches.list).catch(() => ({
-                data: [] as Branch[],
-            })),
-            fetcher<BackendResponse<Storage[]>>(endpoints.storage.list).catch(() => ({
-                data: [] as Storage[],
-            })),
+            fetcher<BackendResponse<BranchDetail[]>>([
+                endpoints.branches.detail,
+                { params: { lang: langCode } },
+            ]).catch(() => ({ data: [] as BranchDetail[] })),
         ])
-            .then(([groupsData, branchesData, storagesData]) => {
+            .then(([groupsData, branchDetailData]) => {
                 setGroups(Array.isArray(groupsData) ? groupsData : []);
-                setBranches(Array.isArray((branchesData as any)?.data) ? (branchesData as any).data : []);
-                setStorages(Array.isArray((storagesData as any)?.data) ? (storagesData as any).data : []);
+
+                const branchDetails = Array.isArray((branchDetailData as any)?.data)
+                    ? ((branchDetailData as any).data as BranchDetail[])
+                    : [];
+
+                setBranches(branchDetails.map((b) => ({ id: b.branch_id, name: b.name })));
+
+                const storagesMap: Record<string, Storage[]> = {};
+                branchDetails.forEach((b) => {
+                    storagesMap[b.branch_id] = Array.isArray(b.storages) ? b.storages : [];
+                });
+                setBranchStoragesMap(storagesMap);
             })
             .catch(console.error);
-    }, [getTransferGroups]);
+    }, [getTransferGroups, i18n.language]);
 
-    // ── Auto-set branches when single branch available ─────────────────────
+    // ── Default both branch pickers to the same branch once branches load ──
+    // Keeps whichever side already has a valid selection; falls back to a
+    // shared branch otherwise, since most transfers move stock within one
+    // branch (between storages), not across branches.
     useEffect(() => {
         if (!isNew) return;
-        if (branches.length !== 1) return;
+        if (branches.length === 0) return;
 
-        const onlyBranchId = branches[0].id;
-        setFormData((prev) => ({
-            ...prev,
-            from_branch_id: prev.from_branch_id || onlyBranchId,
-            to_branch_id: prev.to_branch_id || onlyBranchId,
-        }));
+        setFormData((prev) => {
+            const validIds = new Set(branches.map((b) => b.id));
+            const fromValid = validIds.has(prev.from_branch_id);
+            const toValid = validIds.has(prev.to_branch_id);
+            if (fromValid && toValid) return prev;
+
+            const sharedBranchId = fromValid
+                ? prev.from_branch_id
+                : toValid
+                    ? prev.to_branch_id
+                    : branches[0].id;
+
+            return {
+                ...prev,
+                from_branch_id: fromValid ? prev.from_branch_id : sharedBranchId,
+                to_branch_id: toValid ? prev.to_branch_id : sharedBranchId,
+            };
+        });
     }, [branches, isNew]);
 
     // ── Update fromStorages when fromBranch changes ────────────────────────
@@ -176,13 +207,13 @@ const TransfersFormView = React.memo(function TransfersFormView({
             return;
         }
 
-        const branchStorages = storages.filter((s) => s.branch_id === formData.from_branch_id);
+        const branchStorages = branchStoragesMap[formData.from_branch_id] || [];
         setFromStorages(branchStorages);
 
         if (!formData.from_storage_id && branchStorages.length === 1) {
             setFormData((prev) => ({ ...prev, from_storage_id: branchStorages[0].id }));
         }
-    }, [formData.from_branch_id, storages]);
+    }, [formData.from_branch_id, branchStoragesMap]);
 
     // ── Update toStorages when toBranch changes ──────────────────────────
     useEffect(() => {
@@ -191,13 +222,13 @@ const TransfersFormView = React.memo(function TransfersFormView({
             return;
         }
 
-        const branchStorages = storages.filter((s) => s.branch_id === formData.to_branch_id);
+        const branchStorages = branchStoragesMap[formData.to_branch_id] || [];
         setToStorages(branchStorages);
 
         if (!formData.to_storage_id && branchStorages.length === 1) {
             setFormData((prev) => ({ ...prev, to_storage_id: branchStorages[0].id }));
         }
-    }, [formData.to_branch_id, storages]);
+    }, [formData.to_branch_id, branchStoragesMap]);
 
     // ── Load existing transfer (edit mode) ─────────────────────────────────
     useEffect(() => {
@@ -209,6 +240,11 @@ const TransfersFormView = React.memo(function TransfersFormView({
             setPageLoading(false);
             return undefined;
         }
+        if (loadedIdRef.current === id) {
+            setPageLoading(false);
+            return undefined;
+        }
+        loadedIdRef.current = id;
 
         let cancelled = false;
         const load = async () => {
@@ -244,7 +280,10 @@ const TransfersFormView = React.memo(function TransfersFormView({
                 }
             } catch (e) {
                 console.error(e);
-                if (!cancelled) toast.error(t('error.loadFailed'));
+                if (!cancelled) {
+                    loadedIdRef.current = null;
+                    toast.error(t('error.loadFailed'));
+                }
             } finally {
                 if (!cancelled) setPageLoading(false);
             }

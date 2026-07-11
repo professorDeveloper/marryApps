@@ -26,3 +26,9 @@ export interface Storage {
     name: string;
     branch_id?: string;
 }
+
+export interface BranchDetail {
+    branch_id: string;
+    name: string;
+    storages?: Storage[];
+}

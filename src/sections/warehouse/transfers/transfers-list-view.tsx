@@ -170,11 +170,6 @@ export function TransfersListView() {
     return () => clearTimeout(timeout);
   }, [searchQuery]);
 
-  // Refetch data when filters change (including date period changes)
-  useEffect(() => {
-    loadData();
-  }, [draftFilters]);
-
   // Sync startDate/endDate with draftFilters
   useEffect(() => {
     setStartDate(toPickerDate(draftFilters.date_from)?.toDate() || null);

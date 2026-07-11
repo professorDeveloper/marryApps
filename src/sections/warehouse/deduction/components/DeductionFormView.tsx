@@ -112,6 +112,7 @@ const DeductionFormView = React.memo(function DeductionFormView({
 
     const lineItemsApiRef = useRef<DeductionLineItemsApi | null>(null);
     const listsFetchedRef = useRef(false);
+    const loadedIdRef = useRef<string | null>(null);
 
     // ── Calculate table height based on viewport ───────────────────────────
     useEffect(() => {
@@ -169,6 +170,11 @@ const DeductionFormView = React.memo(function DeductionFormView({
             setPageLoading(false);
             return undefined;
         }
+        if (loadedIdRef.current === id) {
+            setPageLoading(false);
+            return undefined;
+        }
+        loadedIdRef.current = id;
 
         let cancelled = false;
         const load = async () => {
@@ -201,7 +207,10 @@ const DeductionFormView = React.memo(function DeductionFormView({
                 }
             } catch (e) {
                 console.error(e);
-                if (!cancelled) toast.error(t('error.loadFailed'));
+                if (!cancelled) {
+                    loadedIdRef.current = null;
+                    toast.error(t('error.loadFailed'));
+                }
             } finally {
                 if (!cancelled) setPageLoading(false);
             }

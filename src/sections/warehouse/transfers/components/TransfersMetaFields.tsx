@@ -69,15 +69,17 @@ export const TransfersMetaFields = React.memo(function TransfersMetaFields({
 }: TransfersMetaFieldsProps) {
     const { t } = useTranslation('menu');
 
+    const branchLabel = (b: Branch) => b.name || `${t('transfers.unnamedBranch')} (${b.id.slice(0, 8)})`;
+
     const formattedDate = date ? dayjs(date).format('DD.MM.YYYY') : '';
-    const fromBranchName = branches.find((b) => String(b.id) === String(fromBranchId))?.name;
-    const toBranchName = branches.find((b) => String(b.id) === String(toBranchId))?.name;
+    const fromBranch = branches.find((b) => String(b.id) === String(fromBranchId));
+    const toBranch = branches.find((b) => String(b.id) === String(toBranchId));
     const statusLabel = statusOptions.find((opt) => opt.value === status)?.label;
 
     const summaryValues = [
         formattedDate,
-        fromBranchName ? `From: ${fromBranchName}` : '',
-        toBranchName ? `To: ${toBranchName}` : '',
+        fromBranch ? `From: ${branchLabel(fromBranch)}` : '',
+        toBranch ? `To: ${branchLabel(toBranch)}` : '',
         statusLabel,
     ].filter(Boolean) as string[];
 
@@ -125,7 +127,7 @@ export const TransfersMetaFields = React.memo(function TransfersMetaFields({
                     <option value="">{t('transfers.selectFromBranch')}</option>
                     {branches.map((b) => (
                         <option key={b.id} value={b.id}>
-                            {b.name}
+                            {branchLabel(b)}
                         </option>
                     ))}
                 </TextField>
@@ -137,7 +139,7 @@ export const TransfersMetaFields = React.memo(function TransfersMetaFields({
                     onChange={(e) => onFromStorageChange(e.target.value)}
                     size="small"
                     SelectProps={{ native: true }}
-                    disabled={disabled || fromStorages.length === 0}
+                    disabled={disabled || !fromBranchId || fromStorages.length === 0}
                 >
                     <option value="">{t('transfers.selectFromStorage')}</option>
                     {fromStorages.map((s) => (
@@ -159,7 +161,7 @@ export const TransfersMetaFields = React.memo(function TransfersMetaFields({
                     <option value="">{t('transfers.selectToBranch')}</option>
                     {branches.map((b) => (
                         <option key={b.id} value={b.id}>
-                            {b.name}
+                            {branchLabel(b)}
                         </option>
                     ))}
                 </TextField>
@@ -171,7 +173,7 @@ export const TransfersMetaFields = React.memo(function TransfersMetaFields({
                     onChange={(e) => onToStorageChange(e.target.value)}
                     size="small"
                     SelectProps={{ native: true }}
-                    disabled={disabled || toStorages.length === 0}
+                    disabled={disabled || !toBranchId || toStorages.length === 0}
                 >
                     <option value="">{t('transfers.selectToStorage')}</option>
                     {toStorages.map((s) => (
