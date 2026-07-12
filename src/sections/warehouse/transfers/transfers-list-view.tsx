@@ -7,10 +7,24 @@ import { useMemo, useState, useEffect, useCallback } from 'react';
 
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
+import { DataGrid } from '@mui/x-data-grid';
 import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
 import IconButton from '@mui/material/IconButton';
-import { Chip, Dialog, DialogTitle, DialogActions, DialogContent } from '@mui/material';
+import {
+  Chip,
+  Table,
+  Dialog,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+  Typography,
+  DialogTitle,
+  DialogActions,
+  DialogContent,
+  TableContainer,
+} from '@mui/material';
 
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
@@ -18,7 +32,7 @@ import { RouterLink } from 'src/routes/components';
 
 import { useTransfersAPI } from 'src/hooks/use-transfers-api';
 import { usePaginationRows } from 'src/hooks/use-pagination-rows';
-import { useBranchesDetail, useDeductionGroups } from 'src/hooks/use-reference-data';
+import { useBranchesDetail, useIngredientsList, useDeductionGroups } from 'src/hooks/use-reference-data';
 
 import { getStatusColor, formatStatusLabel } from 'src/utils/status-colors';
 
@@ -26,6 +40,7 @@ import { DashboardContent } from 'src/layouts/dashboard';
 
 import { Iconify } from 'src/components/iconify';
 import { RenderCell } from 'src/components/RenderCell';
+import { GenericViewModal } from 'src/components/generic-view-view';
 
 import { FILTER_SELECT_SX } from 'src/sections/common/data-table';
 import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
@@ -58,9 +73,10 @@ const filterSelectSx = FILTER_SELECT_SX;
 export function TransfersListView() {
   const { t } = useTranslation('menu');
   const router = useRouter();
-  const { getTransfers, deleteTransfer } = useTransfersAPI();
+  const { getTransfers, getTransferById, deleteTransfer } = useTransfersAPI();
   const { branchesMap, storagesMap } = useBranchesDetail();
   const { groupsMap } = useDeductionGroups();
+  const { ingredientsMap } = useIngredientsList();
 
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<Transfer[]>([]);
@@ -68,6 +84,9 @@ export function TransfersListView() {
   const [totalAmount, setTotalAmount] = useState('0');
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [openConfirm, setOpenConfirm] = useState(false);
+  const [viewOpen, setViewOpen] = useState(false);
+  const [viewLoading, setViewLoading] = useState(false);
+  const [viewData, setViewData] = useState<Transfer | null>(null);
   const { rowsPerPage } = usePaginationRows();
   const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
     page: 0,
@@ -133,6 +152,20 @@ export function TransfersListView() {
       setPaginationModel((prev) => ({ ...prev, page: 0 }));
     },
     []
+  );
+
+  const openViewModal = useCallback(
+    async (transferId: string) => {
+      setViewOpen(true);
+      setViewLoading(true);
+      try {
+        const details = await getTransferById(transferId);
+        setViewData(details);
+      } finally {
+        setViewLoading(false);
+      }
+    },
+    [getTransferById]
   );
 
   const loadData = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
@@ -412,8 +445,11 @@ export function TransfersListView() {
           }}>
             <IconButton
               size="small"
-              onClick={() => router.push(paths.warehouse.transfers.edit(row.id))}
-              sx={{ 
+              onClick={(e) => {
+                e.stopPropagation();
+                router.push(paths.warehouse.transfers.edit(row.id));
+              }}
+              sx={{
                 color: 'text.secondary',
                 '&:hover': {
                   backgroundColor: 'action.hover',
@@ -425,7 +461,8 @@ export function TransfersListView() {
             </IconButton>
             <IconButton
               size="small"
-              onClick={() => {
+              onClick={(e) => {
+                e.stopPropagation();
                 setDeleteId(row.id);
                 setOpenConfirm(true);
               }}
@@ -444,6 +481,11 @@ export function TransfersListView() {
       },
     ],
     [branchesMap, groupsMap, storagesMap, t, router]
+  );
+
+  const handleRowClick = useCallback(
+    (row: Transfer) => openViewModal(String(row.id)),
+    [openViewModal]
   );
 
   return (
@@ -571,6 +613,7 @@ export function TransfersListView() {
               actions: '0.7fr',
             },
           }}
+          onRowClick={handleRowClick}
           onReset={() => setDraftFilters({
     status: '',
     date_from: getTodayUtcBoundary(),
@@ -670,6 +713,126 @@ export function TransfersListView() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <GenericViewModal
+        isOpen={viewOpen}
+        onClose={() => {
+          setViewOpen(false);
+          setViewData(null);
+        }}
+        title={t('overview.warehouse.transfers')}
+        data={viewData}
+        loading={viewLoading}
+        position="right"
+        slideDirection="left"
+        maxWidth="lg"
+        renderContent={(transfer: Transfer | null) => {
+          if (!transfer) return null;
+
+          const items = transfer.items || [];
+          const total = Number(transfer.total_amount || 0);
+
+          return (
+            <Box sx={{ display: 'grid', gap: 2 }}>
+              <TableContainer>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>{t('deductions.number')}</TableCell>
+                      <TableCell>{t('deductions.date')}</TableCell>
+                      <TableCell>{t('deductions.status')}</TableCell>
+                      <TableCell>{t('warehouse.fromBranch')}</TableCell>
+                      <TableCell>{t('warehouse.toBranch')}</TableCell>
+                      <TableCell>{t('warehouse.fromStorage')}</TableCell>
+                      <TableCell>{t('warehouse.toStorage')}</TableCell>
+                      <TableCell>{t('deductions.group')}</TableCell>
+                      <TableCell>{t('deductions.description')}</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    <TableRow>
+                      <TableCell>{transfer.number}</TableCell>
+                      <TableCell>{transfer.date ? new Date(transfer.date).toLocaleString() : '-'}</TableCell>
+                      <TableCell>{transfer.status}</TableCell>
+                      <TableCell>{branchesMap[transfer.from_branch_id] || transfer.from_branch_id}</TableCell>
+                      <TableCell>{branchesMap[transfer.to_branch_id] || transfer.to_branch_id}</TableCell>
+                      <TableCell>{storagesMap[transfer.from_storage_id] || transfer.from_storage_id}</TableCell>
+                      <TableCell>{storagesMap[transfer.to_storage_id] || transfer.to_storage_id}</TableCell>
+                      <TableCell>{groupsMap[transfer.act_group_id] || transfer.act_group_id}</TableCell>
+                      <TableCell>{transfer.description || '-'}</TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </TableContainer>
+
+              {items.length === 0 ? (
+                <Box sx={{ py: 2, textAlign: 'center' }}>
+                  <Typography variant="body2" color="text.secondary">
+                    {t('common.noData')}
+                  </Typography>
+                </Box>
+              ) : (
+                <Box sx={{ height: 500, width: '100%' }}>
+                  <DataGrid
+                    rows={items.map((item, index) => ({ ...item, rowIndex: index + 1 }))}
+                    getRowId={(row) => row.id || String(row.rowIndex)}
+                    columns={[
+                      { field: 'rowIndex', headerName: '#', width: 50 },
+                      { field: 'ingredient_id', headerName: t('warehouse.ingredient'), flex: 1, renderCell: (params: any) => ingredientsMap[params.value] || params.value },
+                      { field: 'quantity', headerName: t('calculation.quantity'), width: 100 },
+                      { field: 'price', headerName: t('shipments.pricePerUnit'), width: 150 },
+                      { field: 'total_amount', headerName: t('shipments.total'), width: 150 },
+                      { field: 'stock_qty_before', headerName: t('shipments.stockBefore'), width: 120 },
+                      { field: 'stock_qty_after', headerName: t('shipments.stockAfter'), width: 120 },
+                    ]}
+                    autoHeight
+                    disableRowSelectionOnClick
+                    disableColumnFilter
+                    disableColumnMenu
+                    disableColumnSelector
+                    disableDensitySelector
+                    hideFooterSelectedRowCount
+                    pagination
+                    pageSizeOptions={[10, 25, 50, 100]}
+                    initialState={{
+                      pagination: {
+                        paginationModel: { page: 0, pageSize: 50 },
+                      },
+                    }}
+                    sx={{
+                      '& .MuiDataGrid-toolbarContainer, & .MuiDataGrid-toolbarContainer button': {
+                        display: 'none !important',
+                      },
+                      '& .MuiDataGrid-columnHeaders': {
+                        backgroundColor: 'background.paper',
+                      },
+                      '& .MuiDataGrid-menuIcon': {
+                        display: 'none !important',
+                      },
+                      '& .MuiDataGrid-columnHeader:focus, & .MuiDataGrid-cell:focus': {
+                        outline: 'none !important',
+                      },
+                      '& .MuiDataGrid-columnSeparator': {
+                        display: 'none',
+                      },
+                    }}
+                    slots={{
+                      toolbar: () => null,
+                      columnMenu: () => null,
+                    }}
+                  />
+                </Box>
+              )}
+
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 3 }}>
+                <Typography variant="body2">
+                  <strong>{t('deductions.balance')}:</strong> {total.toLocaleString()}
+                </Typography>
+              </Box>
+            </Box>
+          );
+        }}
+      />
     </>
   );
 }
