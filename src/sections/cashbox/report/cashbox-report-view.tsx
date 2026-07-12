@@ -40,7 +40,7 @@ export function CashboxReportView() {
   const [cashRegisters, setCashRegisters] = useState<{ id: string; name: string }[]>([]);
   const [report, setReport] = useState(FALLBACK_REPORT);
 
-  const [fromDate, setFromDate] = useState<dayjs.Dayjs>(dayjs().startOf('day').subtract(1, 'day'));
+  const [fromDate, setFromDate] = useState<dayjs.Dayjs>(dayjs().startOf('day'));
   const [toDate, setToDate] = useState<dayjs.Dayjs>(dayjs().endOf('day'));
   const [cashRegisterId, setCashRegisterId] = useState('');
 

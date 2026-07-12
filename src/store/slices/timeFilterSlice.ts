@@ -11,22 +11,45 @@ interface TimeFilterState {
   activePeriod: TimePeriod;
 }
 
-function getTodayRange(): TimeFilterState {
+export function getRangeForPeriod(period: TimePeriod): TimeFilterState {
   const today = dayjs();
+  let start = today.startOf('day');
+
+  switch (period) {
+    case 'week':
+      start = today.startOf('week');
+      break;
+    case 'month':
+      start = today.startOf('month');
+      break;
+    case 'year':
+      start = today.startOf('year');
+      break;
+    default:
+      break;
+  }
+
   return {
-    startDate: today.startOf('day').toISOString(),
+    startDate: start.toISOString(),
     endDate: today.endOf('day').toISOString(),
-    activePeriod: 'day',
+    activePeriod: period,
   };
 }
 
+function getTodayRange(): TimeFilterState {
+  return getRangeForPeriod('day');
+}
+
+// Only the chosen period (day/week/month/year) is trusted from storage; its start/end
+// boundaries are always recomputed against "now" so a filter saved weeks ago (e.g. "year")
+// never reappears frozen at a stale end date on the next visit.
 function getInitialTimeFilter(): TimeFilterState {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       const parsed = JSON.parse(saved) as TimeFilterState;
-      if (parsed.startDate && parsed.endDate && parsed.activePeriod) {
-        return parsed;
+      if (parsed.activePeriod) {
+        return getRangeForPeriod(parsed.activePeriod);
       }
     }
   } catch {

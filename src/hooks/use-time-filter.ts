@@ -4,7 +4,7 @@ import dayjs from 'dayjs';
 import { useMemo, useCallback } from 'react';
 
 import { useAppDispatch, useAppSelector } from 'src/store';
-import { setTimeFilter, resetTimeFilter } from 'src/store/slices/timeFilterSlice';
+import { setTimeFilter, resetTimeFilter, getRangeForPeriod } from 'src/store/slices/timeFilterSlice';
 
 export function useTimeFilter() {
   const dispatch = useAppDispatch();
@@ -33,31 +33,7 @@ export function useTimeFilter() {
 
   const applyRange = useCallback(
     (range: TimePeriod) => {
-      const today = dayjs();
-      let start = today.startOf('day');
-      const end = today.endOf('day');
-
-      switch (range) {
-        case 'week':
-          start = today.startOf('week');
-          break;
-        case 'month':
-          start = today.startOf('month');
-          break;
-        case 'year':
-          start = today.startOf('year');
-          break;
-        default:
-          break;
-      }
-
-      dispatch(
-        setTimeFilter({
-          startDate: start.toISOString(),
-          endDate: end.toISOString(),
-          activePeriod: range,
-        })
-      );
+      dispatch(setTimeFilter(getRangeForPeriod(range)));
     },
     [dispatch]
   );
