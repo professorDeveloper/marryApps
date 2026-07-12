@@ -51,19 +51,21 @@ export function WorkspacesPopover({ data = [], sx, ...other }: WorkspacesPopover
 
   // Data change'da workspace'ni sync qilish
   useEffect(() => {
-    if (data.length > 0) {
-      // Agar selectedBranchId mavjud bo'lsa, uning uchun workspace'ni topamiz
-      if (selectedBranchId) {
-        const selected = data.find((d) => d.id === selectedBranchId);
-        if (selected) {
-          setWorkspace(selected);
-        }
-      } else {
-        // Agar selectedBranchId yo'q bo'lsa, birinchisini tanlaylik
-        setWorkspace(data[0]);
-        setSelectedBranchId(data[0].id);
-      }
+    if (data.length === 0) return;
+
+    // Agar selectedBranchId mavjud bo'lsa, uning uchun workspace'ni topamiz
+    const selected = selectedBranchId ? data.find((d) => d.id === selectedBranchId) : undefined;
+
+    if (selected) {
+      setWorkspace(selected);
+      return;
     }
+
+    // selectedBranchId yo'q, yoki joriy foydalanuvchi uchun endi mavjud
+    // bo'lmagan (o'chirilgan yoki ruxsat yo'q) branch'ga ishora qilyapti -
+    // ro'yxatdagi birinchi branch'ga tushamiz, aks holda navbar bo'sh qoladi.
+    setWorkspace(data[0]);
+    setSelectedBranchId(data[0].id);
   }, [data, selectedBranchId, setSelectedBranchId]);
 
   const handleChangeWorkspace = useCallback(
