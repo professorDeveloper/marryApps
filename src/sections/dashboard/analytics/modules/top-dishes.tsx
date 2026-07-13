@@ -1,5 +1,8 @@
+import type { TFunction } from 'i18next';
 import type { DishItem } from '../data/types';
 import type { NumFormat } from '../data/formatters';
+
+import { useTranslation } from 'react-i18next';
 
 import { fmtNum } from '../data/formatters';
 
@@ -11,17 +14,17 @@ interface Props {
   style: DishesStyle;
 }
 
-function Table({ items, numFormat }: { items: DishItem[]; numFormat: NumFormat }) {
+function Table({ items, numFormat, t }: { items: DishItem[]; numFormat: NumFormat; t: TFunction }) {
   const maxRev = items.length ? Math.max(...items.map((i) => i.revenue)) : 1;
   return (
     <table className="dish-table">
       <thead>
         <tr>
           <th className="dish-th-rank">#</th>
-          <th>Dish</th>
-          <th className="dish-th-num">Qty</th>
-          <th className="dish-th-num">Revenue</th>
-          <th className="dish-th-bar">Share</th>
+          <th>{t('analyticsDashboard.dishes.dish')}</th>
+          <th className="dish-th-num">{t('analyticsDashboard.dishes.qty')}</th>
+          <th className="dish-th-num">{t('analyticsDashboard.dishes.revenue')}</th>
+          <th className="dish-th-bar">{t('analyticsDashboard.dishes.share')}</th>
         </tr>
       </thead>
       <tbody>
@@ -43,7 +46,7 @@ function Table({ items, numFormat }: { items: DishItem[]; numFormat: NumFormat }
   );
 }
 
-function Cards({ items, numFormat }: { items: DishItem[]; numFormat: NumFormat }) {
+function Cards({ items, numFormat, t }: { items: DishItem[]; numFormat: NumFormat; t: TFunction }) {
   const maxRev = items.length ? Math.max(...items.map((i) => i.revenue)) : 1;
   return (
     <ul className="dish-cards">
@@ -58,9 +61,9 @@ function Cards({ items, numFormat }: { items: DishItem[]; numFormat: NumFormat }
             <div className="dish-card-bar-fill" style={{ width: `${(d.revenue / maxRev) * 100}%` }} />
           </div>
           <div className="dish-card-meta">
-            <span className="mono">{d.quantity} sold</span>
+            <span className="mono">{d.quantity} {t('analyticsDashboard.dishes.sold')}</span>
             <span className="muted">·</span>
-            <span className="mono muted">avg {fmtNum(d.quantity ? d.revenue / d.quantity : 0, numFormat)}</span>
+            <span className="mono muted">{t('analyticsDashboard.dishes.avg')} {fmtNum(d.quantity ? d.revenue / d.quantity : 0, numFormat)}</span>
           </div>
         </li>
       ))}
@@ -68,8 +71,8 @@ function Cards({ items, numFormat }: { items: DishItem[]; numFormat: NumFormat }
   );
 }
 
-function Podium({ items, numFormat }: { items: DishItem[]; numFormat: NumFormat }) {
-  if (items.length === 0) return <div className="muted">No dish data</div>;
+function Podium({ items, numFormat, t }: { items: DishItem[]; numFormat: NumFormat; t: TFunction }) {
+  if (items.length === 0) return <div className="muted">{t('analyticsDashboard.dishes.noData')}</div>;
   const top3 = items.slice(0, 3);
   const rest = items.slice(3);
   const maxRev = top3[0]?.revenue || 1;
@@ -81,7 +84,7 @@ function Podium({ items, numFormat }: { items: DishItem[]; numFormat: NumFormat 
             <div className="dish-podium-rank mono">#{i + 1}</div>
             <div className="dish-podium-name">{d.name}</div>
             <div className="dish-podium-rev mono">{fmtNum(d.revenue, numFormat)}</div>
-            <div className="dish-podium-qty mono muted">{d.quantity} sold</div>
+            <div className="dish-podium-qty mono muted">{d.quantity} {t('analyticsDashboard.dishes.sold')}</div>
             <div className="dish-podium-bar">
               <div className="dish-podium-bar-fill" style={{ width: `${(d.revenue / maxRev) * 100}%` }} />
             </div>
@@ -103,16 +106,17 @@ function Podium({ items, numFormat }: { items: DishItem[]; numFormat: NumFormat 
 }
 
 export function TopDishes({ items, numFormat, style }: Props) {
+  const { t } = useTranslation('menu');
   if (items.length === 0) {
-    return <div className="muted">No dish data</div>;
+    return <div className="muted">{t('analyticsDashboard.dishes.noData')}</div>;
   }
   switch (style) {
     case 'cards':
-      return <Cards items={items} numFormat={numFormat} />;
+      return <Cards items={items} numFormat={numFormat} t={t} />;
     case 'podium':
-      return <Podium items={items} numFormat={numFormat} />;
+      return <Podium items={items} numFormat={numFormat} t={t} />;
     case 'table':
     default:
-      return <Table items={items} numFormat={numFormat} />;
+      return <Table items={items} numFormat={numFormat} t={t} />;
   }
 }

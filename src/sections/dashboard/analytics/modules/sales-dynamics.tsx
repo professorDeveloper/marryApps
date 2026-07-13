@@ -1,6 +1,8 @@
 import type { NumFormat } from '../data/formatters';
 import type { SalesDayPoint, AnalyticsPayload } from '../data/types';
 
+import { useTranslation } from 'react-i18next';
+
 import { fmtNum, fmtCompact } from '../data/formatters';
 
 export type ChartStyle = 'bars' | 'area' | 'line_overlay' | 'paired';
@@ -268,6 +270,7 @@ interface SalesDynamicsProps {
 }
 
 export function SalesDynamics({ payload, chartStyle, showCompare, numFormat }: SalesDynamicsProps) {
+  const { t } = useTranslation('menu');
   const cur = payload.current.sales_dynamics;
   const prev = payload.previous.sales_dynamics;
   const total = cur.reduce((s, d) => s + d.revenue, 0);
@@ -277,27 +280,27 @@ export function SalesDynamics({ payload, chartStyle, showCompare, numFormat }: S
     <div className="sales-chart">
       <div className="sales-chart-stats">
         <div className="sales-stat">
-          <div className="sales-stat-lbl">Total</div>
+          <div className="sales-stat-lbl">{t('analyticsDashboard.salesStats.total')}</div>
           <div className="sales-stat-val mono">{fmtNum(total, numFormat)}</div>
         </div>
         <div className="sales-stat">
-          <div className="sales-stat-lbl">Daily avg</div>
+          <div className="sales-stat-lbl">{t('analyticsDashboard.salesStats.dailyAvg')}</div>
           <div className="sales-stat-val mono">{fmtNum(avg, numFormat)}</div>
         </div>
         <div className="sales-stat">
-          <div className="sales-stat-lbl">Peak day</div>
+          <div className="sales-stat-lbl">{t('analyticsDashboard.salesStats.peakDay')}</div>
           <div className="sales-stat-val mono">{peak?.label ?? '—'}</div>
         </div>
         <div className="sales-stat">
-          <div className="sales-stat-lbl">Active days</div>
+          <div className="sales-stat-lbl">{t('analyticsDashboard.salesStats.activeDays')}</div>
           <div className="sales-stat-val mono">{cur.length}</div>
         </div>
         {showCompare && (
           <div className="sales-legend">
             <span className="legend-swatch swatch-cur" />
-            Current
+            {t('analyticsDashboard.salesStats.current')}
             <span className="legend-swatch swatch-prev" />
-            Previous
+            {t('analyticsDashboard.salesStats.previous')}
           </div>
         )}
       </div>

@@ -1,6 +1,7 @@
 import type { Kpi, KpiKey, PeriodPayload, AnalyticsPayload } from './types';
 import type { DashboardOverviewResponse } from 'src/hooks/use-dashboard-api';
 
+import { useTranslation } from 'react-i18next';
 import { useMemo, useState, useEffect } from 'react';
 
 import { useDashboardAPI } from 'src/hooks/use-dashboard-api';
@@ -64,14 +65,17 @@ function buildWindow(start: Date, end: Date, period: PeriodId): DateWindow {
   return { start: s, end: e, previousStart, previousEnd, groupBy };
 }
 
-const KPI_DEFS: { key: KpiKey; label: string; unit: 'money' | 'int'; good: 'up' | 'down' | 'flat' }[] = [
-  { key: 'revenue', label: 'Revenue', unit: 'money', good: 'up' },
-  { key: 'checks_count', label: 'Checks', unit: 'int', good: 'up' },
-  { key: 'average_check', label: 'Average check', unit: 'money', good: 'up' },
-  { key: 'returns_count', label: 'Returns', unit: 'int', good: 'down' },
-  { key: 'discounts_amount', label: 'Discounts', unit: 'money', good: 'down' },
-  { key: 'vat_amount', label: 'VAT', unit: 'money', good: 'flat' },
-];
+function useKpiDefs(): { key: KpiKey; label: string; unit: 'money' | 'int'; good: 'up' | 'down' | 'flat' }[] {
+  const { t } = useTranslation('menu');
+  return [
+    { key: 'revenue', label: t('analyticsDashboard.kpis.revenue'), unit: 'money', good: 'up' },
+    { key: 'checks_count', label: t('analyticsDashboard.kpis.checks_count'), unit: 'int', good: 'up' },
+    { key: 'average_check', label: t('analyticsDashboard.kpis.average_check'), unit: 'money', good: 'up' },
+    { key: 'returns_count', label: t('analyticsDashboard.kpis.returns_count'), unit: 'int', good: 'down' },
+    { key: 'discounts_amount', label: t('analyticsDashboard.kpis.discounts_amount'), unit: 'money', good: 'down' },
+    { key: 'vat_amount', label: t('analyticsDashboard.kpis.vat_amount'), unit: 'money', good: 'flat' },
+  ];
+}
 
 function reshapePeriod(raw: DashboardOverviewResponse['current'] | null | undefined): PeriodPayload {
   const empty: PeriodPayload = {
@@ -123,6 +127,7 @@ function reshapePeriod(raw: DashboardOverviewResponse['current'] | null | undefi
 
 export function useAnalyticsData(start: Date, end: Date, period: PeriodId) {
   const { getDashboardOverview } = useDashboardAPI();
+  const kpiDefs = useKpiDefs();
   const [payload, setPayload] = useState<AnalyticsPayload | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -163,7 +168,7 @@ export function useAnalyticsData(start: Date, end: Date, period: PeriodId) {
 
   const kpis: Kpi[] = useMemo(() => {
     if (!payload) return [];
-    return KPI_DEFS.map((def) => {
+    return kpiDefs.map((def) => {
       const cur = payload.current.kpis[def.key];
       const prev = payload.previous.kpis[def.key];
       return {
@@ -173,13 +178,26 @@ export function useAnalyticsData(start: Date, end: Date, period: PeriodId) {
         delta: calcDelta(cur, prev),
       };
     });
-  }, [payload]);
+  }, [payload, kpiDefs]);
 
   return { payload, kpis, loading, window };
 }
 
-export function formatPeriodSummary(start: Date, end: Date): string {
-  const fmt = (d: Date) =>
-    d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+const DATE_LOCALE_MAP: Record<string, string> = {
+  en: 'en-GB',
+  ru: 'ru-RU',
+  'uz-Latn': 'uz-Latn-UZ',
+  'uz-Cyrl': 'uz-Cyrl-UZ',
+};
+
+export function formatPeriodSummary(start: Date, end: Date, lang = 'en'): string {
+  const locale = DATE_LOCALE_MAP[lang] ?? 'en-GB';
+  const fmt = (d: Date) => {
+    try {
+      return d.toLocaleDateString(locale, { day: '2-digit', month: 'short', year: 'numeric' });
+    } catch {
+      return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    }
+  };
   return `${fmt(start)} – ${fmt(end)}`;
 }

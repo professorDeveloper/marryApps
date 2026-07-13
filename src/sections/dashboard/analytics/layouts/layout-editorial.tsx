@@ -1,6 +1,8 @@
 import type { Tweaks } from '../tweaks/use-tweaks';
 import type { Kpi, Insight, AnalyticsPayload } from '../data/types';
 
+import { useTranslation } from 'react-i18next';
+
 import { Panel } from '../modules/panel';
 import { DeltaPill } from '../modules/delta-pill';
 import { TopDishes } from '../modules/top-dishes';
@@ -19,6 +21,7 @@ interface Props {
 }
 
 export function LayoutEditorial({ tweaks, payload, kpis, insights }: Props) {
+  const { t } = useTranslation('menu');
   const showCompare = tweaks.compare;
   const rev = kpis.find((k) => k.key === 'revenue');
   const checks = kpis.find((k) => k.key === 'checks_count');
@@ -31,23 +34,25 @@ export function LayoutEditorial({ tweaks, payload, kpis, insights }: Props) {
         <>
           <header className="editorial-hero">
             <div className="editorial-hero-main">
-              <div className="editorial-eyebrow">PERIOD REVENUE</div>
+              <div className="editorial-eyebrow">{t('analyticsDashboard.eyebrows.periodRevenue')}</div>
               <div className="editorial-hero-value mono">{fmtNum(rev.current, tweaks.numFormat)}</div>
               {showCompare && (
                 <div className="editorial-hero-delta">
                   <DeltaPill delta={rev.delta} good={rev.good} />
-                  <span className="muted mono">vs {fmtNum(rev.previous, tweaks.numFormat)} previous</span>
+                  <span className="muted mono">
+                    {t('analyticsDashboard.controls.vs')} {fmtNum(rev.previous, tweaks.numFormat)} ({t('analyticsDashboard.kpis.prev')})
+                  </span>
                 </div>
               )}
             </div>
             <div className="editorial-hero-side">
               <div className="editorial-side-card">
-                <div className="editorial-side-lbl">CHECKS</div>
+                <div className="editorial-side-lbl">{t('analyticsDashboard.eyebrows.checks')}</div>
                 <div className="editorial-side-val mono">{fmtInt(checks.current)}</div>
                 {showCompare && <DeltaPill delta={checks.delta} good={checks.good} />}
               </div>
               <div className="editorial-side-card">
-                <div className="editorial-side-lbl">AVG CHECK</div>
+                <div className="editorial-side-lbl">{t('analyticsDashboard.eyebrows.avgCheck')}</div>
                 <div className="editorial-side-val mono">{fmtNum(avg.current, tweaks.numFormat)}</div>
                 {showCompare && <DeltaPill delta={avg.delta} good={avg.good} />}
               </div>
@@ -71,7 +76,7 @@ export function LayoutEditorial({ tweaks, payload, kpis, insights }: Props) {
       )}
 
       {tweaks.sec_sales && (
-        <Panel title="Sales dynamics" eyebrow="DAY BY DAY">
+        <Panel title={t('analyticsDashboard.panels.salesDynamics')} eyebrow={t('analyticsDashboard.eyebrows.dayByDay')}>
           <SalesDynamics
             payload={payload}
             chartStyle={tweaks.chartStyle}
@@ -84,19 +89,19 @@ export function LayoutEditorial({ tweaks, payload, kpis, insights }: Props) {
       <div className="editorial-cols">
         <div className="editorial-col-wide">
           {tweaks.sec_dishes && (
-            <Panel title="Top dishes" eyebrow="REVENUE RANK">
+            <Panel title={t('analyticsDashboard.panels.topDishes')} eyebrow={t('analyticsDashboard.eyebrows.revenueRank')}>
               <TopDishes items={payload.current.dish_sales} numFormat={tweaks.numFormat} style={tweaks.dishesStyle} />
             </Panel>
           )}
         </div>
         <div className="editorial-col-narrow">
           {tweaks.sec_categories && (
-            <Panel title="Categories" eyebrow="REVENUE MIX">
+            <Panel title={t('analyticsDashboard.panels.categories')} eyebrow={t('analyticsDashboard.eyebrows.revenueMix')}>
               <CategoryList items={payload.current.categories} numFormat={tweaks.numFormat} limit={6} />
             </Panel>
           )}
           {tweaks.sec_payments && (
-            <Panel title="Payment" eyebrow="SPLIT">
+            <Panel title={t('analyticsDashboard.panels.payment')} eyebrow={t('analyticsDashboard.eyebrows.split')}>
               <PaymentSplit items={payload.current.payment_types} numFormat={tweaks.numFormat} variant="bar" />
             </Panel>
           )}
@@ -104,12 +109,12 @@ export function LayoutEditorial({ tweaks, payload, kpis, insights }: Props) {
       </div>
 
       {tweaks.sec_insights && (
-        <Panel title="What's interesting" eyebrow="INSIGHTS">
+        <Panel title={t('analyticsDashboard.panels.whatsInteresting')} eyebrow={t('analyticsDashboard.eyebrows.insights')}>
           <InsightsList items={insights} variant="row" />
         </Panel>
       )}
       {tweaks.sec_heatmap && (
-        <Panel title="Hourly activity" eyebrow="HEATMAP">
+        <Panel title={t('analyticsDashboard.panels.hourlyActivity')} eyebrow={t('analyticsDashboard.eyebrows.heatmap')}>
           <HourlyHeatmap />
         </Panel>
       )}

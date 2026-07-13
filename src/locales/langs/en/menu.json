@@ -47,9 +47,13 @@
   "error": {
     "title": "Something went wrong",
     "description": "An unexpected error has occurred. Please try again or go back to the homepage.",
-    "goHome": "Go to homepage"
+    "goHome": "Go to homepage",
+    "notFound": "Not found"
   },
-  "success": "Success",
+  "success": {
+    "created": "Created successfully",
+    "updated": "Updated successfully"
+  },
   "noData": "No data",
   "noDataAvailable": "No data available",
   "search": "Search",
@@ -391,7 +395,10 @@
       "durationHelp": "Leave empty to keep stopped indefinitely",
       "dialogTitle": "Stop this item",
       "confirmStop": "Stop"
-    }
+    },
+    "comingSoon": "Coming soon",
+    "totalCost": "Total cost",
+    "upload_image": "Upload image"
   },
   "modifiers": {
     "title": "Modifiers",
@@ -576,7 +583,15 @@
     "deleteSuccess": "Deleted successfully",
     "deleteFailed": "Failed to delete",
     "noEmployees": "No employees found",
-    "noEmployeesSubtitle": "Try adjusting your search or filters"
+    "noEmployeesSubtitle": "Try adjusting your search or filters",
+    "addEmployee": "Add employee",
+    "updateEmployee": "Update employee",
+    "created": "Employee created successfully",
+    "updated": "Employee updated successfully",
+    "identityDetails": "Identity details",
+    "personalLoginInfo": "Personal and login information",
+    "systemAccess": "System access",
+    "permissionsHardware": "Permissions and hardware"
   },
   "employe": {
     "title": "Employees",
@@ -618,7 +633,8 @@
         "cancelled": "Cancelled",
         "received": "Received"
       },
-      "supplierNameRequired": "Supplier name is required"
+      "supplierNameRequired": "Supplier name is required",
+      "created": "Invoice created successfully"
     },
     "invoiceDetails": {
       "title": "Invoice",
@@ -802,7 +818,11 @@
     "deleteMessage": "Are you sure you want to delete this item? This action cannot be undone.",
     "noDataSubtitle": "Try adjusting your search or filters",
     "deleteConfirmation": "Are you sure you want to delete this item? This action cannot be undone.",
-    "search": "Search"
+    "search": "Search",
+    "selectRole": "Select a role",
+    "active": "Active",
+    "inactive": "Inactive",
+    "notFound": "Not found"
   },
   "ingredients": {
     "title": "Ingredients",
@@ -1058,7 +1078,8 @@
     "groupUpdated": "Write-off group updated successfully",
     "createGroup": "Create write-off group",
     "editGroup": "Edit write-off group",
-    "groupDetails": "Write-off group details"
+    "groupDetails": "Write-off group details",
+    "selectStorage": "Select a storage"
   },
   "shipments": {
     "create": "Create dispatches",
@@ -1140,7 +1161,10 @@
       "itemDeleted": "Outgoing invoice item deleted",
       "updated": "Outgoing invoice updated successfully",
       "itemsAdded": "Outgoing invoice items added successfully"
-    }
+    },
+    "saveInvoice": "Save invoice",
+    "selectGroup": "Select a group",
+    "enterDescription": "Enter description"
   },
   "separationActs": {
     "create": "Create separation act",
@@ -1233,7 +1257,8 @@
       "created": "Inventory created successfully",
       "updated": "Inventory updated successfully",
       "itemsAdded": "Inventory items added successfully"
-    }
+    },
+    "dateTime": "Date & time"
   },
   "transfers": {
     "title": "Transfers",
@@ -1534,7 +1559,8 @@
       "edit": "Edit Transaction Group"
     },
     "customerPaid": "Customer paid",
-    "changeAmount": "Change"
+    "changeAmount": "Change",
+    "cashierDeleted": "This cashier has been deleted"
   },
   "nav": {
     "staffing": "Employee",
@@ -1693,5 +1719,274 @@
     "connectionType": "Connection type"
   },
   "viewDetails": "View details",
-  "tryAdjustingFilters": "Try adjusting your filters"
+  "tryAdjustingFilters": "Try adjusting your filters",
+  "saving": "Saving...",
+  "comment": "Comment",
+  "restaurantInfo": {
+    "title": "Restaurant info",
+    "mainInfo": "Main information",
+    "organizationName": "Organization name",
+    "address": "Address",
+    "phone": "Phone",
+    "workingDays": "Working days",
+    "socialNetworks": "Social networks",
+    "loadError": "Failed to load restaurant information",
+    "selectRestaurant": "Please select a restaurant",
+    "weekdays": {
+      "monday": "Monday",
+      "tuesday": "Tuesday",
+      "wednesday": "Wednesday",
+      "thursday": "Thursday",
+      "friday": "Friday",
+      "saturday": "Saturday",
+      "sunday": "Sunday"
+    }
+  },
+  "analyticsDashboard": {
+    "settingsAria": "Dashboard settings",
+    "closeSettingsAria": "Close settings",
+    "controls": {
+      "from": "FROM",
+      "to": "TO",
+      "vs": "vs",
+      "loading": "loading…",
+      "previousDays_one": "previous {{count}} day",
+      "previousDays_other": "previous {{count}} days",
+      "periodLetters": {
+        "day": "D",
+        "week": "W",
+        "month": "M",
+        "year": "Y"
+      }
+    },
+    "kpis": {
+      "revenue": "Revenue",
+      "checks_count": "Checks",
+      "average_check": "Average check",
+      "returns_count": "Returns",
+      "discounts_amount": "Discounts",
+      "vat_amount": "VAT",
+      "prev": "prev"
+    },
+    "panels": {
+      "salesDynamics": "Sales dynamics",
+      "revenueByCategory": "Revenue by category",
+      "categories": "Categories",
+      "paymentTypes": "Payment types",
+      "payment": "Payment",
+      "topDishes": "Top dishes",
+      "insights": "Insights",
+      "autoGenerated": "Auto-generated",
+      "whatsInteresting": "What's interesting",
+      "hourlyActivity": "Hourly activity"
+    },
+    "eyebrows": {
+      "dailyRevenue": "DAILY REVENUE",
+      "mix": "MIX",
+      "split": "SPLIT",
+      "auto": "AUTO",
+      "autoGenerated": "AUTO-GENERATED",
+      "whenAreWeBusy": "WHEN ARE WE BUSY",
+      "sortedByRevenueTop": "SORTED BY REVENUE · TOP {{count}}",
+      "revenue": "REVENUE",
+      "checks": "CHECKS",
+      "avgCheck": "AVG CHECK",
+      "revenueRank": "REVENUE RANK",
+      "revenueMix": "REVENUE MIX",
+      "periodRevenue": "PERIOD REVENUE",
+      "dayByDay": "DAY BY DAY",
+      "heatmap": "HEATMAP",
+      "keyMetrics": "KEY METRICS",
+      "insights": "INSIGHTS"
+    },
+    "compareMeta": {
+      "currentVsPrevious": "current vs previous period",
+      "currentPeriod": "current period"
+    },
+    "salesStats": {
+      "total": "Total",
+      "dailyAvg": "Daily avg",
+      "peakDay": "Peak day",
+      "activeDays": "Active days",
+      "current": "Current",
+      "previous": "Previous"
+    },
+    "payment": {
+      "noData": "No payment data"
+    },
+    "categories": {
+      "moreCategories_one": "+ {{count}} more category",
+      "moreCategories_other": "+ {{count}} more categories"
+    },
+    "dishes": {
+      "noData": "No dish data",
+      "dish": "Dish",
+      "qty": "Qty",
+      "revenue": "Revenue",
+      "share": "Share",
+      "sold": "sold",
+      "avg": "avg"
+    },
+    "insights": {
+      "notEnough": "Not enough data for insights.",
+      "bestDay": "Best day",
+      "periodVsPrevious": "Period vs previous",
+      "activeDays": "Active days",
+      "cashShare": "Cash share",
+      "topDishRevenue": "Top dish (revenue)",
+      "topDishVolume": "Top dish (volume)",
+      "noPriorData": "No prior data",
+      "detailChecks_one": "{{revenue}} across {{count}} check",
+      "detailChecks_other": "{{revenue}} across {{count}} checks",
+      "detailLastPeriodPeaked": "Last period peaked {{label}} ({{revenue}})",
+      "detailPerActiveDay": "~{{value}} per active day",
+      "detailCardShare": "Card is {{value}}%",
+      "detailTopDishRevenue": "{{revenue}} from {{count}} sold",
+      "detailTopDishVolume": "{{count}} sold for {{revenue}}"
+    },
+    "heatmap": {
+      "days": {
+        "mon": "Mon",
+        "tue": "Tue",
+        "wed": "Wed",
+        "thu": "Thu",
+        "fri": "Fri",
+        "sat": "Sat",
+        "sun": "Sun"
+      },
+      "placeholder": "placeholder",
+      "notWired": "Hourly data not yet wired — illustrative pattern only.",
+      "low": "low",
+      "high": "high"
+    },
+    "settings": {
+      "tabs": {
+        "layout": "Layout",
+        "style": "Style",
+        "numbers": "Numbers",
+        "modules": "Modules",
+        "sections": "Sections"
+      },
+      "ariaLabel": "Page settings",
+      "eyebrow": "PAGE SETTINGS",
+      "title": "Configure dashboard",
+      "layoutSection": {
+        "label": "Composition",
+        "layout": {
+          "label": "Layout",
+          "hint": "Overall page structure.",
+          "classic": "1 · Classic",
+          "sidebar": "2 · KPI rail",
+          "editorial": "3 · Editorial",
+          "bento": "4 · Bento"
+        },
+        "density": {
+          "label": "Density",
+          "hint": "Tighter rows + smaller paddings.",
+          "comfortable": "Comfortable",
+          "compact": "Compact"
+        }
+      },
+      "styleSection": {
+        "shapeLabel": "Shape",
+        "radius": {
+          "label": "Corner radius",
+          "hint": "How rounded everything looks.",
+          "sharp": "Sharp",
+          "soft": "Soft",
+          "pill": "Round"
+        },
+        "cards": {
+          "label": "Cards",
+          "hint": "Border, shadow, or flat fill.",
+          "flat": "Flat",
+          "outlined": "Outline",
+          "elevated": "Lift"
+        },
+        "backgroundLabel": "Background",
+        "tint": {
+          "label": "Tint",
+          "hint": "Subtle hue shift on the page bg.",
+          "cool": "Cool",
+          "warm": "Warm",
+          "neutral": "Flat"
+        }
+      },
+      "numbersSection": {
+        "formattingLabel": "Formatting",
+        "format": {
+          "label": "Format",
+          "hint": "Compact (46.9M) or full grouped digits.",
+          "compact": "46.9M",
+          "full": "46 884 174"
+        },
+        "comparisonLabel": "Comparison",
+        "compare": {
+          "label": "Show vs previous period",
+          "hint": "Delta % + arrow on every KPI.",
+          "ariaLabel": "Compare to previous"
+        }
+      },
+      "modulesSection": {
+        "salesDynamicsLabel": "Sales dynamics",
+        "chartStyle": {
+          "label": "Chart style",
+          "hint": "How daily revenue is drawn.",
+          "lineOverlay": "Line + dashed overlay",
+          "bars": "Bars",
+          "area": "Area",
+          "paired": "Paired bars"
+        },
+        "topDishesLabel": "Top dishes",
+        "dishesDisplay": {
+          "label": "Display",
+          "hint": "Table, cards, or podium + list.",
+          "table": "Ranked table",
+          "cards": "Card list",
+          "podium": "Podium + list"
+        }
+      },
+      "sectionsTab": {
+        "hideHint": "Hide modules you don't need.",
+        "modulesOnPage": "Modules on this page",
+        "kpiStrip": {
+          "label": "KPI strip",
+          "hint": "Revenue, checks, average check, returns, discounts, VAT.",
+          "ariaLabel": "KPI strip"
+        },
+        "salesDynamics": {
+          "label": "Sales dynamics",
+          "hint": "Daily revenue chart for the period.",
+          "ariaLabel": "Sales dynamics"
+        },
+        "categories": {
+          "label": "Revenue by category",
+          "hint": "Bar list of categories ranked by revenue.",
+          "ariaLabel": "Categories"
+        },
+        "payments": {
+          "label": "Payment types",
+          "hint": "Cash vs card split.",
+          "ariaLabel": "Payment types"
+        },
+        "dishes": {
+          "label": "Top dishes",
+          "hint": "Top dishes by revenue.",
+          "ariaLabel": "Top dishes"
+        },
+        "insights": {
+          "label": "Insights",
+          "hint": "Auto-generated callouts.",
+          "ariaLabel": "Insights"
+        },
+        "heatmap": {
+          "label": "Hourly heatmap",
+          "hint": "Disabled — data not wired yet.",
+          "ariaLabel": "Hourly heatmap"
+        }
+      },
+      "reset": "Reset to defaults",
+      "done": "Done"
+    }
+  }
 }

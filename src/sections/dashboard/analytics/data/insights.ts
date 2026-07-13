@@ -1,8 +1,9 @@
+import type { TFunction } from 'i18next';
 import type { Insight, AnalyticsPayload } from './types';
 
 import { fmtPct, calcDelta, fmtCompact } from './formatters';
 
-export function buildInsights(payload: AnalyticsPayload): Insight[] {
+export function buildInsights(t: TFunction, payload: AnalyticsPayload): Insight[] {
   const cur = payload.current;
   const prev = payload.previous;
   const sd = cur.sales_dynamics;
@@ -21,46 +22,58 @@ export function buildInsights(payload: AnalyticsPayload): Insight[] {
   const out: Insight[] = [];
   out.push({
     kind: 'peak',
-    title: 'Best day',
+    title: t('analyticsDashboard.insights.bestDay'),
     value: best.label,
-    detail: `${fmtCompact(best.revenue)} across ${best.checks_count} check${best.checks_count === 1 ? '' : 's'}`,
+    detail: t('analyticsDashboard.insights.detailChecks', {
+      count: best.checks_count,
+      revenue: fmtCompact(best.revenue),
+    }),
   });
   out.push({
     kind: 'compare',
-    title: 'Period vs previous',
+    title: t('analyticsDashboard.insights.periodVsPrevious'),
     value: fmtPct(calcDelta(cur.kpis.revenue, prev.kpis.revenue).value, 1),
     detail: bestPrev
-      ? `Last period peaked ${bestPrev.label} (${fmtCompact(bestPrev.revenue)})`
-      : 'No prior data',
+      ? t('analyticsDashboard.insights.detailLastPeriodPeaked', {
+          label: bestPrev.label,
+          revenue: fmtCompact(bestPrev.revenue),
+        })
+      : t('analyticsDashboard.insights.noPriorData'),
   });
   out.push({
     kind: 'ops',
-    title: 'Active days',
+    title: t('analyticsDashboard.insights.activeDays'),
     value: `${daysActive}`,
-    detail: `~${fmtCompact(dailyAvg)} per active day`,
+    detail: t('analyticsDashboard.insights.detailPerActiveDay', { value: fmtCompact(dailyAvg) }),
   });
   if (cash) {
     out.push({
       kind: 'mix',
-      title: 'Cash share',
+      title: t('analyticsDashboard.insights.cashShare'),
       value: `${cashShare.toFixed(1)}%`,
-      detail: `Card is ${(100 - cashShare).toFixed(1)}%`,
+      detail: t('analyticsDashboard.insights.detailCardShare', { value: (100 - cashShare).toFixed(1) }),
     });
   }
   if (topDish) {
     out.push({
       kind: 'dish',
-      title: 'Top dish (revenue)',
+      title: t('analyticsDashboard.insights.topDishRevenue'),
       value: topDish.name,
-      detail: `${fmtCompact(topDish.revenue)} from ${topDish.quantity} sold`,
+      detail: t('analyticsDashboard.insights.detailTopDishRevenue', {
+        revenue: fmtCompact(topDish.revenue),
+        count: topDish.quantity,
+      }),
     });
   }
   if (topQtyDish) {
     out.push({
       kind: 'dish',
-      title: 'Top dish (volume)',
+      title: t('analyticsDashboard.insights.topDishVolume'),
       value: topQtyDish.name,
-      detail: `${topQtyDish.quantity} sold for ${fmtCompact(topQtyDish.revenue)}`,
+      detail: t('analyticsDashboard.insights.detailTopDishVolume', {
+        count: topQtyDish.quantity,
+        revenue: fmtCompact(topQtyDish.revenue),
+      }),
     });
   }
   return out;

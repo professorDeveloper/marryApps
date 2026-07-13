@@ -1,7 +1,8 @@
 import { Fragment } from 'react';
+import { useTranslation } from 'react-i18next';
 
 // Placeholder pattern — API doesn't yet expose hourly buckets.
-const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const DAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;
 const DAY_WEIGHT = [0.5, 0.7, 0.75, 0.85, 1.0, 1.15, 0.95];
 
 function hourPeak(h: number): number {
@@ -12,6 +13,8 @@ function hourPeak(h: number): number {
 }
 
 export function HourlyHeatmap() {
+  const { t } = useTranslation('menu');
+  const DAYS = DAY_KEYS.map((k) => t(`analyticsDashboard.heatmap.days.${k}`));
   const cells: { d: number; h: number; v: number }[] = [];
   let max = 0;
   for (let d = 0; d < 7; d++) {
@@ -53,14 +56,14 @@ export function HourlyHeatmap() {
         ))}
       </div>
       <div className="heatmap-foot">
-        <span className="heatmap-tag">placeholder</span>
-        <span className="muted">Hourly data not yet wired — illustrative pattern only.</span>
+        <span className="heatmap-tag">{t('analyticsDashboard.heatmap.placeholder')}</span>
+        <span className="muted">{t('analyticsDashboard.heatmap.notWired')}</span>
         <span className="heatmap-scale">
-          <span className="muted">low</span>
+          <span className="muted">{t('analyticsDashboard.heatmap.low')}</span>
           {[0.15, 0.3, 0.5, 0.75, 1].map((a, i) => (
             <span key={i} className="heatmap-scale-cell" style={{ background: cellBg(a) }} />
           ))}
-          <span className="muted">high</span>
+          <span className="muted">{t('analyticsDashboard.heatmap.high')}</span>
         </span>
       </div>
     </div>

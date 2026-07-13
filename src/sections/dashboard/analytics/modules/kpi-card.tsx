@@ -1,6 +1,8 @@
 import type { Kpi } from '../data/types';
 import type { NumFormat } from '../data/formatters';
 
+import { useTranslation } from 'react-i18next';
+
 import { DeltaPill } from './delta-pill';
 import { fmtInt, fmtNum } from '../data/formatters';
 
@@ -12,6 +14,7 @@ interface KpiCardProps {
 }
 
 export function KpiCard({ kpi, numFormat, showCompare, variant = 'default' }: KpiCardProps) {
+  const { t } = useTranslation('menu');
   const isMoney = kpi.unit === 'money';
   const value = isMoney ? fmtNum(kpi.current, numFormat) : fmtInt(kpi.current);
   const prev = isMoney ? fmtNum(kpi.previous, numFormat) : fmtInt(kpi.previous);
@@ -25,7 +28,7 @@ export function KpiCard({ kpi, numFormat, showCompare, variant = 'default' }: Kp
       </div>
       {showCompare && (
         <div className="kpi-prev">
-          <span className="kpi-prev-lbl">prev</span>
+          <span className="kpi-prev-lbl">{t('analyticsDashboard.kpis.prev')}</span>
           <span className="kpi-prev-val mono">{prev}</span>
         </div>
       )}

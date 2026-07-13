@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import type { Tweaks } from './use-tweaks';
 
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface SettingsDrawerProps {
   open: boolean;
@@ -11,14 +12,8 @@ interface SettingsDrawerProps {
   onReset: () => void;
 }
 
-const TABS = [
-  { id: 'layout', label: 'Layout' },
-  { id: 'style', label: 'Style' },
-  { id: 'numbers', label: 'Numbers' },
-  { id: 'modules', label: 'Modules' },
-  { id: 'sections', label: 'Sections' },
-] as const;
-type TabId = (typeof TABS)[number]['id'];
+const TAB_IDS = ['layout', 'style', 'numbers', 'modules', 'sections'] as const;
+type TabId = (typeof TAB_IDS)[number];
 
 function SettingsRow({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
@@ -117,7 +112,16 @@ function SettingsSelect<V extends string>({
 }
 
 export function SettingsDrawer({ open, onClose, tweaks, setTweak, onReset }: SettingsDrawerProps) {
+  const { t } = useTranslation('menu');
   const [tab, setTab] = useState<TabId>('layout');
+  const s = (key: string) => t(`analyticsDashboard.settings.${key}`);
+  const tabLabels: Record<TabId, string> = {
+    layout: s('tabs.layout'),
+    style: s('tabs.style'),
+    numbers: s('tabs.numbers'),
+    modules: s('tabs.modules'),
+    sections: s('tabs.sections'),
+  };
 
   useEffect(() => {
     if (!open) return undefined;
@@ -146,13 +150,13 @@ export function SettingsDrawer({ open, onClose, tweaks, setTweak, onReset }: Set
   return (
     <>
       <div className={`settings-overlay ${open ? 'open' : ''}`} onClick={onClose} />
-      <aside className={`settings-drawer ${open ? 'open' : ''}`} aria-hidden={!open} aria-label="Page settings">
+      <aside className={`settings-drawer ${open ? 'open' : ''}`} aria-hidden={!open} aria-label={s('ariaLabel')}>
         <header className="settings-drawer-head">
           <div className="settings-drawer-titles">
-            <div className="settings-drawer-eyebrow">PAGE SETTINGS</div>
-            <h2 className="settings-drawer-title">Configure dashboard</h2>
+            <div className="settings-drawer-eyebrow">{s('eyebrow')}</div>
+            <h2 className="settings-drawer-title">{s('title')}</h2>
           </div>
-          <button type="button" className="settings-close" onClick={onClose} aria-label="Close settings">
+          <button type="button" className="settings-close" onClick={onClose} aria-label={t('analyticsDashboard.closeSettingsAria')}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="18" y1="6" x2="6" y2="18" />
               <line x1="6" y1="6" x2="18" y2="18" />
@@ -162,39 +166,39 @@ export function SettingsDrawer({ open, onClose, tweaks, setTweak, onReset }: Set
 
         <div className="settings-drawer-body">
           <nav className="settings-tabs">
-            {TABS.map((s) => (
+            {TAB_IDS.map((id) => (
               <button
-                key={s.id}
+                key={id}
                 type="button"
-                className={`settings-tab ${tab === s.id ? 'active' : ''}`}
-                onClick={() => setTab(s.id)}
+                className={`settings-tab ${tab === id ? 'active' : ''}`}
+                onClick={() => setTab(id)}
               >
-                <span className="settings-tab-label">{s.label}</span>
+                <span className="settings-tab-label">{tabLabels[id]}</span>
               </button>
             ))}
           </nav>
 
           <div className="settings-panel">
             {tab === 'layout' && (
-              <SettingsSection label="Composition">
-                <SettingsRow label="Layout" hint="Overall page structure.">
+              <SettingsSection label={s('layoutSection.label')}>
+                <SettingsRow label={s('layoutSection.layout.label')} hint={s('layoutSection.layout.hint')}>
                   <SettingsSelect
                     value={tweaks.layout}
                     options={[
-                      { value: 'classic', label: '1 · Classic' },
-                      { value: 'sidebar', label: '2 · KPI rail' },
-                      { value: 'editorial', label: '3 · Editorial' },
-                      { value: 'bento', label: '4 · Bento' },
+                      { value: 'classic', label: s('layoutSection.layout.classic') },
+                      { value: 'sidebar', label: s('layoutSection.layout.sidebar') },
+                      { value: 'editorial', label: s('layoutSection.layout.editorial') },
+                      { value: 'bento', label: s('layoutSection.layout.bento') },
                     ]}
                     onChange={(v) => setTweak('layout', v)}
                   />
                 </SettingsRow>
-                <SettingsRow label="Density" hint="Tighter rows + smaller paddings.">
+                <SettingsRow label={s('layoutSection.density.label')} hint={s('layoutSection.density.hint')}>
                   <Segmented
                     value={tweaks.density}
                     options={[
-                      { value: 'comfortable', label: 'Comfortable' },
-                      { value: 'compact', label: 'Compact' },
+                      { value: 'comfortable', label: s('layoutSection.density.comfortable') },
+                      { value: 'compact', label: s('layoutSection.density.compact') },
                     ]}
                     onChange={(v) => setTweak('density', v)}
                   />
@@ -204,38 +208,38 @@ export function SettingsDrawer({ open, onClose, tweaks, setTweak, onReset }: Set
 
             {tab === 'style' && (
               <>
-                <SettingsSection label="Shape">
-                  <SettingsRow label="Corner radius" hint="How rounded everything looks.">
+                <SettingsSection label={s('styleSection.shapeLabel')}>
+                  <SettingsRow label={s('styleSection.radius.label')} hint={s('styleSection.radius.hint')}>
                     <Segmented
                       value={tweaks.radius}
                       options={[
-                        { value: 'sharp', label: 'Sharp' },
-                        { value: 'soft', label: 'Soft' },
-                        { value: 'pill', label: 'Round' },
+                        { value: 'sharp', label: s('styleSection.radius.sharp') },
+                        { value: 'soft', label: s('styleSection.radius.soft') },
+                        { value: 'pill', label: s('styleSection.radius.pill') },
                       ]}
                       onChange={(v) => setTweak('radius', v)}
                     />
                   </SettingsRow>
-                  <SettingsRow label="Cards" hint="Border, shadow, or flat fill.">
+                  <SettingsRow label={s('styleSection.cards.label')} hint={s('styleSection.cards.hint')}>
                     <Segmented
                       value={tweaks.cardStyle}
                       options={[
-                        { value: 'flat', label: 'Flat' },
-                        { value: 'outlined', label: 'Outline' },
-                        { value: 'elevated', label: 'Lift' },
+                        { value: 'flat', label: s('styleSection.cards.flat') },
+                        { value: 'outlined', label: s('styleSection.cards.outlined') },
+                        { value: 'elevated', label: s('styleSection.cards.elevated') },
                       ]}
                       onChange={(v) => setTweak('cardStyle', v)}
                     />
                   </SettingsRow>
                 </SettingsSection>
-                <SettingsSection label="Background">
-                  <SettingsRow label="Tint" hint="Subtle hue shift on the page bg.">
+                <SettingsSection label={s('styleSection.backgroundLabel')}>
+                  <SettingsRow label={s('styleSection.tint.label')} hint={s('styleSection.tint.hint')}>
                     <Segmented
                       value={tweaks.bgTint}
                       options={[
-                        { value: 'cool', label: 'Cool' },
-                        { value: 'warm', label: 'Warm' },
-                        { value: 'neutral', label: 'Flat' },
+                        { value: 'cool', label: s('styleSection.tint.cool') },
+                        { value: 'warm', label: s('styleSection.tint.warm') },
+                        { value: 'neutral', label: s('styleSection.tint.neutral') },
                       ]}
                       onChange={(v) => setTweak('bgTint', v)}
                     />
@@ -246,21 +250,21 @@ export function SettingsDrawer({ open, onClose, tweaks, setTweak, onReset }: Set
 
             {tab === 'numbers' && (
               <>
-                <SettingsSection label="Formatting">
-                  <SettingsRow label="Format" hint="Compact (46.9M) or full grouped digits.">
+                <SettingsSection label={s('numbersSection.formattingLabel')}>
+                  <SettingsRow label={s('numbersSection.format.label')} hint={s('numbersSection.format.hint')}>
                     <Segmented
                       value={tweaks.numFormat}
                       options={[
-                        { value: 'compact', label: '46.9M' },
-                        { value: 'full', label: '46 884 174' },
+                        { value: 'compact', label: s('numbersSection.format.compact') },
+                        { value: 'full', label: s('numbersSection.format.full') },
                       ]}
                       onChange={(v) => setTweak('numFormat', v)}
                     />
                   </SettingsRow>
                 </SettingsSection>
-                <SettingsSection label="Comparison">
-                  <SettingsRow label="Show vs previous period" hint="Delta % + arrow on every KPI.">
-                    <Switch value={tweaks.compare} onChange={(v) => setTweak('compare', v)} ariaLabel="Compare to previous" />
+                <SettingsSection label={s('numbersSection.comparisonLabel')}>
+                  <SettingsRow label={s('numbersSection.compare.label')} hint={s('numbersSection.compare.hint')}>
+                    <Switch value={tweaks.compare} onChange={(v) => setTweak('compare', v)} ariaLabel={s('numbersSection.compare.ariaLabel')} />
                   </SettingsRow>
                 </SettingsSection>
               </>
@@ -268,28 +272,28 @@ export function SettingsDrawer({ open, onClose, tweaks, setTweak, onReset }: Set
 
             {tab === 'modules' && (
               <>
-                <SettingsSection label="Sales dynamics">
-                  <SettingsRow label="Chart style" hint="How daily revenue is drawn.">
+                <SettingsSection label={s('modulesSection.salesDynamicsLabel')}>
+                  <SettingsRow label={s('modulesSection.chartStyle.label')} hint={s('modulesSection.chartStyle.hint')}>
                     <SettingsSelect
                       value={tweaks.chartStyle}
                       options={[
-                        { value: 'line_overlay', label: 'Line + dashed overlay' },
-                        { value: 'bars', label: 'Bars' },
-                        { value: 'area', label: 'Area' },
-                        { value: 'paired', label: 'Paired bars' },
+                        { value: 'line_overlay', label: s('modulesSection.chartStyle.lineOverlay') },
+                        { value: 'bars', label: s('modulesSection.chartStyle.bars') },
+                        { value: 'area', label: s('modulesSection.chartStyle.area') },
+                        { value: 'paired', label: s('modulesSection.chartStyle.paired') },
                       ]}
                       onChange={(v) => setTweak('chartStyle', v)}
                     />
                   </SettingsRow>
                 </SettingsSection>
-                <SettingsSection label="Top dishes">
-                  <SettingsRow label="Display" hint="Table, cards, or podium + list.">
+                <SettingsSection label={s('modulesSection.topDishesLabel')}>
+                  <SettingsRow label={s('modulesSection.dishesDisplay.label')} hint={s('modulesSection.dishesDisplay.hint')}>
                     <SettingsSelect
                       value={tweaks.dishesStyle}
                       options={[
-                        { value: 'table', label: 'Ranked table' },
-                        { value: 'cards', label: 'Card list' },
-                        { value: 'podium', label: 'Podium + list' },
+                        { value: 'table', label: s('modulesSection.dishesDisplay.table') },
+                        { value: 'cards', label: s('modulesSection.dishesDisplay.cards') },
+                        { value: 'podium', label: s('modulesSection.dishesDisplay.podium') },
                       ]}
                       onChange={(v) => setTweak('dishesStyle', v)}
                     />
@@ -301,30 +305,30 @@ export function SettingsDrawer({ open, onClose, tweaks, setTweak, onReset }: Set
             {tab === 'sections' && (
               <>
                 <div className="settings-tab-intro">
-                  <span className="muted">Hide modules you don&apos;t need.</span>
+                  <span className="muted">{s('sectionsTab.hideHint')}</span>
                   <span className="mono settings-tab-count">{visibleSections} / 7</span>
                 </div>
-                <SettingsSection label="Modules on this page">
-                  <SettingsRow label="KPI strip" hint="Revenue, checks, average check, returns, discounts, VAT.">
-                    <Switch value={tweaks.sec_kpis} onChange={(v) => setTweak('sec_kpis', v)} ariaLabel="KPI strip" />
+                <SettingsSection label={s('sectionsTab.modulesOnPage')}>
+                  <SettingsRow label={s('sectionsTab.kpiStrip.label')} hint={s('sectionsTab.kpiStrip.hint')}>
+                    <Switch value={tweaks.sec_kpis} onChange={(v) => setTweak('sec_kpis', v)} ariaLabel={s('sectionsTab.kpiStrip.ariaLabel')} />
                   </SettingsRow>
-                  <SettingsRow label="Sales dynamics" hint="Daily revenue chart for the period.">
-                    <Switch value={tweaks.sec_sales} onChange={(v) => setTweak('sec_sales', v)} ariaLabel="Sales dynamics" />
+                  <SettingsRow label={s('sectionsTab.salesDynamics.label')} hint={s('sectionsTab.salesDynamics.hint')}>
+                    <Switch value={tweaks.sec_sales} onChange={(v) => setTweak('sec_sales', v)} ariaLabel={s('sectionsTab.salesDynamics.ariaLabel')} />
                   </SettingsRow>
-                  <SettingsRow label="Revenue by category" hint="Bar list of categories ranked by revenue.">
-                    <Switch value={tweaks.sec_categories} onChange={(v) => setTweak('sec_categories', v)} ariaLabel="Categories" />
+                  <SettingsRow label={s('sectionsTab.categories.label')} hint={s('sectionsTab.categories.hint')}>
+                    <Switch value={tweaks.sec_categories} onChange={(v) => setTweak('sec_categories', v)} ariaLabel={s('sectionsTab.categories.ariaLabel')} />
                   </SettingsRow>
-                  <SettingsRow label="Payment types" hint="Cash vs card split.">
-                    <Switch value={tweaks.sec_payments} onChange={(v) => setTweak('sec_payments', v)} ariaLabel="Payment types" />
+                  <SettingsRow label={s('sectionsTab.payments.label')} hint={s('sectionsTab.payments.hint')}>
+                    <Switch value={tweaks.sec_payments} onChange={(v) => setTweak('sec_payments', v)} ariaLabel={s('sectionsTab.payments.ariaLabel')} />
                   </SettingsRow>
-                  <SettingsRow label="Top dishes" hint="Top dishes by revenue.">
-                    <Switch value={tweaks.sec_dishes} onChange={(v) => setTweak('sec_dishes', v)} ariaLabel="Top dishes" />
+                  <SettingsRow label={s('sectionsTab.dishes.label')} hint={s('sectionsTab.dishes.hint')}>
+                    <Switch value={tweaks.sec_dishes} onChange={(v) => setTweak('sec_dishes', v)} ariaLabel={s('sectionsTab.dishes.ariaLabel')} />
                   </SettingsRow>
-                  <SettingsRow label="Insights" hint="Auto-generated callouts.">
-                    <Switch value={tweaks.sec_insights} onChange={(v) => setTweak('sec_insights', v)} ariaLabel="Insights" />
+                  <SettingsRow label={s('sectionsTab.insights.label')} hint={s('sectionsTab.insights.hint')}>
+                    <Switch value={tweaks.sec_insights} onChange={(v) => setTweak('sec_insights', v)} ariaLabel={s('sectionsTab.insights.ariaLabel')} />
                   </SettingsRow>
-                  <SettingsRow label="Hourly heatmap" hint="Disabled — data not wired yet.">
-                    <Switch value={false} onChange={() => {}} ariaLabel="Hourly heatmap" disabled />
+                  <SettingsRow label={s('sectionsTab.heatmap.label')} hint={s('sectionsTab.heatmap.hint')}>
+                    <Switch value={false} onChange={() => {}} ariaLabel={s('sectionsTab.heatmap.ariaLabel')} disabled />
                   </SettingsRow>
                 </SettingsSection>
               </>
@@ -334,10 +338,10 @@ export function SettingsDrawer({ open, onClose, tweaks, setTweak, onReset }: Set
 
         <footer className="settings-drawer-foot">
           <button type="button" className="settings-reset" onClick={onReset}>
-            Reset to defaults
+            {s('reset')}
           </button>
           <button type="button" className="settings-done" onClick={onClose}>
-            Done
+            {s('done')}
           </button>
         </footer>
       </aside>

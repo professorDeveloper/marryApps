@@ -47,9 +47,13 @@
   "error": {
     "title": "Что-то пошло не так",
     "description": "Произошла непредвиденная ошибка. Попробуйте снова или вернитесь на главную страницу.",
-    "goHome": "На главную"
+    "goHome": "На главную",
+    "notFound": "Не найдено"
   },
-  "success": "Успешно",
+  "success": {
+    "created": "Успешно создано",
+    "updated": "Успешно обновлено"
+  },
   "noData": "Нет данных",
   "noDataAvailable": "Данные отсутствуют",
   "search": "Поиск",
@@ -392,7 +396,10 @@
       "durationHelp": "Оставьте пустым, чтобы остановить без ограничения по времени",
       "dialogTitle": "Остановить позицию",
       "confirmStop": "Остановить"
-    }
+    },
+    "comingSoon": "Скоро появится",
+    "totalCost": "Общая стоимость",
+    "upload_image": "Загрузить изображение"
   },
   "modifiers": {
     "title": "Модификаторы",
@@ -579,7 +586,15 @@
     "deleteSuccess": "Успешно удалено",
     "deleteFailed": "Ошибка при удалении",
     "noEmployees": "Сотрудники не найдены",
-    "noEmployeesSubtitle": "Попробуйте изменить поиск или фильтры"
+    "noEmployeesSubtitle": "Попробуйте изменить поиск или фильтры",
+    "addEmployee": "Добавить сотрудника",
+    "updateEmployee": "Обновить сотрудника",
+    "created": "Сотрудник успешно создан",
+    "updated": "Сотрудник успешно обновлён",
+    "identityDetails": "Личные данные",
+    "personalLoginInfo": "Личная информация и данные для входа",
+    "systemAccess": "Доступ к системе",
+    "permissionsHardware": "Права доступа и оборудование"
   },
   "employe": {
     "title": "Сотрудники",
@@ -636,7 +651,11 @@
     "deleteMessage": "Вы уверены, что хотите удалить этот элемент? Это действие нельзя отменить.",
     "noDataSubtitle": "Попробуйте изменить поиск или фильтры",
     "deleteConfirmation": "Вы уверены, что хотите удалить этот элемент? Это действие нельзя отменить.",
-    "search": "Поиск"
+    "search": "Поиск",
+    "selectRole": "Выберите роль",
+    "active": "Активный",
+    "inactive": "Неактивный",
+    "notFound": "Не найдено"
   },
   "warehouse": {
     "title": "Склад",
@@ -666,7 +685,8 @@
         "cancelled": "Отменено",
         "received": "Получено"
       },
-      "supplierNameRequired": "Требуется указать наименование поставщика"
+      "supplierNameRequired": "Требуется указать наименование поставщика",
+      "created": "Накладная успешно создана"
     },
     "invoiceDetails": {
       "title": "Детали накладной",
@@ -985,7 +1005,8 @@
     "groupUpdated": "Группа списаний успешно обновлена",
     "createGroup": "Создать группу списаний",
     "editGroup": "Редактировать группу списаний",
-    "groupDetails": "Детали группы списаний"
+    "groupDetails": "Детали группы списаний",
+    "selectStorage": "Выберите склад"
   },
   "floorPlan": {
     "title": "План этажа",
@@ -1106,7 +1127,8 @@
       "created": "Инвентаризация успешно создана",
       "updated": "Инвентаризация успешно обновлена",
       "itemsAdded": "Товары инвентаризации успешно добавлены"
-    }
+    },
+    "dateTime": "Дата и время"
   },
   "order": {
     "create": "Создать заказ",
@@ -1382,7 +1404,8 @@
       "debtOrdersPaid": "Оплаченные долговые заказы"
     },
     "customerPaid": "Оплачено клиентом",
-    "changeAmount": "Сдача"
+    "changeAmount": "Сдача",
+    "cashierDeleted": "Этот кассир был удалён"
   },
   "shipments": {
     "create": "Создать поставку",
@@ -1463,7 +1486,10 @@
       "itemDeleted": "Позиция расходной накладной удалена",
       "updated": "Расходная накладная успешно обновлена",
       "itemsAdded": "Позиции расходной накладной успешно добавлены"
-    }
+    },
+    "saveInvoice": "Сохранить накладную",
+    "selectGroup": "Выберите группу",
+    "enterDescription": "Введите описание"
   },
   "separationActs": {
     "create": "Создать акт разделения",
@@ -1694,5 +1720,280 @@
     "cashiers": "Кассы"
   },
   "viewDetails": "Подробнее",
-  "tryAdjustingFilters": "Попробуйте изменить фильтры"
+  "tryAdjustingFilters": "Попробуйте изменить фильтры",
+  "saving": "Сохранение...",
+  "comment": "Комментарий",
+  "restaurantInfo": {
+    "title": "Информация о ресторане",
+    "mainInfo": "Основная информация",
+    "organizationName": "Название организации",
+    "address": "Адрес",
+    "phone": "Телефон",
+    "workingDays": "Рабочие дни",
+    "socialNetworks": "Социальные сети",
+    "loadError": "Не удалось загрузить информацию о ресторане",
+    "selectRestaurant": "Выберите ресторан",
+    "weekdays": {
+      "monday": "Понедельник",
+      "tuesday": "Вторник",
+      "wednesday": "Среда",
+      "thursday": "Четверг",
+      "friday": "Пятница",
+      "saturday": "Суббота",
+      "sunday": "Воскресенье"
+    }
+  },
+  "analyticsDashboard": {
+    "settingsAria": "Настройки панели",
+    "closeSettingsAria": "Закрыть настройки",
+    "controls": {
+      "from": "С",
+      "to": "ПО",
+      "vs": "по сравнению с",
+      "loading": "загрузка…",
+      "previousDays_one": "предыдущий {{count}} день",
+      "previousDays_few": "предыдущих {{count}} дня",
+      "previousDays_many": "предыдущих {{count}} дней",
+      "previousDays_other": "предыдущих {{count}} дня",
+      "periodLetters": {
+        "day": "Д",
+        "week": "Н",
+        "month": "М",
+        "year": "Г"
+      }
+    },
+    "kpis": {
+      "revenue": "Выручка",
+      "checks_count": "Чеки",
+      "average_check": "Средний чек",
+      "returns_count": "Возвраты",
+      "discounts_amount": "Скидки",
+      "vat_amount": "НДС",
+      "prev": "пред."
+    },
+    "panels": {
+      "salesDynamics": "Динамика продаж",
+      "revenueByCategory": "Выручка по категориям",
+      "categories": "Категории",
+      "paymentTypes": "Способы оплаты",
+      "payment": "Оплата",
+      "topDishes": "Топ блюд",
+      "insights": "Аналитика",
+      "autoGenerated": "Автоматически сформировано",
+      "whatsInteresting": "Что интересного",
+      "hourlyActivity": "Активность по часам"
+    },
+    "eyebrows": {
+      "dailyRevenue": "ВЫРУЧКА ПО ДНЯМ",
+      "mix": "СТРУКТУРА",
+      "split": "РАСПРЕДЕЛЕНИЕ",
+      "auto": "АВТО",
+      "autoGenerated": "АВТОГЕНЕРАЦИЯ",
+      "whenAreWeBusy": "КОГДА У НАС ПИК ЗАГРУЗКИ",
+      "sortedByRevenueTop": "ПО ВЫРУЧКЕ · ТОП {{count}}",
+      "revenue": "ВЫРУЧКА",
+      "checks": "ЧЕКИ",
+      "avgCheck": "СРЕДНИЙ ЧЕК",
+      "revenueRank": "РЕЙТИНГ ПО ВЫРУЧКЕ",
+      "revenueMix": "СТРУКТУРА ВЫРУЧКИ",
+      "periodRevenue": "ВЫРУЧКА ЗА ПЕРИОД",
+      "dayByDay": "ПО ДНЯМ",
+      "heatmap": "ТЕПЛОВАЯ КАРТА",
+      "keyMetrics": "КЛЮЧЕВЫЕ ПОКАЗАТЕЛИ",
+      "insights": "АНАЛИТИКА"
+    },
+    "compareMeta": {
+      "currentVsPrevious": "текущий период по сравнению с предыдущим",
+      "currentPeriod": "текущий период"
+    },
+    "salesStats": {
+      "total": "Всего",
+      "dailyAvg": "Среднее в день",
+      "peakDay": "Пиковый день",
+      "activeDays": "Активных дней",
+      "current": "Текущий",
+      "previous": "Предыдущий"
+    },
+    "payment": {
+      "noData": "Нет данных об оплате"
+    },
+    "categories": {
+      "moreCategories_one": "+ ещё {{count}} категория",
+      "moreCategories_few": "+ ещё {{count}} категории",
+      "moreCategories_many": "+ ещё {{count}} категорий",
+      "moreCategories_other": "+ ещё {{count}} категории"
+    },
+    "dishes": {
+      "noData": "Нет данных по блюдам",
+      "dish": "Блюдо",
+      "qty": "Кол-во",
+      "revenue": "Выручка",
+      "share": "Доля",
+      "sold": "продано",
+      "avg": "сред."
+    },
+    "insights": {
+      "notEnough": "Недостаточно данных для аналитики.",
+      "bestDay": "Лучший день",
+      "periodVsPrevious": "Период к предыдущему",
+      "activeDays": "Активные дни",
+      "cashShare": "Доля наличных",
+      "topDishRevenue": "Топ блюдо (выручка)",
+      "topDishVolume": "Топ блюдо (кол-во)",
+      "noPriorData": "Нет данных за предыдущий период",
+      "detailChecks_one": "{{revenue}} за {{count}} чек",
+      "detailChecks_few": "{{revenue}} за {{count}} чека",
+      "detailChecks_many": "{{revenue}} за {{count}} чеков",
+      "detailChecks_other": "{{revenue}} за {{count}} чека",
+      "detailLastPeriodPeaked": "Пик в прошлом периоде — {{label}} ({{revenue}})",
+      "detailPerActiveDay": "~{{value}} в активный день",
+      "detailCardShare": "Карта — {{value}}%",
+      "detailTopDishRevenue": "{{revenue}} из {{count}} продано",
+      "detailTopDishVolume": "{{count}} продано на {{revenue}}"
+    },
+    "heatmap": {
+      "days": {
+        "mon": "Пн",
+        "tue": "Вт",
+        "wed": "Ср",
+        "thu": "Чт",
+        "fri": "Пт",
+        "sat": "Сб",
+        "sun": "Вс"
+      },
+      "placeholder": "черновик",
+      "notWired": "Почасовые данные ещё не подключены — иллюстративный пример.",
+      "low": "мало",
+      "high": "много"
+    },
+    "settings": {
+      "tabs": {
+        "layout": "Макет",
+        "style": "Стиль",
+        "numbers": "Числа",
+        "modules": "Модули",
+        "sections": "Разделы"
+      },
+      "ariaLabel": "Настройки страницы",
+      "eyebrow": "НАСТРОЙКИ СТРАНИЦЫ",
+      "title": "Настроить дашборд",
+      "layoutSection": {
+        "label": "Композиция",
+        "layout": {
+          "label": "Макет",
+          "hint": "Общая структура страницы.",
+          "classic": "1 · Классический",
+          "sidebar": "2 · Панель KPI",
+          "editorial": "3 · Редакционный",
+          "bento": "4 · Бенто"
+        },
+        "density": {
+          "label": "Плотность",
+          "hint": "Более тесные строки и меньшие отступы.",
+          "comfortable": "Комфортно",
+          "compact": "Компактно"
+        }
+      },
+      "styleSection": {
+        "shapeLabel": "Форма",
+        "radius": {
+          "label": "Радиус углов",
+          "hint": "Насколько скруглены элементы.",
+          "sharp": "Острые",
+          "soft": "Мягкие",
+          "pill": "Круглые"
+        },
+        "cards": {
+          "label": "Карточки",
+          "hint": "Рамка, тень или заливка.",
+          "flat": "Плоские",
+          "outlined": "С рамкой",
+          "elevated": "Приподнятые"
+        },
+        "backgroundLabel": "Фон",
+        "tint": {
+          "label": "Оттенок",
+          "hint": "Лёгкий сдвиг тона фона страницы.",
+          "cool": "Холодный",
+          "warm": "Тёплый",
+          "neutral": "Нейтральный"
+        }
+      },
+      "numbersSection": {
+        "formattingLabel": "Формат",
+        "format": {
+          "label": "Формат",
+          "hint": "Сокращённо (46,9 млн) или полностью с разрядами.",
+          "compact": "46,9 млн",
+          "full": "46 884 174"
+        },
+        "comparisonLabel": "Сравнение",
+        "compare": {
+          "label": "Показывать по сравнению с предыдущим периодом",
+          "hint": "Дельта % и стрелка у каждого KPI.",
+          "ariaLabel": "Сравнение с предыдущим"
+        }
+      },
+      "modulesSection": {
+        "salesDynamicsLabel": "Динамика продаж",
+        "chartStyle": {
+          "label": "Стиль графика",
+          "hint": "Как рисуется выручка по дням.",
+          "lineOverlay": "Линия + пунктир",
+          "bars": "Столбцы",
+          "area": "Область",
+          "paired": "Парные столбцы"
+        },
+        "topDishesLabel": "Топ блюд",
+        "dishesDisplay": {
+          "label": "Отображение",
+          "hint": "Таблица, карточки или подиум + список.",
+          "table": "Таблица рейтинга",
+          "cards": "Список карточек",
+          "podium": "Подиум + список"
+        }
+      },
+      "sectionsTab": {
+        "hideHint": "Скройте модули, которые вам не нужны.",
+        "modulesOnPage": "Модули на странице",
+        "kpiStrip": {
+          "label": "Полоса KPI",
+          "hint": "Выручка, чеки, средний чек, возвраты, скидки, НДС.",
+          "ariaLabel": "Полоса KPI"
+        },
+        "salesDynamics": {
+          "label": "Динамика продаж",
+          "hint": "График выручки по дням за период.",
+          "ariaLabel": "Динамика продаж"
+        },
+        "categories": {
+          "label": "Выручка по категориям",
+          "hint": "Список категорий по выручке.",
+          "ariaLabel": "Категории"
+        },
+        "payments": {
+          "label": "Способы оплаты",
+          "hint": "Соотношение наличных и карты.",
+          "ariaLabel": "Способы оплаты"
+        },
+        "dishes": {
+          "label": "Топ блюд",
+          "hint": "Топ блюд по выручке.",
+          "ariaLabel": "Топ блюд"
+        },
+        "insights": {
+          "label": "Аналитика",
+          "hint": "Автоматически сформированные заметки.",
+          "ariaLabel": "Аналитика"
+        },
+        "heatmap": {
+          "label": "Тепловая карта по часам",
+          "hint": "Отключено — данные ещё не подключены.",
+          "ariaLabel": "Тепловая карта по часам"
+        }
+      },
+      "reset": "Сбросить настройки",
+      "done": "Готово"
+    }
+  }
 }

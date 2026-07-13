@@ -1,6 +1,8 @@
 import type { Tweaks } from '../tweaks/use-tweaks';
 import type { Kpi, Insight, AnalyticsPayload } from '../data/types';
 
+import { useTranslation } from 'react-i18next';
+
 import { DeltaPill } from '../modules/delta-pill';
 import { TopDishes } from '../modules/top-dishes';
 import { fmtInt, fmtNum } from '../data/formatters';
@@ -18,6 +20,7 @@ interface Props {
 }
 
 export function LayoutBento({ tweaks, payload, kpis, insights }: Props) {
+  const { t } = useTranslation('menu');
   const showCompare = tweaks.compare;
   const rev = kpis.find((k) => k.key === 'revenue');
   const checks = kpis.find((k) => k.key === 'checks_count');
@@ -29,22 +32,22 @@ export function LayoutBento({ tweaks, payload, kpis, insights }: Props) {
       {tweaks.sec_kpis && (
         <>
           <div className="bento-cell bento-hero">
-            <div className="bento-eyebrow">REVENUE</div>
+            <div className="bento-eyebrow">{t('analyticsDashboard.eyebrows.revenue')}</div>
             <div className="bento-hero-value mono">{fmtNum(rev.current, tweaks.numFormat)}</div>
             {showCompare && (
               <div className="bento-hero-delta">
                 <DeltaPill delta={rev.delta} good={rev.good} />
-                <span className="muted mono"> vs {fmtNum(rev.previous, tweaks.numFormat)}</span>
+                <span className="muted mono"> {t('analyticsDashboard.controls.vs')} {fmtNum(rev.previous, tweaks.numFormat)}</span>
               </div>
             )}
           </div>
           <div className="bento-cell bento-kpi">
-            <div className="bento-eyebrow">CHECKS</div>
+            <div className="bento-eyebrow">{t('analyticsDashboard.eyebrows.checks')}</div>
             <div className="bento-kpi-value mono">{fmtInt(checks.current)}</div>
             {showCompare && <DeltaPill delta={checks.delta} good={checks.good} />}
           </div>
           <div className="bento-cell bento-kpi">
-            <div className="bento-eyebrow">AVG CHECK</div>
+            <div className="bento-eyebrow">{t('analyticsDashboard.eyebrows.avgCheck')}</div>
             <div className="bento-kpi-value mono">{fmtNum(avg.current, tweaks.numFormat)}</div>
             {showCompare && <DeltaPill delta={avg.delta} good={avg.good} />}
           </div>
@@ -68,8 +71,8 @@ export function LayoutBento({ tweaks, payload, kpis, insights }: Props) {
       {tweaks.sec_sales && (
         <div className="bento-cell bento-chart">
           <header className="bento-card-head">
-            <div className="bento-eyebrow">DAILY REVENUE</div>
-            <h3 className="bento-card-title">Sales dynamics</h3>
+            <div className="bento-eyebrow">{t('analyticsDashboard.eyebrows.dailyRevenue')}</div>
+            <h3 className="bento-card-title">{t('analyticsDashboard.panels.salesDynamics')}</h3>
           </header>
           <SalesDynamics
             payload={payload}
@@ -83,8 +86,8 @@ export function LayoutBento({ tweaks, payload, kpis, insights }: Props) {
       {tweaks.sec_payments && (
         <div className="bento-cell bento-payment">
           <header className="bento-card-head">
-            <div className="bento-eyebrow">SPLIT</div>
-            <h3 className="bento-card-title">Payment</h3>
+            <div className="bento-eyebrow">{t('analyticsDashboard.eyebrows.split')}</div>
+            <h3 className="bento-card-title">{t('analyticsDashboard.panels.payment')}</h3>
           </header>
           <PaymentSplit items={payload.current.payment_types} numFormat={tweaks.numFormat} variant="donut" />
         </div>
@@ -93,8 +96,8 @@ export function LayoutBento({ tweaks, payload, kpis, insights }: Props) {
       {tweaks.sec_categories && (
         <div className="bento-cell bento-cats">
           <header className="bento-card-head">
-            <div className="bento-eyebrow">MIX</div>
-            <h3 className="bento-card-title">Categories</h3>
+            <div className="bento-eyebrow">{t('analyticsDashboard.eyebrows.mix')}</div>
+            <h3 className="bento-card-title">{t('analyticsDashboard.panels.categories')}</h3>
           </header>
           <CategoryList items={payload.current.categories} numFormat={tweaks.numFormat} limit={6} />
         </div>
@@ -103,8 +106,8 @@ export function LayoutBento({ tweaks, payload, kpis, insights }: Props) {
       {tweaks.sec_dishes && (
         <div className="bento-cell bento-dishes">
           <header className="bento-card-head">
-            <div className="bento-eyebrow">REVENUE RANK</div>
-            <h3 className="bento-card-title">Top dishes</h3>
+            <div className="bento-eyebrow">{t('analyticsDashboard.eyebrows.revenueRank')}</div>
+            <h3 className="bento-card-title">{t('analyticsDashboard.panels.topDishes')}</h3>
           </header>
           <TopDishes items={payload.current.dish_sales} numFormat={tweaks.numFormat} style={tweaks.dishesStyle} />
         </div>
@@ -113,8 +116,8 @@ export function LayoutBento({ tweaks, payload, kpis, insights }: Props) {
       {tweaks.sec_insights && (
         <div className="bento-cell bento-insights">
           <header className="bento-card-head">
-            <div className="bento-eyebrow">INSIGHTS</div>
-            <h3 className="bento-card-title">Auto-generated</h3>
+            <div className="bento-eyebrow">{t('analyticsDashboard.eyebrows.insights')}</div>
+            <h3 className="bento-card-title">{t('analyticsDashboard.panels.autoGenerated')}</h3>
           </header>
           <InsightsList items={insights} variant="row" />
         </div>
@@ -123,8 +126,8 @@ export function LayoutBento({ tweaks, payload, kpis, insights }: Props) {
       {tweaks.sec_heatmap && (
         <div className="bento-cell bento-heatmap">
           <header className="bento-card-head">
-            <div className="bento-eyebrow">WHEN ARE WE BUSY</div>
-            <h3 className="bento-card-title">Hourly activity</h3>
+            <div className="bento-eyebrow">{t('analyticsDashboard.eyebrows.whenAreWeBusy')}</div>
+            <h3 className="bento-card-title">{t('analyticsDashboard.panels.hourlyActivity')}</h3>
           </header>
           <HourlyHeatmap />
         </div>

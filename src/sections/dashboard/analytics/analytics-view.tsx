@@ -1,6 +1,7 @@
 import type { PeriodId } from './controls/range-chips';
 import type { Kpi, Insight, AnalyticsPayload } from './data/types';
 
+import { useTranslation } from 'react-i18next';
 import { useMemo, useState, useEffect } from 'react';
 
 import Box from '@mui/material/Box';
@@ -39,6 +40,7 @@ const EMPTY_PAYLOAD: AnalyticsPayload = {
 };
 
 export function AnalyticsView() {
+  const { t, i18n } = useTranslation('menu');
   const { tweaks, setTweak, resetTweaks } = useTweaks();
   const [activePeriod, setActivePeriod] = useState<PeriodId>('month');
   const initial = useMemo(() => resolvePeriodRange('month'), []);
@@ -66,19 +68,19 @@ export function AnalyticsView() {
   const effectiveKpis: Kpi[] = kpis.length
     ? kpis
     : [
-        { key: 'revenue', label: 'Revenue', unit: 'money', good: 'up', current: 0, previous: 0, delta: { value: 0, direction: 'flat' } },
-        { key: 'checks_count', label: 'Checks', unit: 'int', good: 'up', current: 0, previous: 0, delta: { value: 0, direction: 'flat' } },
-        { key: 'average_check', label: 'Average check', unit: 'money', good: 'up', current: 0, previous: 0, delta: { value: 0, direction: 'flat' } },
-        { key: 'returns_count', label: 'Returns', unit: 'int', good: 'down', current: 0, previous: 0, delta: { value: 0, direction: 'flat' } },
-        { key: 'discounts_amount', label: 'Discounts', unit: 'money', good: 'down', current: 0, previous: 0, delta: { value: 0, direction: 'flat' } },
-        { key: 'vat_amount', label: 'VAT', unit: 'money', good: 'flat', current: 0, previous: 0, delta: { value: 0, direction: 'flat' } },
+        { key: 'revenue', label: t('analyticsDashboard.kpis.revenue'), unit: 'money', good: 'up', current: 0, previous: 0, delta: { value: 0, direction: 'flat' } },
+        { key: 'checks_count', label: t('analyticsDashboard.kpis.checks_count'), unit: 'int', good: 'up', current: 0, previous: 0, delta: { value: 0, direction: 'flat' } },
+        { key: 'average_check', label: t('analyticsDashboard.kpis.average_check'), unit: 'money', good: 'up', current: 0, previous: 0, delta: { value: 0, direction: 'flat' } },
+        { key: 'returns_count', label: t('analyticsDashboard.kpis.returns_count'), unit: 'int', good: 'down', current: 0, previous: 0, delta: { value: 0, direction: 'flat' } },
+        { key: 'discounts_amount', label: t('analyticsDashboard.kpis.discounts_amount'), unit: 'money', good: 'down', current: 0, previous: 0, delta: { value: 0, direction: 'flat' } },
+        { key: 'vat_amount', label: t('analyticsDashboard.kpis.vat_amount'), unit: 'money', good: 'flat', current: 0, previous: 0, delta: { value: 0, direction: 'flat' } },
       ];
 
-  const insights: Insight[] = useMemo(() => (payload ? buildInsights(payload) : []), [payload]);
+  const insights: Insight[] = useMemo(() => (payload ? buildInsights(t, payload) : []), [payload, t]);
 
-  const periodSummary = formatPeriodSummary(dateWindow.start, dateWindow.end);
+  const periodSummary = formatPeriodSummary(dateWindow.start, dateWindow.end, i18n.language);
   const prevSpan = Math.round((dateWindow.end.getTime() - dateWindow.start.getTime()) / 86400000) + 1;
-  const compareLabel = tweaks.compare ? `previous ${prevSpan} day${prevSpan === 1 ? '' : 's'}` : null;
+  const compareLabel = tweaks.compare ? t('analyticsDashboard.controls.previousDays', { count: prevSpan }) : null;
 
   const Layout = (() => {
     switch (tweaks.layout) {
@@ -125,12 +127,12 @@ export function AnalyticsView() {
           <div className="analytics-controls-right">
             <span className="period-summary mono muted">
               {periodSummary}
-              {loading ? ' · loading…' : ''}
+              {loading ? ` · ${t('analyticsDashboard.controls.loading')}` : ''}
             </span>
             <IconButton
               size="small"
               onClick={() => setSettingsOpen(true)}
-              aria-label="Dashboard settings"
+              aria-label={t('analyticsDashboard.settingsAria')}
               sx={{ color: 'var(--text-2)' }}
             >
               <Iconify icon="solar:settings-bold-duotone" width={20} />

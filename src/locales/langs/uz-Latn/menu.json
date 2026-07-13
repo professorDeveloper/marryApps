@@ -55,9 +55,13 @@
   "error": {
     "title": "Nimadir xato ketdi",
     "description": "Kutilmagan xatolik yuz berdi. Qaytadan urinib ko'ring yoki bosh sahifaga qayting.",
-    "goHome": "Bosh sahifaga"
+    "goHome": "Bosh sahifaga",
+    "notFound": "Topilmadi"
   },
-  "success": "Muvaffaqiyat",
+  "success": {
+    "created": "Muvaffaqiyatli yaratildi",
+    "updated": "Muvaffaqiyatli yangilandi"
+  },
   "noData": "Ma'lumot yo'q",
   "noDataAvailable": "Ma'lumot mavjud emas",
   "search": "Qidirish",
@@ -391,7 +395,10 @@
       "durationHelp": "Cheksiz to'xtatish uchun bo'sh qoldiring",
       "dialogTitle": "Mahsulotni to'xtatish",
       "confirmStop": "To'xtatish"
-    }
+    },
+    "comingSoon": "Tez orada",
+    "totalCost": "Umumiy narx",
+    "upload_image": "Rasm yuklash"
   },
   "modifiers": {
     "title": "Modifikatorlar",
@@ -578,7 +585,15 @@
     "deleteSuccess": "Muvaffaqiyatli o'chirildi",
     "deleteFailed": "O'chirishda xato",
     "noEmployees": "Xodimlar topilmadi",
-    "noEmployeesSubtitle": "Qidiruv yoki filtrlarni o'zgartirib ko'ring"
+    "noEmployeesSubtitle": "Qidiruv yoki filtrlarni o'zgartirib ko'ring",
+    "addEmployee": "Xodim qo'shish",
+    "updateEmployee": "Xodimni yangilash",
+    "created": "Xodim muvaffaqiyatli yaratildi",
+    "updated": "Xodim muvaffaqiyatli yangilandi",
+    "identityDetails": "Shaxsiy ma'lumotlar",
+    "personalLoginInfo": "Shaxsiy va tizimga kirish ma'lumotlari",
+    "systemAccess": "Tizimga kirish huquqi",
+    "permissionsHardware": "Huquqlar va uskunalar"
   },
   "employe": {
     "title": "Xodimlar",
@@ -634,7 +649,11 @@
     "deleteMessage": "Bu elementni o'chirishni xohlaysizmi? Bu amalni bekor qilib bo'lmaydi.",
     "noDataSubtitle": "Qidiruv yoki filtrlarni o'zgartirib ko'ring",
     "deleteConfirmation": "Bu elementni o'chirishni xohlaysizmi? Bu amalni bekor qilib bo'lmaydi.",
-    "search": "Qidiruv"
+    "search": "Qidiruv",
+    "selectRole": "Rolni tanlang",
+    "active": "Faol",
+    "inactive": "Nofaol",
+    "notFound": "Topilmadi"
   },
   "warehouse": {
     "title": "Ombor",
@@ -665,7 +684,8 @@
       "supplierNameRequired": "Yetkazib beruvchi nomi kiritilishi shart",
       "supplier": "Yetkazib beruvchi",
       "storage": "Ombor",
-      "information": "Umumiy ma'lumotlar"
+      "information": "Umumiy ma'lumotlar",
+      "created": "Hisob-faktura muvaffaqiyatli yaratildi"
     },
     "invoiceDetails": {
       "title": "Kirim ma'lumotlari",
@@ -1061,7 +1081,8 @@
     "groupUpdated": "Chiqim guruhi muvaffaqiyat yangilandi",
     "createGroup": "Chiqim guruhi yaratish",
     "editGroup": "Chiqim guruhi tahrirlash",
-    "groupDetails": "Chiqim guruhi tafsilotlari"
+    "groupDetails": "Chiqim guruhi tafsilotlari",
+    "selectStorage": "Omborni tanlang"
   },
   "inventory": {
     "title": "Ombor menusi",
@@ -1106,7 +1127,8 @@
       "created": "Ombor menusi muvaffaqiyat yaratildi",
       "updated": "Ombor menusi muvaffaqiyat yangilandi",
       "itemsAdded": "Ombor menusi elementlari muvaffaqiyat qo'shildi"
-    }
+    },
+    "dateTime": "Sana va vaqt"
   },
   "order": {
     "create": "Buyurtma yaratish",
@@ -1388,7 +1410,8 @@
       "edit": "Tranzaksiya guruhini tahrirlash"
     },
     "customerPaid": "Mijoz to'lagan",
-    "changeAmount": "Qaytim"
+    "changeAmount": "Qaytim",
+    "cashierDeleted": "Bu kassir o'chirilgan"
   },
   "shipments": {
     "create": "Yetkazib berish yaratish",
@@ -1470,7 +1493,10 @@
       "itemDeleted": "Chiqim fakturasi elementi o'chirildi",
       "updated": "Chiqim fakturasi muvaffaqiyatli yangilandi",
       "itemsAdded": "Chiqim fakturasi elementlari muvaffaqiyatli qo'shildi"
-    }
+    },
+    "saveInvoice": "Hisob-fakturani saqlash",
+    "selectGroup": "Guruhni tanlang",
+    "enterDescription": "Tavsifni kiriting"
   },
   "separationActs": {
     "create": "Ajratish aktini yaratish",
@@ -1701,5 +1727,274 @@
     "cashiers": "Kassalar"
   },
   "viewDetails": "Tafsilotlar",
-  "tryAdjustingFilters": "Filtrlarni o'zgartirib ko'ring"
+  "tryAdjustingFilters": "Filtrlarni o'zgartirib ko'ring",
+  "saving": "Saqlanmoqda...",
+  "comment": "Izoh",
+  "restaurantInfo": {
+    "title": "Restoran ma'lumotlari",
+    "mainInfo": "Asosiy ma'lumotlar",
+    "organizationName": "Tashkilot nomi",
+    "address": "Manzil",
+    "phone": "Telefon",
+    "workingDays": "Ish kunlari",
+    "socialNetworks": "Ijtimoiy tarmoqlar",
+    "loadError": "Restoran ma'lumotlarini yuklashda xatolik yuz berdi",
+    "selectRestaurant": "Restoranni tanlang",
+    "weekdays": {
+      "monday": "Dushanba",
+      "tuesday": "Seshanba",
+      "wednesday": "Chorshanba",
+      "thursday": "Payshanba",
+      "friday": "Juma",
+      "saturday": "Shanba",
+      "sunday": "Yakshanba"
+    }
+  },
+  "analyticsDashboard": {
+    "settingsAria": "Boshqaruv paneli sozlamalari",
+    "closeSettingsAria": "Sozlamalarni yopish",
+    "controls": {
+      "from": "DAN",
+      "to": "GACHA",
+      "vs": "solishtirganda",
+      "loading": "yuklanmoqda…",
+      "previousDays_one": "oldingi {{count}} kun",
+      "previousDays_other": "oldingi {{count}} kun",
+      "periodLetters": {
+        "day": "K",
+        "week": "H",
+        "month": "O",
+        "year": "Y"
+      }
+    },
+    "kpis": {
+      "revenue": "Tushum",
+      "checks_count": "Cheklar",
+      "average_check": "O'rtacha chek",
+      "returns_count": "Qaytarishlar",
+      "discounts_amount": "Chegirmalar",
+      "vat_amount": "QQS",
+      "prev": "oldingi"
+    },
+    "panels": {
+      "salesDynamics": "Savdo dinamikasi",
+      "revenueByCategory": "Kategoriya bo'yicha tushum",
+      "categories": "Kategoriyalar",
+      "paymentTypes": "To'lov turlari",
+      "payment": "To'lov",
+      "topDishes": "Top taomlar",
+      "insights": "Tahlillar",
+      "autoGenerated": "Avtomatik yaratilgan",
+      "whatsInteresting": "Diqqatga molik",
+      "hourlyActivity": "Soatlik faollik"
+    },
+    "eyebrows": {
+      "dailyRevenue": "KUNLIK TUSHUM",
+      "mix": "TARKIB",
+      "split": "TAQSIMOT",
+      "auto": "AVTO",
+      "autoGenerated": "AVTOMATIK YARATILGAN",
+      "whenAreWeBusy": "ENG BAND VAQTLAR",
+      "sortedByRevenueTop": "TUSHUM BO'YICHA · TOP {{count}}",
+      "revenue": "TUSHUM",
+      "checks": "CHEKLAR",
+      "avgCheck": "O'RTACHA CHEK",
+      "revenueRank": "TUSHUM REYTINGI",
+      "revenueMix": "TUSHUM TARKIBI",
+      "periodRevenue": "DAVR TUSHUMI",
+      "dayByDay": "KUNLAR BO'YICHA",
+      "heatmap": "ISSIQLIK XARITASI",
+      "keyMetrics": "ASOSIY KO'RSATKICHLAR",
+      "insights": "TAHLILLAR"
+    },
+    "compareMeta": {
+      "currentVsPrevious": "joriy davr oldingisi bilan solishtirilmoqda",
+      "currentPeriod": "joriy davr"
+    },
+    "salesStats": {
+      "total": "Jami",
+      "dailyAvg": "Kunlik o'rtacha",
+      "peakDay": "Eng yuqori kun",
+      "activeDays": "Faol kunlar",
+      "current": "Joriy",
+      "previous": "Oldingi"
+    },
+    "payment": {
+      "noData": "To'lov ma'lumotlari yo'q"
+    },
+    "categories": {
+      "moreCategories_one": "+ yana {{count}} ta kategoriya",
+      "moreCategories_other": "+ yana {{count}} ta kategoriya"
+    },
+    "dishes": {
+      "noData": "Taom ma'lumotlari yo'q",
+      "dish": "Taom",
+      "qty": "Soni",
+      "revenue": "Tushum",
+      "share": "Ulush",
+      "sold": "sotildi",
+      "avg": "o'rtacha"
+    },
+    "insights": {
+      "notEnough": "Tahlil uchun ma'lumot yetarli emas.",
+      "bestDay": "Eng yaxshi kun",
+      "periodVsPrevious": "Davr oldingisiga nisbatan",
+      "activeDays": "Faol kunlar",
+      "cashShare": "Naqd pul ulushi",
+      "topDishRevenue": "Top taom (tushum)",
+      "topDishVolume": "Top taom (soni)",
+      "noPriorData": "Oldingi davr ma'lumotlari yo'q",
+      "detailChecks_one": "{{revenue}} — {{count}} chekda",
+      "detailChecks_other": "{{revenue}} — {{count}} chekda",
+      "detailLastPeriodPeaked": "Oldingi davrda eng yuqori kun — {{label}} ({{revenue}})",
+      "detailPerActiveDay": "Faol kunda ~{{value}}",
+      "detailCardShare": "Karta — {{value}}%",
+      "detailTopDishRevenue": "{{count}} ta sotilgandan {{revenue}}",
+      "detailTopDishVolume": "{{count}} ta sotildi, {{revenue}} qiymatida"
+    },
+    "heatmap": {
+      "days": {
+        "mon": "Du",
+        "tue": "Se",
+        "wed": "Ch",
+        "thu": "Pa",
+        "fri": "Ju",
+        "sat": "Sh",
+        "sun": "Ya"
+      },
+      "placeholder": "namuna",
+      "notWired": "Soatlik ma'lumotlar hali ulanmagan — bu faqat namunaviy ko'rinish.",
+      "low": "past",
+      "high": "yuqori"
+    },
+    "settings": {
+      "tabs": {
+        "layout": "Tuzilma",
+        "style": "Uslub",
+        "numbers": "Raqamlar",
+        "modules": "Modullar",
+        "sections": "Bo'limlar"
+      },
+      "ariaLabel": "Sahifa sozlamalari",
+      "eyebrow": "SAHIFA SOZLAMALARI",
+      "title": "Boshqaruv panelini sozlash",
+      "layoutSection": {
+        "label": "Tarkib",
+        "layout": {
+          "label": "Tuzilma",
+          "hint": "Sahifaning umumiy tuzilishi.",
+          "classic": "1 · Klassik",
+          "sidebar": "2 · KPI panel",
+          "editorial": "3 · Muharrirlik",
+          "bento": "4 · Bento"
+        },
+        "density": {
+          "label": "Zichlik",
+          "hint": "Torroq qatorlar va kichikroq bo'shliqlar.",
+          "comfortable": "Keng",
+          "compact": "Ixcham"
+        }
+      },
+      "styleSection": {
+        "shapeLabel": "Shakl",
+        "radius": {
+          "label": "Burchak radiusi",
+          "hint": "Elementlar qanchalik yumaloqligi.",
+          "sharp": "Keskin",
+          "soft": "Yumshoq",
+          "pill": "Yumaloq"
+        },
+        "cards": {
+          "label": "Kartalar",
+          "hint": "Ramka, soya yoki to'liq fon.",
+          "flat": "Tekis",
+          "outlined": "Ramkali",
+          "elevated": "Ko'tarilgan"
+        },
+        "backgroundLabel": "Fon",
+        "tint": {
+          "label": "Rang tusi",
+          "hint": "Sahifa foniga yengil rang tusi.",
+          "cool": "Sovuq",
+          "warm": "Issiq",
+          "neutral": "Neytral"
+        }
+      },
+      "numbersSection": {
+        "formattingLabel": "Formatlash",
+        "format": {
+          "label": "Format",
+          "hint": "Qisqartirilgan (46,9 mln) yoki to'liq guruhlangan raqamlar.",
+          "compact": "46,9 mln",
+          "full": "46 884 174"
+        },
+        "comparisonLabel": "Solishtirish",
+        "compare": {
+          "label": "Oldingi davr bilan solishtirishni ko'rsatish",
+          "hint": "Har bir KPI uchun farq % va strelka.",
+          "ariaLabel": "Oldingisi bilan solishtirish"
+        }
+      },
+      "modulesSection": {
+        "salesDynamicsLabel": "Savdo dinamikasi",
+        "chartStyle": {
+          "label": "Grafik uslubi",
+          "hint": "Kunlik tushum qanday chizilishi.",
+          "lineOverlay": "Chiziq + punktir",
+          "bars": "Ustunlar",
+          "area": "Maydon",
+          "paired": "Juft ustunlar"
+        },
+        "topDishesLabel": "Top taomlar",
+        "dishesDisplay": {
+          "label": "Ko'rinish",
+          "hint": "Jadval, kartalar yoki podium + ro'yxat.",
+          "table": "Reyting jadvali",
+          "cards": "Karta ro'yxati",
+          "podium": "Podium + ro'yxat"
+        }
+      },
+      "sectionsTab": {
+        "hideHint": "Kerak bo'lmagan modullarni yashiring.",
+        "modulesOnPage": "Sahifadagi modullar",
+        "kpiStrip": {
+          "label": "KPI qatori",
+          "hint": "Tushum, cheklar, o'rtacha chek, qaytarishlar, chegirmalar, QQS.",
+          "ariaLabel": "KPI qatori"
+        },
+        "salesDynamics": {
+          "label": "Savdo dinamikasi",
+          "hint": "Davr uchun kunlik tushum grafigi.",
+          "ariaLabel": "Savdo dinamikasi"
+        },
+        "categories": {
+          "label": "Kategoriya bo'yicha tushum",
+          "hint": "Tushum bo'yicha kategoriyalar ro'yxati.",
+          "ariaLabel": "Kategoriyalar"
+        },
+        "payments": {
+          "label": "To'lov turlari",
+          "hint": "Naqd va karta nisbati.",
+          "ariaLabel": "To'lov turlari"
+        },
+        "dishes": {
+          "label": "Top taomlar",
+          "hint": "Tushum bo'yicha top taomlar.",
+          "ariaLabel": "Top taomlar"
+        },
+        "insights": {
+          "label": "Tahlillar",
+          "hint": "Avtomatik yaratilgan eslatmalar.",
+          "ariaLabel": "Tahlillar"
+        },
+        "heatmap": {
+          "label": "Soatlik issiqlik xaritasi",
+          "hint": "O'chirilgan — ma'lumotlar hali ulanmagan.",
+          "ariaLabel": "Soatlik issiqlik xaritasi"
+        }
+      },
+      "reset": "Standart holatga qaytarish",
+      "done": "Tayyor"
+    }
+  }
 }

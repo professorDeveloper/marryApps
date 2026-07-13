@@ -1,4 +1,5 @@
 import dayjs from 'dayjs';
+import { useTranslation } from 'react-i18next';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
@@ -28,6 +29,13 @@ export function RangeChips({
   onPeriodChange,
   compareLabel,
 }: Props) {
+  const { t } = useTranslation('menu');
+  const periodLetters: Record<PeriodId, string> = {
+    day: t('analyticsDashboard.controls.periodLetters.day'),
+    week: t('analyticsDashboard.controls.periodLetters.week'),
+    month: t('analyticsDashboard.controls.periodLetters.month'),
+    year: t('analyticsDashboard.controls.periodLetters.year'),
+  };
   return (
     <Stack direction="row" alignItems="center" gap={1} flexWrap="wrap">
       <Box
@@ -46,7 +54,7 @@ export function RangeChips({
         <Typography
           sx={{ fontSize: 11, fontWeight: 600, color: 'var(--text-3)', fontFamily: 'var(--font-sans)', letterSpacing: '0.04em', userSelect: 'none' }}
         >
-          FROM
+          {t('analyticsDashboard.controls.from')}
         </Typography>
         <Box
           component="input"
@@ -72,7 +80,7 @@ export function RangeChips({
         <Typography
           sx={{ fontSize: 11, fontWeight: 600, color: 'var(--text-3)', fontFamily: 'var(--font-sans)', letterSpacing: '0.04em', userSelect: 'none' }}
         >
-          TO
+          {t('analyticsDashboard.controls.to')}
         </Typography>
         <Box
           component="input"
@@ -122,7 +130,7 @@ export function RangeChips({
                 '&:hover': { color: isActive ? 'var(--bg)' : 'var(--text)' },
               }}
             >
-              {period.charAt(0).toUpperCase()}
+              {periodLetters[period]}
             </Box>
           );
         })}
@@ -130,7 +138,7 @@ export function RangeChips({
 
       {compareLabel && (
         <div className="range-compare">
-          <span className="range-compare-lbl">vs</span>
+          <span className="range-compare-lbl">{t('analyticsDashboard.controls.vs')}</span>
           <span className="range-compare-val">{compareLabel}</span>
         </div>
       )}

@@ -235,3 +235,7 @@
 {"languages":["en"],"namespace":"menu","key":"common.notFound","fallback":"common.notFound","timestamp":"2026-07-11T21:20:52.320Z","url":"http://localhost:8082/operations/transfers"}
 {"languages":["en"],"namespace":"menu","key":"common.notFound","fallback":"common.notFound","timestamp":"2026-07-11T22:29:17.569Z","url":"http://localhost:8082/operations/transfers"}
 {"languages":["en"],"namespace":"menu","key":"error.notFound","fallback":"error.notFound","timestamp":"2026-07-11T22:38:56.343Z","url":"http://localhost:8082/operations/transfers/051dfde2-5bf9-48c1-b28e-3053d5b199c7/edit"}
+{"languages":["en"],"namespace":"menu","key":"cashbox.cashierDeleted","fallback":"cashbox.cashierDeleted","timestamp":"2026-07-12T05:15:47.059Z","url":"http://localhost:8081/cashbooks/transactions"}
+{"languages":["en"],"namespace":"menu","key":"cashbox.cashierDeleted","fallback":"cashbox.cashierDeleted","timestamp":"2026-07-12T05:31:43.182Z","url":"http://localhost:8081/cashbooks/transactions"}
+{"languages":["en"],"namespace":"menu","key":"error.notFound","fallback":"error.notFound","timestamp":"2026-07-12T05:32:51.838Z","url":"http://localhost:8081/operations/transfers/051dfde2-5bf9-48c1-b28e-3053d5b199c7/edit"}
+{"languages":["en"],"namespace":"menu","key":"analyticsDashboard.settings.closeSettingsAria","fallback":"analyticsDashboard.settings.closeSettingsAria","timestamp":"2026-07-13T09:10:06.422Z","url":"http://localhost:8081/dashboard"}

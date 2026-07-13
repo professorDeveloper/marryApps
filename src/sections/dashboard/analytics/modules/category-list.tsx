@@ -1,6 +1,8 @@
 import type { CategoryItem } from '../data/types';
 import type { NumFormat } from '../data/formatters';
 
+import { useTranslation } from 'react-i18next';
+
 import { fmtNum } from '../data/formatters';
 
 interface Props {
@@ -10,6 +12,7 @@ interface Props {
 }
 
 export function CategoryList({ items, numFormat, limit = 8 }: Props) {
+  const { t } = useTranslation('menu');
   const shown = items.slice(0, limit);
   const hidden = items.length - shown.length;
   const max = items.length ? Math.max(...items.map((i) => i.revenue)) : 1;
@@ -38,7 +41,11 @@ export function CategoryList({ items, numFormat, limit = 8 }: Props) {
           ))}
         </tbody>
       </table>
-      {hidden > 0 && <div className="cat-more">+ {hidden} more categories</div>}
+      {hidden > 0 && (
+        <div className="cat-more">
+          {t('analyticsDashboard.categories.moreCategories', { count: hidden })}
+        </div>
+      )}
     </div>
   );
 }

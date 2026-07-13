@@ -1,6 +1,8 @@
 import type { NumFormat } from '../data/formatters';
 import type { PaymentTypeItem } from '../data/types';
 
+import { useTranslation } from 'react-i18next';
+
 import { fmtNum } from '../data/formatters';
 
 interface Props {
@@ -12,8 +14,9 @@ interface Props {
 const colors = ['var(--accent)', 'var(--text-3)', 'var(--text-4)'];
 
 export function PaymentSplit({ items, numFormat, variant = 'bar' }: Props) {
+  const { t } = useTranslation('menu');
   if (items.length === 0) {
-    return <div className="muted">No payment data</div>;
+    return <div className="muted">{t('analyticsDashboard.payment.noData')}</div>;
   }
   if (variant === 'donut') {
     const r = 42;

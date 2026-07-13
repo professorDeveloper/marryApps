@@ -1,13 +1,16 @@
 import type { Insight } from '../data/types';
 
+import { useTranslation } from 'react-i18next';
+
 interface Props {
   items: Insight[];
   variant?: 'grid' | 'row' | 'stack';
 }
 
 export function InsightsList({ items, variant = 'grid' }: Props) {
+  const { t } = useTranslation('menu');
   if (items.length === 0) {
-    return <div className="muted">Not enough data for insights.</div>;
+    return <div className="muted">{t('analyticsDashboard.insights.notEnough')}</div>;
   }
   return (
     <ul className={`insights insights--${variant}`}>

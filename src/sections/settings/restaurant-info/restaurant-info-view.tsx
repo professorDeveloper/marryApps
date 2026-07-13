@@ -59,13 +59,13 @@ export function RestaurantInfoListView() {
 
   // 41.292258, 69.222276
   const weekDays = [
-    { key: 'monday', label: 'Dushanba', value: restaurantData.workingDays.monday },
-    { key: 'tuesday', label: 'Seshanba', value: restaurantData.workingDays.tuesday },
-    { key: 'wednesday', label: 'Chorshanba', value: restaurantData.workingDays.wednesday },
-    { key: 'thursday', label: 'Payshanba', value: restaurantData.workingDays.thursday },
-    { key: 'friday', label: 'Juma', value: restaurantData.workingDays.friday },
-    { key: 'saturday', label: 'Shanba', value: restaurantData.workingDays.saturday },
-    { key: 'sunday', label: 'Yakshanba', value: restaurantData.workingDays.sunday },
+    { key: 'monday', label: t('restaurantInfo.weekdays.monday'), value: restaurantData.workingDays.monday },
+    { key: 'tuesday', label: t('restaurantInfo.weekdays.tuesday'), value: restaurantData.workingDays.tuesday },
+    { key: 'wednesday', label: t('restaurantInfo.weekdays.wednesday'), value: restaurantData.workingDays.wednesday },
+    { key: 'thursday', label: t('restaurantInfo.weekdays.thursday'), value: restaurantData.workingDays.thursday },
+    { key: 'friday', label: t('restaurantInfo.weekdays.friday'), value: restaurantData.workingDays.friday },
+    { key: 'saturday', label: t('restaurantInfo.weekdays.saturday'), value: restaurantData.workingDays.saturday },
+    { key: 'sunday', label: t('restaurantInfo.weekdays.sunday'), value: restaurantData.workingDays.sunday },
   ];
 
   return (
@@ -79,11 +79,11 @@ export function RestaurantInfoListView() {
       }}
     >
       <CustomBreadcrumbs
-        heading="Sozlamalar"
+        heading={t('settings')}
         links={[
-          { name: t('app') || 'Bosh sahifa', href: paths.menu.root },
+          { name: t('app'), href: paths.menu.root },
           {
-            name: 'Restoran ma\'lumotlari',
+            name: t('restaurantInfo.title'),
             // icon: <Iconify icon="eva:chevron-down-fill" width={16} />,
           },
         ]}
@@ -111,25 +111,25 @@ export function RestaurantInfoListView() {
 
         {branchError && !branchLoading && (
           <Alert severity="error">
-            Restoran ma&apos;lumotlarini yuklashda xatolik yuz berdi
+            {t('restaurantInfo.loadError')}
           </Alert>
         )}
 
         {!selectedBranchId && !branchLoading && (
           <Alert severity="info">
-            Restoranni tanlang
+            {t('restaurantInfo.selectRestaurant')}
           </Alert>
         )}
 
         {/* Asosiy ma'lumotlar Card */}
         {!branchLoading && selectedBranchId && (
           <Card>
-            <CardHeader title="Asosiy ma'lumotlar" />
+            <CardHeader title={t('restaurantInfo.mainInfo')} />
             <CardContent>
               <Stack spacing={3}>
                 <Box>
                   <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                    Tashkilot nomi
+                    {t('restaurantInfo.organizationName')}
                   </Typography>
                   <Typography variant="body1" fontWeight={500}>
                     {restaurantData.organizationName}
@@ -138,7 +138,7 @@ export function RestaurantInfoListView() {
 
                 <Box>
                   <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                    Manzil
+                    {t('restaurantInfo.address')}
                   </Typography>
                   <Typography variant="body1" fontWeight={500}>
                     {restaurantData.address}
@@ -147,7 +147,7 @@ export function RestaurantInfoListView() {
 
                 <Box>
                   <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                    Telefon
+                    {t('restaurantInfo.phone')}
                   </Typography>
                   <Typography variant="body1" fontWeight={500}>
                     {restaurantData.phone}
@@ -262,7 +262,7 @@ export function RestaurantInfoListView() {
       >
         {/* Ish kunlari Card */}
         <Card>
-          <CardHeader title="Ish kunlari" />
+          <CardHeader title={t('restaurantInfo.workingDays')} />
           <CardContent>
             <Stack spacing={1.5}>
               {weekDays.map((day) => (
@@ -292,7 +292,7 @@ export function RestaurantInfoListView() {
 
         {/* Manzil Card */}
         <Card>
-          <CardHeader title="Manzil" />
+          <CardHeader title={t('restaurantInfo.address')} />
           <CardContent>
             <Stack spacing={2}>
               <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
@@ -322,7 +322,7 @@ export function RestaurantInfoListView() {
 
         {/* Ijtimoiy tarmoqlar Card */}
         <Card>
-          <CardHeader title="Ijtimoiy tarmoqlar" />
+          <CardHeader title={t('restaurantInfo.socialNetworks')} />
           <CardContent>
             <Stack spacing={2}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
