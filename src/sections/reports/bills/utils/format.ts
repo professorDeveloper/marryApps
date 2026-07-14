@@ -1,10 +1,11 @@
 // Cached formatter — creating an Intl.NumberFormat per call is expensive inside
-// cell renderers. ru-RU groups thousands with U+00A0, matching the previous
-// regex-based output byte-for-byte; U+202F is normalized for older ICU variants.
-const numberFormatter = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 });
+// cell renderers. en-US groups thousands with commas and uses a period for
+// decimals; commas are swapped for U+00A0 to keep the existing spaced-thousands
+// look. Decimals only appear when the value actually has a fractional part.
+const numberFormatter = new Intl.NumberFormat('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 
 export const fmtNum = (n: number) =>
-    numberFormatter.format(Math.round(n)).replace(/\u202f/g, "\u00a0");
+    numberFormatter.format(n).replace(/,/g, "\u00a0");
 
 export const fmtDuration = (totalSeconds: number): string => {
     const s = Math.max(0, Math.round(totalSeconds || 0));

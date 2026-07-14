@@ -1,18 +1,18 @@
-function formatNumberSpaced(value: number, decimals = 2): string {
-  const negative = value < 0;
-  const fixed = Math.abs(value).toFixed(decimals);
-  const [intPart, decPart] = fixed.split('.');
-  const grouped = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-  const result = decPart ? `${grouped},${decPart}` : grouped;
-  return negative ? `-${result}` : result;
+const numberFormatter = new Intl.NumberFormat('en-US', {
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 2,
+});
+
+function formatNumberSpaced(value: number): string {
+  return numberFormatter.format(value).replace(/,/g, ' ');
 }
 
 export const formatAmount = (value: string | number | undefined): string => {
   const amount = Number(value) || 0;
-  return formatNumberSpaced(amount, 2);
+  return formatNumberSpaced(amount);
 };
 
 export const formatPercent = (value: string | number | undefined): string => {
   const amount = Number(value) || 0;
-  return `${formatNumberSpaced(amount, 2)}%`;
+  return `${formatNumberSpaced(amount)}%`;
 };
