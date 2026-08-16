@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mary AI POS — Designer TZ</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            /* Brand */
+            --brand: #FB6633;
+            --brand-light: #FF8C5A;
+            --brand-bg: #FFF3EE;
+
+            /* Colors */
+            --error: #EB295B;
+            --error-bg: #FFF0F3;
+            --warning: #F5A524;
+            --warning-bg: #FFF8E7;
+            --success: #13AF1B;
+            --success-bg: #E8F9E9;
+            --info: #3B82F6;
+            --info-bg: #EEF2FF;
+            --cyan: #00BCD4;
+
+            /* Text & BG */
+            --text-primary: #19160B;
+            --text-secondary: #888888;
+            --text-tertiary: #AAAAAA;
+            --bg-app: #F5F4F2;
+            --bg-card: #FFFFFF;
+            --border: #EBEBEB;
+
+            /* Sidebar */
+            --sidebar-bg: #18171C;
+            --sidebar-active: #2D2B32;
+            --sidebar-icon: #6B6875;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background-color: var(--bg-app);
+            color: var(--text-primary);
+            line-height: 1.4;
+        }
+
+        .app {
+            display: flex;
+            height: 100vh;
+        }
+
+        /* ========== SIDEBAR ========== */
+        .sidebar {
+            width: 220px;
+            background-color: var(--sidebar-bg);
+            color: white;
+            overflow-y: auto;
+            padding: 16px;
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            flex-shrink: 0;
+        }
+
+        .sidebar-title {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--brand);
+            margin: 16px 0 8px 0;
+            padding-top: 8px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .sidebar-item {
+            padding: 8px 12px;
+            margin: 4px 0;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            color: var(--sidebar-icon);
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+        }
+
+        .sidebar-item:hover {
+            background-color: var(--sidebar-active);
+            color: var(--brand);
+        }
+
+        .sidebar-item.active {
+            background-color: var(--sidebar-active);
+            color: var(--brand);
+            border-left-color: var(--brand);
+            font-weight: 600;
+        }
+
+        .sidebar-item.sub {
+            padding-left: 24px;
+            font-size: 12px;
+        }
+
+        /* ========== MAIN CONTENT ========== */
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: var(--bg-app);
+        }
+
+        .header {
+            height: 56px;
+            background-color: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            padding: 0 24px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .section-desc {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-left: auto;
+        }
+
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+        }
+
+        .section {
+            display: none;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        /* ========== TOKENS DISPLAY ========== */
+        .token-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 12px;
+            margin: 16px 0;
+        }
+
+        .token-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+        }
+
+        .token-swatch {
+            width: 100%;
+            height: 60px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .token-name {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 2px;
+        }
+
+        .token-value {
+            font-size: 10px;
+            color: var(--text-secondary);
+            font-family: monospace;
+        }
+
+        /* ========== SCREEN WIREFRAMES ========== */
+        .wireframe {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 16px 0;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .wireframe-title {
+            font-size: 14px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: var(--text-primary);
+        }
+
+        .screen-layout {
+            background-color: #f9f9f9;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+            margin: 12px 0;
+            font-family: monospace;
+            font-size: 11px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            color: var(--text-secondary);
+        }
+
+        .component-list {
+            list-style: none;
+            margin: 12px 0;
+        }
+
+        .component-list li {
+            padding: 6px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .component-list li:last-child {
+            border-bottom: none;
+        }
+
+        .component-spec {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-left: 16px;
+            margin-top: 4px;
+        }
+
+        .color-badge {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            margin-right: 8px;
+            vertical-align: middle;
+            border: 1px solid var(--border);
+        }
+
+        /* ========== RESPONSIVE ========== */
+        @media (max-width: 1024px) {
+            .sidebar {
+                width: 160px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <!-- SIDEBAR -->
+        <div class="sidebar">
+            <div style="font-weight: 700; font-size: 14px; margin-bottom: 16px; color: var(--brand);">📋 POS TZ</div>
+
+            <div class="sidebar-item active" onclick="showSection(0)">0️⃣ Overview</div>
+
+            <div class="sidebar-title">🔐 Auth Flow</div>
+            <div class="sidebar-item" onclick="showSection(1)">1️⃣ Auth Flow</div>
+
+            <div class="sidebar-title">💰 Kassir</div>
+            <div class="sidebar-item" onclick="showSection(2)">2️⃣ CashierScreen</div>
+            <div class="sidebar-item sub" onclick="showSection(20)">  ├─ Tab: Блюда</div>
+            <div class="sidebar-item sub" onclick="showSection(21)">  ├─ Tab: Касса</div>
+            <div class="sidebar-item sub" onclick="showSection(22)">  ├─ Tab: Счета</div>
+            <div class="sidebar-item sub" onclick="showSection(23)">  └─ Tab: Настройки</div>
+
+            <div class="sidebar-title">👨‍💼 Ofitsant</div>
+            <div class="sidebar-item" onclick="showSection(3)">3️⃣ WaiterScreen</div>
+            <div class="sidebar-item sub" onclick="showSection(30)">  ├─ Stol Grid</div>
+            <div class="sidebar-item sub" onclick="showSection(31)">  ├─ Order Detail</div>
+            <div class="sidebar-item sub" onclick="showSection(32)">  └─ Modals</div>
+
+            <div class="sidebar-title">💳 Core Screens</div>
+            <div class="sidebar-item" onclick="showSection(4)">4️⃣ PaymentScreen</div>
+            <div class="sidebar-item" onclick="showSection(5)">5️⃣ ArchiveScreen</div>
+            <div class="sidebar-item" onclick="showSection(6)">6️⃣ CloseShiftScreen</div>
+            <div class="sidebar-item" onclick="showSection(7)">7️⃣ NotificationScreen</div>
+
+            <div class="sidebar-title">Admin & Components</div>
+            <div class="sidebar-item" onclick="showSection(8)">8️⃣ AdminScreen</div>
+            <div class="sidebar-item" onclick="showSection(9)">9️⃣ Components</div>
+        </div>
+
+        <!-- MAIN -->
+        <div class="main">
+            <!-- HEADER -->
+            <div class="header">
+                <div class="section-title" id="header-title">Overview</div>
+                <div class="section-desc" id="header-desc">Mary AI POS — Restoran POS tizimi</div>
+            </div>
+
+            <!-- CONTENT -->
+            <div class="content">
+                <!-- SECTION 0: OVERVIEW -->
+                <div id="section0" class="section active">
+                    <div class="wireframe">
+                        <div class="wireframe-title">📊 Loyiha Haqida</div>
+                        <p><strong>Mary AI POS</strong> — zamonaviy restoran uchun to'liq POS tizimi.</p>
+                        <p style="margin-top: 12px;"><strong>Platform:</strong> Desktop/Tablet (1440×900px)</p>
+                        <p><strong>Font:</strong> Inter (400, 500, 600, 700 weights)</p>
+                        <p><strong>Rollar:</strong> Kassir (Cashier) | Ofitsant (Waiter) | Admin | Oshpaz (Kitchen)</p>
+                    </div>
+
+                    <div class="wireframe">
+                        <div class="wireframe-title">🎨 Design Tokens</div>
+                        <h4 style="margin-top: 12px; margin-bottom: 8px;">Brand Colors</h4>
+                        <div class="token-grid">
+                            <div class="token-card">
+                                <div class="token-swatch" style="background-color: var(--brand);"></div>
+                                <div class="token-name">Brand</div>
+                                <div class="token-value">#FB6633</div>
+                            </div>
+                            <div class="token-card">
+                                <div class="token-swatch" style="background-color: var(--brand-light);"></div>
+                                <div class="token-name">Brand Light</div>
+                                <div class="token-value">#FF8C5A</div>
+                            </div>
+                            <div class="token-card">
+                                <div class="token-swatch" style="background-color: var(--brand-bg);"></div>
+                                <div class="token-name">Brand BG</div>
+                                <div class="token-value">#FFF3EE</div>
+                            </div>
+                        </div>
+
+                        <h4 style="margin-top: 16px; margin-bottom: 8px;">Semantic Colors</h4>
+                        <div class="token-grid">
+                            <div class="token-card">
+                                <div class="token-swatch" style="background-color: var(--success);"></div>
+                                <div class="token-name">Success</div>
+                                <div class="token-value">#13AF1B</div>
+                            </div>
+                            <div class="token-card">
+                                <div class="token-swatch" style="background-color: var(--error);"></div>
+                                <div class="token-name">Error</div>
+                                <div class="token-value">#EB295B</div>
+                            </div>
+                            <div class="token-card">
+                                <div class="token-swatch" style="background-color: var(--warning);"></div>
+                                <div class="token-name">Warning</div>
+                                <div class="token-value">#F5A524</div>
+                            </div>
+                            <div class="token-card">
+                                <div class="token-swatch" style="background-color: var(--info);"></div>
+                                <div class="token-name">Info</div>
+                                <div class="token-value">#3B82F6</div>
+                            </div>
+                            <div class="token-card">
+                                <div class="token-swatch" style="background-color: var(--cyan);"></div>
+                                <div class="token-name">Cyan</div>
+                                <div class="token-value">#00BCD4</div>
+                            </div>
+                        </div>
+
+                        <h4 style="margin-top: 16px; margin-bottom: 8px;">Neutral Colors</h4>
+                        <div class="token-grid">
+                            <div class="token-card">
+                                <div class="token-swatch" style="background-color: var(--bg-card);"></div>
+                                <div class="token-name">BG Card</div>
+                                <div class="token-value">#FFFFFF</div>
+                            </div>
+                            <div class="token-card">
+                                <div class="token-swatch" style="background-color: var(--bg-app);"></div>
+                                <div class="token-name">BG App</div>
+                                <div class="token-value">#F5F4F2</div>
+                            </div>
+                            <div class="token-card">
+                                <div class="token-swatch" style="background-color: var(--border);"></div>
+                                <div class="token-name">Border</div>
+                                <div class="token-value">#EBEBEB</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="wireframe">
+                        <div class="wireframe-title">📐 Typography Scale</div>
+                        <ul class="component-list">
+                            <li><strong>Title:</strong> 18px, Weight 700</li>
+                            <li><strong>Heading:</strong> 15–16px, Weight 700</li>
+                            <li><strong>Body:</strong> 13px, Weight 400/500</li>
+                            <li><strong>Caption:</strong> 11–12px, Weight 400/500</li>
+                            <li><strong>Micro:</strong> 9–10px, Weight 500</li>
+                        </ul>
+                    </div>
+
+                    <div class="wireframe">
+                        <div class="wireframe-title">📏 Spacing & Layout</div>
+                        <ul class="component-list">
+                            <li>Sidebar width: <strong>72px</strong></li>
+                            <li>Header height: <strong>56px</strong></li>
+                            <li>Content padding: <strong>20px 24px</strong></li>
+                            <li>Card border-radius: <strong>16px</strong></li>
+                            <li>Button border-radius: <strong>10px</strong></li>
+                            <li>Gap between sections: <strong>16px</strong></li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- SECTION 1: AUTH FLOW -->
+                <div id="section1" class="section">
+                    <div class="wireframe">
+                        <div class="wireframe-title">🔐 Authentication Flow</div>
+                        <p>3 ta screen, linear flow:</p>
+                        <div class="screen-layout">SplashScreen (logo + loading)
+  ↓
+LoginScreen (brand_id + password)
+  ↓
+LoginPinScreen (PIN numpad)
+  ↓
+MainScreen (role-specific)</div>
+                    </div>
+
+                    <div class="wireframe">
+                        <div class="wireframe-title">1️⃣ SplashScreen</div>
+                        <div class="screen-layout">┌─────────────────────────────────┐
+│                                 │
+│        [  Mary AI Logo  ]        │
+│       (animated scaling)         │
+│                                 │
+│      [====== Loading ======]     │
+│                                 │
+│          v1.0.0                 │
+└─────────────────────────────────┘
+
+Content: Centered logo + loading indicator
+Timer: 500ms → initialize auth check
+Animations: Logo fade-in + scale (600ms)</div>
+                        <div class="component-spec">
+                            Canvas: 1440×900px | Logo: 106×106px | Centered | BG: Linear gradient brand
+                        </div>
+                    </div>
+
+                    <div class="wireframe">
+                        <div class="wireframe-title">2️⃣ LoginScreen</div>
+                        <div class="screen-layout">┌──────────────────────────────────┐
+│        Mary AI POS               │
+├──────────────────────────────────┤
+│                                  │
+│  Restaurant Login                │
+│                                  │
+│  Brand ID: [___________________] │
+│  Password: [___________________] │
+│                                  │
+│     [   Kirish (Login)   ]        │
+│                                  │
+│  [ Parolni unutdingizmi? ]        │
+│                                  │
+└──────────────────────────────────┘
+
+Layout: 2-column (left: logo, right: form) OR centered form
+Inputs: Brand ID (text), Password (password)
+Button: Primary button, "Kirish"
+Link: "Parolni unutdingizmi?" — optional</div>
+                        <div class="component-spec">
+                            Input height: 44px | Border-radius: 10px | Font: 13px 500
+                        </div>
+                    </div>
+
+                    <div class="wireframe">
+                        <div class="wireframe-title">3️⃣ LoginPinScreen</div>
+                        <div class="screen-layout">┌──────────────────────────────────┐
+│        PIN Kiritish              │
+├──────────────────────────────────┤
+│                                  │
+│  Xodim: Ali (role badge)         │
+│                                  │
+│  PIN: ● ● ● ● ● ●               │
+│                                  │
+│  ┌─────┐ ┌─────┐ ┌─────┐        │
+│  │  1  │ │  2  │ │  3  │        │
+│  └─────┘ └─────┘ └─────┘        │
+│  ┌─────┐ ┌─────┐ ┌─────┐        │
+│  │  4  │ │  5  │ │  6  │        │
+│  └─────┘ └─────┘ └─────┘        │
+│  ┌─────┐ ┌─────┐ ┌─────┐        │
+│  │  7  │ │  8  │ │  9  │        │
+│  └─────┘ └─────┘ └─────┘        │
+│  ┌─────┐ ┌─────┐ ┌─────┐        │
+│  │ DEL │ │  0  │ │  ✓  │        │
+│  └─────┘ └─────┘ └─────┘        │
+│                                  │
+└──────────────────────────────────┘
+
+Numpad: 3×4 grid, 44px buttons, 8px gap
+PIN display: 6 dots, 12px diameter
+Animations: Shake on error, dot reveal on input
+States: Empty (all open dots), Partial (some filled), Full (all filled)
+Error: Red text, dots shake 200ms</div>
+                        <div class="component-spec">
+                            Button bg: #F5F4F2, hover: darker | Del button: error color (#EB295B)
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECTION 2: CASHIER -->
+                <div id="section2" class="section">
+                    <div class="wireframe">
+                        <div class="wireframe-title">💰 CashierScreen (Kassir Dashboard)</div>
+                        <p>Role-based main screen for cashiers. 4 tabs for different operations.</p>
+                        <div class="screen-layout">┌────────────────────────────────────────────────┐
+│ [←]  Mary AI POS       Cashier: Ali  11:02     │
+├────────────────────────────────────────────────┤
+│ [Блюда] [Касса ●] [Счета] [Настройки]         │
+├────────────────────────────────────────────────┤
+│                                                │
+│  (Tab content changes here)                    │
+│                                                │
+│                                                │
+├────────────────────────────────────────────────┤
+│ Кассир: Ali    11:02:31    30 Март 2026       │
+└────────────────────────────────────────────────┘</div>
+                        <div class="component-spec">
+                            Header: 56px | Tab bar: 56px | Footer: 56px | Content: flex
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECTION 3: WAITER -->
+                <div id="section3" class="section">
+                    <div class="wireframe">
+                        <div class="wireframe-title">👨‍💼 WaiterScreen (Ofitsant)</div>
+                        <p>Main screen for waiters. Shows table grid with order management.</p>
+                        <div class="screen-layout">┌────────────────────────────────────┐
+│ Restaurant Name    Time            │
+├────────────────────────────────────┤
+│ [Zal-1 ▼]  [All tables]            │
+├────────────────────────────────────┤
+│                                    │
+│  ┌─────────┐  ┌─────────┐         │
+│  │ 1-stol  │  │ 2-stol  │  ...    │
+│  │ Bo'sh   │  │ Band    │         │
+│  │ 4 kishi │  │ ⏱ 12min │         │
+│  └─────────┘  └─────────┘         │
+│                                    │
+│  ┌─────────┐  ┌─────────┐         │
+│  │ 3-stol  │  │ 4-stol  │         │
+│  │ Bron    │  │ Bo'sh   │         │
+│  │ 🔔      │  │ 2 kishi │         │
+│  └─────────┘  └─────────┘         │
+│                                    │
+└────────────────────────────────────┘</div>
+                        <div class="component-spec">
+                            Table card: 200×150px | Border: 2px | Radius: 14px
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECTION 4-9: OTHER SCREENS -->
+                <div id="section4" class="section">
+                    <div class="wireframe">
+                        <div class="wireframe-title">💳 PaymentScreen</div>
+                        <p>Payment method selection and amount entry.</p>
+                        <div class="screen-layout">Payment methods: Naqd | Karta | Online
+Amount display + numpad
+Change calculator
+Confirm button</div>
+                    </div>
+                </div>
+
+                <div id="section5" class="section">
+                    <div class="wireframe">
+                        <div class="wireframe-title">📦 ArchiveScreen</div>
+                        <p>Bills history with filtering and detail view.</p>
+                        <div class="screen-layout">Filter bar (date range, type, status)
+Bills data table (columns: #, table, cashier, total, type, status, date)
+Bill detail side panel on tap</div>
+                    </div>
+                </div>
+
+                <div id="section6" class="section">
+                    <div class="wireframe">
+                        <div class="wireframe-title">🔴 CloseShiftScreen</div>
+                        <p>End-of-shift cash reconciliation and reporting.</p>
+                        <div class="screen-layout">Shift info card (cashier, start time, duration)
+Stats row: 4 cards (cash, card, total, shift #)
+Payment breakdown (progress bars)
+Right panel: Cash/Card input + numpad
+Close Shift / Cancel buttons</div>
+                    </div>
+                </div>
+
+                <div id="section7" class="section">
+                    <div class="wireframe">
+                        <div class="wireframe-title">🔔 NotificationScreen</div>
+                        <p>List of restaurant notifications and updates.</p>
+                        <div class="screen-layout">Notification list items
+Icon + title + timestamp + unread indicator
+Empty state when no notifications</div>
+                    </div>
+                </div>
+
+                <div id="section8" class="section">
+                    <div class="wireframe">
+                        <div class="wireframe-title">👨‍💼 AdminScreen</div>
+                        <p>Full administrative dashboard (coming soon).</p>
+                        <div class="screen-layout">Placeholder: "Keyinchalik qo'shiladi"
+Admin role badge
+Full access indicator</div>
+                    </div>
+                </div>
+
+                <div id="section9" class="section">
+                    <div class="wireframe">
+                        <div class="wireframe-title">🎨 Components Library</div>
+                        <div class="component-spec" style="margin-left: 0;">
+                            <strong>Buttons:</strong> Primary, Secondary, Danger, Ghost<br>
+                            <strong>Badges:</strong> Status (free/busy/booked), Role, Loyalty<br>
+                            <strong>Cards:</strong> Stat card, Product card, Table card, Bill row<br>
+                            <strong>Input:</strong> Text field, Numpad display, Search<br>
+                            <strong>Navigation:</strong> Sidebar nav item, Tab bar<br>
+                            <strong>Other:</strong> Progress bar, Toggle switch, Badge
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SUB SECTIONS -->
+                <div id="section20" class="section">
+                    <div class="wireframe">
+                        <div class="wireframe-title">Kassir Tab 1: Блюда (Dishes)</div>
+                        <p>Menu management with sidebar navigation.</p>
+                        <div class="screen-layout">┌──────────────┬─────────────────────┐
+│ Left Sidebar │ Content Area        │
+│ 200px        │ (flex)              │
+├──────────────┼─────────────────────┤
+│ Отдел        │ Categories grid     │
+│ Категория ●  │ or Products grid    │
+│ Блюда        │ or Table list       │
+│ Модификаторы │                     │
+│ Позиции блюд │                     │
+│ Стол-list    │                     │
+└──────────────┴─────────────────────┘</div>
+                    </div>
+                </div>
+
+                <div id="section21" class="section">
+                    <div class="wireframe">
+                        <div class="wireframe-title">Kassir Tab 2: Касса (Cash Register)</div>
+                        <p>Main cashier operations dashboard.</p>
+                        <div class="screen-layout">┌─────────────────────┬──────────────────┐
+│ LEFT                │ RIGHT            │
+│ Shift info card     │ Stats Cards (3)  │
+│ Action buttons (5)  │ Payment breakdown│
+│ Close Shift button  │                  │
+└─────────────────────┴──────────────────┘</div>
+                    </div>
+                </div>
+
+                <div id="section22" class="section">
+                    <div class="wireframe">
+                        <div class="wireframe-title">Kassir Tab 3: Счета (Bills)</div>
+                        <p>Bills history with filtering.</p>
+                        <div class="screen-layout">Sub-filter tabs: [All] [Bills] [Delivery] [Distribution]
+Bill list rows (scrollable)
+Tap → bill detail side panel</div>
+                    </div>
+                </div>
+
+                <div id="section23" class="section">
+                    <div class="wireframe">
+                        <div class="wireframe-title">Kassir Tab 4: Настройки (Settings)</div>
+                        <p>Configuration and management screens.</p>
+                        <div class="screen-layout">Settings list items:
+├─ Персонал ресторана (Staff)
+├─ Залы (Halls)
+└─ Настройки принтеров (Printer config)</div>
+                    </div>
+                </div>
+
+                <div id="section30" class="section">
+                    <div class="wireframe">
+                        <div class="wireframe-title">Ofitsant: Stol Grid</div>
+                        <p>Main waiter view showing all tables with status.</p>
+                        <div class="component-spec" style="margin-left: 0;">
+                            Table cards: 200×150px | Border-radius: 14px<br>
+                            States: Free (gray), Busy/Band (orange), Booked (blue)<br>
+                            Waiting time: Orange badge with icon<br>
+                            Alert: Red 🚨 badge<br>
+                            Action buttons: 🔔 (kitchen notify), 📝 (notes), 💳 (split bill)
+                        </div>
+                    </div>
+                </div>
+
+                <div id="section31" class="section">
+                    <div class="wireframe">
+                        <div class="wireframe-title">Ofitsant: Order Detail Screen</div>
+                        <p>Detailed table order and menu selection.</p>
+                        <div class="screen-layout">┌─────────────┬──────────────────────┐
+│ LEFT: Order │ RIGHT: Menu Grid     │
+│ Sidebar     │                      │
+│ Items list  │ [Categories tabs]    │
+│ Totals      │ [Products grid]      │
+│ Payment btn │                      │
+└─────────────┴──────────────────────┘</div>
+                    </div>
+                </div>
+
+                <div id="section32" class="section">
+                    <div class="wireframe">
+                        <div class="wireframe-title">Ofitsant: Modals</div>
+                        <div class="component-spec" style="margin-left: 0;">
+                            <strong>Item Notes Modal:</strong> Text input + suggestion chips<br>
+                            <strong>Split Bill Modal:</strong> Total display + tip % buttons + per-person calc<br>
+                            <strong>Kitchen Notify:</strong> Simple confirmation dialog
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showSection(id) {
+            // Hide all sections
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+
+            // Remove active from all sidebar items
+            document.querySelectorAll('.sidebar-item').forEach(s => s.classList.remove('active'));
+
+            // Show selected section
+            document.getElementById('section' + id).classList.add('active');
+
+            // Activate sidebar item
+            event.target.classList.add('active');
+
+            // Update header
+            const titles = {
+                0: 'Overview',
+                1: 'Auth Flow',
+                2: 'CashierScreen',
+                3: 'WaiterScreen',
+                4: 'PaymentScreen',
+                5: 'ArchiveScreen',
+                6: 'CloseShiftScreen',
+                7: 'NotificationScreen',
+                8: 'AdminScreen',
+                9: 'Components',
+                20: 'Kassir: Блюда',
+                21: 'Kassir: Касса',
+                22: 'Kassir: Счета',
+                23: 'Kassir: Настройки',
+                30: 'Ofitsant: Stol Grid',
+                31: 'Ofitsant: Order Detail',
+                32: 'Ofitsant: Modals'
+            };
+            document.getElementById('header-title').textContent = titles[id] || 'Section';
+        }
+    </script>
+</body>
+</html>

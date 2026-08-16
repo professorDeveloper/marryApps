@@ -1,0 +1,154 @@
+name: mary_ai_pos
+description: "A new Flutter project."
+# The following line prevents the package from being accidentally published to
+# pub.dev using `flutter pub publish`. This is preferred for private packages.
+publish_to: "none" # Remove this line if you wish to publish to pub.dev
+
+# The following defines the version and build number for your application.
+# A version number is three numbers separated by dots, like 1.2.43
+# followed by an optional build number separated by a +.
+# Both the version and the builder number may be overridden in flutter
+# build by specifying --build-name and --build-number, respectively.
+# In Android, build-name is used as versionName while build-number used as versionCode.
+# Read more about Android versioning at https://developer.android.com/studio/publish/versioning
+# In iOS, build-name is used as CFBundleShortVersionString while build-number is used as CFBundleVersion.
+# Read more about iOS versioning at
+# https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
+# In Windows, build-name is used as the major, minor, and patch parts
+# of the product and file versions while build-number is used as the build suffix.
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.10.4
+
+# Dependencies specify other packages that your package needs in order to work.
+# To automatically upgrade your package dependencies to the latest versions
+# consider running `flutter pub upgrade --major-versions`. Alternatively,
+# dependencies can be manually updated by changing the version numbers below to
+# the latest version available on pub.dev. To see which dependencies have newer
+# versions available, run `flutter pub outdated`.
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # The following adds the Cupertino Icons font to your application.
+  # Use with the CupertinoIcons class for iOS style icons.
+  intl: ^0.20.2
+  intl_utils: ^2.8.5
+  flutter_localizations:
+    sdk: flutter
+  cupertino_icons: ^1.0.6
+  # to use svg icons
+  flutter_svg: ^2.0.7
+  # cached network image
+  cached_network_image: ^3.3.0
+  # anotation
+  freezed: ^2.4.3
+  json_serializable: ^6.5.4
+  json_annotation: ^4.8.1
+  dartz: ^0.10.1
+  freezed_annotation: ^2.4.1
+  # state mangment
+  rxdart: ^0.28.0
+  flutter_bloc: ^8.1.1
+  equatable: ^2.0.5
+  # injector
+  get_it: ^7.2.0
+  # for api
+  dio: ^5.9.1
+  pretty_dio_logger: ^1.4.0
+  # Flutter plugin for local db for small data
+  shared_preferences: ^2.5.4
+  # for animation button
+  scale_button: ^2.1.2
+  # for animation
+  animate_do: ^3.0.2
+  # This Flutter plugin provides an API for querying information about an application package.
+  package_info_plus: ^8.0.1
+  # which format the input by a given mask.
+  mask_text_input_formatter: ^2.5.0
+  # Get current device information from within the Flutter application.
+  device_info_plus: ^12.3.0
+  # use for shimmer loading
+  shimmer: ^3.0.0
+  # a widget provided to the flutter scroll component drop-down refresh and pull up load.support android and ios.
+  pull_to_refresh: ^2.0.0
+  # Use this package if you need more customization when notifying your user.
+  keyboard_dismisser: ^3.0.0
+  fluent_ui: ^4.13.0
+  animated_snack_bar: ^0.4.0
+  device_preview: ^1.2.0
+  virtual_keyboard_multi_language: ^1.1.2
+  window_manager: ^0.5.1
+  flutter_acrylic: ^1.1.4
+  alice: ^1.0.0
+  alice_dio: ^1.0.7
+
+  # Thermal printer (ESC/POS over TCP/IP + Windows USB)
+  win32: ^5.5.0
+  ffi: ^2.1.0
+  esc_pos_utils_plus: ^2.0.4
+  windows1251: ^2.0.1
+  charset: ^2.0.1
+  file_selector: ^1.1.0
+  number_paginator: ^1.1.2
+  hive_flutter: ^1.1.0
+  connectivity_plus: ^6.1.4
+
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^6.0.0
+  build_runner: ^2.4.6
+  flutter_gen_runner: 5.8.0
+  hive_generator: ^2.0.1
+  flutter_launcher_icons: ^0.14.4
+
+flutter_gen:
+  output: lib/gen/
+  integrations:
+    flutter_svg: true
+  assets:
+    enabled: true
+    exclude:
+      - assets/fonts/**
+  fonts:
+    enabled: false
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/fonts/
+    - assets/images/
+    - assets/icons/
+    - shorebird.yaml
+
+fonts:
+  - family: Inter
+    fonts:
+      - asset: assets/fonts/Inter.ttf
+  # Slate Dawn dizayn sistemasi (frontend/style.md) — Manrope UI uchun,
+  # JetBrains Mono raqamlar/kodlar uchun. Ikkalasi ham variable TTF (wght
+  # o'qi), SIL Open Font License 1.1.
+  - family: Manrope
+    fonts:
+      - asset: assets/fonts/Manrope.ttf
+  - family: JetBrainsMono
+    fonts:
+      - asset: assets/fonts/JetBrainsMono.ttf
+
+flutter_intl:
+  enabled: true
+
+flutter_launcher_icons:
+  image_path: assets/images/mary_logo.png
+  android: true
+  ios: true
+  macos:
+    generate: true
+  windows:
+    generate: true
+    image_path: assets/images/mary_logo.png

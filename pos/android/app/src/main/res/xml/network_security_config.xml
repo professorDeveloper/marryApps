@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Ofitsiant ilovasi POS bilan LAN orqali oddiy HTTP'da gaplashadi
+  (http://192.168.x.x:28080). Android 9 (API 28) dan boshlab cleartext
+  trafik sukut bo'yicha bloklangan — busiz har bir so'rov
+  "Cleartext HTTP traffic not permitted" bilan yiqiladi.
+
+  Nega IP bo'yicha cheklamadik: POS manzili DHCP orqali beriladi va
+  discovery paytida aniqlanadi, ya'ni oldindan ma'lum emas. Android
+  `domain-config` da IP diapazon (masalan 192.168.0.0/16) yozishga
+  ruxsat bermaydi — faqat aniq domen/host. Shu sababli cleartext
+  umumiy yoqilgan.
+
+  Bu bulut aloqasini zaiflashtirmaydi: `BASE_URL` = https://api.maryai.uz/
+  va HTTPS URL cleartext ruxsatidan qat'i nazar HTTPS bo'lib qoladi.
+  Xavf faqat kimdir bulutga bilib turib http:// yozsa paydo bo'ladi.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>
