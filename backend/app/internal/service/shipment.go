@@ -1,0 +1,1288 @@
+package service
+
+import (
+	"context"
+	"fmt"
+	"math/big"
+	"strings"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
+
+	"gitlab.yurtal.tech/company/maryai/back/internal/model"
+	"gitlab.yurtal.tech/company/maryai/back/internal/repository"
+	pg "gitlab.yurtal.tech/company/maryai/back/internal/repository/pg/tenantsdb"
+)
+
+type ShipmentI interface {
+	CreateShipment(ctx context.Context, req *model.CreateShipmentRequest) (*model.ShipmentResponse, error)
+	CreateShipmentBatch(ctx context.Context, req *model.CreateShipmentBatchRequest) (*model.ShipmentWithItemsResponse, error)
+	UpdateShipmentBatch(ctx context.Context, id string, req *model.UpdateShipmentBatchRequest) (*model.ShipmentWithItemsResponse, error)
+	GetShipment(ctx context.Context, id string) (*model.ShipmentWithItemsResponse, error)
+	ListShipments(ctx context.Context, storageID, supplierID, status *string, startDate, endDate *string, limit, offset int32) ([]*model.ShipmentResponse, int64, string, error)
+	UpdateShipment(ctx context.Context, id string, req *model.UpdateShipmentRequest) (*model.ShipmentResponse, error)
+	DeleteShipment(ctx context.Context, id string) error
+	UpsertShipmentItems(ctx context.Context, shipmentID string, req *model.UpsertShipmentItemsRequest) ([]model.ShipmentItemResponse, error)
+	DeleteShipmentItem(ctx context.Context, itemID string) error
+}
+
+type ShipmentS struct {
+	repo *repository.Repository
+}
+
+func NewShipmentS(repo *repository.Repository) *ShipmentS {
+	return &ShipmentS{repo: repo}
+}
+
+func (s *ShipmentS) getTenantMutationQueries(ctx context.Context) (*pg.Queries, context.Context, pgx.Tx, bool, error) {
+	if existingTx, ok := repository.TenantTxFromContext(ctx); ok && existingTx != nil {
+		if q, ok := repository.TenantQueriesFromContext(ctx); ok && q != nil {
+			return q, ctx, existingTx, false, nil
+		}
+		q := pg.New(existingTx)
+		txCtx := repository.WithTenantQueries(ctx, q)
+		return q, txCtx, existingTx, false, nil
+	}
+
+	tx, err := s.repo.PgRepo.TenantPool.Begin(ctx)
+	if err != nil {
+		return nil, nil, nil, false, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+
+	brandID, _ := ctx.Value("brand_id").(string)
+	brandID = strings.TrimSpace(brandID)
+	if brandID == "" {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("brand_id is missing in context")
+	}
+
+	schemaName := fmt.Sprintf("tenant_%s", brandID)
+	if _, err := tx.Exec(ctx, fmt.Sprintf(`SET LOCAL search_path TO "%s", public`, schemaName)); err != nil {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("failed to set tenant search_path: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx, "SET LOCAL app.brand_id = $1", brandID); err != nil {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("failed to set app.brand_id: %w", err)
+	}
+
+	if branchID, _ := ctx.Value("branch_id").(string); strings.TrimSpace(branchID) != "" {
+		if _, err := tx.Exec(ctx, "SET LOCAL app.branch_id = $1", strings.TrimSpace(branchID)); err != nil {
+			tx.Rollback(ctx)
+			return nil, nil, nil, false, fmt.Errorf("failed to set app.branch_id: %w", err)
+		}
+	}
+
+	q := pg.New(tx)
+	txCtx := repository.WithTenantQueries(ctx, q)
+
+	return q, txCtx, tx, true, nil
+}
+
+type shipmentTouchedKey struct {
+	StorageID    uuid.UUID
+	IngredientID uuid.UUID
+}
+
+func shipmentEffectiveAt(ts pgtype.Timestamptz) *pgtype.Timestamptz {
+	if !ts.Valid {
+		return nil
+	}
+	effective := pgtype.Timestamptz{
+		Time:  ts.Time.In(time.UTC),
+		Valid: true,
+	}
+	return &effective
+}
+
+func shipmentFreezeDate(ts pgtype.Timestamp, entityName string) (time.Time, error) {
+	if !ts.Valid {
+		return time.Time{}, fmt.Errorf("%s date is required for inventory freeze check", entityName)
+	}
+	return ts.Time, nil
+}
+
+func assertCanMutateShipmentCurrent(ctx context.Context, q *pg.Queries, sh pg.Shipment, entityName string) error {
+	if !sh.StorageID.Valid {
+		return nil
+	}
+
+	effectiveAt, err := shipmentFreezeDate(sh.Date, entityName)
+	if err != nil {
+		return err
+	}
+
+	return assertCanMutateAfterInventory(ctx, q, sh.StorageID.Bytes, effectiveAt, entityName)
+}
+
+func assertCanMutateShipmentTarget(ctx context.Context, q *pg.Queries, storageID pgtype.UUID, shipmentDate pgtype.Timestamp, entityName string) error {
+	if !storageID.Valid {
+		return nil
+	}
+
+	effectiveAt, err := shipmentFreezeDate(shipmentDate, entityName)
+	if err != nil {
+		return err
+	}
+
+	return assertCanMutateAfterInventory(ctx, q, storageID.Bytes, effectiveAt, entityName)
+}
+
+func assertCanMutateShipmentChange(ctx context.Context, q *pg.Queries, current pg.Shipment, targetStorage pgtype.UUID, targetDate pgtype.Timestamp, entityName string) error {
+	if err := assertCanMutateShipmentCurrent(ctx, q, current, entityName); err != nil {
+		return err
+	}
+
+	if err := assertCanMutateShipmentTarget(ctx, q, targetStorage, targetDate, entityName); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *ShipmentS) rebalanceShipmentIngredientLedger(
+	ctx context.Context,
+	q *pg.Queries,
+	storageID pgtype.UUID,
+	ingredientID uuid.UUID,
+) error {
+	return rebalanceIngredientStockLedger(ctx, q, storageID, ingredientID, "shipment")
+}
+
+func (s *ShipmentS) CreateShipment(ctx context.Context, req *model.CreateShipmentRequest) (*model.ShipmentResponse, error) {
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	params := pg.CreateShipmentParams{
+		Date:    pgtype.Timestamp{Time: time.Now(), Valid: true},
+		Column5: pg.ShipmentStatusDraft,
+	}
+	if req.Date != nil {
+		if t, err := time.Parse(time.RFC3339, *req.Date); err == nil {
+			params.Date = pgtype.Timestamp{Time: t, Valid: true}
+		}
+	}
+	if req.StorageID != nil {
+		if id, err := uuid.Parse(*req.StorageID); err == nil {
+			params.StorageID = pgtype.UUID{Bytes: id, Valid: true}
+		}
+	}
+	if req.SupplierID != nil {
+		if id, err := uuid.Parse(*req.SupplierID); err == nil {
+			params.SupplierID = pgtype.UUID{Bytes: id, Valid: true}
+		}
+	}
+	if req.Description != nil {
+		params.Description = req.Description
+	}
+	if req.Status != nil {
+		st := pg.ShipmentStatus(*req.Status)
+		if st == pg.ShipmentStatusActive || st == pg.ShipmentStatusDraft {
+			params.Column5 = st
+		}
+	}
+
+	if err := assertCanMutateShipmentTarget(txCtx, q, params.StorageID, params.Date, "shipment"); err != nil {
+		return nil, err
+	}
+
+	row, err := q.CreateShipment(txCtx, params)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create shipment: %w", err)
+	}
+
+	// If created as active, immediately deduct stock
+	if row.Status == pg.ShipmentStatusActive && row.StorageID.Valid {
+		shipmentDate := pgtype.Timestamptz{}
+		if row.Date.Valid {
+			shipmentDate = pgtype.Timestamptz{Time: row.Date.Time.In(time.UTC), Valid: true}
+		}
+		if err := s.deductStock(txCtx, q, row.ID, row.StorageID, string(pg.ShipmentOut), shipmentDate); err != nil {
+			return nil, err
+		}
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
+	return shipmentToResponse(row), nil
+}
+
+func (s *ShipmentS) GetShipment(ctx context.Context, id string) (*model.ShipmentWithItemsResponse, error) {
+	shipmentID, err := uuid.Parse(id)
+	if err != nil {
+		return nil, fmt.Errorf("invalid shipment id: %w", err)
+	}
+
+	var row pg.Shipment
+	var items []pg.ShipmentItem
+
+	err = withTenantRead(ctx, s.repo, func(tenantCtx context.Context, q *pg.Queries) error {
+		var err error
+		row, err = q.GetShipmentByID(tenantCtx, shipmentID)
+		if err != nil {
+			return fmt.Errorf("shipment not found: %w", err)
+		}
+
+		items, err = q.GetShipmentItemsByShipmentID(tenantCtx, shipmentID)
+		if err != nil {
+			return fmt.Errorf("failed to get shipment items: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	itemResponses := make([]model.ShipmentItemResponse, 0, len(items))
+	for _, it := range items {
+		resp := shipmentItemToResponse(it)
+
+		// draft bo'lsa stock preview / snapshot ko'rsatmaymiz
+		if row.Status == pg.ShipmentStatusDraft {
+			itemResponses = append(itemResponses, hideShipmentDraftStockSnapshot(resp, row.Status))
+			continue
+		}
+
+		// snapshot save qilingan bo'lsa o'shani ko'rsatamiz, bo'lmasa fallback preview
+		snapshotSaved := it.StockBefore.Valid && it.StockAfter.Valid &&
+			!(resp.StockBefore == "0" && resp.StockAfter == "0")
+
+		if !snapshotSaved && row.StorageID.Valid {
+			var stock pg.IngredientStock
+			err = withTenantRead(ctx, s.repo, func(tenantCtx context.Context, q *pg.Queries) error {
+				var err error
+				stock, err = q.GetStockByIngredientAndStorage(tenantCtx, pg.GetStockByIngredientAndStorageParams{
+					IngredientID: it.IngredientID,
+					StorageID:    row.StorageID,
+				})
+				return err
+			})
+
+			currentQty := 0.0
+			if err == nil {
+				resp.StockBefore = pgNumericToStr(stock.Quantity)
+				v, _ := stock.Quantity.Float64Value()
+				currentQty = v.Float64
+			} else {
+				resp.StockBefore = "0"
+			}
+
+			itemQty, _ := it.Quantity.Float64Value()
+			projected := currentQty - itemQty.Float64
+			projN := pgtype.Numeric{}
+			_ = projN.Scan(fmt.Sprintf("%g", projected))
+			resp.StockAfter = pgNumericToStr(projN)
+		}
+
+		itemResponses = append(itemResponses, resp)
+	}
+
+	return &model.ShipmentWithItemsResponse{
+		Shipment: *shipmentToResponse(row),
+		Items:    itemResponses,
+	}, nil
+}
+
+func (s *ShipmentS) CreateShipmentBatch(ctx context.Context, req *model.CreateShipmentBatchRequest) (*model.ShipmentWithItemsResponse, error) {
+	// Always create header as draft so items exist before any stock deduction
+	shipmentResp, err := s.CreateShipment(ctx, &model.CreateShipmentRequest{
+		Date:        req.Date,
+		StorageID:   req.StorageID,
+		SupplierID:  req.SupplierID,
+		Description: req.Description,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if _, err := s.UpsertShipmentItems(ctx, shipmentResp.ID, &model.UpsertShipmentItemsRequest{Items: req.Items}); err != nil {
+		return nil, err
+	}
+	// If caller requested active, activate now — items exist so stock deduction is correct
+	if req.Status != nil && *req.Status == string(pg.ShipmentStatusActive) {
+		active := string(pg.ShipmentStatusActive)
+		if _, err := s.UpdateShipment(ctx, shipmentResp.ID, &model.UpdateShipmentRequest{Status: &active}); err != nil {
+			return nil, err
+		}
+	}
+	return s.GetShipment(ctx, shipmentResp.ID)
+}
+
+func (s *ShipmentS) UpdateShipmentBatch(ctx context.Context, id string, req *model.UpdateShipmentBatchRequest) (*model.ShipmentWithItemsResponse, error) {
+	// Update header
+	if _, err := s.UpdateShipment(ctx, id, &model.UpdateShipmentRequest{
+		Date:        req.Date,
+		StorageID:   req.StorageID,
+		SupplierID:  req.SupplierID,
+		Description: req.Description,
+	}); err != nil {
+		return nil, err
+	}
+	// Upsert items
+	if _, err := s.UpsertShipmentItems(ctx, id, &model.UpsertShipmentItemsRequest{Items: req.Items}); err != nil {
+		return nil, err
+	}
+	return s.GetShipment(ctx, id)
+}
+
+func (s *ShipmentS) ListShipments(ctx context.Context, storageID, supplierID, status *string, startDate, endDate *string, limit, offset int32) ([]*model.ShipmentResponse, int64, string, error) {
+	var result []*model.ShipmentResponse
+	var total int64
+	var totalAmountSum string
+
+	err := withTenantRead(ctx, s.repo, func(tenantCtx context.Context, q *pg.Queries) error {
+		listParams := pg.ListShipmentsParams{Limit: limit, Offset: offset}
+		countParams := pg.CountShipmentsParams{}
+		sumParams := pg.SumShipmentsTotalAmountParams{}
+
+		if storageID != nil {
+			listParams.Column1 = *storageID
+			countParams.Column1 = *storageID
+			sumParams.Column1 = *storageID
+		}
+		if supplierID != nil {
+			listParams.Column2 = *supplierID
+			countParams.Column2 = *supplierID
+			sumParams.Column2 = *supplierID
+		}
+		if status != nil {
+			listParams.Column3 = *status
+			countParams.Column3 = *status
+			sumParams.Column3 = *status
+		}
+		if startDate != nil {
+			if t, err := time.Parse(time.RFC3339, *startDate); err == nil {
+				ts := pgtype.Timestamp{Time: t, Valid: true}
+				listParams.Column4 = ts
+				countParams.Column4 = ts
+				sumParams.Column4 = ts
+			}
+		}
+		if endDate != nil {
+			if t, err := time.Parse(time.RFC3339, *endDate); err == nil {
+				ts := pgtype.Timestamp{Time: t, Valid: true}
+				listParams.Column5 = ts
+				countParams.Column5 = ts
+				sumParams.Column5 = ts
+			}
+		}
+
+		rows, err := q.ListShipments(tenantCtx, listParams)
+		if err != nil {
+			return fmt.Errorf("failed to list shipments: %w", err)
+		}
+		total, err = q.CountShipments(tenantCtx, countParams)
+		if err != nil {
+			return fmt.Errorf("failed to count shipments: %w", err)
+		}
+		sumN, err := q.SumShipmentsTotalAmount(tenantCtx, sumParams)
+		totalAmountSum = "0"
+		if err == nil {
+			totalAmountSum = pgNumericToStr(sumN)
+		}
+
+		result = make([]*model.ShipmentResponse, 0, len(rows))
+		for _, row := range rows {
+			result = append(result, shipmentToResponse(row))
+		}
+		return nil
+	})
+
+	if err != nil {
+		return nil, 0, "0", err
+	}
+
+	return result, total, totalAmountSum, nil
+}
+
+func (s *ShipmentS) UpdateShipment(ctx context.Context, id string, req *model.UpdateShipmentRequest) (*model.ShipmentResponse, error) {
+	shipmentID, err := uuid.Parse(id)
+	if err != nil {
+		return nil, fmt.Errorf("invalid shipment id: %w", err)
+	}
+
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	current, err := q.GetShipmentByID(txCtx, shipmentID)
+	if err != nil {
+		return nil, fmt.Errorf("shipment not found: %w", err)
+	}
+
+	// Build effective target values first.
+	effectiveDate := current.Date
+	if req.Date != nil && strings.TrimSpace(*req.Date) != "" {
+		t, err := time.Parse(time.RFC3339, strings.TrimSpace(*req.Date))
+		if err != nil {
+			return nil, fmt.Errorf("invalid date: %w", err)
+		}
+		effectiveDate = pgtype.Timestamp{Time: t, Valid: true}
+	}
+
+	effectiveStorage := current.StorageID
+	if req.StorageID != nil && strings.TrimSpace(*req.StorageID) != "" {
+		stID, err := uuid.Parse(strings.TrimSpace(*req.StorageID))
+		if err != nil {
+			return nil, fmt.Errorf("invalid storage_id: %w", err)
+		}
+		effectiveStorage = pgtype.UUID{Bytes: stID, Valid: true}
+	}
+
+	targetStatus := current.Status
+	if req.Status != nil && strings.TrimSpace(*req.Status) != "" {
+		targetStatus = pg.ShipmentStatus(strings.TrimSpace(*req.Status))
+	}
+
+	// Validate requested transition before any DB write.
+	if req.Status != nil && strings.TrimSpace(*req.Status) != "" {
+		switch {
+		case current.Status == pg.ShipmentStatusDraft && targetStatus == pg.ShipmentStatusActive:
+			// allowed
+		case current.Status == pg.ShipmentStatusActive && targetStatus == pg.ShipmentStatusDraft:
+			// allowed
+		case current.Status == targetStatus:
+			// no-op status update, allowed
+		default:
+			return nil, fmt.Errorf("invalid shipment status transition: %s -> %s", current.Status, targetStatus)
+		}
+	}
+
+	// Historical lock check for both current and target state.
+	if err := assertCanMutateShipmentChange(txCtx, q, current, effectiveStorage, effectiveDate, "shipment"); err != nil {
+		return nil, err
+	}
+
+	// Build update params for header fields only.
+	params := pg.UpdateShipmentParams{ID: shipmentID}
+	if effectiveDate.Valid {
+		params.Date = effectiveDate
+	}
+	if effectiveStorage.Valid {
+		params.StorageID = effectiveStorage
+	}
+
+	if req.SupplierID != nil && strings.TrimSpace(*req.SupplierID) != "" {
+		supplierID, err := uuid.Parse(strings.TrimSpace(*req.SupplierID))
+		if err != nil {
+			return nil, fmt.Errorf("invalid supplier_id: %w", err)
+		}
+		params.SupplierID = pgtype.UUID{Bytes: supplierID, Valid: true}
+	}
+
+	if req.Description != nil {
+		params.Description = req.Description
+	}
+
+	row, err := q.UpdateShipment(txCtx, params)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update shipment: %w", err)
+	}
+
+	sameStorage := current.StorageID.Valid == row.StorageID.Valid &&
+		(!current.StorageID.Valid || current.StorageID.Bytes == row.StorageID.Bytes)
+
+	dateChanged := current.Date.Valid &&
+		row.Date.Valid &&
+		!current.Date.Time.Equal(row.Date.Time)
+
+	switch {
+	// draft -> active
+	case current.Status == pg.ShipmentStatusDraft && targetStatus == pg.ShipmentStatusActive:
+		if !row.StorageID.Valid {
+			return nil, fmt.Errorf("shipment must have a storage selected before activating")
+		}
+
+		items, err := q.GetShipmentItemsByShipmentID(txCtx, shipmentID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get shipment items: %w", err)
+		}
+		if len(items) == 0 {
+			return nil, fmt.Errorf("shipment has no items")
+		}
+
+		shipmentDate := pgtype.Timestamptz{}
+		if row.Date.Valid {
+			shipmentDate = pgtype.Timestamptz{
+				Time:  row.Date.Time.In(time.UTC),
+				Valid: true,
+			}
+		}
+
+		if err := s.deductStock(txCtx, q, shipmentID, row.StorageID, "shipment_out", shipmentDate); err != nil {
+			return nil, fmt.Errorf("failed to deduct stock on shipment activation: %w", err)
+		}
+
+		activated, err := q.ActivateShipment(txCtx, shipmentID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to activate shipment: %w", err)
+		}
+		row = activated
+
+	// active -> draft
+	case current.Status == pg.ShipmentStatusActive && targetStatus == pg.ShipmentStatusDraft:
+		if current.StorageID.Valid {
+			oldShipmentDate := pgtype.Timestamptz{}
+			if current.Date.Valid {
+				oldShipmentDate = pgtype.Timestamptz{
+					Time:  current.Date.Time.In(time.UTC),
+					Valid: true,
+				}
+			}
+
+			if err := s.reverseStock(txCtx, q, shipmentID, current.StorageID, "shipment_deactivated", oldShipmentDate); err != nil {
+				return nil, fmt.Errorf("failed to reverse stock on shipment deactivation: %w", err)
+			}
+		}
+
+		deactivated, err := q.DeactivateShipment(txCtx, shipmentID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to deactivate shipment: %w", err)
+		}
+		row = deactivated
+
+	// active -> active with storage change
+	case current.Status == pg.ShipmentStatusActive && targetStatus == pg.ShipmentStatusActive && !sameStorage:
+		if !current.StorageID.Valid {
+			return nil, fmt.Errorf("current active shipment has no storage_id")
+		}
+		if !row.StorageID.Valid {
+			return nil, fmt.Errorf("updated active shipment has no storage_id")
+		}
+
+		oldShipmentDate := pgtype.Timestamptz{}
+		if current.Date.Valid {
+			oldShipmentDate = pgtype.Timestamptz{
+				Time:  current.Date.Time.In(time.UTC),
+				Valid: true,
+			}
+		}
+
+		newShipmentDate := pgtype.Timestamptz{}
+		if row.Date.Valid {
+			newShipmentDate = pgtype.Timestamptz{
+				Time:  row.Date.Time.In(time.UTC),
+				Valid: true,
+			}
+		}
+
+		if err := s.reverseStock(txCtx, q, shipmentID, current.StorageID, "shipment_storage_change", oldShipmentDate); err != nil {
+			return nil, fmt.Errorf("failed to reverse old storage on shipment storage change: %w", err)
+		}
+
+		if err := s.deductStock(txCtx, q, shipmentID, row.StorageID, "shipment_storage_change_out", newShipmentDate); err != nil {
+			return nil, fmt.Errorf("failed to deduct new storage on shipment storage change: %w", err)
+		}
+
+	// active -> active with same storage but date change
+	case current.Status == pg.ShipmentStatusActive && targetStatus == pg.ShipmentStatusActive && sameStorage && dateChanged:
+		if !current.StorageID.Valid {
+			return nil, fmt.Errorf("current active shipment has no storage_id")
+		}
+
+		oldShipmentDate := pgtype.Timestamptz{}
+		if current.Date.Valid {
+			oldShipmentDate = pgtype.Timestamptz{
+				Time:  current.Date.Time.In(time.UTC),
+				Valid: true,
+			}
+		}
+
+		newShipmentDate := pgtype.Timestamptz{}
+		if row.Date.Valid {
+			newShipmentDate = pgtype.Timestamptz{
+				Time:  row.Date.Time.In(time.UTC),
+				Valid: true,
+			}
+		}
+
+		if err := s.reverseStock(txCtx, q, shipmentID, current.StorageID, "shipment_date_change", oldShipmentDate); err != nil {
+			return nil, fmt.Errorf("failed to reverse old shipment date contribution: %w", err)
+		}
+
+		if err := s.deductStock(txCtx, q, shipmentID, row.StorageID, "shipment_date_change_out", newShipmentDate); err != nil {
+			return nil, fmt.Errorf("failed to deduct shipment on new date: %w", err)
+		}
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
+	return shipmentToResponse(row), nil
+}
+func (s *ShipmentS) DeleteShipment(ctx context.Context, id string) error {
+	shipmentID, err := uuid.Parse(id)
+	if err != nil {
+		return fmt.Errorf("invalid shipment id: %w", err)
+	}
+
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	shipment, err := q.GetShipmentByID(txCtx, shipmentID)
+	if err != nil {
+		return fmt.Errorf("shipment not found: %w", err)
+	}
+	if err := assertCanMutateShipmentCurrent(txCtx, q, shipment, "shipment"); err != nil {
+		return err
+	}
+
+	// Reverse stock if active
+	if shipment.Status == pg.ShipmentStatusActive && shipment.StorageID.Valid {
+		shipmentDate := pgtype.Timestamptz{}
+		if shipment.Date.Valid {
+			shipmentDate = pgtype.Timestamptz{Time: shipment.Date.Time.In(time.UTC), Valid: true}
+		}
+		if err := s.reverseStock(txCtx, q, shipmentID, shipment.StorageID, "shipment_deleted", shipmentDate); err != nil {
+			return fmt.Errorf("failed to reverse stock before deleting shipment: %w", err)
+		}
+	}
+
+	if err := q.DeleteShipment(txCtx, shipmentID); err != nil {
+		return fmt.Errorf("failed to delete shipment: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (s *ShipmentS) UpsertShipmentItems(ctx context.Context, shipmentID string, req *model.UpsertShipmentItemsRequest) ([]model.ShipmentItemResponse, error) {
+	sID, err := uuid.Parse(shipmentID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid shipment id: %w", err)
+	}
+
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	shipment, err := q.GetShipmentByID(txCtx, sID)
+	if err != nil {
+		return nil, fmt.Errorf("shipment not found: %w", err)
+	}
+
+	if err := assertCanMutateShipmentCurrent(txCtx, q, shipment, "shipment items"); err != nil {
+		return nil, err
+	}
+
+	// active shipment uchun old qty map kerak
+	oldQtyMap := make(map[uuid.UUID]pgtype.Numeric)
+	if shipment.Status == pg.ShipmentStatusActive {
+		existing, _ := q.GetShipmentItemsByShipmentID(txCtx, sID)
+		for _, ex := range existing {
+			oldQtyMap[ex.IngredientID] = ex.Quantity
+		}
+	}
+
+	results := make([]model.ShipmentItemResponse, 0, len(req.Items))
+	for _, r := range req.Items {
+		resp, err := s.upsertOneItem(txCtx, q, sID, shipment, &r, oldQtyMap)
+		if err != nil {
+			return nil, err
+		}
+		results = append(results, *resp)
+	}
+
+	if err := s.recalcShipmentTotal(txCtx, q, sID); err != nil {
+		return nil, err
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
+	return results, nil
+}
+
+// upsertOneItem saves a single item. For active shipments, immediately adjusts stock.
+func (s *ShipmentS) upsertOneItem(
+	ctx context.Context,
+	q *pg.Queries,
+	sID uuid.UUID,
+	shipment pg.Shipment,
+	req *model.UpsertShipmentItemRequest,
+	oldQtyMap map[uuid.UUID]pgtype.Numeric,
+) (*model.ShipmentItemResponse, error) {
+	// Convert shipment date to timestamptz for effective_at
+	var shipmentDate pgtype.Timestamptz
+	if shipment.Date.Valid {
+		shipmentDate = pgtype.Timestamptz{
+			Time:  shipment.Date.Time.In(time.UTC),
+			Valid: true,
+		}
+	}
+
+	iID, err := uuid.Parse(req.IngredientID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid ingredient id: %w", err)
+	}
+
+	qty := pgtype.Numeric{}
+	if err := qty.Scan(req.Quantity); err != nil {
+		return nil, fmt.Errorf("invalid quantity: %w", err)
+	}
+
+	ing, err := q.GetIngredientByID(ctx, iID)
+	if err != nil {
+		return nil, fmt.Errorf("ingredient not found: %w", err)
+	}
+
+	price := pgtype.Numeric{}
+	_ = price.Scan("0")
+	if ing.PricePerUnit.Valid {
+		price = ing.PricePerUnit
+	}
+
+	item, err := q.UpsertShipmentItem(ctx, pg.UpsertShipmentItemParams{
+		ShipmentID:   sID,
+		IngredientID: iID,
+		Quantity:     qty,
+		PricePerUnit: price,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to upsert shipment item: %w", err)
+	}
+
+	resp := shipmentItemToResponse(item)
+
+	// draft bo'lsa stock preview / snapshotni umuman ko'rsatmaymiz
+	if shipment.Status == pg.ShipmentStatusDraft {
+		resp = hideShipmentDraftStockSnapshot(resp, shipment.Status)
+		return &resp, nil
+	}
+
+	// Active shipment bo'lsa stockni real-time adjust qilamiz
+	if shipment.Status == pg.ShipmentStatusActive && shipment.StorageID.Valid {
+		stockID, err := q.EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
+			ID:           uuid.New(),
+			IngredientID: iID,
+			StorageID:    shipment.StorageID,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to ensure stock row: %w", err)
+		}
+
+		zero := pgtype.Numeric{}
+		_ = zero.Scan("0")
+		srcType := "shipment_item_upsert"
+		srcID := sID
+
+		// old item bo'lsa avval eski deductionni qaytaramiz
+		if oldQty, ok := oldQtyMap[iID]; ok {
+			locked, err := q.GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
+				IngredientID: iID,
+				StorageID:    shipment.StorageID,
+			})
+			if err != nil {
+				return nil, fmt.Errorf("failed to lock stock row for old qty reverse: %w", err)
+			}
+
+			restored, err := q.AddToIngredientStock(ctx, pg.AddToIngredientStockParams{
+				ID:       stockID,
+				Quantity: oldQty,
+			})
+			if err != nil {
+				return nil, fmt.Errorf("failed to restore old shipment qty: %w", err)
+			}
+
+			if !shouldSkipStockMovement(oldQty, zero) {
+				if err := q.InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+					ID:           uuid.New(),
+					StorageID:    uuid.UUID(shipment.StorageID.Bytes),
+					IngredientID: iID,
+					EventType:    "shipment_item_update_in",
+					QtyIn:        oldQty,
+					QtyOut:       zero,
+					StockBefore:  locked.Quantity,
+					StockAfter:   restored.Quantity,
+					PricePerUnit: price,
+					SourceType:   &srcType,
+					SourceID:     &srcID,
+					EffectiveAt:  shipmentEffectiveAt(shipmentDate),
+				}); err != nil {
+					return nil, fmt.Errorf("failed to insert old qty reverse movement: %w", err)
+				}
+			}
+		}
+
+		locked, err := q.GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
+			IngredientID: iID,
+			StorageID:    shipment.StorageID,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to lock stock row for new qty deduct: %w", err)
+		}
+
+		updated, err := q.RemoveFromIngredientStock(ctx, pg.RemoveFromIngredientStockParams{
+			ID:       stockID,
+			Quantity: qty,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to deduct shipment qty: %w", err)
+		}
+
+		item, err = q.UpdateShipmentItemStockSnapshot(ctx, pg.UpdateShipmentItemStockSnapshotParams{
+			ID:          item.ID,
+			StockBefore: locked.Quantity,
+			StockAfter:  updated.Quantity,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to save shipment item stock snapshot: %w", err)
+		}
+
+		if !shouldSkipStockMovement(zero, qty) {
+			if err := q.InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+				ID:           uuid.New(),
+				StorageID:    uuid.UUID(shipment.StorageID.Bytes),
+				IngredientID: iID,
+				EventType:    "shipment_item_update_out",
+				QtyIn:        zero,
+				QtyOut:       qty,
+				StockBefore:  locked.Quantity,
+				StockAfter:   updated.Quantity,
+				PricePerUnit: price,
+				SourceType:   &srcType,
+				SourceID:     &srcID,
+				EffectiveAt:  shipmentEffectiveAt(shipmentDate),
+			}); err != nil {
+				return nil, fmt.Errorf("failed to insert new qty deduct movement: %w", err)
+			}
+		}
+
+		if err := s.rebalanceShipmentIngredientLedger(
+			ctx,
+			q,
+			pgtype.UUID{Bytes: shipment.StorageID.Bytes, Valid: true},
+			iID,
+		); err != nil {
+			return nil, fmt.Errorf("failed to rebalance shipment item upsert ledger: %w", err)
+		}
+
+		resp = shipmentItemToResponse(item)
+		return &resp, nil
+	}
+
+	return &resp, nil
+}
+
+func (s *ShipmentS) DeleteShipmentItem(ctx context.Context, itemID string) error {
+	id, err := uuid.Parse(itemID)
+	if err != nil {
+		return fmt.Errorf("invalid item id: %w", err)
+	}
+
+	q, txCtx, tx, ownsTx, err := s.getTenantMutationQueries(ctx)
+	if err != nil {
+		return err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	item, err := q.GetShipmentItemByID(txCtx, id)
+	if err != nil {
+		return fmt.Errorf("item not found: %w", err)
+	}
+
+	shipment, err := q.GetShipmentByID(txCtx, item.ShipmentID)
+	if err != nil {
+		return fmt.Errorf("failed to get shipment: %w", err)
+	}
+
+	if err := assertCanMutateShipmentCurrent(txCtx, q, shipment, "shipment item"); err != nil {
+		return err
+	}
+
+	// If shipment is active, reverse this item's stock contribution before deleting it.
+	if shipment.Status == pg.ShipmentStatusActive && shipment.StorageID.Valid {
+		storageID := shipment.StorageID
+		effectiveAt := shipmentEffectiveAt(pgtype.Timestamptz{
+			Time:  shipment.Date.Time.In(time.UTC),
+			Valid: shipment.Date.Valid,
+		})
+
+		zero := inventoryZeroNumeric()
+		srcType := "shipment_item_deleted"
+		srcID := item.ShipmentID
+
+		stockID, err := q.EnsureIngredientStockByStorage(txCtx, pg.EnsureIngredientStockByStorageParams{
+			ID:           uuid.New(),
+			IngredientID: item.IngredientID,
+			StorageID:    storageID,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to ensure stock row during shipment item delete: %w", err)
+		}
+
+		locked, err := q.GetStockByIngredientAndStorageForUpdate(txCtx, pg.GetStockByIngredientAndStorageForUpdateParams{
+			IngredientID: item.IngredientID,
+			StorageID:    storageID,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to lock stock row during shipment item delete: %w", err)
+		}
+
+		updated, err := q.AddToIngredientStock(txCtx, pg.AddToIngredientStockParams{
+			ID:       stockID,
+			Quantity: item.Quantity,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to restore stock during shipment item delete: %w", err)
+		}
+
+		if !shouldSkipStockMovement(item.Quantity, zero) {
+			if err := q.InsertIngredientStockMovement(txCtx, pg.InsertIngredientStockMovementParams{
+				ID:           uuid.New(),
+				StorageID:    uuid.UUID(storageID.Bytes),
+				IngredientID: item.IngredientID,
+				EventType:    "shipment_item_deleted_in",
+				QtyIn:        item.Quantity,
+				QtyOut:       zero,
+				StockBefore:  locked.Quantity,
+				StockAfter:   updated.Quantity,
+				PricePerUnit: item.PricePerUnit,
+				SourceType:   &srcType,
+				SourceID:     &srcID,
+				EffectiveAt:  effectiveAt,
+			}); err != nil {
+				return fmt.Errorf("failed to insert shipment item delete reverse movement: %w", err)
+			}
+
+			if err := s.rebalanceShipmentIngredientLedger(
+				txCtx,
+				q,
+				pgtype.UUID{Bytes: storageID.Bytes, Valid: true},
+				item.IngredientID,
+			); err != nil {
+				return fmt.Errorf("failed to rebalance shipment item delete ledger: %w", err)
+			}
+		}
+	}
+
+	if err := q.DeleteShipmentItem(txCtx, id); err != nil {
+		return fmt.Errorf("failed to delete shipment item: %w", err)
+	}
+
+	if err := s.recalcShipmentTotal(txCtx, q, item.ShipmentID); err != nil {
+		return fmt.Errorf("failed to recalculate shipment total after item delete: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
+	return nil
+}
+func (s *ShipmentS) recalcShipmentTotal(ctx context.Context, q *pg.Queries, shipmentID uuid.UUID) error {
+	items, err := q.GetShipmentItemsByShipmentID(ctx, shipmentID)
+	if err != nil {
+		return fmt.Errorf("failed to get items for total recalc: %w", err)
+	}
+	var total float64
+	for _, item := range items {
+		f, _ := item.TotalAmount.Float64Value()
+		total += f.Float64
+	}
+	totalN := pgtype.Numeric{}
+	if err := totalN.Scan(fmt.Sprintf("%.2f", total)); err != nil {
+		return err
+	}
+	_, err = q.UpdateShipmentTotalAmount(ctx, pg.UpdateShipmentTotalAmountParams{
+		ID:          shipmentID,
+		TotalAmount: totalN,
+	})
+	return err
+}
+
+// deductStock removes ingredient quantities from stock for an active shipment.
+func (s *ShipmentS) deductStock(ctx context.Context, q *pg.Queries, shipmentID uuid.UUID, storageID pgtype.UUID, eventType string, shipmentDate pgtype.Timestamptz) error {
+	items, err := q.GetShipmentItemsByShipmentID(ctx, shipmentID)
+	if err != nil {
+		return fmt.Errorf("failed to get shipment items: %w", err)
+	}
+
+	zero := inventoryZeroNumeric()
+	srcType := "shipment"
+	effectiveAt := shipmentEffectiveAt(shipmentDate)
+	touched := make(map[shipmentTouchedKey]struct{})
+
+	for _, item := range items {
+		stockID, err := q.EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
+			ID:           uuid.New(),
+			IngredientID: item.IngredientID,
+			StorageID:    storageID,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to ensure stock row: %w", err)
+		}
+
+		locked, err := q.GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
+			IngredientID: item.IngredientID,
+			StorageID:    storageID,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to lock stock row: %w", err)
+		}
+
+		updated, err := q.RemoveFromIngredientStock(ctx, pg.RemoveFromIngredientStockParams{
+			ID:       stockID,
+			Quantity: item.Quantity,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to deduct stock: %w", err)
+		}
+
+		if _, err := q.UpdateShipmentItemStockSnapshot(ctx, pg.UpdateShipmentItemStockSnapshotParams{
+			ID:          item.ID,
+			StockBefore: locked.Quantity,
+			StockAfter:  updated.Quantity,
+		}); err != nil {
+			return fmt.Errorf("failed to save stock snapshot: %w", err)
+		}
+
+		if shouldSkipStockMovement(zero, item.Quantity) {
+			continue
+		}
+
+		if err := q.InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+			ID:           uuid.New(),
+			StorageID:    uuid.UUID(storageID.Bytes),
+			IngredientID: item.IngredientID,
+			EventType:    eventType,
+			QtyIn:        zero,
+			QtyOut:       item.Quantity,
+			StockBefore:  locked.Quantity,
+			StockAfter:   updated.Quantity,
+			PricePerUnit: item.PricePerUnit,
+			SourceType:   &srcType,
+			SourceID:     &shipmentID,
+			EffectiveAt:  effectiveAt,
+		}); err != nil {
+			return fmt.Errorf("failed to insert shipment stock movement: %w", err)
+		}
+
+		touched[shipmentTouchedKey{
+			StorageID:    storageID.Bytes,
+			IngredientID: item.IngredientID,
+		}] = struct{}{}
+	}
+
+	for key := range touched {
+		if err := s.rebalanceShipmentIngredientLedger(ctx, q, pgtype.UUID{Bytes: key.StorageID, Valid: true}, key.IngredientID); err != nil {
+			return fmt.Errorf("failed to rebalance shipment ledger: %w", err)
+		}
+	}
+
+	return nil
+}
+
+// reverseStock adds back ingredient quantities when an active shipment is deactivated or deleted.
+func (s *ShipmentS) reverseStock(ctx context.Context, q *pg.Queries, shipmentID uuid.UUID, storageID pgtype.UUID, eventType string, shipmentDate pgtype.Timestamptz) error {
+	items, err := q.GetShipmentItemsByShipmentID(ctx, shipmentID)
+	if err != nil {
+		return fmt.Errorf("failed to get shipment items: %w", err)
+	}
+
+	zero := inventoryZeroNumeric()
+	srcType := eventType
+	effectiveAt := shipmentEffectiveAt(shipmentDate)
+	touched := make(map[shipmentTouchedKey]struct{})
+
+	for _, item := range items {
+		stockID, err := q.EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
+			ID:           uuid.New(),
+			IngredientID: item.IngredientID,
+			StorageID:    storageID,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to ensure stock row during shipment reverse: %w", err)
+		}
+
+		locked, err := q.GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
+			IngredientID: item.IngredientID,
+			StorageID:    storageID,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to lock stock row during shipment reverse: %w", err)
+		}
+
+		updated, err := q.AddToIngredientStock(ctx, pg.AddToIngredientStockParams{
+			ID:       stockID,
+			Quantity: item.Quantity,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to restore stock during shipment reverse: %w", err)
+		}
+
+		if shouldSkipStockMovement(item.Quantity, zero) {
+			continue
+		}
+
+		if err := q.InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+			ID:           uuid.New(),
+			StorageID:    uuid.UUID(storageID.Bytes),
+			IngredientID: item.IngredientID,
+			EventType:    eventType + "_in",
+			QtyIn:        item.Quantity,
+			QtyOut:       zero,
+			StockBefore:  locked.Quantity,
+			StockAfter:   updated.Quantity,
+			PricePerUnit: item.PricePerUnit,
+			SourceType:   &srcType,
+			SourceID:     &shipmentID,
+			EffectiveAt:  effectiveAt,
+		}); err != nil {
+			return fmt.Errorf("failed to insert shipment reverse movement: %w", err)
+		}
+
+		touched[shipmentTouchedKey{
+			StorageID:    storageID.Bytes,
+			IngredientID: item.IngredientID,
+		}] = struct{}{}
+	}
+
+	for key := range touched {
+		if err := s.rebalanceShipmentIngredientLedger(ctx, q, pgtype.UUID{Bytes: key.StorageID, Valid: true}, key.IngredientID); err != nil {
+			return fmt.Errorf("failed to rebalance shipment reverse ledger: %w", err)
+		}
+	}
+
+	return nil
+}
+
+// ── helpers ──────────────────────────────────────────────────────────────────
+
+func shipmentToResponse(row pg.Shipment) *model.ShipmentResponse {
+	shipStatus := model.ShipmentStatus(row.Status)
+	if row.DeletedAt != nil && *row.DeletedAt > 0 {
+		shipStatus = "deleted"
+	}
+	r := &model.ShipmentResponse{
+		ID:          row.ID.String(),
+		Number:      row.Number,
+		Status:      shipStatus,
+		TotalAmount: pgNumericToStr(row.TotalAmount),
+		PaidAmount:  pgNumericToStr(row.PaidAmount),
+	}
+	if row.Date.Valid {
+		t := row.Date.Time
+		r.Date = &t
+	}
+	if row.StorageID.Valid {
+		s := uuid.UUID(row.StorageID.Bytes).String()
+		r.StorageID = &s
+	}
+	if row.SupplierID.Valid {
+		s := uuid.UUID(row.SupplierID.Bytes).String()
+		r.SupplierID = &s
+	}
+	if row.BranchID.Valid {
+		s := uuid.UUID(row.BranchID.Bytes).String()
+		r.BranchID = &s
+	}
+	r.Description = row.Description
+	if row.CreatedAt.Valid {
+		t := row.CreatedAt.Time
+		r.CreatedAt = &t
+	}
+	if row.UpdatedAt.Valid {
+		t := row.UpdatedAt.Time
+		r.UpdatedAt = &t
+	}
+	return r
+}
+
+func shipmentItemToResponse(row pg.ShipmentItem) model.ShipmentItemResponse {
+	r := model.ShipmentItemResponse{
+		ID:           row.ID.String(),
+		ShipmentID:   row.ShipmentID.String(),
+		IngredientID: row.IngredientID.String(),
+		Quantity:     pgNumericToStr(row.Quantity),
+		PricePerUnit: pgNumericToStr(row.PricePerUnit),
+		TotalAmount:  pgNumericToStr(row.TotalAmount),
+		StockBefore:  pgNumericToStr(row.StockBefore),
+		StockAfter:   pgNumericToStr(row.StockAfter),
+	}
+	if row.CreatedAt.Valid {
+		t := row.CreatedAt.Time
+		r.CreatedAt = &t
+	}
+	if row.UpdatedAt.Valid {
+		t := row.UpdatedAt.Time
+		r.UpdatedAt = &t
+	}
+	return r
+}
+
+func hideShipmentDraftStockSnapshot(resp model.ShipmentItemResponse, shipmentStatus pg.ShipmentStatus) model.ShipmentItemResponse {
+	if shipmentStatus == pg.ShipmentStatus("draft") {
+		resp.StockBefore = ""
+		resp.StockAfter = ""
+	}
+	return resp
+}
+
+func pgNumericToStr(n pgtype.Numeric) string {
+	if !n.Valid {
+		return "0"
+	}
+	if n.NaN {
+		return "0"
+	}
+	if n.Int == nil {
+		return "0"
+	}
+	// Use big.Rat for exact decimal representation (no scientific notation)
+	rat := new(big.Rat).SetInt(n.Int)
+	if n.Exp > 0 {
+		mul := new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(n.Exp)), nil)
+		rat.Mul(rat, new(big.Rat).SetInt(mul))
+	} else if n.Exp < 0 {
+		div := new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(-n.Exp)), nil)
+		rat.Quo(rat, new(big.Rat).SetInt(div))
+	}
+	// Format as decimal string without scientific notation
+	s := rat.FloatString(10) // up to 10 decimal places
+	// Trim trailing zeros after decimal point
+	if strings.Contains(s, ".") {
+		s = strings.TrimRight(s, "0")
+		s = strings.TrimRight(s, ".")
+	}
+	return s
+}

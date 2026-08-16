@@ -1,0 +1,1232 @@
+package service
+
+import (
+	"context"
+	"fmt"
+	"log"
+	"strings"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
+	"gitlab.yurtal.tech/company/maryai/back/internal/model"
+	"gitlab.yurtal.tech/company/maryai/back/internal/repository"
+	pg "gitlab.yurtal.tech/company/maryai/back/internal/repository/pg/tenantsdb"
+)
+
+// Good row fields interface for converting different row types to response
+type goodRowFields struct {
+	ID              uuid.UUID
+	Name            string
+	Description     *string
+	NameI18n        pgtype.UUID
+	DescriptionI18n pgtype.UUID
+	CategoryID      pgtype.UUID
+	BranchID        pgtype.UUID
+	Price           pgtype.Numeric
+	CookTime        *int32
+	PictureUrl      *string
+	ColorCode       *string
+	CostPrice       pgtype.Numeric
+	Profit          pgtype.Numeric
+	ProfitMargin    pgtype.Numeric
+	CreatedAt       pgtype.Timestamptz
+	UpdatedAt       pgtype.Timestamptz
+}
+
+func parseOptionalUUIDFilter(value string) (pgtype.UUID, error) {
+	if value == "" {
+		return pgtype.UUID{}, nil
+	}
+
+	id, err := uuid.Parse(value)
+	if err != nil {
+		return pgtype.UUID{}, err
+	}
+
+	return pgtype.UUID{
+		Bytes: id,
+		Valid: true,
+	}, nil
+}
+
+func parseOptionalNumericFilter(value string) (pgtype.Numeric, error) {
+	if value == "" {
+		return pgtype.Numeric{}, nil
+	}
+
+	var num pgtype.Numeric
+	if err := num.Scan(value); err != nil {
+		return pgtype.Numeric{}, err
+	}
+
+	return num, nil
+}
+
+// Helper function to convert any good row type to response
+func goodToResponseAny(row any) *model.GoodResponse {
+	var f goodRowFields
+
+	switch v := row.(type) {
+	case pg.Good:
+		f = goodRowFields{
+			ID: v.ID, Name: v.Name, Description: v.Description, NameI18n: v.NameI18n,
+			DescriptionI18n: v.DescriptionI18n, CategoryID: v.CategoryID, BranchID: v.BranchID,
+			Price: v.Price, CookTime: v.CookTime, PictureUrl: v.PictureUrl, ColorCode: v.ColorCode,
+			CostPrice: v.CostPrice, Profit: v.Profit, ProfitMargin: v.ProfitMargin,
+			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
+		}
+	case pg.CreateGoodRow:
+		f = goodRowFields{
+			ID: v.ID, Name: v.Name, Description: v.Description, NameI18n: v.NameI18n,
+			DescriptionI18n: v.DescriptionI18n, CategoryID: v.CategoryID, BranchID: v.BranchID,
+			Price: v.Price, CookTime: v.CookTime, PictureUrl: v.PictureUrl, ColorCode: v.ColorCode,
+			CostPrice: v.CostPrice, Profit: v.Profit, ProfitMargin: v.ProfitMargin,
+			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
+		}
+	case pg.UpdateGoodRow:
+		f = goodRowFields{
+			ID: v.ID, Name: v.Name, Description: v.Description, NameI18n: v.NameI18n,
+			DescriptionI18n: v.DescriptionI18n, CategoryID: v.CategoryID, BranchID: v.BranchID,
+			Price: v.Price, CookTime: v.CookTime, PictureUrl: v.PictureUrl, ColorCode: v.ColorCode,
+			CostPrice: v.CostPrice, Profit: v.Profit, ProfitMargin: v.ProfitMargin,
+			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
+		}
+	case pg.GetGoodByIDWithLanguageRow:
+		f = goodRowFields{
+			ID: v.ID, Name: v.Name, Description: v.Description, NameI18n: v.NameI18n,
+			DescriptionI18n: v.DescriptionI18n, CategoryID: v.CategoryID, BranchID: v.BranchID,
+			Price: v.Price, CookTime: v.CookTime, PictureUrl: v.PictureUrl, ColorCode: v.ColorCode,
+			CostPrice: v.CostPrice, Profit: v.Profit, ProfitMargin: v.ProfitMargin,
+			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
+		}
+	case pg.GetAllGoodsWithLanguageRow:
+		f = goodRowFields{
+			ID: v.ID, Name: v.Name, Description: v.Description, NameI18n: v.NameI18n,
+			DescriptionI18n: v.DescriptionI18n, CategoryID: v.CategoryID, BranchID: v.BranchID,
+			Price: v.Price, CookTime: v.CookTime, PictureUrl: v.PictureUrl, ColorCode: v.ColorCode,
+			CostPrice: v.CostPrice, Profit: v.Profit, ProfitMargin: v.ProfitMargin,
+			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
+		}
+	case pg.GetAllGoodsRow:
+		f = goodRowFields{
+			ID: v.ID, Name: v.Name, Description: v.Description, NameI18n: v.NameI18n,
+			DescriptionI18n: v.DescriptionI18n, CategoryID: v.CategoryID, BranchID: v.BranchID,
+			Price: v.Price, CookTime: v.CookTime, PictureUrl: v.PictureUrl, ColorCode: v.ColorCode,
+			CostPrice: v.CostPrice, Profit: v.Profit, ProfitMargin: v.ProfitMargin,
+			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
+		}
+	case pg.GetGoodsListRow:
+		f = goodRowFields{
+			ID: v.ID, Name: v.Name, Description: v.Description, NameI18n: v.NameI18n,
+			DescriptionI18n: v.DescriptionI18n, CategoryID: v.CategoryID, BranchID: v.BranchID,
+			Price: v.Price, CookTime: v.CookTime, PictureUrl: v.PictureUrl, ColorCode: v.ColorCode,
+			CostPrice: v.CostPrice, Profit: v.Profit, ProfitMargin: v.ProfitMargin,
+			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
+		}
+	case pg.GetGoodByIDRow:
+		f = goodRowFields{
+			ID: v.ID, Name: v.Name, Description: v.Description, NameI18n: v.NameI18n,
+			DescriptionI18n: v.DescriptionI18n, CategoryID: v.CategoryID, BranchID: v.BranchID,
+			Price: v.Price, CookTime: v.CookTime, PictureUrl: v.PictureUrl, ColorCode: v.ColorCode,
+			CostPrice: v.CostPrice, Profit: v.Profit, ProfitMargin: v.ProfitMargin,
+			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
+		}
+	case pg.GetGoodsByCategoryIDRow:
+		f = goodRowFields{
+			ID: v.ID, Name: v.Name, Description: v.Description, NameI18n: v.NameI18n,
+			DescriptionI18n: v.DescriptionI18n, CategoryID: v.CategoryID, BranchID: v.BranchID,
+			Price: v.Price, CookTime: v.CookTime, PictureUrl: v.PictureUrl, ColorCode: v.ColorCode,
+			CostPrice: v.CostPrice, Profit: v.Profit, ProfitMargin: v.ProfitMargin,
+			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
+		}
+	case pg.UpdateGoodCostFieldsRow:
+		f = goodRowFields{
+			ID: v.ID, Name: v.Name, Description: v.Description, NameI18n: v.NameI18n,
+			DescriptionI18n: v.DescriptionI18n, CategoryID: v.CategoryID, BranchID: v.BranchID,
+			Price: v.Price, CookTime: v.CookTime, PictureUrl: v.PictureUrl, ColorCode: v.ColorCode,
+			CostPrice: v.CostPrice, Profit: v.Profit, ProfitMargin: v.ProfitMargin,
+			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
+		}
+	case pg.UpdateGoodPriceRow:
+		f = goodRowFields{
+			ID: v.ID, Name: v.Name, Description: v.Description, NameI18n: v.NameI18n,
+			DescriptionI18n: v.DescriptionI18n, CategoryID: v.CategoryID, BranchID: v.BranchID,
+			Price: v.Price, CookTime: v.CookTime, PictureUrl: v.PictureUrl, ColorCode: v.ColorCode,
+			CostPrice: v.CostPrice, Profit: v.Profit, ProfitMargin: v.ProfitMargin,
+			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
+		}
+	default:
+		log.Printf("Unknown good row type: %T", row)
+		return nil
+	}
+
+	return &model.GoodResponse{
+		ID:              f.ID.String(),
+		Name:            f.Name,
+		Description:     f.Description,
+		NameI18n:        uuidToStr(f.NameI18n),
+		DescriptionI18n: uuidToStr(f.DescriptionI18n),
+		CategoryID:      uuidToStr(f.CategoryID),
+		BranchID:        uuidToStr(f.BranchID),
+		Price:           numericToStringGoods(f.Price),
+		CookTime:        f.CookTime,
+		PictureUrl:      f.PictureUrl,
+		ColorCode:       f.ColorCode,
+		CostPrice:       numericToStringGoods(f.CostPrice),
+		Profit:          numericToStringGoods(f.Profit),
+		ProfitMargin:    numericToStringGoods(f.ProfitMargin),
+		CreatedAt:       timestampToTime(f.CreatedAt),
+		UpdatedAt:       timestampToTime(f.UpdatedAt),
+	}
+}
+
+type GoodsS struct {
+	repo *repository.Repository
+}
+
+func NewGoodsS(repo *repository.Repository) *GoodsS {
+	return &GoodsS{repo: repo}
+}
+
+func (g *GoodsS) getTenantMutationQueries(ctx context.Context) (*pg.Queries, context.Context, pgx.Tx, bool, error) {
+	if existingTx, ok := repository.TenantTxFromContext(ctx); ok && existingTx != nil {
+		if q, ok := repository.TenantQueriesFromContext(ctx); ok && q != nil {
+			return q, ctx, existingTx, false, nil
+		}
+		q := pg.New(existingTx)
+		txCtx := repository.WithTenantQueries(ctx, q)
+		return q, txCtx, existingTx, false, nil
+	}
+
+	tx, err := g.repo.PgRepo.TenantPool.Begin(ctx)
+	if err != nil {
+		return nil, nil, nil, false, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+
+	brandID, _ := ctx.Value("brand_id").(string)
+	brandID = strings.TrimSpace(brandID)
+	if brandID == "" {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("brand_id is missing in context")
+	}
+
+	schemaName := fmt.Sprintf("tenant_%s", brandID)
+	if _, err := tx.Exec(ctx, fmt.Sprintf(`SET LOCAL search_path TO "%s", public`, schemaName)); err != nil {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("failed to set tenant search_path: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx, "SET LOCAL app.brand_id = $1", brandID); err != nil {
+		tx.Rollback(ctx)
+		return nil, nil, nil, false, fmt.Errorf("failed to set app.brand_id: %w", err)
+	}
+
+	if branchID, _ := ctx.Value("branch_id").(string); strings.TrimSpace(branchID) != "" {
+		if _, err := tx.Exec(ctx, "SET LOCAL app.branch_id = $1", strings.TrimSpace(branchID)); err != nil {
+			tx.Rollback(ctx)
+			return nil, nil, nil, false, fmt.Errorf("failed to set app.branch_id: %w", err)
+		}
+	}
+
+	q := pg.New(tx)
+	txCtx := repository.WithTenantQueries(ctx, q)
+
+	return q, txCtx, tx, true, nil
+}
+
+// CreateGood creates a new good/menu item
+func (g *GoodsS) CreateGood(ctx context.Context, name string, description *string, nameI18n, descriptionI18n, categoryID *string, price string, cookTime *int32, pictureUrl *string, colorCode *string) (*model.GoodResponse, error) {
+	q, txCtx, tx, ownsTx, err := g.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	if name == "" {
+		return nil, fmt.Errorf("good name is required")
+	}
+	if price == "" {
+		return nil, fmt.Errorf("price is required")
+	}
+
+	id := uuid.New()
+
+	nameI18nUUID := pgtype.UUID{}
+	if nameI18n != nil && *nameI18n != "" {
+		i18nID, err := uuid.Parse(*nameI18n)
+		if err != nil {
+			return nil, fmt.Errorf("invalid name_i18n: %w", err)
+		}
+		nameI18nUUID = pgtype.UUID{Bytes: i18nID, Valid: true}
+	}
+
+	descriptionI18nUUID := pgtype.UUID{}
+	if descriptionI18n != nil && *descriptionI18n != "" {
+		i18nID, err := uuid.Parse(*descriptionI18n)
+		if err != nil {
+			return nil, fmt.Errorf("invalid description_i18n: %w", err)
+		}
+		descriptionI18nUUID = pgtype.UUID{Bytes: i18nID, Valid: true}
+	}
+
+	categoryUUID := pgtype.UUID{}
+	if categoryID != nil && *categoryID != "" {
+		cID, err := uuid.Parse(*categoryID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid category_id: %w", err)
+		}
+		categoryUUID = pgtype.UUID{Bytes: cID, Valid: true}
+	}
+
+	numPrice := pgtype.Numeric{}
+	numPrice.Scan(price)
+
+	good, err := q.CreateGood(txCtx, pg.CreateGoodParams{
+		ID:              id,
+		Name:            name,
+		Description:     description,
+		NameI18n:        nameI18nUUID,
+		DescriptionI18n: descriptionI18nUUID,
+		CategoryID:      categoryUUID,
+		Price:           numPrice,
+		CookTime:        cookTime,
+		PictureUrl:      pictureUrl,
+		ColorCode:       colorCode,
+	})
+	if err != nil {
+		log.Printf("CreateGood failed: %v", err)
+		return nil, fmt.Errorf("failed to create good: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
+	return goodToResponseAny(good), nil
+}
+
+// GetGoodByID retrieves a good by ID
+func (g *GoodsS) GetGoodByID(ctx context.Context, goodID string) (*model.GoodResponse, error) {
+	id, err := uuid.Parse(goodID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid good ID: %w", err)
+	}
+
+	var good pg.GetGoodByIDRow
+	err = withTenantRead(ctx, g.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		good, err = q.GetGoodByID(ctx, id)
+		if err != nil {
+			if err == pgx.ErrNoRows {
+				return fmt.Errorf("good not found")
+			}
+			log.Printf("GetGoodByID failed: %v", err)
+			return fmt.Errorf("failed to retrieve good: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return goodToResponseAny(good), nil
+}
+
+func (g *GoodsS) GetGoodsList(ctx context.Context, filter model.GoodsListFilter, lang string, limit, offset int32) ([]*model.GoodResponse, int64, error) {
+	categoryUUID, err := parseOptionalUUIDFilter(filter.CategoryID)
+	if err != nil {
+		return nil, 0, fmt.Errorf("invalid category_id: %w", err)
+	}
+
+	departmentUUID, err := parseOptionalUUIDFilter(filter.DepartmentID)
+	if err != nil {
+		return nil, 0, fmt.Errorf("invalid department_id: %w", err)
+	}
+
+	storageUUID, err := parseOptionalUUIDFilter(filter.StorageID)
+	if err != nil {
+		return nil, 0, fmt.Errorf("invalid storage_id: %w", err)
+	}
+
+	minPrice, err := parseOptionalNumericFilter(filter.MinPrice)
+	if err != nil {
+		return nil, 0, fmt.Errorf("invalid min_price: %w", err)
+	}
+
+	maxPrice, err := parseOptionalNumericFilter(filter.MaxPrice)
+	if err != nil {
+		return nil, 0, fmt.Errorf("invalid max_price: %w", err)
+	}
+
+	if filter.SortBy == "" {
+		filter.SortBy = "created_at"
+	}
+	if filter.SortOrder == "" {
+		filter.SortOrder = "desc"
+	}
+
+	if limit <= 0 {
+		limit = 20
+	}
+	if offset < 0 {
+		offset = 0
+	}
+
+	countParams := pg.CountGoodsListParams{
+		Lang:         lang,
+		CategoryID:   categoryUUID,
+		DepartmentID: departmentUUID,
+		StorageID:    storageUUID,
+		Search:       filter.Search,
+		MinPrice:     minPrice,
+		MaxPrice:     maxPrice,
+	}
+
+	var total int64
+	var rows []pg.GetGoodsListRow
+	err = withTenantRead(ctx, g.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		total, err = q.CountGoodsList(ctx, countParams)
+		if err != nil {
+			log.Printf("CountGoodsList failed: lang=%q limit=%d offset=%d filter=%+v err=%v", lang, limit, offset, filter, err)
+			total = 0
+			return nil
+		}
+
+		if total == 0 {
+			return nil
+		}
+		if int64(offset) >= total {
+			return nil
+		}
+
+		rows, err = q.GetGoodsList(ctx, pg.GetGoodsListParams{
+			Lang:         lang,
+			CategoryID:   categoryUUID,
+			DepartmentID: departmentUUID,
+			StorageID:    storageUUID,
+			Search:       filter.Search,
+			MinPrice:     minPrice,
+			MaxPrice:     maxPrice,
+			SortBy:       filter.SortBy,
+			SortOrder:    filter.SortOrder,
+			Limit:        limit,
+			Offset:       offset,
+		})
+		if err != nil {
+			log.Printf("GetGoodsList failed: lang=%q limit=%d offset=%d filter=%+v err=%v", lang, limit, offset, filter, err)
+			return fmt.Errorf("failed to retrieve goods: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, 0, err
+	}
+
+	responses := make([]*model.GoodResponse, 0, len(rows))
+	for _, row := range rows {
+		responses = append(responses, goodToResponseAny(row))
+	}
+
+	return responses, total, nil
+}
+
+func (g *GoodsS) GetAllGoods(ctx context.Context, limit, offset int32) ([]*model.GoodResponse, int64, error) {
+	if limit <= 0 {
+		limit = 20
+	}
+	if offset < 0 {
+		offset = 0
+	}
+
+	var total int64
+	var goods []pg.GetAllGoodsRow
+	err := withTenantRead(ctx, g.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		total, err = q.CountGoods(ctx)
+		if err != nil {
+			log.Printf("CountGoods failed: limit=%d offset=%d err=%v", limit, offset, err)
+			total = 0
+			return nil
+		}
+
+		if total == 0 {
+			return nil
+		}
+		if int64(offset) >= total {
+			return nil
+		}
+
+		goods, err = q.GetAllGoods(ctx, pg.GetAllGoodsParams{
+			Limit:  limit,
+			Offset: offset,
+		})
+		if err != nil {
+			log.Printf("GetAllGoods failed: limit=%d offset=%d err=%v", limit, offset, err)
+			return fmt.Errorf("failed to retrieve goods: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, 0, err
+	}
+
+	responses := make([]*model.GoodResponse, 0, len(goods))
+	for _, good := range goods {
+		responses = append(responses, goodToResponseAny(good))
+	}
+
+	return responses, total, nil
+}
+
+// GetGoodsByCategory retrieves goods by category
+func (g *GoodsS) GetGoodsByCategory(ctx context.Context, categoryID string, limit, offset int32) ([]*model.GoodResponse, error) {
+	id, err := uuid.Parse(categoryID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid category ID: %w", err)
+	}
+
+	var goods []pg.GetGoodsByCategoryIDRow
+	err = withTenantRead(ctx, g.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		goods, err = q.GetGoodsByCategoryID(ctx, pg.GetGoodsByCategoryIDParams{
+			CategoryID: pgtype.UUID{Bytes: id, Valid: true},
+			Limit:      limit,
+			Offset:     offset,
+		})
+		if err != nil {
+			log.Printf("GetGoodsByCategory failed: %v", err)
+			return fmt.Errorf("failed to retrieve goods: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	var responses []*model.GoodResponse
+	for _, good := range goods {
+		responses = append(responses, goodToResponseAny(good))
+	}
+	return responses, nil
+}
+
+// UpdateGood updates a good
+func (g *GoodsS) UpdateGood(ctx context.Context, goodID string, name, description, nameI18n, descriptionI18n, categoryID, price *string, cookTime *int32, pictureUrl *string, colorCode *string) (*model.GoodResponse, error) {
+	q, txCtx, tx, ownsTx, err := g.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	id, err := uuid.Parse(goodID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid good ID: %w", err)
+	}
+
+	nameI18nUUID := pgtype.UUID{}
+	if nameI18n != nil && *nameI18n != "" {
+		i18nID, err := uuid.Parse(*nameI18n)
+		if err != nil {
+			return nil, fmt.Errorf("invalid name_i18n: %w", err)
+		}
+		nameI18nUUID = pgtype.UUID{Bytes: i18nID, Valid: true}
+	}
+
+	descriptionI18nUUID := pgtype.UUID{}
+	if descriptionI18n != nil && *descriptionI18n != "" {
+		i18nID, err := uuid.Parse(*descriptionI18n)
+		if err != nil {
+			return nil, fmt.Errorf("invalid description_i18n: %w", err)
+		}
+		descriptionI18nUUID = pgtype.UUID{Bytes: i18nID, Valid: true}
+	}
+
+	categoryUUID := pgtype.UUID{}
+	if categoryID != nil && *categoryID != "" {
+		cID, err := uuid.Parse(*categoryID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid category_id: %w", err)
+		}
+		categoryUUID = pgtype.UUID{Bytes: cID, Valid: true}
+	}
+
+	priceNum := pgtype.Numeric{}
+	if price != nil && *price != "" {
+		priceNum.Scan(*price)
+	}
+
+	finalName := ""
+	if name != nil {
+		finalName = *name
+	}
+
+	finalDescription := (*string)(nil)
+	if description != nil {
+		finalDescription = description
+	}
+
+	good, err := q.UpdateGood(txCtx, pg.UpdateGoodParams{
+		ID:              id,
+		Name:            finalName,
+		Description:     finalDescription,
+		NameI18n:        nameI18nUUID,
+		DescriptionI18n: descriptionI18nUUID,
+		CategoryID:      categoryUUID,
+		Price:           priceNum,
+		CookTime:        cookTime,
+		PictureUrl:      pictureUrl,
+		ColorCode:       colorCode,
+	})
+	if err != nil {
+		log.Printf("UpdateGood failed: %v", err)
+		return nil, fmt.Errorf("failed to update good: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
+	return goodToResponseAny(good), nil
+}
+
+// UpdateGoodPrice updates the price of a good
+func (g *GoodsS) UpdateGoodPrice(ctx context.Context, goodID, price string) (*model.GoodResponse, error) {
+	q, txCtx, tx, ownsTx, err := g.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	id, err := uuid.Parse(goodID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid good ID: %w", err)
+	}
+
+	priceNum := pgtype.Numeric{}
+	priceNum.Scan(price)
+
+	good, err := q.UpdateGoodPrice(txCtx, pg.UpdateGoodPriceParams{
+		ID:    id,
+		Price: priceNum,
+	})
+	if err != nil {
+		log.Printf("UpdateGoodPrice failed: %v", err)
+		return nil, fmt.Errorf("failed to update good price: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
+	return goodToResponseAny(good), nil
+}
+
+// DeleteGood deletes a good
+func (g *GoodsS) DeleteGood(ctx context.Context, goodID string) error {
+	q, txCtx, tx, ownsTx, err := g.getTenantMutationQueries(ctx)
+	if err != nil {
+		return err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	id, err := uuid.Parse(goodID)
+	if err != nil {
+		return fmt.Errorf("invalid good ID: %w", err)
+	}
+
+	if err := q.DeleteGood(txCtx, id); err != nil {
+		log.Printf("DeleteGood failed: %v", err)
+		return fmt.Errorf("failed to delete good: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
+	return nil
+}
+
+// RestoreGood restores a deleted good
+func (g *GoodsS) RestoreGood(ctx context.Context, goodID string) (*model.GoodResponse, error) {
+	q, txCtx, tx, ownsTx, err := g.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	id, err := uuid.Parse(goodID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid good ID: %w", err)
+	}
+
+	if err := q.RestoreGood(txCtx, id); err != nil {
+		log.Printf("RestoreGood failed: %v", err)
+		return nil, fmt.Errorf("failed to restore good: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
+	return g.GetGoodByID(ctx, goodID)
+}
+
+// ==================== GOODS DETAILS ====================
+
+// CreateGoodDetail creates a new good detail
+func (g *GoodsS) CreateGoodDetail(ctx context.Context, goodID string, ingredientID, compoundID *string, measurement *string, quantity int64) (*model.GoodDetailResponse, error) {
+	q, txCtx, tx, ownsTx, err := g.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	id := uuid.New()
+	gID, err := uuid.Parse(goodID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid good ID: %w", err)
+	}
+
+	var ingID, cmpID pgtype.UUID
+	if ingredientID != nil && *ingredientID != "" {
+		iid, err := uuid.Parse(*ingredientID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid ingredient ID: %w", err)
+		}
+		ingID = pgtype.UUID{Bytes: iid, Valid: true}
+	}
+	if compoundID != nil && *compoundID != "" {
+		cid, err := uuid.Parse(*compoundID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid compound ID: %w", err)
+		}
+		cmpID = pgtype.UUID{Bytes: cid, Valid: true}
+	}
+
+	if !ingID.Valid && !cmpID.Valid {
+		return nil, fmt.Errorf("either ingredient_id or compound_id is required")
+	}
+
+	measurementType := pg.NullMeasurementType{}
+	if measurement != nil && *measurement != "" {
+		measurementType.MeasurementType = pg.MeasurementType(*measurement)
+		measurementType.Valid = true
+	}
+
+	detail, err := q.CreateGoodDetail(txCtx, pg.CreateGoodDetailParams{
+		ID:           id,
+		GoodID:       gID,
+		IngredientID: ingID,
+		CompoundID:   cmpID,
+		Measurement:  measurementType,
+		Quantity:     quantity,
+	})
+	if err != nil {
+		log.Printf("CreateGoodDetail failed: %v", err)
+		return nil, fmt.Errorf("failed to create good detail: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
+	return toGoodDetailResponse(detail), nil
+}
+
+// GetGoodDetailByID retrieves a good detail by ID
+func (g *GoodsS) GetGoodDetailByID(ctx context.Context, detailID string) (*model.GoodDetailResponse, error) {
+	id, err := uuid.Parse(detailID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid detail ID: %w", err)
+	}
+
+	var detail pg.GoodsDetail
+	err = withTenantRead(ctx, g.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		detail, err = q.GetGoodDetailByID(ctx, id)
+		if err != nil {
+			if err == pgx.ErrNoRows {
+				return fmt.Errorf("good detail not found")
+			}
+			log.Printf("GetGoodDetailByID failed: %v", err)
+			return fmt.Errorf("failed to retrieve good detail: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return toGoodDetailResponse(detail), nil
+}
+
+// GetGoodDetailsByGood retrieves all details for a good
+func (g *GoodsS) GetGoodDetailsByGood(ctx context.Context, goodID string) ([]*model.GoodDetailResponse, error) {
+	id, err := uuid.Parse(goodID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid good ID: %w", err)
+	}
+
+	var details []pg.GoodsDetail
+	err = withTenantRead(ctx, g.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		details, err = q.GetGoodDetailsByGoodID(ctx, id)
+		if err != nil {
+			log.Printf("GetGoodDetailsByGood failed: %v", err)
+			return fmt.Errorf("failed to retrieve good details: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	var responses []*model.GoodDetailResponse
+	for _, detail := range details {
+		responses = append(responses, toGoodDetailResponse(detail))
+	}
+	return responses, nil
+}
+
+// GetGoodDetailsByIngredient retrieves all good details for an ingredient
+func (g *GoodsS) GetGoodDetailsByIngredient(ctx context.Context, ingredientID string, limit, offset int32) ([]*model.GoodDetailResponse, error) {
+	id, err := uuid.Parse(ingredientID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid ingredient ID: %w", err)
+	}
+
+	var details []pg.GoodsDetail
+	err = withTenantRead(ctx, g.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		details, err = q.GetGoodDetailsByIngredientID(ctx, pg.GetGoodDetailsByIngredientIDParams{
+			IngredientID: pgtype.UUID{Bytes: id, Valid: true},
+			Limit:        limit,
+			Offset:       offset,
+		})
+		if err != nil {
+			log.Printf("GetGoodDetailsByIngredient failed: %v", err)
+			return fmt.Errorf("failed to retrieve good details: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	var responses []*model.GoodDetailResponse
+	for _, detail := range details {
+		responses = append(responses, toGoodDetailResponse(detail))
+	}
+	return responses, nil
+}
+
+// GetGoodDetailsByCompound retrieves all good details for a compound
+func (g *GoodsS) GetGoodDetailsByCompound(ctx context.Context, compoundID string, limit, offset int32) ([]*model.GoodDetailResponse, error) {
+	id, err := uuid.Parse(compoundID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid compound ID: %w", err)
+	}
+
+	var details []pg.GoodsDetail
+	err = withTenantRead(ctx, g.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		details, err = q.GetGoodDetailsByCompoundID(ctx, pg.GetGoodDetailsByCompoundIDParams{
+			CompoundID: pgtype.UUID{Bytes: id, Valid: true},
+			Limit:      limit,
+			Offset:     offset,
+		})
+		if err != nil {
+			log.Printf("GetGoodDetailsByCompound failed: %v", err)
+			return fmt.Errorf("failed to retrieve good details: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	var responses []*model.GoodDetailResponse
+	for _, detail := range details {
+		responses = append(responses, toGoodDetailResponse(detail))
+	}
+	return responses, nil
+}
+
+// UpdateGoodDetail updates a good detail
+func (g *GoodsS) UpdateGoodDetail(ctx context.Context, detailID string, goodID, ingredientID, compoundID *string, measurement *string, quantity *int64) (*model.GoodDetailResponse, error) {
+	q, txCtx, tx, ownsTx, err := g.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	id, err := uuid.Parse(detailID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid detail ID: %w", err)
+	}
+
+	// Get existing detail
+	existing, err := q.GetGoodDetailByID(txCtx, id)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, fmt.Errorf("good detail not found")
+		}
+		return nil, fmt.Errorf("failed to get good detail: %w", err)
+	}
+
+	finalGoodID := existing.GoodID
+	if goodID != nil && *goodID != "" {
+		gid, err := uuid.Parse(*goodID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid good ID: %w", err)
+		}
+		finalGoodID = gid
+	}
+
+	finalIngredientID := existing.IngredientID
+	if ingredientID != nil && *ingredientID != "" {
+		iid, err := uuid.Parse(*ingredientID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid ingredient ID: %w", err)
+		}
+		finalIngredientID = pgtype.UUID{Bytes: iid, Valid: true}
+	}
+
+	finalCompoundID := existing.CompoundID
+	if compoundID != nil && *compoundID != "" {
+		cid, err := uuid.Parse(*compoundID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid compound ID: %w", err)
+		}
+		finalCompoundID = pgtype.UUID{Bytes: cid, Valid: true}
+	}
+
+	finalMeasurement := existing.Measurement
+	if measurement != nil && *measurement != "" {
+		finalMeasurement = pg.NullMeasurementType{
+			MeasurementType: pg.MeasurementType(*measurement),
+			Valid:           true,
+		}
+	}
+
+	finalQuantity := existing.Quantity
+	if quantity != nil {
+		finalQuantity = *quantity
+	}
+
+	detail, err := q.UpdateGoodDetail(txCtx, pg.UpdateGoodDetailParams{
+		ID:           id,
+		GoodID:       finalGoodID,
+		IngredientID: finalIngredientID,
+		CompoundID:   finalCompoundID,
+		Measurement:  finalMeasurement,
+		Quantity:     finalQuantity,
+	})
+	if err != nil {
+		log.Printf("UpdateGoodDetail failed: %v", err)
+		return nil, fmt.Errorf("failed to update good detail: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
+	return toGoodDetailResponse(detail), nil
+}
+
+// UpdateGoodDetailQuantity updates the quantity of a good detail
+func (g *GoodsS) UpdateGoodDetailQuantity(ctx context.Context, detailID string, quantity int64) (*model.GoodDetailResponse, error) {
+	q, txCtx, tx, ownsTx, err := g.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	id, err := uuid.Parse(detailID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid detail ID: %w", err)
+	}
+
+	detail, err := q.UpdateGoodDetailQuantity(txCtx, pg.UpdateGoodDetailQuantityParams{
+		ID:       id,
+		Quantity: quantity,
+	})
+	if err != nil {
+		log.Printf("UpdateGoodDetailQuantity failed: %v", err)
+		return nil, fmt.Errorf("failed to update good detail quantity: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
+	return toGoodDetailResponse(detail), nil
+}
+
+// DeleteGoodDetail deletes a good detail
+func (g *GoodsS) DeleteGoodDetail(ctx context.Context, detailID string) error {
+	q, txCtx, tx, ownsTx, err := g.getTenantMutationQueries(ctx)
+	if err != nil {
+		return err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	id, err := uuid.Parse(detailID)
+	if err != nil {
+		return fmt.Errorf("invalid detail ID: %w", err)
+	}
+
+	if err := q.DeleteGoodDetail(txCtx, id); err != nil {
+		log.Printf("DeleteGoodDetail failed: %v", err)
+		return fmt.Errorf("failed to delete good detail: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
+	return nil
+}
+
+// RestoreGoodDetail restores a deleted good detail
+func (g *GoodsS) RestoreGoodDetail(ctx context.Context, detailID string) (*model.GoodDetailResponse, error) {
+	q, txCtx, tx, ownsTx, err := g.getTenantMutationQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
+
+	id, err := uuid.Parse(detailID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid detail ID: %w", err)
+	}
+
+	if err := q.RestoreGoodDetail(txCtx, id); err != nil {
+		log.Printf("RestoreGoodDetail failed: %v", err)
+		return nil, fmt.Errorf("failed to restore good detail: %w", err)
+	}
+
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
+	}
+
+	return g.GetGoodDetailByID(ctx, detailID)
+}
+
+// Helper function to convert database good to response model
+
+// Helper function to convert database good detail to response model
+func toGoodDetailResponse(detail pg.GoodsDetail) *model.GoodDetailResponse {
+	var ingredientIDStr *string
+	if detail.IngredientID.Valid {
+		str := detail.IngredientID.String()
+		ingredientIDStr = &str
+	}
+
+	var compoundIDStr *string
+	if detail.CompoundID.Valid {
+		str := detail.CompoundID.String()
+		compoundIDStr = &str
+	}
+
+	var measurementStr *string
+	if detail.Measurement.Valid {
+		str := string(detail.Measurement.MeasurementType)
+		measurementStr = &str
+	}
+
+	var createdAt *time.Time
+	if detail.CreatedAt.Valid {
+		createdAt = &detail.CreatedAt.Time
+	}
+
+	var updatedAt *time.Time
+	if detail.UpdatedAt.Valid {
+		updatedAt = &detail.UpdatedAt.Time
+	}
+
+	return &model.GoodDetailResponse{
+		ID:           detail.ID.String(),
+		GoodID:       detail.GoodID.String(),
+		IngredientID: ingredientIDStr,
+		CompoundID:   compoundIDStr,
+		Measurement:  measurementStr,
+		Quantity:     detail.Quantity,
+		CreatedAt:    createdAt,
+		UpdatedAt:    updatedAt,
+	}
+}
+
+// Helper function to convert pgtype.Numeric to string
+func numericToStringGoods(n pgtype.Numeric) string {
+	if !n.Valid {
+		return "0"
+	}
+	// Convert to Decimal string representation
+	if n.NaN {
+		return "NaN"
+	}
+	if n.InfinityModifier > 0 {
+		return "Infinity"
+	}
+	if n.InfinityModifier < 0 {
+		return "-Infinity"
+	}
+
+	// If Int is nil, return 0
+	if n.Int == nil {
+		return "0"
+	}
+
+	// Apply exponent to format the number
+	str := n.Int.String()
+	isNegative := strings.HasPrefix(str, "-")
+	if isNegative {
+		str = str[1:] // Remove sign temporarily
+	}
+
+	if n.Exp < 0 {
+		// Need to add decimal point
+		exp := -int(n.Exp)
+		if exp >= len(str) {
+			// Add leading zeros and decimal
+			str = "0." + strings.Repeat("0", exp-len(str)) + str
+		} else {
+			// Insert decimal point
+			str = str[:len(str)-exp] + "." + str[len(str)-exp:]
+		}
+	} else if n.Exp > 0 {
+		// Add trailing zeros
+		str = str + strings.Repeat("0", int(n.Exp))
+	}
+
+	// Add sign back if negative
+	if isNegative {
+		str = "-" + str
+	}
+
+	if str == "" || str == "-0" {
+		return "0"
+	}
+	return str
+}
+
+// GetGoodByIDWithLang retrieves good by ID with language support
+func (g *GoodsS) GetGoodByIDWithLang(ctx context.Context, goodID string, lang string) (*model.GoodResponse, error) {
+	id, err := uuid.Parse(goodID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid good ID: %w", err)
+	}
+
+	var good pg.GetGoodByIDWithLanguageRow
+	err = withTenantRead(ctx, g.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		good, err = q.GetGoodByIDWithLanguage(ctx, pg.GetGoodByIDWithLanguageParams{
+			ID:      id,
+			Column2: lang,
+		})
+		if err != nil {
+			log.Printf("GetGoodByIDWithLang failed: %v", err)
+			return fmt.Errorf("failed to get good: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return goodToResponseAny(good), nil
+}
+
+// GetAllGoodsWithLang retrieves all goods with language support
+func (g *GoodsS) GetAllGoodsWithLang(ctx context.Context, lang string, limit, offset int32) ([]*model.GoodResponse, int64, error) {
+	if limit <= 0 {
+		limit = 20
+	}
+	if offset < 0 {
+		offset = 0
+	}
+
+	var total int64
+	var goods []pg.GetAllGoodsWithLanguageRow
+	err := withTenantRead(ctx, g.repo, func(ctx context.Context, q *pg.Queries) error {
+		var err error
+		total, err = q.CountGoods(ctx)
+		if err != nil {
+			log.Printf("CountGoods (WithLang) failed: lang=%q limit=%d offset=%d err=%v", lang, limit, offset, err)
+			total = 0
+			return nil
+		}
+
+		if total == 0 {
+			return nil
+		}
+		if int64(offset) >= total {
+			return nil
+		}
+
+		goods, err = q.GetAllGoodsWithLanguage(ctx, pg.GetAllGoodsWithLanguageParams{
+			Column1: lang,
+			Limit:   limit,
+			Offset:  offset,
+		})
+		if err != nil {
+			log.Printf("GetAllGoodsWithLang failed: lang=%q limit=%d offset=%d err=%v", lang, limit, offset, err)
+			return fmt.Errorf("failed to get goods: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, 0, err
+	}
+
+	responses := make([]*model.GoodResponse, 0, len(goods))
+	for _, good := range goods {
+		responses = append(responses, goodToResponseAny(good))
+	}
+
+	return responses, total, nil
+}

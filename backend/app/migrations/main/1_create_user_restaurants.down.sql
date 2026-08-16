@@ -1,0 +1,4 @@
+DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS brands;
+
+DROP TYPE IF EXISTS roles_enum;

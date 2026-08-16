@@ -1,0 +1,7 @@
+DROP TABLE IF EXISTS qr_sessions;
+DROP TABLE IF EXISTS cafe_tables;
+DROP TYPE IF EXISTS table_status;
+DROP TABLE IF EXISTS categories;
+DROP TABLE IF EXISTS departments;
+DROP TABLE IF EXISTS halls;
+DROP TABLE IF EXISTS storages;

@@ -1,0 +1,2 @@
+ALTER TABLE inventory_items
+  ADD COLUMN IF NOT EXISTS system_quantity NUMERIC(18,6) NOT NULL DEFAULT 0;

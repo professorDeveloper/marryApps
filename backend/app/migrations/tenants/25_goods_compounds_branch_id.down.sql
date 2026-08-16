@@ -1,0 +1,7 @@
+DROP INDEX IF EXISTS idx_goods_branch;
+ALTER TABLE goods DROP COLUMN IF EXISTS branch_id;
+ALTER TABLE goods ADD COLUMN IF NOT EXISTS department_id UUID REFERENCES departments(id) ON DELETE SET NULL;
+
+DROP INDEX IF EXISTS idx_compounds_branch;
+ALTER TABLE compounds DROP COLUMN IF EXISTS branch_id;
+ALTER TABLE compounds ADD COLUMN IF NOT EXISTS department_id UUID REFERENCES departments(id) ON DELETE SET NULL;

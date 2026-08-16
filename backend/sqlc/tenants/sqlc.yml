@@ -1,0 +1,63 @@
+version: "2"
+sql:
+  - engine: "postgresql"
+    queries: "./queries"
+    schema:
+      - "../../app/migrations/tenants/1_core.up.sql"
+      - "../../app/migrations/tenants/2_catalog.up.sql"
+      - "../../app/migrations/tenants/3_ingredients.up.sql"
+      - "../../app/migrations/tenants/4_supply.up.sql"
+      - "../../app/migrations/tenants/5_goods.up.sql"
+      - "../../app/migrations/tenants/6_orders.up.sql"
+      - "../../app/migrations/tenants/7_inventory.up.sql"
+      - "../../app/migrations/tenants/8_movements.up.sql"
+      - "../../app/migrations/tenants/9_extras.up.sql"
+      - "../../app/migrations/tenants/10_seed.up.sql"
+      - "../../app/migrations/tenants/11_transaction_category.up.sql"
+      - "../../app/migrations/tenants/12_transaction_type_update.up.sql"
+      - "../../app/migrations/tenants/13_shipments.up.sql"
+      - "../../app/migrations/tenants/14_order_item_cost_price.up.sql"
+      - "../../app/migrations/tenants/15_order_paid_amount.up.sql"
+      - "../../app/migrations/tenants/16_transaction_paid_amount.up.sql"
+      - "../../app/migrations/tenants/17_outgoing_invoices.up.sql"
+      - "../../app/migrations/tenants/18_separation_acts.up.sql"
+      - "../../app/migrations/tenants/19_order_reservations.up.sql"
+      - "../../app/migrations/tenants/20_cash_register_shifts.up.sql"
+      - "../../app/migrations/tenants/21_inventory_system_quantity.up.sql"
+      - "../../app/migrations/tenants/22_user_cash_register.up.sql"
+      - "../../app/migrations/tenants/23_order_cash_register.up.sql"
+      - "../../app/migrations/tenants/24_category_remove_storage.up.sql"
+      - "../../app/migrations/tenants/25_goods_compounds_branch_id.up.sql"
+      - "../../app/migrations/tenants/26_compounds_ingredient_group.up.sql"
+      - "../../app/migrations/tenants/27_compound_quantity_numeric.up.sql"
+      - "../../app/migrations/tenants/28_invoice_status_deleted.up.sql"
+      - "../../app/migrations/tenants/29_cafe_tables_price_per_hour.up.sql"
+      - "../../app/migrations/tenants/30_order_payment_split.up.sql"
+      - "../../app/migrations/tenants/31_drop_transfers_branch_check.up.sql"
+      - "../../app/migrations/tenants/32_shift_role_cashier.up.sql"
+      - "../../app/migrations/tenants/33_table_timer_foundation.up.sql"
+      - "../../app/migrations/tenants/35_modifier.up.sql"
+      - "../../app/migrations/tenants/38_recreate_printer_settings.up.sql"
+      - "../../app/migrations/tenants/40_printer_settings_add_connection_type.up.sql"
+      - "../../app/migrations/tenants/41_modifier_calculation.up.sql"
+      - "../../app/migrations/tenants/43_cafe_tables_shape_and_float_position.up.sql"
+      - "../../app/migrations/tenants/44_orders_client_created_at.up.sql"
+      - "../../app/migrations/tenants/45_inventory_counted_at.up.sql"
+
+
+    gen:
+      go:
+        emit_json_tags: true
+        emit_pointers_for_null_types: true
+        package: "pg"
+        out: "../../app/internal/repository/pg/tenantsdb"
+        sql_package: "pgx/v5"
+        overrides:
+          - db_type: "uuid"
+            go_type:
+              import: "github.com/google/uuid"
+              type: "UUID"
+          - db_type: "timestamptz"
+            go_type:
+              import: "time"
+              type: "Time"

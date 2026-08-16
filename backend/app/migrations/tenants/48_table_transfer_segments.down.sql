@@ -1,0 +1,6 @@
+DROP INDEX IF EXISTS uq_table_time_session_segments_active_session;
+DROP INDEX IF EXISTS idx_table_time_session_segments_order;
+DROP INDEX IF EXISTS idx_table_time_session_segments_table;
+DROP INDEX IF EXISTS idx_table_time_session_segments_session;
+
+DROP TABLE IF EXISTS table_time_session_segments;

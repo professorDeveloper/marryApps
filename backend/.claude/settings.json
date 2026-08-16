@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -E \"\\\\.\\(go\\)$\")",
+      "Bash(go test *)",
+      "Bash(go mod *)",
+      "Bash(git status *)",
+      "Bash(git add *)",
+      "Bash(git push *)",
+      "Bash(go build *)",
+      "Bash(git commit -m ' *)",
+      "Bash(go install *)",
+      "Bash(swag init *)",
+      "Bash(xargs cat *)",
+      "Bash(grep \"\\\\.go$\")",
+      "Bash(xargs ls *)"
+    ]
+  }
+}

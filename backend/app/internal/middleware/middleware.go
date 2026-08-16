@@ -1,0 +1,343 @@
+package middleware
+
+import (
+	"errors"
+	"io"
+	"log"
+	"net/http"
+	"strings"
+	"time"
+
+	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
+	"gitlab.yurtal.tech/company/maryai/back/internal/config"
+	"gitlab.yurtal.tech/company/maryai/back/internal/model"
+	"gitlab.yurtal.tech/company/maryai/back/pkg/utils"
+)
+
+func SetupMiddleware(e *echo.Echo, cfg *config.Config) {
+	e.Use(CheckLanguage())
+	e.Use(LocalizeErrorResponse())
+
+	e.Use(middleware.RequestID())
+
+	e.Use(middleware.LoggerWithConfig(middleware.LoggerConfig{
+		Format: "${time_rfc3339} ${method} ${uri} ${status} ${latency_human}\n",
+	}))
+
+	e.Use(middleware.Recover())
+
+	e.Use(middleware.SecureWithConfig(middleware.SecureConfig{
+		XSSProtection:      "1; mode=block",
+		ContentTypeNosniff: "nosniff",
+		XFrameOptions:      "SAMEORIGIN",
+		HSTSMaxAge:         3600,
+		// Removed CSP temporarily
+	}))
+
+	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+		AllowOrigins:     []string{"*"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
+		AllowHeaders:     []string{"*"},
+		AllowCredentials: true,
+		MaxAge:           3600,
+	}))
+	e.Use(middleware.TimeoutWithConfig(middleware.TimeoutConfig{
+		Timeout: time.Duration(cfg.Server.CtxDefaultTimeout) * time.Second,
+		Skipper: func(c echo.Context) bool {
+			return strings.HasPrefix(c.Path(), "/api/v1/user/avatar")
+		},
+	}))
+
+	e.Use(middleware.BodyLimit("10M"))
+
+	e.Use(middleware.RateLimiter(middleware.NewRateLimiterMemoryStore(20)))
+
+	e.Use(SanitizeInput())
+}
+
+func LoginRateLimiter() echo.MiddlewareFunc {
+	store := middleware.NewRateLimiterMemoryStoreWithConfig(middleware.RateLimiterMemoryStoreConfig{
+		Rate:      5,
+		Burst:     5,
+		ExpiresIn: time.Minute,
+	})
+
+	return middleware.RateLimiterWithConfig(middleware.RateLimiterConfig{
+		Store: store,
+		IdentifierExtractor: func(c echo.Context) (string, error) {
+			return c.RealIP(), nil
+		},
+		ErrorHandler: func(c echo.Context, err error) error {
+			lang := getLanguage(c)
+			message := model.GetLocalizedMessage(lang, "too_many_attempts")
+			return c.JSON(http.StatusTooManyRequests, model.ErrorResponse{Message: message})
+		},
+	})
+}
+
+func CheckAuth(cfg *config.Config) echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			authHeader := c.Request().Header.Get("Authorization")
+			var accessToken string
+
+			fields := strings.Fields(authHeader)
+			if len(fields) == 2 && strings.EqualFold(fields[0], "Bearer") {
+				accessToken = fields[1]
+			} else if authHeader != "" && !strings.Contains(authHeader, " ") {
+				accessToken = authHeader
+			}
+
+			if accessToken == "" {
+				return c.JSON(http.StatusUnauthorized, model.ErrorResponse{
+					Message: "You are not logged in",
+				})
+			}
+
+			// Try to validate with new JWT format (with brand_id)
+			claims, err := utils.ValidateJWTWithClaims(accessToken, cfg.Jwt.SecretKey)
+			if err != nil {
+				log.Printf("JWT validation error: %v", err)
+				return c.JSON(http.StatusUnauthorized, model.ErrorResponse{
+					Message: "Invalid token",
+				})
+			}
+
+			if claims.TokenType != "" && claims.TokenType != utils.TokenTypeAccess {
+				return c.JSON(http.StatusUnauthorized, model.ErrorResponse{
+					Message: "Invalid token type",
+				})
+			}
+
+			c.Set("user_id", claims.UserID.String())
+			if claims.BrandID != nil {
+				c.Set("brand_id", *claims.BrandID)
+			} else {
+				c.Set("brand_id", "")
+			}
+			if claims.BranchID != nil {
+				c.Set("branch_id", *claims.BranchID)
+			} else {
+				c.Set("branch_id", "")
+			}
+			if claims.CashRegisterID != nil {
+				c.Set("cash_register_id", *claims.CashRegisterID)
+			} else {
+				c.Set("cash_register_id", "")
+			}
+
+			role := claims.Role
+			if role == "" {
+				role = "user"
+			}
+			c.Set("role", role)
+			c.Set("is_global", claims.IsGlobal)
+			// Also set for backward compatibility with old code that looks for "user_id" as string
+			c.Set("jwt_secret", cfg.Jwt.SecretKey)
+
+			return next(c)
+		}
+	}
+}
+
+func RequireGlobalSuperadmin(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		role, _ := c.Get("role").(string)
+		isGlobal, _ := c.Get("is_global").(bool)
+
+		if !isGlobal || role != "superadmin" {
+			return c.JSON(http.StatusForbidden, model.ErrorResponse{Message: "Forbidden"})
+		}
+
+		return next(c)
+	}
+}
+
+func ValidateLoginInput(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		var req model.LoginRequest
+		if err := c.Bind(&req); err != nil {
+			lang := getLanguage(c)
+			message := model.GetLocalizedMessage(lang, "invalid_request_body")
+			log.Printf("Login bind error: %v", err)
+			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: message})
+		}
+
+		req.Username = strings.TrimSpace(req.Username)
+		req.Password = strings.TrimSpace(req.Password)
+		if req.BrandID != nil {
+			b := strings.TrimSpace(*req.BrandID)
+			req.BrandID = &b
+		}
+
+		if req.Username == "" {
+			lang := getLanguage(c)
+			message := model.GetLocalizedMessage(lang, "phone_password_required")
+			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: message})
+		}
+		if req.Password == "" {
+			lang := getLanguage(c)
+			message := model.GetLocalizedMessage(lang, "phone_password_required")
+			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: message})
+		}
+		if c.Path() == "/api/v1/auth/login" {
+			if req.BrandID == nil || strings.TrimSpace(*req.BrandID) == "" {
+				lang := getLanguage(c)
+				message := model.GetLocalizedMessage(lang, "invalid_request_format")
+				if message == "" {
+					message = "brand_id is required"
+				}
+				return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: message})
+			}
+		}
+
+		c.Set("loginBody", req)
+		return next(c)
+	}
+}
+
+func ValidateRegisterInput(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		var req model.RegisterRequest
+		if err := c.Bind(&req); err != nil {
+			lang := getLanguage(c)
+			message := model.GetLocalizedMessage(lang, "invalid_request_format")
+			if errors.Is(err, io.EOF) {
+				message = "empty request body"
+			}
+			log.Printf("Failed to bind register request: %v", err)
+			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: message})
+		}
+		req.PhoneNumber = strings.TrimSpace(req.PhoneNumber)
+		req.FullName = strings.TrimSpace(req.FullName)
+		req.Username = strings.TrimSpace(req.Username)
+		req.Password = strings.TrimSpace(req.Password)
+		req.Pincode = strings.TrimSpace(req.Pincode)
+		if req.BrandID != nil {
+			b := strings.TrimSpace(*req.BrandID)
+			req.BrandID = &b
+		}
+		if req.PhoneNumber == "" {
+			lang := getLanguage(c)
+			message := model.GetLocalizedMessage(lang, "phone_password_required")
+			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: message})
+		}
+		if req.FullName == "" {
+			lang := getLanguage(c)
+			message := model.GetLocalizedMessage(lang, "invalid_request_format")
+			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: message})
+		}
+
+		if !isValidUzPhoneNumber(req.PhoneNumber) {
+			lang := getLanguage(c)
+			message := model.GetLocalizedMessage(lang, "invalid_phone_format")
+			if message == "" {
+				message = "Phone number must be in the format +998XXXXXXXXX"
+			}
+			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: message})
+		}
+
+		c.Set("register_request", &req)
+		return next(c)
+
+	}
+}
+func isValidUzPhoneNumber(phone string) bool {
+	if len(phone) != 13 {
+		return false
+	}
+	if !strings.HasPrefix(phone, "+998") {
+		return false
+	}
+	for _, c := range phone[4:] {
+		if c < '0' || c > '9' {
+			return false
+		}
+	}
+	return true
+}
+func ValidateRefreshInput(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		var req model.RefreshRequest
+		if err := c.Bind(&req); err != nil {
+			lang := getLanguage(c)
+			message := model.GetLocalizedMessage(lang, "invalid_request_body")
+			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: message})
+		}
+
+		if req.RefreshToken == "" {
+			lang := getLanguage(c)
+			message := model.GetLocalizedMessage(lang, "refresh_token_required")
+			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: message})
+		}
+
+		c.Set("refreshBody", req)
+		return next(c)
+	}
+}
+
+func CheckLanguage() echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			lang := strings.TrimSpace(c.QueryParam("lang"))
+
+			if lang == "" {
+				lang = "uz"
+				acceptLang := c.Request().Header.Get("Accept-Language")
+				langs := strings.Split(acceptLang, ",")
+				if acceptLang != "" && len(langs) > 0 {
+					langParts := strings.Split(strings.TrimSpace(langs[0]), "-")
+					if len(langParts) > 0 {
+						lang = strings.ToLower(langParts[0])
+					}
+				}
+			}
+
+			c.Set("language", model.NormalizeLanguage(lang))
+
+			return next(c)
+		}
+	}
+}
+
+func SanitizeInput() echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			contentType := c.Request().Header.Get("Content-Type")
+			if strings.Contains(contentType, "multipart/form-data") {
+				return next(c)
+			}
+			return next(c)
+		}
+	}
+}
+
+func getLanguage(c echo.Context) string {
+	if lang, ok := c.Get("language").(string); ok {
+		return model.NormalizeLanguage(lang)
+	}
+	return "uz"
+}
+
+func RequireRoles(roles ...string) echo.MiddlewareFunc {
+	allowed := make(map[string]struct{}, len(roles))
+	for _, r := range roles {
+		allowed[strings.TrimSpace(strings.ToLower(r))] = struct{}{}
+	}
+
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			role, _ := c.Get("role").(string)
+			role = strings.TrimSpace(strings.ToLower(role))
+
+			if _, ok := allowed[role]; !ok {
+				return c.JSON(http.StatusForbidden, model.ErrorResponse{
+					Message: "Forbidden",
+				})
+			}
+
+			return next(c)
+		}
+	}
+}
