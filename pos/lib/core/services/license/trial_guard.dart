@@ -43,6 +43,16 @@ class TrialGuard {
   static const bool enabled =
       bool.fromEnvironment('TRIAL_ENABLED', defaultValue: true);
 
+  /// Nusxa fayllarni yozishni o'chiradi: `--dart-define=TRIAL_MIRROR=off`.
+  ///
+  /// **Faqat testlar uchun.** Nusxalar ataylab ilova papkasidan tashqarida
+  /// (`%PROGRAMDATA%` va h.k.) va o'chirishga chidamli — ya'ni Windows'da
+  /// test to'plami ularni haqiqatan yozib qo'yadi va keyingi test o'sha
+  /// yozuvni o'qib "muddat allaqachon ketgan" deb qoladi. Testlar
+  /// bir-birini ifloslantirmasligi uchun shu bayroq bor.
+  static const bool mirrorEnabled =
+      String.fromEnvironment('TRIAL_MIRROR', defaultValue: 'on') != 'off';
+
   /// **Mutlaq muddat** — ISO-8601, masalan `2026-08-24T00:00:00Z`.
   /// `--dart-define=TRIAL_DEADLINE=...`
   ///
@@ -343,6 +353,7 @@ class TrialGuard {
   /// narsasi tozalanadi va ruxsatsiz saqlanadigan joy yo'q. U yerda
   /// [deadline] yagona ishonchli to'siq.
   static List<File> _mirrorFiles() {
+    if (!mirrorEnabled) return const [];
     if (!Platform.isWindows) return const [];
     const sep = r'\';
     final roots = <String?>[
