@@ -1,0 +1,253 @@
+import type { Theme, SxProps } from '@mui/material/styles';
+import type { ButtonBaseProps } from '@mui/material/ButtonBase';
+import type { IBranchFormData } from 'src/types/branches';
+
+import { usePopover } from 'minimal-shared/hooks';
+import { useState, useEffect, useCallback } from 'react';
+
+import Box from '@mui/material/Box';
+import Avatar from '@mui/material/Avatar';
+import Button from '@mui/material/Button';
+import MenuList from '@mui/material/MenuList';
+import MenuItem from '@mui/material/MenuItem';
+import Typography from '@mui/material/Typography';
+import ButtonBase from '@mui/material/ButtonBase';
+
+import { useTranslate } from 'src/locales/use-locales';
+import { useCreateBranch } from 'src/actions/branches';
+
+import { Iconify } from 'src/components/iconify';
+import { Scrollbar } from 'src/components/scrollbar';
+import { CustomPopover } from 'src/components/custom-popover';
+import { useBranchContext } from 'src/components/contexts/branch-context';
+
+import { BranchFormDialog } from './BranchFormDialog';
+
+// ----------------------------------------------------------------------
+
+export type WorkspacesPopoverProps = ButtonBaseProps & {
+  data?: {
+    id: string;
+    name: string;
+    logo: string;
+    // plan: string;
+  }[];
+};
+
+export function WorkspacesPopover({ data = [], sx, ...other }: WorkspacesPopoverProps) {
+  const mediaQuery = 'sm';
+
+  const { open, anchorEl, onClose, onOpen } = usePopover();
+  const { selectedBranchId, setSelectedBranchId } = useBranchContext();
+  const isSuperadmin = String(localStorage.getItem('user_role') || '').toLowerCase() === 'superadmin';
+
+  const [workspace, setWorkspace] = useState(data[0]);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const { t } = useTranslate('menu');
+  const { t: tLayout } = useTranslate('layout');
+  const { createBranch } = useCreateBranch();
+
+  // Data change'da workspace'ni sync qilish
+  useEffect(() => {
+    if (data.length === 0) return;
+
+    // Agar selectedBranchId mavjud bo'lsa, uning uchun workspace'ni topamiz
+    const selected = selectedBranchId ? data.find((d) => d.id === selectedBranchId) : undefined;
+
+    if (selected) {
+      setWorkspace(selected);
+      return;
+    }
+
+    // selectedBranchId yo'q, yoki joriy foydalanuvchi uchun endi mavjud
+    // bo'lmagan (o'chirilgan yoki ruxsat yo'q) branch'ga ishora qilyapti -
+    // ro'yxatdagi birinchi branch'ga tushamiz, aks holda navbar bo'sh qoladi.
+    setWorkspace(data[0]);
+    setSelectedBranchId(data[0].id);
+  }, [data, selectedBranchId, setSelectedBranchId]);
+
+  const handleChangeWorkspace = useCallback(
+    (newValue: (typeof data)[0]) => {
+      const hasChanged = selectedBranchId !== newValue.id;
+      setWorkspace(newValue);
+      setSelectedBranchId(newValue.id);
+      onClose();
+
+      if (isSuperadmin && hasChanged) {
+        window.location.reload();
+      }
+    },
+    [isSuperadmin, onClose, selectedBranchId, setSelectedBranchId]
+  );
+
+  const handleOpenDialog = useCallback(() => {
+    onClose();
+    setDialogOpen(true);
+  }, [onClose]);
+
+  const handleCloseDialog = useCallback(() => {
+    setDialogOpen(false);
+  }, []);
+
+  const handleSubmitBranch = useCallback(
+    async (formData: IBranchFormData) => {
+      try {
+        setIsSubmitting(true);
+        await createBranch(formData);
+        handleCloseDialog();
+        // Reload to refresh the branch list
+        window.location.reload();
+      } catch (error) {
+        console.error('Failed to create branch:', error);
+        setIsSubmitting(false);
+      }
+    },
+    [createBranch, handleCloseDialog]
+  );
+
+  const buttonBg: SxProps<Theme> = {
+    height: 1,
+    zIndex: -1,
+    opacity: 0,
+    content: "''",
+    borderRadius: 1,
+    position: 'absolute',
+    visibility: 'hidden',
+    bgcolor: 'action.hover',
+    width: 'calc(100% + 8px)',
+    transition: (theme) =>
+      theme.transitions.create(['opacity', 'visibility'], {
+        easing: theme.transitions.easing.sharp,
+        duration: theme.transitions.duration.shorter,
+      }),
+    ...(open && {
+      opacity: 1,
+      visibility: 'visible',
+    }),
+  };
+
+  const renderButton = () => (
+    <ButtonBase
+      disableRipple
+      onClick={onOpen}
+      // The visible workspace name is hidden on xs and absent while branches
+      // load; without this the button has no accessible name. Including the
+      // name keeps the accessible name a superset of the visible text.
+      aria-label={
+        workspace?.name
+          ? `${tLayout('a11y.selectBranch')}: ${workspace.name}`
+          : tLayout('a11y.selectBranch')
+      }
+      sx={[
+        {
+          py: 0.5,
+          gap: { xs: 0.5, [mediaQuery]: 1 },
+          '&::before': buttonBg,
+        },
+        ...(Array.isArray(sx) ? sx : [sx]),
+      ]}
+      {...other}
+    >
+      <Avatar alt={workspace?.name} src={workspace?.logo} sx={{ width: 24, height: 24 }} />
+
+      <Box
+        component="span"
+        sx={{ typography: 'subtitle2', display: { xs: 'none', [mediaQuery]: 'inline-flex' } }}
+      >
+        {workspace?.name}
+      </Box>
+
+      {/* <Label
+        color={workspace?.plan === 'Free' ? 'default' : 'info'}
+        sx={{
+          height: 22,
+          cursor: 'inherit',
+          display: { xs: 'none', [mediaQuery]: 'inline-flex' },
+        }}
+      >
+        {workspace?.plan}
+      </Label> */}
+
+      <Iconify width={16} icon="carbon:chevron-sort" sx={{ color: 'text.disabled' }} />
+    </ButtonBase>
+  );
+
+  const renderMenuList = () => (
+    <CustomPopover
+      open={open}
+      anchorEl={anchorEl}
+      onClose={onClose}
+      slotProps={{
+        arrow: { placement: 'top-left' },
+        paper: { sx: { mt: 0.5, ml: -1.55, width: 240 } },
+      }}
+    >
+      <Scrollbar sx={{ maxHeight: 240 }}>
+        <MenuList>
+          {data.map((option) => (
+            <MenuItem
+              key={option.id}
+              selected={option.id === workspace?.id}
+              onClick={() => handleChangeWorkspace(option)}
+              sx={{ height: 48 }}
+            >
+              <Avatar alt={option.name} src={option.logo} sx={{ width: 24, height: 24 }} />
+
+              <Typography
+                noWrap
+                component="span"
+                variant="body2"
+                sx={{ flexGrow: 1, fontWeight: 'fontWeightMedium' }}
+              >
+                {option.name}
+              </Typography>
+
+              {/* <Label color={option.plan === 'Free' ? 'default' : 'info'}>{option.plan}</Label> */}
+            </MenuItem>
+          ))}
+        </MenuList>
+      </Scrollbar>
+
+      {isSuperadmin && (
+        <Button
+          fullWidth
+          startIcon={<Iconify width={18} icon="mingcute:add-line" />}
+          onClick={handleOpenDialog}
+          sx={{
+            gap: 2,
+            justifyContent: 'flex-start',
+            fontWeight: 'fontWeightMedium',
+            borderTop: '1px dashed',
+            borderColor: 'divider',
+            pt: 1.5,
+            [`& .MuiButton-startIcon`]: {
+              m: 0,
+              width: 24,
+              height: 24,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            },
+          }}
+        >
+          {t('workspaces.add')}
+        </Button>
+      )}
+    </CustomPopover>
+  );
+
+  return (
+    <>
+      {renderButton()}
+      {renderMenuList()}
+      <BranchFormDialog
+        open={dialogOpen}
+        onClose={handleCloseDialog}
+        onSubmit={handleSubmitBranch}
+        isSubmitting={isSubmitting}
+      />
+    </>
+  );
+}

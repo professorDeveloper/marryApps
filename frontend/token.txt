@@ -1,0 +1,11 @@
+{
+  "credentials": {
+    "brand_id": "mary_ai",
+    "username": "madinka_1",
+    "password": "admin123"
+  },
+  "tokens": {
+    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiNTg5ZjY3NWUtODE4Mi00OTA1LWJmMTUtYTZiYmE0ZDA0MzdkIiwiYnJhbmRfaWQiOiJtYXJ5X2FpIiwiYnJhbmNoX2lkIjoiMzg2OTEyNDEtYmYxNC00NzE3LWI3OTYtMmVhNzJhYWY4MjQzIiwicm9sZSI6ImFkbWluIiwiaXNfZ2xvYmFsIjpmYWxzZSwidG9rZW5fdHlwZSI6ImFjY2VzcyIsImV4cCI6MTc3NzA1MDE3NSwiaWF0IjoxNzc2OTYzNzc1LCJuYmYiOjE3NzY5NjM3NzUsInN1YiI6IjU4OWY2NzVlLTgxODItNDkwNS1iZjE1LWE2YmJhNGQwNDM3ZCJ9.GvZ0tCb0-RvzmJu4wlvi7xAGC7PaMU9iIAYqHizvEKs",
+    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiNTg5ZjY3NWUtODE4Mi00OTA1LWJmMTUtYTZiYmE0ZDA0MzdkIiwiYnJhbmRfaWQiOiJtYXJ5X2FpIiwiYnJhbmNoX2lkIjoiMzg2OTEyNDEtYmYxNC00NzE3LWI3OTYtMmVhNzJhYWY4MjQzIiwicm9sZSI6ImFkbWluIiwiaXNfZ2xvYmFsIjpmYWxzZSwidG9rZW5fdHlwZSI6InJlZnJlc2giLCJleHAiOjE3Nzk1NTU3NzUsImlhdCI6MTc3Njk2Mzc3NSwibmJmIjoxNzc2OTYzNzc1LCJzdWIiOiI1ODlmNjc1ZS04MTgyLTQ5MDUtYmYxNS1hNmJiYTRkMDQzN2QifQ.T0GXItCCRWs7vhzcxlJqcvxOJmBBzTRtn_dYis8Xyc0"
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "demo": {
+    "lang": "English",
+    "description": "The starting point for your next project is based on MUI. Easy customization helps you build apps faster and better."
+  },
+  "folders": {
+    "documents": "Documents",
+    "projects": "Projects",
+    "work": "Work",
+    "education": "Education",
+    "sports": "Sports",
+    "meals": "Meals"
+  },
+  "dataTable": {
+    "sort": "Sort",
+    "filter": "Filter",
+    "columnSettings": "Column settings",
+    "resetToDefault": "Reset to default",
+    "search": "Search",
+    "rowActions": "Row actions",
+    "menu": "Menu",
+    "previousPage": "Previous page",
+    "nextPage": "Next page",
+    "rowsPerPage": "Rows per page",
+    "startDate": "Start date",
+    "endDate": "End date"
+  },
+  "all": "All"
+}

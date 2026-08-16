@@ -1,0 +1,59 @@
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+
+  <g opacity="0.4">
+    <!-- wider centered document background -->
+    <path d="M6.8 2.5H14.5L17.8 5.6V21C17.8 21.6 17.2 22 16.6 22H7.4C6.8 22 6.2 21.6 6.2 21V3.4C6.2 2.9 6.5 2.5 6.8 2.5Z"
+          fill="#1D7BF5"/>
+  </g>
+
+  <!-- fold -->
+  <path d="M14.2 3.2V6H17.2"
+        stroke="#1D7BF5"
+        stroke-width="1.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"/>
+
+  <!-- TOP LINE -->
+  <path d="M7.5 8H16.5"
+        stroke="#1D7BF5"
+        stroke-width="1.5"
+        stroke-linecap="round"
+        opacity="0.4"/>
+
+  <!-- up arrow (wider left) -->
+  <path d="M9.5 15V10"
+        stroke="#1D7BF5"
+        stroke-width="1.5"
+        stroke-linecap="round"/>
+  <path d="M8.3 11.2L9.5 10L10.7 11.2"
+        stroke="#1D7BF5"
+        stroke-width="1.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"/>
+
+  <!-- down arrow (wider right) -->
+  <path d="M14.5 10V15"
+        stroke="#1D7BF5"
+        stroke-width="1.5"
+        stroke-linecap="round"/>
+  <path d="M13.3 13.8L14.5 15L15.7 13.8"
+        stroke="#1D7BF5"
+        stroke-width="1.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"/>
+
+  <!-- base line -->
+  <path d="M7.5 20H16.5"
+        stroke="#1D7BF5"
+        stroke-width="1.5"
+        stroke-linecap="round"
+        opacity="0.4"/>
+
+  <!-- BOTTOM LINE -->
+  <path d="M7.5 18H16.5"
+        stroke="#1D7BF5"
+        stroke-width="1.5"
+        stroke-linecap="round"
+        opacity="0.4"/>
+
+</svg>

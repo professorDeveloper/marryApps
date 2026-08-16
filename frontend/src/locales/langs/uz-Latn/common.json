@@ -1,0 +1,29 @@
+{
+  "demo": {
+    "lang": "O'zbek",
+    "description": "Keyingi loyihangizning boshlang'ich nuqtasi MUI asosida yaratilgan. Oson sozlash aplikatsiyalarni tezroq va yaxshiroq qurish uchun yordam beradi."
+  },
+  "folders": {
+    "documents": "Hujjatlar",
+    "projects": "Loyahalar",
+    "work": "Ish",
+    "education": "O'qitish",
+    "sports": "Sport",
+    "meals": "Taomlar"
+  },
+  "dataTable": {
+    "sort": "Saralash",
+    "filter": "Filter",
+    "columnSettings": "Ustun sozlamalari",
+    "resetToDefault": "Standartga qaytarish",
+    "search": "Qidirish",
+    "rowActions": "Qator amallari",
+    "menu": "Menyu",
+    "previousPage": "Oldingi sahifa",
+    "nextPage": "Keyingi sahifa",
+    "rowsPerPage": "Sahifadagi qatorlar",
+    "startDate": "Boshlanish sanasi",
+    "endDate": "Tugash sanasi"
+  },
+  "all": "Hammasi"
+}

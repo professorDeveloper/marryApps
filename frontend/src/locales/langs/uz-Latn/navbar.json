@@ -1,0 +1,12 @@
+{
+  "app": "Ilova",
+  "job": "Ish",
+  "user": "Foydalanuvchi",
+  "travel": "Sayohat",
+  "invoice": "Hisob-faktura",
+  "blog": {
+    "title": "Blog",
+    "caption": "Sozlangan klaviatura yorliqlari."
+  },
+  "subheader": "Ostangi sarlavha"
+}

@@ -1,0 +1,21 @@
+{
+  "infoAlert": "This is an info Alert.",
+  "needHelp": "Need help?",
+  "languages": {
+    "en": "English",
+    "uz-Latn": "O'zbek (Lotin)",
+    "uz-Cyrl": "Ўзбек (Кирил)",
+    "ru": "Русский"
+  },
+  "a11y": {
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "closeNavigation": "Close navigation",
+    "openProfile": "Open profile",
+    "account": "Account",
+    "notifications": "Notifications",
+    "languages": "Languages",
+    "contacts": "Contacts",
+    "selectBranch": "Select branch"
+  }
+}

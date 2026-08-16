@@ -1,0 +1,224 @@
+import type { SWRConfiguration } from 'swr';
+import type {
+  IIngredientGroupItem,
+  IIngredientGroupFormData,
+  IIngredientGroupResponse,
+} from 'src/types/ingredient-group';
+
+import useSWR from 'swr';
+import { useMemo, useCallback } from 'react';
+
+import { mutate } from 'src/lib/swr';
+import { prependToListCache } from 'src/lib/list-cache';
+import { poster, putter, fetcher, deleter, endpoints } from 'src/lib/axios';
+
+import { toast } from 'src/components/snackbar';
+
+const swrOptions: SWRConfiguration = {
+  revalidateIfStale: false, // Don't re-fetch stale data when component re-mounts
+  revalidateOnFocus: false,
+  revalidateOnReconnect: false,
+  dedupingInterval: 60000, // Dedupe requests within 1 minute
+  keepPreviousData: true, // Keep previous data while revalidating
+};
+
+/**
+ * Get all ingredient groups
+ */
+export function useGetIngredientGroups(searchQuery?: string, enabled = true) {
+  const normalizedQuery = searchQuery?.trim() || '';
+  // Always fetch ingredient groups once and cache them globally
+  const url = normalizedQuery
+    ? [endpoints.ingredientGroups.list, { params: { search: normalizedQuery } }]
+    : endpoints.ingredientGroups.list;
+
+  const { data, isLoading, error, isValidating } = useSWR<IIngredientGroupResponse>(
+    url,
+    fetcher,
+    swrOptions
+  );
+
+  const memoizedValue = useMemo(
+    () => ({
+      ingredientGroups: (data?.data as IIngredientGroupItem[]) || [],
+      ingredientGroupsLoading: isLoading,
+      ingredientGroupsError: error,
+      ingredientGroupsValidating: isValidating,
+      ingredientGroupsEmpty: !isLoading && !isValidating && !data?.data?.length,
+    }),
+    [data?.data, error, isLoading, isValidating]
+  );
+
+  return memoizedValue;
+}
+
+/**
+ * Get ingredient groups with server-side pagination
+ */
+export function useGetIngredientGroupsPage(params?: {
+  search?: string;
+  limit?: number;
+  offset?: number;
+}) {
+  const normalizedQuery = params?.search?.trim() || '';
+  const limit = typeof params?.limit === 'number' ? params?.limit : 20;
+  const offset = typeof params?.offset === 'number' ? params?.offset : 0;
+
+  const url = [
+    endpoints.ingredientGroups.list,
+    {
+      params: {
+        search: normalizedQuery || undefined,
+        limit,
+        offset,
+      },
+    },
+  ];
+
+  const { data, isLoading, error, isValidating } = useSWR<IIngredientGroupResponse>(
+    url,
+    fetcher,
+    swrOptions
+  );
+
+  const memoizedValue = useMemo(
+    () => ({
+      ingredientGroups: (data?.data as IIngredientGroupItem[]) || [],
+      ingredientGroupsLoading: isLoading,
+      ingredientGroupsError: error,
+      ingredientGroupsValidating: isValidating,
+      ingredientGroupsEmpty: !isLoading && !isValidating && !data?.data?.length,
+      pagination: data?.pagination,
+    }),
+    [data?.data, data?.pagination, error, isLoading, isValidating]
+  );
+
+  return memoizedValue;
+}
+
+/**
+ * Get single ingredient group by ID
+ */
+export function useGetIngredientGroup(groupId: string) {
+  const url = groupId ? endpoints.ingredientGroups.details(groupId) : '';
+
+  const { data, isLoading, error, isValidating } = useSWR<IIngredientGroupResponse>(
+    url,
+    fetcher,
+    swrOptions
+  );
+
+  const memoizedValue = useMemo(() => {
+    if (!data?.data) {
+      return {
+        ingredientGroup: null,
+        ingredientGroupLoading: isLoading,
+        ingredientGroupError: error,
+        ingredientGroupValidating: isValidating,
+      };
+    }
+
+    const ingredientGroup = Array.isArray(data.data)
+      ? (data.data[0] as IIngredientGroupItem)
+      : (data.data as IIngredientGroupItem);
+
+    return {
+      ingredientGroup,
+      ingredientGroupLoading: isLoading,
+      ingredientGroupError: error,
+      ingredientGroupValidating: isValidating,
+    };
+  }, [data, error, isLoading, isValidating]);
+
+  return memoizedValue;
+}
+
+/**
+ * Create new ingredient group
+ */
+export function useCreateIngredientGroup() {
+  const createIngredientGroup = useCallback(async (formData: IIngredientGroupFormData) => {
+    try {
+      const response = await poster<IIngredientGroupResponse>(
+        endpoints.ingredientGroups.create,
+        formData
+      );
+
+      // Prepend the created ingredient group to cached lists instead of refetching
+      const created = Array.isArray(response.data) ? response.data[0] : response.data;
+      if (created) {
+        await prependToListCache(endpoints.ingredientGroups.list, created);
+      }
+
+      toast.success('Ingredient group created successfully');
+      return response;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to create ingredient group';
+      toast.error(message);
+      throw error;
+    }
+  }, []);
+
+  return { createIngredientGroup };
+}
+
+/**
+ * Update ingredient group
+ */
+export function useUpdateIngredientGroup() {
+  const updateIngredientGroup = useCallback(
+    async (groupId: string, formData: IIngredientGroupFormData) => {
+      try {
+        const response = await putter<IIngredientGroupResponse>(
+          endpoints.ingredientGroups.update(groupId),
+          formData
+        );
+
+        await mutate(endpoints.ingredientGroups.list);
+        await mutate(endpoints.ingredientGroups.details(groupId));
+
+        toast.success('Ingredient group updated successfully');
+        return response;
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : 'Failed to update ingredient group';
+        toast.error(message);
+        throw error;
+      }
+    },
+    []
+  );
+
+  return { updateIngredientGroup };
+}
+
+/**
+ * Delete ingredient group
+ */
+export function useDeleteIngredientGroup() {
+  const deleteIngredientGroup = useCallback(async (groupId: string) => {
+    try {
+      const response = await deleter<IIngredientGroupResponse>(
+        endpoints.ingredientGroups.delete(groupId)
+      );
+
+      await mutate(
+        (key) =>
+          key === endpoints.ingredientGroups.list ||
+          (Array.isArray(key) && key[0] === endpoints.ingredientGroups.list),
+        undefined,
+        { revalidate: true }
+      );
+
+      toast.success('Ingredient group deleted successfully');
+      return response;
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Failed to delete ingredient group';
+      toast.error(message);
+      throw error;
+    }
+  }, []);
+
+  return { deleteIngredientGroup };
+}

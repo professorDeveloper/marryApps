@@ -1,0 +1,21 @@
+{
+  "infoAlert": "Это информационное предупреждение.",
+  "needHelp": "Нужна помощь?",
+  "languages": {
+    "en": "English",
+    "uz-Latn": "O'zbek (Lotin)",
+    "uz-Cyrl": "Ўзбек (Кирил)",
+    "ru": "Русский"
+  },
+  "a11y": {
+    "openMenu": "Открыть меню",
+    "closeMenu": "Закрыть меню",
+    "closeNavigation": "Закрыть навигацию",
+    "openProfile": "Открыть профиль",
+    "account": "Аккаунт",
+    "notifications": "Уведомления",
+    "languages": "Языки",
+    "contacts": "Контакты",
+    "selectBranch": "Выбрать филиал"
+  }
+}

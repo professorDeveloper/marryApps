@@ -1,0 +1,274 @@
+import type { SWRConfiguration } from 'swr';
+import type { IUser, IUserFormData } from 'src/types/user';
+
+import useSWR from 'swr';
+import { useMemo, useCallback } from 'react';
+
+import { mutate } from 'src/lib/swr';
+import { poster, patcher, fetcher, deleter, endpoints } from 'src/lib/axios';
+
+const swrOptions: SWRConfiguration = {
+    revalidateIfStale: true,
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+};
+
+/**
+ * Backend response structure
+ */
+interface BackendResponse<T> {
+    status: string;
+    message: string;
+    data: T;
+    code: number;
+}
+
+interface GetUsersParams {
+    query?: string;
+    role?: string;
+    staff?: boolean;
+    branch_id?: string;
+    limit?: number;
+    offset?: number;
+}
+
+function normalizeUser(rawUser: any): IUser {
+    return {
+        ...rawUser,
+        full_name: rawUser?.full_name ?? rawUser?.fullName ?? '',
+        phone_number: rawUser?.phone_number ?? rawUser?.phoneNumber ?? '',
+        brand_id: rawUser?.brand_id ?? rawUser?.brandId ?? '',
+        branch_id: rawUser?.branch_id ?? rawUser?.branchId ?? '',
+        cash_register_id: rawUser?.cash_register_id ?? rawUser?.cashRegisterId ?? '',
+        pincode: rawUser?.pincode ?? rawUser?.pinCode ?? '',
+        terminal: rawUser?.terminal ?? rawUser?.terminal_name ?? '',
+        is_active: rawUser?.is_active,
+        status:
+            rawUser?.status ??
+            (typeof rawUser?.is_active === 'boolean'
+                ? (rawUser.is_active ? 'active' : 'inactive')
+                : undefined),
+    };
+}
+
+function extractUserPayload(input: any): any {
+    if (!input) return undefined;
+
+    if (Array.isArray(input)) {
+        return input[0];
+    }
+
+    if (typeof input !== 'object') {
+        return undefined;
+    }
+
+    if (input.user && typeof input.user === 'object') return input.user;
+    if (input.item && typeof input.item === 'object') return input.item;
+    if (input.result && typeof input.result === 'object') return extractUserPayload(input.result);
+    if (input.data && typeof input.data === 'object') return extractUserPayload(input.data);
+
+    // If this object already looks like a user record, return it directly.
+    if ('id' in input || 'username' in input || 'full_name' in input || 'fullName' in input) {
+        return input;
+    }
+
+    return undefined;
+}
+
+
+function buildUsersListUrl(params: GetUsersParams = {}) {
+    const searchParams = new URLSearchParams();
+
+    if (params.query?.trim()) searchParams.set('query', params.query.trim());
+    if (params.role?.trim()) searchParams.set('role', params.role.trim());
+    if (typeof params.staff === 'boolean') searchParams.set('staff', String(params.staff));
+    if (params.branch_id?.trim()) searchParams.set('branch_id', params.branch_id.trim());
+    if (typeof params.limit === 'number') searchParams.set('limit', String(params.limit));
+    if (typeof params.offset === 'number') searchParams.set('offset', String(params.offset));
+
+    const queryString = searchParams.toString();
+    return queryString ? `${endpoints.users.list}?${queryString}` : endpoints.users.list;
+}
+
+
+/**
+ * Get users by role
+ */
+export function useGetUsersByRole(role: string, useStaffApi = false) {
+    const url = useStaffApi ? endpoints.users.staff : (role ? endpoints.users.byRole(role) : '');
+
+    const { data, isLoading, error, isValidating } = useSWR<BackendResponse<IUser[]> | IUser[]>(
+        url,
+        fetcher,
+        { ...swrOptions }
+    );
+
+    const users = useMemo(() => {
+        const rawUsers = Array.isArray(data) ? data : (data?.data || []);
+
+        return rawUsers.map((user: any) => normalizeUser(user));
+    }, [data]);
+
+    const memoizedValue = useMemo(
+        () => ({
+            users,
+            usersLoading: isLoading,
+            usersError: error,
+            usersValidating: isValidating,
+            usersEmpty: !isLoading && !isValidating && !users.length,
+        }),
+        [error, isLoading, isValidating, users]
+    );
+
+    return memoizedValue;
+}
+
+/**
+ * Get users with filters
+ */
+export function useGetUsers(params: GetUsersParams = {}) {
+    const url = buildUsersListUrl(params);
+
+    const { data, isLoading, error, isValidating } = useSWR<BackendResponse<IUser[]> | IUser[]>(
+        url,
+        fetcher,
+        { ...swrOptions }
+    );
+
+    const users = useMemo(() => {
+        const rawUsers = Array.isArray(data) ? data : (data?.data || []);
+        return rawUsers.map((user: any) => normalizeUser(user));
+    }, [data]);
+
+    const memoizedValue = useMemo(
+        () => ({
+            users,
+            totalCount: users.length,
+            usersLoading: isLoading,
+            usersError: error,
+            usersValidating: isValidating,
+            usersEmpty: !isLoading && !isValidating && !users.length,
+        }),
+        [error, isLoading, isValidating, users]
+    );
+
+    return memoizedValue;
+}
+
+/**
+ * Get single user by ID
+ */
+export function useGetUser(userId: string) {
+    const url = userId ? endpoints.users.details(userId) : '';
+
+    const { data, isLoading, error, isValidating } = useSWR<BackendResponse<IUser> | IUser | { data?: IUser }>(
+        url,
+        fetcher,
+        { ...swrOptions }
+    );
+
+    const user = useMemo(() => {
+        if (!data) return undefined;
+        const rawUser = extractUserPayload(data);
+        if (!rawUser) return undefined;
+        return normalizeUser(rawUser);
+    }, [data]);
+
+    const memoizedValue = useMemo(
+        () => ({
+            user,
+            userLoading: isLoading,
+            userError: error,
+            userValidating: isValidating,
+        }),
+        [user, error, isLoading, isValidating]
+    );
+
+    return memoizedValue;
+}
+
+/**
+ * Create staff user (via authenticated admin endpoint)
+ */
+export function useCreateUser() {
+    const callback = useCallback(
+        async (formData: IUserFormData) => {
+            const staffData: Record<string, unknown> = {
+                full_name: formData.full_name || formData.fullName || '',
+                phone_number: formData.phone_number || formData.phoneNumber || '',
+                username: formData.username || '',
+                role: formData.role,
+                is_active: formData.is_active ?? true,
+                branch_id:
+                    formData.branch_id
+                    || localStorage.getItem('selectedBranchId')
+                    || localStorage.getItem('branch_id')
+                    || '',
+            };
+
+            if (formData.password?.trim()) {
+                staffData.password = formData.password.trim();
+            }
+
+            if (formData.pincode?.trim()) {
+                staffData.pincode = formData.pincode.trim();
+            }
+
+            if (formData.cash_register_id) {
+                staffData.cash_register_id = formData.cash_register_id;
+            }
+
+            const response = await poster<IUser>(endpoints.users.create, staffData);
+            mutate(endpoints.users.list);
+            return response;
+        },
+        []
+    );
+
+    return callback;
+}
+
+/**
+ * Update user
+ */
+export function useUpdateUser() {
+    const callback = useCallback(
+        async (userId: string, formData: IUserFormData) => {
+            const response = await patcher<IUser>(endpoints.users.update(userId), formData);
+            // Revalidate list and details
+            mutate(endpoints.users.list);
+            mutate(endpoints.users.details(userId));
+            return response;
+        },
+        []
+    );
+
+    return callback;
+}
+
+/**
+ * Delete user
+ */
+export function useDeleteUser() {
+    const callback = useCallback(
+        async (userId: string) => {
+            await deleter(endpoints.users.delete(userId));
+            await mutate(
+                (key) =>
+                    typeof key === 'string' &&
+                    (key === endpoints.users.list || key.startsWith(`${endpoints.users.list}?`)),
+                undefined,
+                { revalidate: true }
+            );
+            const roles = ['admin', 'manager', 'cashier', 'waiter', 'kitchen', 'user'];
+            roles.forEach(role => {
+                const roleUrl = endpoints.users.byRole(role);
+                mutate(roleUrl, undefined, { revalidate: true });
+            });
+            mutate(endpoints.users.staff, undefined, { revalidate: true });
+        },
+        []
+    );
+
+    return callback;
+}

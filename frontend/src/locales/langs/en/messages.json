@@ -1,0 +1,18 @@
+{
+  "languageSwitch": {
+    "success": "Language has been changed!",
+    "error": "Error changing language!",
+    "loading": "Loading..."
+  },
+  "errors": {
+    "registrationFailed": "Registration failed. Please try again.",
+    "duplicatePincode": "This PIN code is already in use. Please enter a different PIN code.",
+    "duplicateUsername": "This username is already taken. Please choose a different username.",
+    "duplicateEmail": "This email address is already registered. Please use a different email.",
+    "duplicateField": "This value is already in use. Please enter a different value.",
+    "invalidUsername": "Invalid username. Please check and try again.",
+    "invalidPassword": "Invalid password. Please check and try again.",
+    "invalidPhone": "Invalid phone number. Please check and try again.",
+    "invalidEmail": "Invalid email address. Please check and try again."
+  }
+}

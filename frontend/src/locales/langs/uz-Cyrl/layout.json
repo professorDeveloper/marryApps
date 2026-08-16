@@ -1,0 +1,21 @@
+{
+  "infoAlert": "Бу маълумотнома огоҳлантиришидир.",
+  "needHelp": "Ёрдам керакми?",
+  "languages": {
+    "en": "English",
+    "uz-Latn": "O'zbek (Lotin)",
+    "uz-Cyrl": "Ўзбек (Кирил)",
+    "ru": "Русский"
+  },
+  "a11y": {
+    "openMenu": "Менюни очинг",
+    "closeMenu": "Менюни ёпинг",
+    "closeNavigation": "Навигацияни ёпинг",
+    "openProfile": "Профилни очинг",
+    "account": "Аккаунт",
+    "notifications": "Билдиришномалар",
+    "languages": "Тиллар",
+    "contacts": "Контактлар",
+    "selectBranch": "Филиални танлаш"
+  }
+}

@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+# pre-push: run TypeScript + ESLint checks before pushing.
+# If issues are found you choose: [f]ix (abort the push) or [i]gnore (push anyway).
+# Skip entirely for one push with: git push --no-verify
+
+set -u
+
+BOLD=$(tput bold 2>/dev/null || true)
+RED=$(tput setaf 1 2>/dev/null || true)
+GREEN=$(tput setaf 2 2>/dev/null || true)
+YELLOW=$(tput setaf 3 2>/dev/null || true)
+RESET=$(tput sgr0 2>/dev/null || true)
+
+cd "$(git rev-parse --show-toplevel)" || exit 1
+
+echo "${BOLD}pre-push:${RESET} type-checking (tsc --noEmit)..."
+TSC_OUT=$(npx tsc --noEmit 2>&1)
+TSC_STATUS=$?
+
+echo "${BOLD}pre-push:${RESET} linting (eslint src)..."
+LINT_OUT=$(npx eslint "src/**/*.{js,jsx,ts,tsx}" 2>&1)
+LINT_STATUS=$?
+
+if [ "$TSC_STATUS" -eq 0 ] && [ "$LINT_STATUS" -eq 0 ]; then
+    echo "${GREEN}pre-push: all checks passed.${RESET}"
+    exit 0
+fi
+
+echo
+echo "${RED}${BOLD}pre-push: issues found${RESET}"
+echo "──────────────────────────────────────────────────"
+
+if [ "$TSC_STATUS" -ne 0 ]; then
+    TSC_COUNT=$(printf '%s\n' "$TSC_OUT" | grep -c "error TS")
+    echo "${RED}TypeScript: $TSC_COUNT error(s)${RESET}"
+    printf '%s\n' "$TSC_OUT" | head -40
+    [ "$(printf '%s\n' "$TSC_OUT" | wc -l)" -gt 40 ] && echo "${YELLOW}... (truncated, run 'yarn typecheck' for full output)${RESET}"
+    echo
+fi
+
+if [ "$LINT_STATUS" -ne 0 ]; then
+    echo "${RED}ESLint: errors found${RESET}"
+    printf '%s\n' "$LINT_OUT" | tail -60
+    echo
+fi
+
+echo "──────────────────────────────────────────────────"
+
+# git pipes the pushed refs into stdin, so user input must come from the terminal
+if { exec 3</dev/tty; } 2>/dev/null; then
+    while true; do
+        printf "%s" "${BOLD}[f]${RESET}ix (abort push) / ${BOLD}[i]${RESET}gnore (push anyway)? "
+        read -r answer <&3
+        case "$answer" in
+            f | F | fix)
+                echo "${YELLOW}Push aborted. Fix the issues and push again.${RESET}"
+                exit 1
+                ;;
+            i | I | ignore)
+                echo "${YELLOW}Ignoring issues, continuing push.${RESET}"
+                exit 0
+                ;;
+            *)
+                echo "Please answer f or i."
+                ;;
+        esac
+    done
+else
+    echo "${RED}No terminal available to ask — blocking push.${RESET}"
+    echo "Push from a terminal to get the fix/ignore prompt, or bypass once with: git push --no-verify"
+    exit 1
+fi

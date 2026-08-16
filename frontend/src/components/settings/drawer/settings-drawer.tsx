@@ -1,0 +1,300 @@
+import type { SettingsState, SettingsDrawerProps } from '../types';
+
+import { useEffect, useCallback } from 'react';
+import { hasKeys } from 'minimal-shared/utils';
+
+import Box from '@mui/material/Box';
+import Badge from '@mui/material/Badge';
+import Drawer from '@mui/material/Drawer';
+import SvgIcon from '@mui/material/SvgIcon';
+import Tooltip from '@mui/material/Tooltip';
+import IconButton from '@mui/material/IconButton';
+import Typography from '@mui/material/Typography';
+import { useTheme , useColorScheme } from '@mui/material/styles';
+
+import { themeConfig } from 'src/theme/theme-config';
+import { useTranslate } from 'src/locales/use-locales';
+import { primaryColorPresets } from 'src/theme/with-settings';
+
+import { Label } from '../../label';
+import { settingIcons } from './icons';
+import { Iconify } from '../../iconify';
+import { BaseOption } from './base-option';
+import { Scrollbar } from '../../scrollbar';
+import { SmallBlock, LargeBlock } from './styles';
+import { PresetsOptions } from './presets-options';
+import { NavColorOptions } from './nav-layout-option';
+import { FullScreenButton } from './fullscreen-button';
+import { FontSizeOptions, FontFamilyOptions } from './font-options';
+import { useSettingsContext } from '../context/use-settings-context';
+import { FloorPlanSettings } from '../../floor-plan-editor/floor-plan-settings';
+
+// ----------------------------------------------------------------------
+
+export function SettingsDrawer({ sx, defaultSettings }: SettingsDrawerProps) {
+  const theme = useTheme();
+  const settings = useSettingsContext();
+  const { mode, setMode, colorScheme } = useColorScheme();
+  const { t } = useTranslate('menu');
+
+  // Visible options by default settings
+  const visibility = {
+    mode: hasKeys(defaultSettings, ['mode']),
+    contrast: hasKeys(defaultSettings, ['contrast']),
+    navColor: hasKeys(defaultSettings, ['navColor']),
+    fontSize: hasKeys(defaultSettings, ['fontSize']),
+    direction: hasKeys(defaultSettings, ['direction']),
+    navLayout: hasKeys(defaultSettings, ['navLayout']),
+    fontFamily: hasKeys(defaultSettings, ['fontFamily']),
+    primaryColor: hasKeys(defaultSettings, ['primaryColor']),
+    compactLayout: hasKeys(defaultSettings, ['compactLayout']),
+  };
+
+  useEffect(() => {
+    if (mode !== undefined && mode !== settings.state.mode) {
+      settings.setState({ mode });
+    }
+  }, [mode, settings]);
+
+  const handleReset = useCallback(() => {
+    settings.onReset();
+    setMode(null);
+  }, [setMode, settings]);
+
+  const renderHead = () => (
+    <Box
+      sx={{
+        py: 2,
+        pr: 1,
+        pl: 2.5,
+        display: 'flex',
+        alignItems: 'center',
+      }}
+    >
+      <Typography variant="h6" sx={{ flexGrow: 1 }}>
+        {t('settingsDrawer.title')}
+      </Typography>
+
+      <FullScreenButton />
+
+      <Tooltip title={t('settingsDrawer.resetAll')}>
+        <IconButton onClick={handleReset}>
+          <Badge color="error" variant="dot" invisible={!settings.canReset}>
+            <Iconify icon="solar:restart-bold" />
+          </Badge>
+        </IconButton>
+      </Tooltip>
+
+      <Tooltip title={t('settingsDrawer.close')}>
+        <IconButton onClick={settings.onCloseDrawer}>
+          <Iconify icon="mingcute:close-line" />
+        </IconButton>
+      </Tooltip>
+    </Box>
+  );
+
+  const renderMode = () => (
+    <BaseOption
+      label={t('settingsDrawer.mode')}
+      labelPosition="inline"
+      selected={settings.state.mode === 'dark'}
+      icon={<SvgIcon>{settingIcons.moon}</SvgIcon>}
+      action={mode === 'system' ? <Label sx={{ height: 20, cursor: 'inherit', borderRadius: '20px', fontWeight: 'fontWeightSemiBold' }}>{t('settingsDrawer.system')}</Label> : null}
+      onChangeOption={() => {
+        setMode(colorScheme === 'light' ? 'dark' : 'light');
+        settings.setState({ mode: colorScheme === 'light' ? 'dark' : 'light' });
+      }}
+    />
+  );
+
+  const renderContrast = () => (
+    <BaseOption
+      label={t('settingsDrawer.contrast')}
+      selected={settings.state.contrast === 'high'}
+      icon={<SvgIcon>{settingIcons.contrast}</SvgIcon>}
+      onChangeOption={() => {
+        settings.setState({
+          contrast: settings.state.contrast === 'default' ? 'high' : 'default',
+        });
+      }}
+    />
+  );
+
+  const renderDirection = () => (
+    <BaseOption
+      label={t('settingsDrawer.direction')}
+      selected={settings.state.direction === 'rtl'}
+      icon={<SvgIcon>{settingIcons.alignRight}</SvgIcon>}
+      onChangeOption={() => {
+        settings.setState({ direction: settings.state.direction === 'ltr' ? 'rtl' : 'ltr' });
+      }}
+    />
+  );
+
+  const renderCompactLayout = () => (
+    <BaseOption
+      tooltip="Dashboard only and available at large resolutions > 1600px (xl)"
+      label={t('settingsDrawer.compact')}
+      selected={!!settings.state.compactLayout}
+      icon={<SvgIcon>{settingIcons.autofitWidth}</SvgIcon>}
+      onChangeOption={() => {
+        settings.setState({ compactLayout: !settings.state.compactLayout });
+      }}
+    />
+  );
+
+  const renderPresets = () => (
+    <LargeBlock
+      title={t('settingsDrawer.presets')}
+      canReset={settings.state.primaryColor !== defaultSettings.primaryColor}
+      onReset={() => {
+        settings.setState({ primaryColor: defaultSettings.primaryColor });
+      }}
+    >
+      <PresetsOptions
+        icon={<SvgIcon sx={{ width: 28, height: 28 }}>{settingIcons.siderbarDuotone}</SvgIcon>}
+        options={(Object.keys(primaryColorPresets) as SettingsState['primaryColor'][]).map(
+          (key) => ({
+            name: key,
+            value: primaryColorPresets[key].main,
+          })
+        )}
+        value={settings.state.primaryColor}
+        onChangeOption={(newOption) => {
+          settings.setState({ primaryColor: newOption });
+        }}
+      />
+    </LargeBlock>
+  );
+
+  const renderNav = () => (
+    <LargeBlock title={t('settingsDrawer.nav')} tooltip="Dashboard only" sx={{ gap: 2.5 }}>
+      {visibility.navColor && (
+        <SmallBlock
+          label={t('settingsDrawer.color')}
+          canReset={settings.state.navColor !== defaultSettings.navColor}
+          onReset={() => {
+            settings.setState({ navColor: defaultSettings.navColor });
+          }}
+        >
+          <NavColorOptions
+            value={settings.state.navColor}
+            onChangeOption={(newOption) => {
+              settings.setState({ navColor: newOption });
+            }}
+            options={[
+              {
+                label: 'Integrate',
+                value: 'integrate',
+                icon: <SvgIcon>{settingIcons.sidebarOutline}</SvgIcon>,
+              },
+              {
+                label: 'Apparent',
+                value: 'apparent',
+                icon: <SvgIcon>{settingIcons.sidebarFill}</SvgIcon>,
+              },
+            ]}
+          />
+        </SmallBlock>
+      )}
+    </LargeBlock>
+  );
+
+  const renderFont = () => (
+    <LargeBlock title={t('settingsDrawer.font')} sx={{ gap: 2.5 }}>
+      {visibility.fontFamily && (
+        <SmallBlock
+          label={t('settingsDrawer.family')}
+          canReset={settings.state.fontFamily !== defaultSettings.fontFamily}
+          onReset={() => {
+            settings.setState({ fontFamily: defaultSettings.fontFamily });
+          }}
+        >
+          <FontFamilyOptions
+            value={settings.state.fontFamily}
+            onChangeOption={(newOption) => {
+              settings.setState({ fontFamily: newOption });
+            }}
+            options={[
+              themeConfig.fontFamily.primary,
+              'Inter Variable',
+              'DM Sans Variable',
+              'Nunito Sans Variable',
+            ]}
+            icon={<SvgIcon sx={{ width: 28, height: 28 }}>{settingIcons.font}</SvgIcon>}
+          />
+        </SmallBlock>
+      )}
+      {visibility.fontSize && (
+        <SmallBlock
+          label={t('settingsDrawer.size')}
+          canReset={settings.state.fontSize !== defaultSettings.fontSize}
+          onReset={() => {
+            settings.setState({ fontSize: defaultSettings.fontSize });
+          }}
+          sx={{ gap: 5 }}
+        >
+          <FontSizeOptions
+            options={[12, 20]}
+            value={settings.state.fontSize}
+            onChangeOption={(newOption) => {
+              settings.setState({ fontSize: newOption });
+            }}
+          />
+        </SmallBlock>
+      )}
+    </LargeBlock>
+  );
+
+  return (
+    <Drawer
+      anchor="right"
+      open={settings.openDrawer}
+      onClose={settings.onCloseDrawer}
+      // sx={{}}
+      slotProps={{
+        backdrop: { invisible: true },
+        paper: {
+          sx: [
+            {
+              width: 360,
+            },
+            ...(Array.isArray(sx) ? sx : [sx]),
+          ],
+        },
+      }}
+    >
+      {renderHead()}
+
+      <Scrollbar>
+        <Box
+          sx={{
+            pb: 5,
+            gap: 6,
+            px: 2.5,
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
+          <Box sx={{ gap: 2, display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)' }}>
+            {visibility.mode && renderMode()}
+            {/* Contrast option temporarily disabled per request */}
+            {/* {visibility.contrast && renderContrast()} */}
+            {/* Right-to-left option temporarily disabled per request */}
+            {/* {visibility.direction && renderDirection()} */}
+            {/* {visibility.compactLayout && renderCompactLayout()} */}
+          </Box>
+
+          {/* Floor Plan Settings Section */}
+          <Box sx={{ borderTop: `1px solid ${theme.palette.divider}`, pt: 3, transition: theme.transitions.create(['border-color'], { duration: theme.transitions.duration.shorter }) }}>
+            <FloorPlanSettings hallWidth={1000} hallHeight={400} />
+          </Box>
+
+          {(visibility.navColor || visibility.navLayout) && renderNav()}
+          {/* {visibility.primaryColor && renderPresets()} */}
+          {/* {(visibility.fontFamily || visibility.fontSize) && renderFont()} */}
+        </Box>
+      </Scrollbar>
+    </Drawer>
+  );
+}

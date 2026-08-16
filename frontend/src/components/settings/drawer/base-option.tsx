@@ -1,0 +1,135 @@
+import type { ButtonBaseProps } from '@mui/material/ButtonBase';
+
+import Switch from '@mui/material/Switch';
+import Tooltip from '@mui/material/Tooltip';
+import { styled } from '@mui/material/styles';
+import ButtonBase from '@mui/material/ButtonBase';
+
+import { Iconify } from '../../iconify';
+
+// ----------------------------------------------------------------------
+
+export type BaseOptionProps = Omit<ButtonBaseProps, 'action'> & {
+  label: string;
+  tooltip?: string;
+  selected: boolean;
+  icon: React.ReactNode;
+  action?: React.ReactNode;
+  centerLabel?: boolean;
+  labelPosition?: 'top' | 'bottom' | 'inline';
+  onChangeOption: () => void;
+};
+
+export function BaseOption({
+  sx,
+  icon,
+  label,
+  action,
+  tooltip,
+  selected,
+  centerLabel,
+  labelPosition = 'bottom',
+  onChangeOption,
+  ...other
+}: BaseOptionProps) {
+  return (
+    <ItemRoot disableRipple selected={selected} onClick={onChangeOption} sx={sx} {...other}>
+      <TopContainer>
+        {icon}
+        {labelPosition === 'inline' ? (
+          <InlineLabel>{label}</InlineLabel>
+        ) : labelPosition === 'top' ? (
+          <TopLabelContainer>
+            <ItemLabel center={!!centerLabel}>{label}</ItemLabel>
+          </TopLabelContainer>
+        ) : null}
+        {action ?? (
+          <Switch name={label} size="small" color="default" checked={selected} sx={{ mr: -0.75 }} />
+        )}
+      </TopContainer>
+
+      <BottomContainer>
+        {labelPosition === 'bottom' ? <ItemLabel center={!!centerLabel}>{label}</ItemLabel> : <div />}
+
+        {tooltip && (
+          <Tooltip
+            arrow
+            title={tooltip}
+            slotProps={{ tooltip: { sx: { maxWidth: 240, mr: 0.5 } } }}
+          >
+            <Iconify
+              width={16}
+              icon="eva:info-outline"
+              sx={{ cursor: 'pointer', color: 'var(--text-3)' }}
+            />
+          </Tooltip>
+        )}
+      </BottomContainer>
+    </ItemRoot>
+  );
+}
+
+// ----------------------------------------------------------------------
+
+const ItemRoot = styled(ButtonBase, {
+  shouldForwardProp: (prop: string) => !['selected', 'sx'].includes(prop),
+})<{ selected: boolean }>(({ selected, theme }) => ({
+  cursor: 'pointer',
+  flexDirection: 'column',
+  alignItems: 'flex-start',
+  padding: theme.spacing(2, 2, 2, 2.5),
+  borderRadius: Number(theme.shape.borderRadius) * 2,
+  backgroundColor: 'var(--bg)',
+  border: `solid 1px var(--border)`,
+  '&:hover': {
+    backgroundColor: 'var(--surface)',
+  },
+  ...(selected && {
+    backgroundColor: 'var(--surface)',
+    borderColor: 'var(--accent)',
+  }),
+}));
+
+const TopContainer = styled('div')(({ theme }) => ({
+  width: '100%',
+  display: 'flex',
+  alignItems: 'start',
+  marginBottom: theme.spacing(3),
+  justifyContent: 'space-between',
+}));
+
+const TopLabelContainer = styled('div')(({ theme }) => ({
+  flex: 1,
+  display: 'flex',
+  justifyContent: 'center',
+  padding: theme.spacing(0, 1),
+}));
+
+const InlineLabel = styled('span')(({ theme }) => ({
+  marginLeft: theme.spacing(1.5),
+  lineHeight: '18px',
+  fontSize: theme.typography.pxToRem(13),
+  fontWeight: theme.typography.fontWeightSemiBold,
+}));
+
+const BottomContainer = styled('div')(({ theme }) => ({
+  width: '100%',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  position: 'relative',
+}));
+
+const ItemLabel = styled('span')<{ center?: boolean }>(({ theme, center }) => ({
+  lineHeight: '18px',
+  fontSize: theme.typography.pxToRem(13),
+  fontWeight: theme.typography.fontWeightSemiBold,
+  ...(center
+    ? {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      textAlign: 'center',
+    }
+    : {}),
+}));
