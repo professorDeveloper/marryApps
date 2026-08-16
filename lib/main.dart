@@ -12,6 +12,8 @@ import 'package:mary_ai_pos/core/routes/app_pages.dart';
 import 'package:mary_ai_pos/core/routes/app_routes.dart';
 import 'package:mary_ai_pos/core/service/app_version/app_update_service.dart';
 import 'package:mary_ai_pos/core/services/connectivity/connectivity_cubit.dart';
+import 'package:mary_ai_pos/core/services/license/trial_gate.dart';
+import 'package:mary_ai_pos/core/services/license/trial_guard.dart';
 import 'package:mary_ai_pos/core/services/offline_queue/pending_operation.dart';
 import 'package:mary_ai_pos/core/theme/app_theme.dart';
 import 'package:mary_ai_pos/core/utils/helper/helper_widget.dart';
@@ -150,12 +152,18 @@ class MyApp extends StatelessWidget {
             theme: AppTheme.lightTheme,
             // darkTheme: AppTheme.darkTheme,
             builder: (context, child) {
-              return GestureDetector(
-                behavior: HitTestBehavior.translucent,
-                onLongPress: () => inject<Alice>().showInspector(),
-                child: ScrollConfiguration(
-                  behavior: const ScrollBehaviorModified(),
-                  child: child!,
+              // `TrialGate` eng tashqarida: u `MaterialApp.builder` ichida
+              // har bir route ustidan tushadi, ya'ni qulfni navigatsiya bilan
+              // chetlab o'tib bo'lmaydi.
+              return TrialGate(
+                guard: inject<TrialGuard>(),
+                child: GestureDetector(
+                  behavior: HitTestBehavior.translucent,
+                  onLongPress: () => inject<Alice>().showInspector(),
+                  child: ScrollConfiguration(
+                    behavior: const ScrollBehaviorModified(),
+                    child: child!,
+                  ),
                 ),
               );
             },

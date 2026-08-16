@@ -13,6 +13,7 @@ import 'package:mary_ai_pos/core/constants/constants.dart';
 import 'dart:convert';
 
 import 'package:mary_ai_pos/core/services/cache/cache_service.dart';
+import 'package:mary_ai_pos/core/services/local/local_order_store.dart';
 import 'package:mary_ai_pos/core/services/offline_queue/offline_queue_service.dart';
 import 'package:mary_ai_pos/core/services/offline_queue/pending_operation.dart';
 import 'package:mary_ai_pos/di.dart' show inject;
@@ -47,6 +48,11 @@ class DetailBloc extends Bloc<DetailEvent, DetailState> {
   final GetPaymentDetailWithTableIdUsecase _getPaymentDetailWithTableIdUsecase;
   final CacheService _cache;
 
+  /// Ofitsiant LAN orqali bergan va POS'da offline yaratilgan buyurtmalar
+  /// shu yerda yotadi. Usiz kassir stolni "band" ko'radi-yu, ichini
+  /// ko'rmaydi va chekni yopa olmaydi.
+  final LocalOrderStore _localOrders;
+
   ArchiveDetailEntity? lastDetail;
 
   // Duplikat /orders/table/{id} + /bills/{id} chaqiriqlarini kamaytirish uchun
@@ -78,6 +84,7 @@ class DetailBloc extends Bloc<DetailEvent, DetailState> {
     this._getGoodsWithNameUseCase,
     this._getPaymentDetailWithTableIdUsecase,
     this._cache,
+    this._localOrders,
   ) : super(const DetailState()) {
     on<_Started>(_onStarted);
     on<_GetCategories>(_onGetCategories);
@@ -167,9 +174,22 @@ class DetailBloc extends Bloc<DetailEvent, DetailState> {
     // `force: true` paytida cache-first emit qilmaymiz — bu mutatsiya
     // (item +/- yoki delete) dan keyingi refetch. Cache hali eski qty saqlasa,
     // optimistik UI ustidan eski qiymat qisqacha "miltillab" ko'rinardi.
-    final cached = _cache.getOrderDetail(event.billId);
+    // Lokal ochiq buyurtma — ofitsiantdan LAN orqali kelgan yoki offline
+    // yaratilgan. Cloud undan xabarsiz bo'lishi mumkin.
+    final local = _localOrders.openOrderForTable(event.billId);
+
+    // Kesh stol bo'yicha kalitlanadi, ya'ni oldingi (yopilgan) buyurtmadan
+    // qolgan bo'lishi mumkin. Lokal buyurtma hali cloudda yo'q bo'lsa,
+    // keshdagi detal aniq boshqa buyurtmaniki — unga ishonmaymiz, aks holda
+    // kassir yopilgan chekning taomlarini ko'rardi.
+    final staleCache = local != null && !local.cloudCreated;
+    final cached = staleCache ? null : _cache.getOrderDetail(event.billId);
+
     if (cached != null && !event.force) {
       _applyDetailToState(ArchiveDetailModel.fromJson(cached), event.billId, emit);
+    } else if (local != null && !event.force) {
+      // Cloudda hali yo'q — chekni lokal yozuvdan chizamiz.
+      _applyLocalOnly(local, emit);
     }
 
     // Throttle: shu tableId uchun 15s ichida takroriy /bills/ + /orders/table/
@@ -193,11 +213,25 @@ class DetailBloc extends Bloc<DetailEvent, DetailState> {
     if (isClosed) return;
     String? orderIdForTimestamps;
     result.fold(
-      (_) => null, // cache allaqachon ko'rsatilgan, hech nima qilmaymiz
+      (_) {
+        // Cloud javob bermadi. Kesh ko'rsatilgan bo'lsa yetarli; bo'lmasa
+        // lokal yozuv yagona haqiqat — kassir chekni ko'rishi shart.
+        if (isClosed || cached != null) return;
+        final fresh = _localOrders.openOrderForTable(event.billId);
+        if (fresh != null) _applyLocalOnly(fresh, emit);
+      },
       (detail) {
         if (isClosed) return;
         lastDetail = detail;
         _cache.saveOrderDetail(event.billId, (detail as ArchiveDetailModel).toJson());
+        // Serverdan yangi kelgan detal — unga ishonamiz.
+        //
+        // Bu yerda ilgari `staleCache` bo'lsa server detali **tashlab
+        // yuborilardi**. Kesh eskirgan bo'lishi mumkin, lekin hozir olingan
+        // javob eskirmagan: uni tashlash kassirning o'z taomlarini chekdan
+        // yo'qotardi. `_applyDetailToState` server qatorlari ustiga faqat
+        // hali yetkazilmagan lokal qatorlarni qo'shadi, ya'ni ikkilanish
+        // bo'lmaydi va hech narsa tushib qolmaydi.
         _applyDetailToState(detail, event.billId, emit);
         orderIdForTimestamps = detail.id;
       },
@@ -396,11 +430,94 @@ class DetailBloc extends Bloc<DetailEvent, DetailState> {
       } catch (_) {}
     }
 
+    // 3. Lokal ombordagi, cloudga hali yetmagan qatorlar.
+    //
+    // Faqat `unsyncedItems` — cloudga yetkazilganlari serverning javobida
+    // allaqachon bor, ikkalasini qo'shsak chek ikki barobar bo'lardi.
+    final local = _localOrders.openOrderForTable(tableId);
+    if (local != null) {
+      _mergeLocalItems(local.unsyncedItems, local.clientCreatedAt, grouped);
+    }
+
     if (!isClosed) {
       emit(state.copyWith(
         existingGoods: grouped.values.toList(),
         activeOrderId: detail.id,
       ));
+    }
+  }
+
+  /// Cloudda hali yo'q buyurtma — chek butunlay lokal yozuvdan chiziladi.
+  void _applyLocalOnly(LocalOrder order, Emitter<DetailState> emit) {
+    final grouped = <String, OrderItem>{};
+    _mergeLocalItems(order.items, order.clientCreatedAt, grouped);
+    if (isClosed) return;
+    emit(state.copyWith(
+      existingGoods: grouped.values.toList(),
+      activeOrderId: order.id,
+    ));
+  }
+
+  /// Lokal qatorlarni `grouped` ga qo'shadi. Nom bo'yicha guruhlanadi va
+  /// `⏳` bilan belgilanadi — kassir bu taomlar hali cloudga yetmaganini
+  /// ko'rib turishi kerak, jimgina "yuborilgan" ko'rinishida bo'lmasin.
+  void _mergeLocalItems(
+    List<Map<String, dynamic>> items,
+    DateTime createdAt,
+    Map<String, OrderItem> grouped,
+  ) {
+    if (items.isEmpty) return;
+    final cachedGoods = _cache.getGoods();
+
+    for (final item in items) {
+      final goodId = item['good_id']?.toString() ?? '';
+      if (goodId.isEmpty) continue;
+      final qty = (item['quantity'] as num?)?.toInt() ?? 0;
+      if (qty <= 0) continue;
+
+      // Nom va narx ofitsiantdan kelgan bo'lishi mumkin; bo'lmasa keshdan.
+      final goodJson = cachedGoods.firstWhere(
+        (g) => g['id'] == goodId,
+        orElse: () => <String, dynamic>{},
+      );
+      final name = (item['name'] as String?)?.isNotEmpty == true
+          ? item['name'] as String
+          : (goodJson['name'] as String? ?? goodId);
+      final price = item['price']?.toString().isNotEmpty == true
+          ? item['price'].toString()
+          : (goodJson['price']?.toString() ?? '0');
+
+      final ts = DateTime.tryParse(item['created_at']?.toString() ?? '')
+              ?.toLocal() ??
+          createdAt;
+
+      final key = '⏳$name';
+      final existing = grouped[key];
+      if (existing != null) {
+        grouped[key] = existing.copyWith(
+          quantity: existing.quantity + qty,
+          createdAt: _earlier(existing.createdAt, ts),
+        );
+      } else {
+        grouped[key] = OrderItem(
+          uniqueId: item['id']?.toString() ?? '${goodId}_$qty',
+          goods: GoodsModel(
+            id: goodId,
+            name: '⏳ $name',
+            price: price,
+            categoryId: '',
+            cookTime: 0,
+            costPrice: '0',
+            description: '',
+            profit: '0',
+            profitMargin: '0',
+          ),
+          quantity: qty,
+          commet: 'pending_offline',
+          comment: item['comment']?.toString() ?? '',
+          createdAt: ts,
+        );
+      }
     }
   }
 

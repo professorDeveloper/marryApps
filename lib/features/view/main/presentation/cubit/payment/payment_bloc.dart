@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/cupertino.dart';
@@ -18,6 +19,10 @@ import 'package:mary_ai_pos/core/services/connectivity/connectivity_cubit.dart';
 import 'package:mary_ai_pos/core/services/offline_queue/offline_queue_service.dart';
 import 'package:mary_ai_pos/core/services/offline_queue/pending_operation.dart';
 import 'package:mary_ai_pos/core/services/cache/cache_service.dart';
+import 'package:mary_ai_pos/core/services/local/local_order_store.dart';
+import 'package:mary_ai_pos/core/utils/parse_num.dart';
+import 'package:mary_ai_pos/core/services/local/local_order_sync_service.dart';
+import 'package:mary_ai_pos/features/view/main/data/models/archive_detail/local_order_detail_mapper.dart';
 import 'package:mary_ai_pos/core/api/dio_client.dart';
 import 'package:mary_ai_pos/core/api/list_api.dart';
 import 'package:mary_ai_pos/di.dart' show inject;
@@ -139,6 +144,19 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
     if (state.detail != null && !cashNeedsAmount) {
       emit(state.copyWith(status: Status.LOADING));
 
+      // Buyurtma hali cloudda yo'q bo'lsa (ofitsiantdan LAN orqali kelgan,
+      // hali sinxronlanmagan) — to'lovni yuborishdan oldin uni surib
+      // yuboramiz. Aks holda `/orders/{id}/pay` mavjud bo'lmagan buyurtmaga
+      // tushib 404 qaytaradi.
+      if (!await _ensureOrderOnCloud()) {
+        // Aloqa yo'q — to'lov navbatga tushadi, buyurtmaning o'zi ham
+        // navbatda turibdi va ikkalasi tartib bilan yuboriladi.
+        await _enqueuePayment();
+        if (isClosed) return;
+        _onPaymentSuccess();
+        return;
+      }
+
       // Total 0 bo'lsa — /pay emas /cancel
       if (effectiveTot <= 0) {
         try {
@@ -183,7 +201,12 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
       response.fold(
         (l) async {
           if (l is ConnectionFailure) {
-            // Internet yo'q — to'lovni offline queue ga saqla
+            // Karta/QR ham navbatga tushaveradi. Bu POS bank bilan
+            // integratsiyalashmagan — `paymentType` shunchaki yorliq, kassir
+            // kartani alohida bank terminalida o'tkazadi. Ishonch modeli
+            // online va offline'da bir xil, shuning uchun kartani bloklash
+            // xavfsizlik bermaydi, faqat aloqa yo'qolganda hisobni yopishga
+            // to'sqinlik qiladi (bank terminalining o'z SIM aloqasi bor).
             await _enqueuePayment();
             if (isClosed) return;
             _onPaymentSuccess();
@@ -201,6 +224,31 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
   }
 
   void _onPaymentSuccess() {
+    // Lokal buyurtmani yopamiz. Busiz `openOrderForTable` uni qaytaraverardi:
+    // `MainCubit._overlayLocal` stolni qayta "band" qilib qo'yardi va chek
+    // ekranida to'langan taomlar turaverardi. Yozuv o'chirilmaydi — hali
+    // cloudga yetmagan bo'lsa sinxronizatsiya davom etadi (`pendingSync`
+    // holatga emas, `syncState` ga qaraydi).
+    // Yopish AYNAN to'langan buyurtma id'si bo'yicha bo'ladi, stol bo'yicha
+    // qidiruv bilan emas. Ilgari shu yerda `openOrderForTable(tableId)`
+    // chaqirilardi va u qaytargan narsa yopilardi: to'lov yo'lda ketayotganda
+    // ofitsiant LAN orqali yangi davra yuborgan bo'lsa, `openOrderForTable`
+    // **yangisini** qaytarardi va aynan o'sha yopilardi — pishirilgan taomlar
+    // hech qanday hisobga tushmasdi, to'langan buyurtma esa ochiq qolardi.
+    final store = inject<LocalOrderStore>();
+    final paidId = state.detail?.id ?? '';
+    if (paidId.isNotEmpty && store.getById(paidId) != null) {
+      unawaited(store.setStatus(paidId, 'closed'));
+    } else {
+      // To'langan buyurtma lokal omborda yo'q (faqat cloudda tug'ilgan) —
+      // eski xatti-harakat, lekin endi u faqat zaxira yo'l.
+      final tableId = state.tableId;
+      if (tableId != null) {
+        final local = store.openOrderForTable(tableId);
+        if (local != null) unawaited(store.setStatus(local.id, 'closed'));
+      }
+    }
+
     showSuccessMessage(
       navigatorKey.currentContext!,
       "Buyurtma muvafaqqiyatli to'landi",
@@ -235,6 +283,24 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
     mainCubit.refreshTables(force: true);
   }
 
+  /// Lokal buyurtma cloudda borligiga ishonch hosil qiladi.
+  ///
+  /// `true` — cloudda bor (yoki umuman lokal buyurtma emas, ya'ni allaqachon
+  /// serverniki). `false` — surib bo'lmadi, to'lov navbatga tushishi kerak.
+  Future<bool> _ensureOrderOnCloud() async {
+    final tableId = state.tableId;
+    if (tableId == null) return true;
+
+    final store = inject<LocalOrderStore>();
+    final local = store.openOrderForTable(tableId);
+    if (local == null || local.cloudCreated) return true;
+
+    if (!inject<ConnectivityCubit>().isOnline) return false;
+
+    await inject<LocalOrderSyncService>().drain();
+    return store.getById(local.id)?.cloudCreated ?? false;
+  }
+
   Future<void> _enqueuePayment() async {
     final offlineExtra = pendingOfflineExtra(state.tableId);
     final effectiveAmt =
@@ -252,6 +318,11 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
       if ((int.tryParse(state.discountAmount) ?? 0) > 0 &&
           state.discountType == DiscountType.percent)
         'discount_percent': int.parse(state.discountAmount),
+      // Pul AYNAN HOZIR olindi, yuborilgan paytda emas. Busiz backend
+      // `paid_at = COALESCE($12, NOW())` bo'yicha sinxronizatsiya vaqtini
+      // yozadi (`bills_custom.go` PayOrderBill) — kechqurun olingan naqd
+      // ertalabki smenaga tushib qoladi va hisobot buziladi.
+      'paid_at': DateTime.now().toUtc().toIso8601String(),
     });
     await inject<OfflineQueueService>().enqueue(
       PendingOperation(
@@ -293,6 +364,27 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
         }
       } catch (_) {}
     }
+
+    // Ofitsiant qo'shgan, cloudga hali yetmagan qatorlar. Server javobida
+    // ular yo'q, ya'ni ularsiz kassir kam pul olardi. Buyurtma cloudda
+    // umuman bo'lmasa chek to'liq lokal chiziladi va bu yerga kirmaydi —
+    // shuning uchun faqat `cloudCreated` bo'lganlar hisoblanadi.
+    final local = inject<LocalOrderStore>().openOrderForTable(tableId);
+    if (local != null && local.cloudCreated) {
+      for (final item in local.unsyncedItems) {
+        final qty = (item['quantity'] as num?)?.toInt() ?? 0;
+        if (qty <= 0) continue;
+        final goodId = item['good_id']?.toString() ?? '';
+        final price = item['price'] != null
+            ? asNum(item['price'])
+            : asNum(cachedGoods.firstWhere(
+                (g) => g['id'] == goodId,
+                orElse: () => <String, dynamic>{},
+              )['price']);
+        extra += (price * qty).toInt();
+      }
+    }
+
     return extra;
   }
 
@@ -330,6 +422,26 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
     final cache = inject<CacheService>();
 
     if (state.tableId != null) {
+      // Ofitsiantdan LAN orqali kelgan yoki offline yaratilgan buyurtma —
+      // cloud undan xabarsiz bo'lishi mumkin. Bu holda kesh ham, server ham
+      // chekni bermaydi va kassir stolni yopa olmaydi.
+      final local = inject<LocalOrderStore>().openOrderForTable(state.tableId!);
+      if (local != null && !local.cloudCreated) {
+        final localDetail = archiveDetailFromLocalOrder(local, cache: cache);
+        final prefill =
+            PaymentBloc.effectiveTotal(localDetail) + state.hourPrice.toInt();
+        emit(state.copyWith(
+          status: Status.SUCCESS,
+          detailStatus: Status.SUCCESS,
+          detail: localDetail,
+          enterSum: (state.enterSum.isEmpty || state.enterSum == '0')
+              ? prefill.toString()
+              : state.enterSum,
+          failure: null,
+        ));
+        return;
+      }
+
       // Cache-first: avval saqlangan detalni ko'rsat
       final cached = cache.getOrderDetail(state.tableId!);
       if (cached != null) {

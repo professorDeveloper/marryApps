@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:mary_ai_pos/core/extension/for_context.dart';
 import 'package:mary_ai_pos/core/services/lan_hub/lan_hub_service.dart';
 import 'package:mary_ai_pos/di.dart';
+import 'package:mary_ai_pos/features/view/main/presentation/pages/settings/sections/waiter_server_card.dart';
 import 'package:mary_ai_pos/features/view/main/presentation/pages/settings/widgets/section_shell.dart';
 import 'package:mary_ai_pos/generated/l10n.dart';
 
@@ -101,6 +102,8 @@ class _LanNetworkSectionState extends State<LanNetworkSection> {
           ),
           const SizedBox(height: 14),
           _InfoCard(mode: _mode),
+          const SizedBox(height: 14),
+          const WaiterServerCard(),
         ],
       ),
     );

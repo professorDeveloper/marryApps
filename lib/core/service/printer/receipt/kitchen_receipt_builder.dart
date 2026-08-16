@@ -32,9 +32,13 @@ class KitchenReceiptBuilder {
       ),
     );
 
+    // Olib ketish buyurtmasida stol yo'q — `tableNumber` 0 bo'lib qoladi va
+    // "Стол: 0" oshxonani chalg'itardi.
+    final isTakeaway = (order.orderType ?? '').toLowerCase().contains('away');
+
     bytes += gen.row([
       PosColumn(
-        text: 'Стол: ${order.tableNumber}',
+        text: isTakeaway ? 'НАВЫНОС' : 'Стол: ${order.tableNumber}',
         width: 8,
         styles: const PosStyles(bold: true),
       ),

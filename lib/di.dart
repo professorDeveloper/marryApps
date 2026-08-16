@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:alice/alice.dart';
 import 'package:alice/model/alice_configuration.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -6,7 +8,14 @@ import 'package:mary_ai_pos/core/services/auth/offline_auth_cache.dart';
 import 'package:mary_ai_pos/core/service/receipt/receipt_info_storage.dart';
 import 'package:mary_ai_pos/core/services/cache/cache_service.dart';
 import 'package:mary_ai_pos/core/services/connectivity/connectivity_cubit.dart';
+import 'package:mary_ai_pos/core/services/demo/demo_seeder.dart';
+import 'package:mary_ai_pos/core/components/flush_bars.dart';
+import 'package:mary_ai_pos/core/services/lan/lan_server_service.dart';
+import 'package:mary_ai_pos/core/services/license/trial_guard.dart';
+import 'package:mary_ai_pos/core/services/printing/kitchen_print_queue.dart';
 import 'package:mary_ai_pos/core/services/lan_hub/lan_hub_service.dart';
+import 'package:mary_ai_pos/core/services/local/local_order_store.dart';
+import 'package:mary_ai_pos/core/services/local/local_order_sync_service.dart';
 import 'package:mary_ai_pos/core/services/offline_queue/offline_queue_service.dart';
 import 'package:mary_ai_pos/core/auth/storage/token_storage_impl.dart';
 import 'package:mary_ai_pos/core/service/minio/minio_service.dart';
@@ -67,6 +76,7 @@ import 'package:mary_ai_pos/features/view/main/presentation/cubit/main/main_cubi
 import 'package:mary_ai_pos/features/view/main/presentation/cubit/table_timer/table_timer_cubit.dart';
 import 'package:mary_ai_pos/features/view/main/presentation/cubit/waiter/waiter_cubit.dart';
 import 'package:mary_ai_pos/features/view/main/presentation/cubit/ui_prefs/ui_prefs_cubit.dart';
+import 'package:mary_ai_pos/core/utils/helper/helper_widget.dart';
 
 final inject = GetIt.instance;
 Future<void> initDi() async {
@@ -97,6 +107,20 @@ Future<void> initDi() async {
   final offlineQueue = await OfflineQueueService.init();
   inject.registerSingleton<OfflineQueueService>(offlineQueue);
 
+  // Demo urug'i — LAN serverdan oldin, u keshdan o'qiydi.
+  // `--dart-define=DEMO_SEED=true` bo'lmasa hech narsa qilmaydi.
+  await DemoSeeder.seed(
+    cache: cacheService,
+    authCache: inject<OfflineAuthCache>(),
+  );
+
+  final localOrderStore = await LocalOrderStore.init();
+  inject.registerSingleton<LocalOrderStore>(localOrderStore);
+  // Eski `local_orders` yozuvlarini tozalab turadi. `pending` va
+  // `deadLetter` hech qachon o'chmaydi — faqat sinxronlangan yopiq
+  // buyurtmalar.
+  unawaited(localOrderStore.pruneSynced());
+
   final dioClient = DioClient(tokenStorage, connectivityCubit);
   alice.addAdapter(dioClient.aliceDioAdapter);
   inject.registerSingleton<DioClient>(dioClient);
@@ -105,11 +129,83 @@ Future<void> initDi() async {
   await lanHubService.init();
   inject.registerSingleton<LanHubService>(lanHubService);
 
+  // Sinov muddati. LAN serverdan **oldin** quriladi: server ko'tarilishidan
+  // oldin `isLocked` o'rnatilgan bo'lishi kerak, aks holda muddati o'tgan
+  // POS qisqa vaqt bo'lsa ham planshetlarga ochiq qolardi.
+  final trialGuard = await TrialGuard.init();
+  inject.registerSingleton<TrialGuard>(trialGuard);
+
+  // Ofitsiant planshetlari uchun LAN REST + WS + discovery. Sozlamalarda
+  // yoqilmagan bo'lsa `init()` hech narsa qilmaydi.
+  final lanServerService = LanServerService(
+    prefs: prefs,
+    cache: cacheService,
+    orders: localOrderStore,
+    authCache: inject<OfflineAuthCache>(),
+  );
+  // Muddat tugagach planshetlar 423 oladi va ochiq soketlar uziladi —
+  // POS "yo'q" emas, "yopiq" bo'lib ko'rinadi.
+  lanServerService.isLocked = () => trialGuard.isLocked;
+  trialGuard.onLockChanged.listen((_) => lanServerService.notifyLockChanged());
+  await lanServerService.init();
+  inject.registerSingleton<LanServerService>(lanServerService);
+
+  // Lokal buyurtmalarni cloudga surib boruvchi jarayon.
+  final localOrderSync = LocalOrderSyncService(
+    client: dioClient,
+    store: localOrderStore,
+    connectivity: connectivityCubit,
+    // Eski navbat ham shu yerdan suriladi. Ilgari uni faqat `AppScaffold`
+    // surardi va sovuq startda (internet bor holda) umuman surilmasdi.
+    legacyQueue: offlineQueue,
+  );
+  localOrderSync.start();
+  inject.registerSingleton<LocalOrderSyncService>(localOrderSync);
+
   final MinioService minioService = MinioService.instance;
   inject.registerLazySingleton(() => minioService);
 
   inject.registerLazySingleton(() => PrinterConfigStorage(inject()));
   inject.registerLazySingleton(() => PrinterService(inject<PrinterConfigStorage>()));
+
+  // Oshxona cheklarining yagona navbati: ofitsiant planshetidan LAN orqali
+  // kelgan buyurtma ham, kassirning o'zi bergan buyurtma ham shu yerdan
+  // o'tadi. Printer bitta, ya'ni navbat ham bitta bo'lishi kerak.
+  //
+  // Navbat LAN serverdan **keyin** quriladi (uning oqimiga obuna bo'ladi) va
+  // `PrinterService` dan **keyin** (uni chaqiradi).
+  //
+  // `PrinterService` callback ichidan olinadi: u lazy singleton va shu yerda
+  // majburan yaratish DI tartibini bekorga qattiqlashtirardi.
+  final kitchenPrint = KitchenPrintQueue(
+    server: lanServerService,
+    cache: cacheService,
+    prefs: prefs,
+    print: ({required order, required items}) =>
+        inject<PrinterService>().printKitchenReceipt(
+      order: order,
+      items: items,
+      // Oyna faqat urinishlar tugagach — pastdagi `onGiveUp` da.
+      notifyOnFailure: false,
+    ),
+    onGiveUp: (tableId, itemCount) {
+      final ctx = navigatorKey.currentContext;
+      if (ctx == null) return;
+      final table = cacheService.getTables().firstWhere(
+            (t) => t['id']?.toString() == tableId,
+            orElse: () => const <String, dynamic>{},
+          );
+      final number = table['number']?.toString();
+      final where = number != null ? '$number-stol' : 'Buyurtma';
+      showErrorMessageDismissible(
+        ctx,
+        '$where: oshxona cheki chop etilmadi ($itemCount pozitsiya). '
+        'Taomlar buyurtmada bor — chekni qo\'lda chiqaring.',
+      );
+    },
+  );
+  kitchenPrint.start();
+  inject.registerSingleton<KitchenPrintQueue>(kitchenPrint);
 
   _dataSources();
   _repositories();
@@ -180,7 +276,15 @@ void _cubit() {
   inject.registerLazySingleton(() => UiPrefsCubit(inject()));
   inject.registerLazySingleton(() => ServiceChargeCubit(inject()));
   inject.registerLazySingleton(
-    () => MainCubit(inject(), inject(), inject(), inject(), inject()),
+    () => MainCubit(
+      inject(),
+      inject(),
+      inject(),
+      inject(),
+      inject(),
+      inject(),
+      inject(),
+    ),
   );
   inject.registerLazySingleton(() => KeyboardCubit());
   inject.registerLazySingleton(
@@ -202,15 +306,20 @@ void _cubit() {
     ),
   );
   inject.registerFactory(() => LoginPinCubit(inject(), inject(), inject(), inject(), inject()));
-  inject.registerFactory(() => DetailBloc(inject(), inject(), inject(), inject(), inject()));
+  inject.registerFactory(
+    () => DetailBloc(inject(), inject(), inject(), inject(), inject(), inject()),
+  );
   inject.registerFactory(
     () => CreateOrderBloc(
       createOrderUsecase: inject(),
       createTakeAwayOrderUsecase: inject(),
       connectivity: inject(),
-      queue: inject(),
       lanHub: inject(),
       client: inject(),
+      localOrders: inject(),
+      cache: inject(),
+      lanServer: inject(),
+      kitchenPrint: inject(),
     ),
   );
   inject.registerFactory(() => CounterCubit());

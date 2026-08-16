@@ -49,5 +49,25 @@
 		<true/>
 		<key>UIViewControllerBasedStatusBarAppearance</key>
 		<false/>
+
+		<!-- Ofitsiant ilovasi POS bilan LAN orqali oddiy HTTP'da gaplashadi
+		     (http://192.168.x.x:28080). App Transport Security buni sukut
+		     bo'yicha bloklaydi. POS manzili DHCP orqali beriladi va discovery
+		     paytida aniqlanadi — oldindan ma'lum bo'lmagani uchun aniq host
+		     bo'yicha istisno yozib bo'lmaydi.
+
+		     Bulut aloqasi zaiflashmaydi: BASE_URL = https://api.maryai.uz/
+		     va HTTPS URL bu sozlamadan qat'i nazar HTTPS bo'lib qoladi. -->
+		<key>NSAppTransportSecurity</key>
+		<dict>
+			<key>NSAllowsLocalNetworking</key>
+			<true/>
+		</dict>
+
+		<!-- iOS 14+ lokal tarmoqqa murojaat uchun foydalanuvchidan ruxsat
+		     so'raydi. Bu matn ruxsat oynasida ko'rinadi. Busiz UDP discovery
+		     jimgina ishlamaydi — paketlar ketadi, javob kelmaydi. -->
+		<key>NSLocalNetworkUsageDescription</key>
+		<string>Kassa kompyuterini topish va buyurtmalarni yuborish uchun lokal tarmoqqa ulanish kerak.</string>
 	</dict>
 </plist>

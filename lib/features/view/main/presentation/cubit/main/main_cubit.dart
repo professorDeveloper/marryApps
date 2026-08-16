@@ -4,7 +4,9 @@ import 'package:mary_ai_pos/core/api/api.dart';
 import 'package:mary_ai_pos/core/error/failure.dart';
 import 'package:mary_ai_pos/core/services/cache/cache_service.dart';
 import 'package:mary_ai_pos/core/services/connectivity/connectivity_cubit.dart';
+import 'package:mary_ai_pos/core/services/lan/lan_server_service.dart';
 import 'package:mary_ai_pos/core/services/lan_hub/lan_hub_service.dart';
+import 'package:mary_ai_pos/core/services/local/local_order_store.dart';
 import 'package:mary_ai_pos/core/usecase/usecase.dart';
 import 'package:mary_ai_pos/features/view/main/data/models/cafe_tables/cafe_tables_model.dart';
 import 'package:mary_ai_pos/features/view/main/data/models/hall/hall_model.dart';
@@ -20,8 +22,11 @@ class MainCubit extends Cubit<MainState> {
   final CacheService _cache;
   final ConnectivityCubit _connectivity;
   final LanHubService _lanHub;
+  final LocalOrderStore _localOrders;
+  final LanServerService _lanServer;
 
   StreamSubscription<({String tableId, String status})>? _lanSub;
+  StreamSubscription<LocalOrder>? _lanOrderSub;
 
   // ── Throttle: bir xil tables chaqiriqni 30s ichida takrorlamaymiz ──
   DateTime? _lastAllTablesFetchAt;
@@ -36,8 +41,33 @@ class MainCubit extends Cubit<MainState> {
     this._cache,
     this._connectivity,
     this._lanHub,
+    this._localOrders,
+    this._lanServer,
   ) : super(const MainState()) {
     _lanSub = _lanHub.onRemoteTableUpdate.listen(_applyRemoteTableUpdate);
+    // Ofitsiant LAN orqali buyurtma bergani bilan stol darhol band bo'ladi.
+    _lanOrderSub = _lanServer.onOrderChanged.listen((_) {
+      if (isClosed) return;
+      final tables = state.tables;
+      if (tables != null) emit(state.copyWith(tables: _overlayLocal(tables)));
+    });
+  }
+
+  /// Lokal ochiq buyurtmalarni stollar ro'yxatiga qoplaydi.
+  ///
+  /// Serverdan kelgan stol holati internet bo'lmagan paytda eskirgan bo'ladi —
+  /// ofitsiant LAN orqali bergan buyurtma hali cloudga yetmagan. Shu sababli
+  /// lokal ombor ustuvor: unda ochiq buyurtma bor stol **har doim** band.
+  List<CafeTableModel> _overlayLocal(List<CafeTableModel> tables) {
+    final open = _localOrders.openOrders();
+    if (open.isEmpty) return tables;
+    final busyIds = open.map((o) => o.tableId).toSet();
+    return [
+      for (final t in tables)
+        busyIds.contains(t.id) && t.status != TableStatus.busy
+            ? t.copyWith(status: TableStatus.busy)
+            : t,
+    ];
   }
 
   void _applyRemoteTableUpdate(({String tableId, String status}) event) {
@@ -56,7 +86,10 @@ class MainCubit extends Cubit<MainState> {
         .toList();
     final cachedForHall = allCached.where((t) => t.hallId == hallId).toList();
     if (cachedForHall.isNotEmpty) {
-      emit(state.copyWith(tables: cachedForHall, status: Status.SUCCESS));
+      emit(state.copyWith(
+        tables: _overlayLocal(cachedForHall),
+        status: Status.SUCCESS,
+      ));
     } else {
       emit(state.copyWith(status: Status.LOADING));
     }
@@ -87,7 +120,10 @@ class MainCubit extends Cubit<MainState> {
         final otherHalls = allCached.where((t) => t.hallId != hallId).toList();
         final merged = [...otherHalls, ...tables];
         _cache.saveTables(merged.map((t) => t.toJson()).toList());
-        emit(state.copyWith(tables: tables, status: Status.SUCCESS));
+        emit(state.copyWith(
+          tables: _overlayLocal(tables),
+          status: Status.SUCCESS,
+        ));
       },
     );
   }
@@ -184,7 +220,7 @@ class MainCubit extends Cubit<MainState> {
     if (allCached.isNotEmpty) {
       emit(state.copyWith(
         selectedHallId: null,
-        tables: allCached,
+        tables: _overlayLocal(allCached),
         status: Status.SUCCESS,
       ));
     } else {
@@ -230,7 +266,7 @@ class MainCubit extends Cubit<MainState> {
       await _cache.evictOrderDetail(id);
     }
     _cache.saveTables(all.map((t) => t.toJson()).toList());
-    emit(state.copyWith(tables: all, status: Status.SUCCESS));
+    emit(state.copyWith(tables: _overlayLocal(all), status: Status.SUCCESS));
   }
 
   Future<void> refreshTables({bool force = false}) async {
@@ -245,6 +281,7 @@ class MainCubit extends Cubit<MainState> {
   @override
   Future<void> close() {
     _lanSub?.cancel();
+    _lanOrderSub?.cancel();
     return super.close();
   }
 }

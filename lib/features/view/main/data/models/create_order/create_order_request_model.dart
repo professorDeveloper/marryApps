@@ -9,6 +9,14 @@ part 'create_order_request_model.freezed.dart';
 @freezed
 class CreateOrderRequestModel with _$CreateOrderRequestModel {
   const factory CreateOrderRequestModel({
+    /// Klientda generatsiya qilinadigan buyurtma id'si.
+    ///
+    /// Backend `CreateOrder` (`order.go:189-206`) shu id bilan buyurtma bor
+    /// bo'lsa uni qaytaradi — ya'ni javob yo'qolib so'rov qayta yuborilsa
+    /// ham dublikat tushmaydi. Bo'sh qoldirilsa backend o'zi yangi UUID
+    /// beradi va **hech qanday himoya bo'lmaydi**: offline navbat javobni
+    /// olmay qayta urinsa ikkinchi buyurtma yaratilardi.
+    @Default('') String orderId,
     @Default('') String cashierId,
     @Default('') String comment,
     @Default(0) int guestCount,
@@ -23,6 +31,7 @@ class CreateOrderRequestModel with _$CreateOrderRequestModel {
 
   Map<String, dynamic> request() => {
     // "cashier_id": cashierId,
+    if (orderId.isNotEmpty) "id": orderId,
     "comment": comment,
     "guest_count": guestCount,
     "items": List.generate(

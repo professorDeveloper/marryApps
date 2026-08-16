@@ -168,11 +168,21 @@ class PrinterService {
 
   /// `type: category` bo‘yicha guruhlab, har bir printerga alohida oshxona cheki.
   /// Printeri sozlanmagan kategoriya pozitsiyalari o‘tkaziladi (boshqa printerga qo‘shilmaydi).
-  Future<void> printKitchenReceipt({
+  ///
+  /// Qaytaradi: `true` — chek printerga yetdi **yoki** qayta urinish yordam
+  /// bermaydigan sabab bilan chiqmadi (kategoriyaga printer biriktirilmagan).
+  /// `false` — vaqtinchalik xato (printer o‘chiq, tarmoq uzildi), qayta
+  /// urinish mantiqli.
+  ///
+  /// [notifyOnFailure] `false` bo‘lsa foydalanuvchiga oyna ko‘rsatilmaydi.
+  /// Buni qayta uringan chaqiruvchi beradi (`LanKitchenPrintBridge`) — aks
+  /// holda har urinishda kassir ekraniga bittadan oyna chiqardi.
+  Future<bool> printKitchenReceipt({
     required OpenOrderModel order,
     required List<OrderItem> items,
+    bool notifyOnFailure = true,
   }) async {
-    if (items.isEmpty) return;
+    if (items.isEmpty) return true;
     final byKey = <String, List<OrderItem>>{};
     final cfgByKey = <String, PrinterConfig>{};
     for (final item in items) {
@@ -196,7 +206,7 @@ class PrinterService {
         '[PrinterService] Oshxona cheki: barcha pozitsiyalar uchun printer topilmadi — chop etilmadi.',
       );
       final ctx = navigatorKey.currentContext;
-      if (ctx != null) {
+      if (ctx != null && notifyOnFailure) {
         if (!_storage.hasPrinterSettingsEntries) {
           showStructuredErrorDismissible(
             ctx,
@@ -219,7 +229,8 @@ class PrinterService {
           );
         }
       }
-      return;
+      // Qayta urinish bu holatni o‘zgartirmaydi — sozlama kerak, vaqt emas.
+      return true;
     }
     try {
       for (final k in byKey.keys) {
@@ -232,15 +243,18 @@ class PrinterService {
         );
         final r = await _connectAndPrint(config, bytes);
         if (!r.ok) {
-          _notifyPrinterFailed(
-            config,
-            title: 'Oshxona cheki chop etilmadi',
-            printerRole: 'category printer (backend) ${config.ip}',
-            detail: r.error,
-          );
-          return;
+          if (notifyOnFailure) {
+            _notifyPrinterFailed(
+              config,
+              title: 'Oshxona cheki chop etilmadi',
+              printerRole: 'category printer (backend) ${config.ip}',
+              detail: r.error,
+            );
+          }
+          return false;
         }
       }
+      return true;
     } catch (e, st) {
       debugPrint('[PrinterService] Oshxona cheki xatosi: $e\n$st');
       PrinterConfig? config;
@@ -251,7 +265,7 @@ class PrinterService {
         );
         if (config != null) break;
       }
-      if (config != null) {
+      if (config != null && notifyOnFailure) {
         _notifyPrinterFailed(
           config,
           title: 'Oshxona cheki tayyorlashda xato',
@@ -259,6 +273,7 @@ class PrinterService {
           detail: e.toString(),
         );
       }
+      return false;
     }
   }
 

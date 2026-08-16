@@ -1,5 +1,3 @@
-import 'dart:async' show unawaited;
-
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -374,7 +372,12 @@ class WaiterCubit extends Cubit<WaiterState> {
         // Fire-and-forget: faqat oshxona cheklari (kategoriya printerlari). Kassa cheki faqat to'lovdan keyin (closeOrder).
         final order = state.openOrders.where((o) => o.id == orderId).firstOrNull;
         if (order != null) {
-          unawaited(_printerService.printKitchenReceipt(order: order, items: items));
+          // `printKitchenReceipt` endi `Future<bool>` qaytaradi (LAN ko'prigi
+          // qayta urinish uchun natijani biladi). Bu yerda natija kerak emas —
+          // xatoni funksiyaning o'zi ekranda ko'rsatadi.
+          _printerService
+              .printKitchenReceipt(order: order, items: items)
+              .ignore();
         }
         await loadOrderItems(orderId);
         await loadOpenOrders();

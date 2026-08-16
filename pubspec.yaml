@@ -130,6 +130,15 @@ fonts:
   - family: Inter
     fonts:
       - asset: assets/fonts/Inter.ttf
+  # Slate Dawn dizayn sistemasi (frontend/style.md) — Manrope UI uchun,
+  # JetBrains Mono raqamlar/kodlar uchun. Ikkalasi ham variable TTF (wght
+  # o'qi), SIL Open Font License 1.1.
+  - family: Manrope
+    fonts:
+      - asset: assets/fonts/Manrope.ttf
+  - family: JetBrainsMono
+    fonts:
+      - asset: assets/fonts/JetBrainsMono.ttf
 
 flutter_intl:
   enabled: true
