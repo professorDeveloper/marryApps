@@ -1,0 +1,143 @@
+name: Build POS (exe) & Waiter (apk)
+
+# Qo'lda ishga tushiriladi — qulf sozlamalari har safar boshqacha bo'lishi
+# mumkin (demo, mijoz, ichki test). Teg qo'yilganda ham avtomatik yig'iladi.
+on:
+  workflow_dispatch:
+    inputs:
+      trial_hours:
+        description: "Sinov muddati (soat). 36 = 1.5 kun"
+        required: true
+        default: "36"
+      trial_deadline:
+        description: "Mutlaq muddat, ISO-8601: 2026-08-20 yoki 2026-08-20T23:59:59+05:00. Bo'sh = mutlaq muddat yo'q"
+        required: false
+        default: "2026-08-20"
+      trial_contact:
+        description: "Qulf ekranidagi aloqa (telefon/Telegram). Bo'sh = faqat 'Contact to developer'"
+        required: false
+        default: ""
+      trial_enabled:
+        description: "Qulf yoqilganmi. Haqiqiy mijoz uchun false"
+        required: true
+        default: "true"
+        type: choice
+        options: ["true", "false"]
+  push:
+    tags: ["v*"]
+
+env:
+  # Mahalliy mashinadagi versiya bilan bir xil — CI boshqa versiyada
+  # yig'sa "menda ishlaydi" muammosi paydo bo'ladi.
+  FLUTTER_VERSION: "3.41.6"
+  WORKING_DIR: pos
+
+jobs:
+  # ── Kassa ilovasi: Windows exe ──────────────────────────────────────────────
+  windows:
+    name: POS Windows exe
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Bog'liqliklar
+        working-directory: ${{ env.WORKING_DIR }}
+        run: flutter pub get
+
+      # Qulf mantiqi yetkazib berish bilan bog'liq — yig'ishdan oldin
+      # tekshiriladi. Muddat kompilyatsiya vaqtida qadalgani uchun testlar
+      # o'z `--dart-define` i bilan ishlaydi.
+      - name: Testlar
+        working-directory: ${{ env.WORKING_DIR }}
+        run: flutter test --dart-define=TRIAL_MINUTES=3
+
+      - name: EXE yig'ish
+        working-directory: ${{ env.WORKING_DIR }}
+        shell: bash
+        run: |
+          flutter build windows --release \
+            --dart-define=TRIAL_ENABLED=${{ inputs.trial_enabled || 'true' }} \
+            --dart-define=TRIAL_HOURS=${{ inputs.trial_hours || '36' }} \
+            --dart-define=TRIAL_DEADLINE=${{ inputs.trial_deadline }} \
+            --dart-define=TRIAL_CONTACT="${{ inputs.trial_contact }}"
+
+      # `Release` papkasi butunligicha kerak: exe yonidagi DLL'lar va
+      # `data/` papkasisiz ilova ishga tushmaydi.
+      - name: ZIP qilish
+        working-directory: ${{ env.WORKING_DIR }}/build/windows/x64/runner
+        shell: pwsh
+        run: Compress-Archive -Path Release\* -DestinationPath MaryAI-POS-windows.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pos-windows
+          path: ${{ env.WORKING_DIR }}/build/windows/x64/runner/MaryAI-POS-windows.zip
+          if-no-files-found: error
+          retention-days: 30
+
+  # ── Ofitsiant ilovasi: ABI bo'yicha ajratilgan APK ──────────────────────────
+  #
+  # Mac'da ham yig'sa bo'ladi, lekin CI nusxasi mavjud bo'lgani ma'qul:
+  # exe va apk bitta ishga tushirishdan chiqsa ularning qulf sozlamalari
+  # aynan bir xil bo'lishiga kafolat bo'ladi.
+  android:
+    name: Waiter APK (split per ABI)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Bog'liqliklar
+        working-directory: ${{ env.WORKING_DIR }}
+        run: flutter pub get
+
+      - name: APK yig'ish
+        working-directory: ${{ env.WORKING_DIR }}
+        run: |
+          flutter build apk --release --split-per-abi \
+            --target=lib/main_waiter.dart \
+            --dart-define=TRIAL_ENABLED=${{ inputs.trial_enabled || 'true' }} \
+            --dart-define=TRIAL_HOURS=${{ inputs.trial_hours || '36' }} \
+            --dart-define=TRIAL_DEADLINE=${{ inputs.trial_deadline }} \
+            --dart-define=TRIAL_CONTACT="${{ inputs.trial_contact }}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: waiter-apk
+          path: ${{ env.WORKING_DIR }}/build/app/outputs/flutter-apk/*-release.apk
+          if-no-files-found: error
+          retention-days: 30
+
+  # ── Teg qo'yilganda ikkalasini relizga qo'yamiz ─────────────────────────────
+  release:
+    name: Release
+    needs: [windows, android]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/**/*
+          generate_release_notes: true
