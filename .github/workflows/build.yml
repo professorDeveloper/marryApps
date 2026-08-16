@@ -86,6 +86,22 @@ jobs:
         working-directory: ${{ env.WORKING_DIR }}
         run: flutter pub get
 
+      # Versiya `pubspec.yaml` dan olinadi (`1.0.0+1` -> `1.0.0`). Teg
+      # qo'yilgan bo'lsa teg ustun turadi — reliz nomi bilan o'rnatuvchi
+      # nomi bir xil bo'lishi kerak.
+      - name: Versiya aniqlash
+        id: ver
+        working-directory: ${{ env.WORKING_DIR }}
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            v="${GITHUB_REF#refs/tags/v}"
+          else
+            v=$(grep -m1 '^version:' pubspec.yaml | sed 's/version:[[:space:]]*//; s/+.*//' | tr -d '\r')
+          fi
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          echo "versiya: $v"
+
       - name: EXE yig'ish
         working-directory: ${{ env.WORKING_DIR }}
         shell: bash
@@ -96,8 +112,32 @@ jobs:
             --dart-define=TRIAL_DEADLINE=${{ inputs.trial_deadline }} \
             --dart-define=TRIAL_CONTACT="${{ inputs.trial_contact }}"
 
-      # `Release` papkasi butunligicha kerak: exe yonidagi DLL'lar va
-      # `data/` papkasisiz ilova ishga tushmaydi.
+      # ── O'rnatuvchi ─────────────────────────────────────────────────────────
+      #
+      # Inno Setup `windows-latest` obrazida oldindan bor. Bo'lmasa ham
+      # to'xtab qolmaymiz — choco orqali o'rnatiladi.
+      - name: Inno Setup tayyorligi
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) {
+            Write-Host "Inno Setup topilmadi — o'rnatilyapti"
+            choco install innosetup -y --no-progress
+          }
+          "ISCC=$iscc" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Setup.exe yig'ish
+        working-directory: ${{ env.WORKING_DIR }}/windows/installer
+        shell: pwsh
+        run: |
+          & "$env:ISCC" `
+            "/DAppVersion=${{ steps.ver.outputs.version }}" `
+            "/DSourceDir=..\..\build\windows\x64\runner\Release" `
+            installer.iss
+          Get-ChildItem Output
+
+      # ZIP ham qoldiriladi: o'rnatuvchisiz, portativ ishlatmoqchi bo'lganlar
+      # uchun (masalan flesh-kartadan sinab ko'rish).
       - name: ZIP qilish
         working-directory: ${{ env.WORKING_DIR }}/build/windows/x64/runner
         shell: pwsh
@@ -105,7 +145,14 @@ jobs:
 
       - uses: actions/upload-artifact@v5
         with:
-          name: pos-windows
+          name: pos-windows-setup
+          path: ${{ env.WORKING_DIR }}/windows/installer/Output/*.exe
+          if-no-files-found: error
+          retention-days: 30
+
+      - uses: actions/upload-artifact@v5
+        with:
+          name: pos-windows-portable
           path: ${{ env.WORKING_DIR }}/build/windows/x64/runner/MaryAI-POS-windows.zip
           if-no-files-found: error
           retention-days: 30
