@@ -32,6 +32,17 @@ set(CMAKE_CXX_FLAGS_PROFILE "${CMAKE_CXX_FLAGS_RELEASE}")
 # Use Unicode for all projects.
 add_definitions(-DUNICODE -D_UNICODE)
 
+# MSVC 14.51 (Visual Studio 18) dan boshlab <experimental/coroutine> ni
+# ishlatish `static_assert` bilan **xato** beradi (STL1011), ilgari faqat
+# ogohlantirish edi. Bizning kodimiz uni ishlatmaydi, lekin ikkita plagin
+# ishlatadi: flutter_local_notifications_windows va permission_handler_windows.
+# Ular yangilanmaguncha yig'ilish mumkin bo'lishi uchun tekshiruvni
+# so'ndiramiz — MSVC o'zi shu define'ni taklif qiladi.
+#
+# `add_definitions` bu papkadan keyin qo'shiladigan hamma target'ga tarqaladi,
+# jumladan `generated_plugins.cmake` orqali ulanadigan plaginlarga ham.
+add_definitions(-D_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS)
+
 # Compilation settings that should be applied to most targets.
 #
 # Be cautious about adding new options here, as plugins use this function by
