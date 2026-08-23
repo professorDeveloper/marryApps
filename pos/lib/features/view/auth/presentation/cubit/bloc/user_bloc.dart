@@ -43,7 +43,7 @@ class UserBloc extends Bloc<UserEvent, UserState> {
     final response = await _getUserUsecase.call(NoParams());
     response.fold(
       (l) async {
-        if (l is ConnectionFailure) {
+        if (l.isOffline) {
           await _tryOfflineUser(emit);
           return;
         }

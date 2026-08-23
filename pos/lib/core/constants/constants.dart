@@ -1,5 +1,6 @@
 // ignore_for_file: constant_identifier_names
-const BASE_URL = 'https://api.maryai.uz/';
+const BASE_URL = 'https://api.maryaidev.uz/';
+// const BASE_URL = 'https://api.maryai.uz/';  // eski prod — 2026-08-23 da o'lik
 // const BASE_URL = 'https://back.maryai.yurtal.tech/';
 // const BASE_URL = 'https://back.staging.maryai.yurtal.tech/';
 // const BASE_URL = 'http://localhost:8080/';

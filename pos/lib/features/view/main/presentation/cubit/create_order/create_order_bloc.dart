@@ -211,7 +211,7 @@ class CreateOrderBloc extends Bloc<CreateOrderEvent, CreateOrderState> {
     final response = await _createOrderUsecase.call(request);
     response.fold(
       (l) async {
-        if (l is ConnectionFailure) {
+        if (l.isOffline) {
           await _handleOfflineOrder(lines, createdAt, emit, orderId);
           return;
         }
