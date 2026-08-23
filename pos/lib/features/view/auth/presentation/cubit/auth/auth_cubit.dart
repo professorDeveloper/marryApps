@@ -72,7 +72,7 @@ class AuthCubit extends Cubit<AuthState> {
 
     result.fold(
       (failure) async {
-        if (failure is ConnectionFailure) {
+        if (failure.isOffline) {
           final cached = _offlineAuthCache.validateAndGetUser(
             req.brandId,
             req.password,

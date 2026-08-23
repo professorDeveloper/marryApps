@@ -31,8 +31,20 @@ class DioClient {
     _dio = Dio(
       BaseOptions(
         baseUrl: BASE_URL,
-        connectTimeout: const Duration(seconds: 30),
-        receiveTimeout: const Duration(seconds: 30),
+        // Ilgari ikkalasi ham 30 s edi. Server o'lik bo'lganda (SYN javobsiz
+        // tashlanadi) kassir har bosishda yarim daqiqa muzlagan ekranga
+        // qarab turardi va odatda shu orada ikkinchi marta bosardi.
+        //
+        // `connectTimeout` — "server umuman javob bermayapti" ni aniqlash
+        // vaqti. 6 s yetarli: soqlom serverga ulanish restoran WiFi'sida
+        // ham 1 soniyadan kam.
+        connectTimeout: const Duration(seconds: 6),
+        // Bular ulanish o'rnatilgandan keyin. 15 s — chunki
+        // `prefetchAllGoods` menyuni 500 tadan sahifalab tortadi
+        // (`cache_service.dart`), sekin kanalda bir batch bir necha
+        // soniya ketishi mumkin. Undan pastga tushirmaslik kerak.
+        sendTimeout: const Duration(seconds: 15),
+        receiveTimeout: const Duration(seconds: 15),
         validateStatus: (status) => status != null && status < 400,
       ),
     );

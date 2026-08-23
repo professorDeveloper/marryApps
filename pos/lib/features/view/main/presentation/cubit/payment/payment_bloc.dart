@@ -27,6 +27,7 @@ import 'package:mary_ai_pos/core/api/dio_client.dart';
 import 'package:mary_ai_pos/core/api/list_api.dart';
 import 'package:mary_ai_pos/di.dart' show inject;
 import 'package:mary_ai_pos/features/view/main/data/models/archive_detail/archive_detail_model.dart';
+import 'package:mary_ai_pos/features/view/main/data/models/order_food/order_food_model.dart';
 import 'package:mary_ai_pos/features/view/main/domain/usecase/create_payment_usecase.dart';
 import 'package:mary_ai_pos/features/view/main/domain/usecase/get_payment_detail_with_id_usecase.dart';
 import 'package:mary_ai_pos/features/view/main/domain/usecase/get_payment_detail_with_table_id_usecase.dart';
@@ -200,7 +201,7 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
       );
       response.fold(
         (l) async {
-          if (l is ConnectionFailure) {
+          if (l.isOffline) {
             // Karta/QR ham navbatga tushaveradi. Bu POS bank bilan
             // integratsiyalashmagan — `paymentType` shunchaki yorliq, kassir
             // kartani alohida bank terminalida o'tkazadi. Ishonch modeli
@@ -224,6 +225,14 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
   }
 
   void _onPaymentSuccess() {
+    // DIQQAT: chek detali AYNAN shu yerda, lokal buyurtma yopilishidan
+    // OLDIN hisoblanadi. `pendingOfflineGoods` `openOrderForTable` ga
+    // tayanadi, quyidagi `setStatus(..., 'closed')` esa uni yopadi —
+    // keyin chaqirilsa offline qatorlar chekdan tushib qolardi.
+    final receiptDetail = state.detail != null
+        ? detailForReceipt(state.detail!, state.tableId)
+        : null;
+
     // Lokal buyurtmani yopamiz. Busiz `openOrderForTable` uni qaytaraverardi:
     // `MainCubit._overlayLocal` stolni qayta "band" qilib qo'yardi va chek
     // ekranida to'langan taomlar turaverardi. Yozuv o'chirilmaydi — hali
@@ -260,7 +269,7 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
         ? (int.tryParse(state.discountAmount) ?? 0).toDouble()
         : 0.0;
     _printerService.printCashierReceiptFromDetail(
-      detail: state.detail!,
+      detail: receiptDetail ?? state.detail!,
       hourAmount: state.hourPrice,
       discountPercent: discPct,
       discountAmount: discAmt,
@@ -339,11 +348,22 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
     );
   }
 
-  static int pendingOfflineExtra(String? tableId) {
-    if (tableId == null) return 0;
+  /// Cloudga hali yetmagan, offline qo'shilgan qatorlar.
+  ///
+  /// Ilgari bu mantiq faqat **summa** qaytarardi (`pendingOfflineExtra`) va
+  /// qatorlarning o'zi hech qayerga chiqmasdi. Natijada kassir cheki
+  /// `state.detail` dan chizilardi — unda bu taomlar yo'q edi — undiriladigan
+  /// summaga esa qo'shilardi. Ya'ni mijozdan 150 000 olinib, chekda 120 000
+  /// chiqardi va e'tiroz bo'lsa kassirning qo'lida hech narsa qolmasdi.
+  ///
+  /// Endi qatorlar yagona manba: `pendingOfflineExtra` ham, chek ham shundan
+  /// hisoblanadi, ya'ni ikkalasi bir-biridan ajralib ketolmaydi.
+  static List<OrderFoodModel> pendingOfflineGoods(String? tableId) {
+    if (tableId == null) return const [];
     final queue = inject<OfflineQueueService>();
     final cachedGoods = inject<CacheService>().getGoods();
-    int extra = 0;
+    final out = <OrderFoodModel>[];
+
     for (final op in queue.pending.where(
       (o) => o.tableId == tableId && o.type == PendingOperationType.addItems,
     )) {
@@ -360,32 +380,94 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
           if (goodJson.isEmpty) continue;
           final price =
               double.tryParse(goodJson['price']?.toString() ?? '0') ?? 0.0;
-          extra += (price * qty).toInt();
+          out.add(
+            OrderFoodModel(
+              id: item['id']?.toString() ?? goodId,
+              name: (item['name'] as String?)?.isNotEmpty == true
+                  ? item['name'] as String
+                  : (goodJson['name'] as String? ?? goodId),
+              quantity: qty,
+              price: price.toInt(),
+              comment: item['comment']?.toString() ?? '',
+              status: 'pending',
+            ),
+          );
         }
       } catch (_) {}
     }
 
     // Ofitsiant qo'shgan, cloudga hali yetmagan qatorlar. Server javobida
     // ular yo'q, ya'ni ularsiz kassir kam pul olardi. Buyurtma cloudda
-    // umuman bo'lmasa chek to'liq lokal chiziladi va bu yerga kirmaydi —
-    // shuning uchun faqat `cloudCreated` bo'lganlar hisoblanadi.
+    // umuman bo'lmasa chek to'liq lokal chiziladi (`archiveDetailFromLocalOrder`)
+    // va bu yerga kirmaydi — shuning uchun faqat `cloudCreated` bo'lganlar
+    // hisoblanadi, aks holda o'sha qatorlar ikki marta sanalardi.
     final local = inject<LocalOrderStore>().openOrderForTable(tableId);
     if (local != null && local.cloudCreated) {
       for (final item in local.unsyncedItems) {
         final qty = (item['quantity'] as num?)?.toInt() ?? 0;
         if (qty <= 0) continue;
         final goodId = item['good_id']?.toString() ?? '';
+        final goodJson = cachedGoods.firstWhere(
+          (g) => g['id'] == goodId,
+          orElse: () => <String, dynamic>{},
+        );
         final price = item['price'] != null
             ? asNum(item['price'])
-            : asNum(cachedGoods.firstWhere(
-                (g) => g['id'] == goodId,
-                orElse: () => <String, dynamic>{},
-              )['price']);
-        extra += (price * qty).toInt();
+            : asNum(goodJson['price']);
+        out.add(
+          OrderFoodModel(
+            id: item['id']?.toString() ?? goodId,
+            name: (item['name'] as String?)?.isNotEmpty == true
+                ? item['name'] as String
+                : (goodJson['name'] as String? ?? goodId),
+            quantity: qty,
+            price: price.toInt(),
+            comment: item['comment']?.toString() ?? '',
+            status: 'pending',
+          ),
+        );
       }
     }
 
-    return extra;
+    return out;
+  }
+
+  static int pendingOfflineExtra(String? tableId) => pendingOfflineGoods(
+        tableId,
+      ).fold<int>(0, (sum, g) => sum + g.price * g.quantity);
+
+  /// Chop etish uchun chek detali — offline qatorlar qo'shilgan.
+  ///
+  /// Chek quruvchisi jamini `detail.goods` dan **qayta hisoblaydi** va
+  /// `grandTotal` ga umuman qaramaydi (`cashier_receipt_builder.dart:403`).
+  /// Shuning uchun qatorlarni qo'shishning o'zi kifoya emas: xizmat haqi
+  /// foiz sifatida qolsa, u kattalashgan summaga qayta qo'llanib chekdagi
+  /// jami undirilgandan **oshib** ketardi.
+  ///
+  /// Buning oldini olish uchun xizmat haqi aniq raqamga aylantiriladi:
+  /// `effectiveTotal(detail) - foodSum`. Shunda chekdagi jami
+  /// (`foodSum + extra + service`) undiriladigan summa bilan
+  /// (`effectiveTotal + extra`, `_payment` dagi hisob) aynan teng bo'ladi.
+  static ArchiveDetailEntity detailForReceipt(
+    ArchiveDetailEntity detail,
+    String? tableId,
+  ) {
+    final extraGoods = pendingOfflineGoods(tableId);
+    if (extraGoods.isEmpty) return detail;
+    // Freezed `copyWith` faqat modelda bor; boshqa implementatsiya kelsa
+    // chekni o'zgartirmasdan qoldiramiz (eski xatti-harakat).
+    if (detail is! ArchiveDetailModel) return detail;
+
+    final foodSum = detail.goods
+        .where((g) => g.status != 'cancelled')
+        .fold<double>(0, (s, g) => s + g.price * g.quantity);
+    final service = effectiveTotal(detail) - foodSum;
+
+    return detail.copyWith(
+      goods: [...detail.goods, ...extraGoods],
+      serviceAmount: service > 0.0001 ? service : 0.0,
+      servicePercent: service > 0.0001 ? detail.servicePercent : 0.0,
+    );
   }
 
   static int effectiveTotal(ArchiveDetailEntity detail) {

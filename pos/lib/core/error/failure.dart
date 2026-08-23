@@ -118,6 +118,24 @@ class OtherFailure extends Failure {
       S.of(context).strFailureMessage_other;
 }
 
+/// Tarmoq yo'qligini bildiruvchi xatolar — offline yo'lga o'tish sharti.
+///
+/// `ConnectionFailure` soket darhol yiqilganda keladi (kabel uzilgan,
+/// WiFi o'chiq). `TimeoutFailure` esa so'rov javobsiz qolganda.
+///
+/// Restoranda aynan **ikkinchisi** ko'proq uchraydi: router yoqiq, WiFi
+/// bor, lekin WAN o'lik yoki server javob bermayapti. Bunda SYN jimgina
+/// tashlab yuboriladi va dio `connectionTimeout` qaytaradi —
+/// `SocketException` emas (`dio_exception_handler.dart:8-16`).
+///
+/// Ilgari offline yo'llar faqat `is ConnectionFailure` ni tekshirardi,
+/// natijada aynan shu eng ko'p uchraydigan holatda ilova offline rejimga
+/// **umuman o'tmasdi**: buyurtma navbatga tushmasdi, to'lov saqlanmasdi,
+/// kassir esa login ekraniga uloqtirilardi.
+extension OfflineFailureExt on Failure {
+  bool get isOffline => this is ConnectionFailure || this is TimeoutFailure;
+}
+
 extension ShowErrorExt on Failure {
   void showErrorMsg() {
     showErrorMessage(
